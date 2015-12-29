@@ -1,66 +1,147 @@
 #!/usr/bin/env python
 
-# The problem that is being addressed is:
+# # bom_manager
 #
-#       Schematic Symbol =>
-#         Footprint =>
-#           Manufacturer Part Number =>
-#             Vendor Part Number =>
-#               Vendor Order
+# ## Overview:
 #
-# In KiCad, the schematic does not care about footprints.  Conceptually,
-# it is possible to use the same KiCad schematic to produce multiple
-# different PCB layouts (e.g. through hole parts or surface mount parts.)
-# This is possible because KiCad allows the user to delay the footprint
-# binding until after schematic capture using the CvPcb sub-system.
-# However, once the binding has occurred, it is difficult to change because
-# the footprints become embedded in the PCB.  Thus, while it is possible
-# to reuse KiCad schematics, realistically nobody does anything other
-# than a 1-to-1 between a schematic and a PCB.  Hence, I've reluctantly
-# come to the conclusion that the Schematic symbol should explicitly specify
-# the footprint in KiCad (e.g. "10K;1608" instead of "10K" or
-# "ATMEGA328-16PU;QFP32" instead of "ATMEGA328-16PU".)  This clutters up
-# the schematic somewhat, but removes all ambiguity and makes the rest of
-# the BOM managment easier.  Once the footprint has been selected,
-# KiCad simply does not care about the rest of the part selection
-# and purchasing workflow.
 #
-# As evidenced by Rohan's Aleopile library, it is possible to assign
-# Footprint, Manufacturer, Manufacture Part Number, Vendor and Vendor
-# Part Number into a schematic symbol.  Alas, this is a brittle binding
-# in that any change to library, does not automatically get updated
-# to the schematic.  If a part goes obsolete, it is necessary to
-# change the schematic library and manually update the schematic to
-# force the schematic symbol update.  This brittleness is not acceptable.
+# This program is called *bom_manager* (i.e. Bill of Materials Manager.)
+# The program fundamentally deals with the task of binding parts in a
+# schematic with actual parts that can be ordered from one or more
+# vendors (i.e. distributors, sellers, etc.)  It also deals with binding
+# the schematic parts with footprints that can be used with the final PCB
+# (i.e. Printed Circuit Board.)
 #
-# The next issue is that many components are generic.  We really do not care
-# who is the manufacturer for a 10K 1608 resistor.  Other components only have
-# a single manufacturer source.  For the Aleopile library, schematic
-# symbols are 1-to-1 with manufacturer part numbers.
+# In short we have:
 #
-# Once you have MPN (Manufacturer Part Number), Octopart can be used to find
-# the vendors and associated prices.  There is an internet API for this.
-# Octopart limits the free accounts to 5K accesses per month.  Paid Octopart
-# access is actually quite expensive.  An access is allowed to lookup 20
-# parts.  In order to make it all work, we need to cache previous lookup
-# values.  In theory, Digikey has totally free part lookup, but the
-# documentation is awful.
+#    Schematic Part => Manufacturer Part
 #
-# Once we have the vendor costs, the final step is to do vendor selection.
-# If shipping costs were $0, this step would be unnecessary.  However,
-# ordering a part to save $.01, but pay $7 for shipping is kind of stupid.
-# So, I have the ability to kick out vendors due to shipping costs.
-# Usually, I get stuck with one or two vendors that make sense (DigiKey,
-# Mouser, Arrow.)
+# and
 #
-# Finally, there are issues of supporting multiple differenct PCB's in one
-# order, inventory managment, etc.
+#    Manufacturer Part => (Footprint, Vendor Part)
 #
-# Inventory management is an area that needs some more work.  I've come
-# to the conclusion that for generic parts, we should just buy one reel
-# and store them on a rod.
+# and
 #
-# Pieces of this system are kind of working, but the whole system is not. 
+#    Vendor Part => Pricing
+#
+# The footprints are passed into the printed circuit design workflow
+# and the vendor parts are collected together into one or more orders
+# that are sent off to various vendors (i.e. distributors) to be fulfilled.
+# The decision of which vendor to order a part from depends upon parts
+# availability and pricing.  The availability and pricing information
+# is obtained via a process of visiting various web sites and "screen
+# scraping" the needed information from the associated web pages.
+#
+# ## Schematic Parts
+#
+# KiCad really only deals with schematic parts in the schematic drawing
+# program *and* footprints in the PCB layout program.  While in theory
+# the binding between a schematic part and PCB footprint is one-to-one
+# in practice KiCad keeps the two pretty decoupled.  There is a "program"
+# in KiCad called "CvPcb" that is responsible for binding schematic parts
+# to PCB footprints.  In general, it is very easy to make mistakes with
+# CvPcb and generate incorrect PCB's where the actual parts do not fit
+# properly onto the PCB's.  It would be very nice to make this process
+# less error prone.
+#
+# Numerous people have come up with a strategy of explicitly binding
+# the schematic part to (footprint, manufacturer part, vendor_part)
+# into the schematic part library.  The KiCad fields was explicitly
+# added to support these kinds of experiments.  The problem with
+# KiCad fields is that they are currently quite brittle.  If you make
+# a mistake in the schematic part library (which happens all the time),
+# it is necessary to first correct the erroneous fields in the schematic
+# part library *and* manually find and update each associated schematic
+# part in the schematic.  This strategy is currently extremely error
+# prone.
+#
+# `bom_manager` uses a different strategy.  In KiCad, each schematic
+# part in the schematic has a reference name (e.g. R123, U7, etc.)
+# and name (e.g. 74HC08, etc.)  The name can be pretty much anything
+# that the end user decides provides enough information to identify
+# the desired part.  What `bom_manager` does is structure this name
+# as follows:
+#
+#        name;footprint:comment
+#
+# where:
+#
+# * *name* specifies the part name,
+#
+# * *footprint* specifies the footprint to associate with the name, and
+#
+# * *comment* is an optional comment field that is ignored by `bom_manager`
+#
+# For example the Atmel ATmega382 comes in 4 different IC packages --
+# DIP28, QFP32, and QFN32.  The `bom_manager` program wants
+# to see these symbols show up in the schematic as `ATMEGA328;DIP28`,
+# `ATMEGA328;QFP32`, and `ATMEGA328;QFN32`.  There is a textual database
+# that maps these `bom_manager` names into the actual manufacturer part
+# numbers of `ATmega328P-PU`, `ATmega328P-AU`, and `ATmega328-MU`.
+# In addition, this database provides a binding to the correct KiCad
+# footprint.  If there is an error in the database, the database can
+# be corrected, and the next time `bom_manager` is run, both the
+# vendor orders and the footprints will be automatically propagated.
+#
+# As another example, most people use fairly common resistor values
+# in their electrical designs -- 10K, 22K, 33K, 47K, etc.  These are
+# considered to be generic parts (sometimes called common parts) and
+# designer is happy as long as the resistors have 5% tolerance and
+# can dissipate up to 1/8 Watt.  Having said that, there are numerous
+# footprints to choose from.  Using inches, the common sizes
+# are .008"x.005", .006"x.003", .004"x.002", and .002"x.001".
+# These are abbreviated as 0805, 0603, 0402, and 0201.  `bom_manager`
+# uses the metric equivalent values of 2013, 1608, 1005, and 0503.
+# Thus, a 5% 1/8W 10K resistor in a .006"x.003" package would be
+# listed as "10K;1608".  Again, the database is responsible for specifying
+# a list of acceptable manufacturer parts that have the same .16mm x.08mm
+# footprint.  `bom_manager` is responsible for selecting the specific
+# manufacturer part based on availability and price.
+#
+# Once the designer (i.e. you) have used schematic part names that
+# adhere to the `bom_manager` format, the footprint and vendor
+# selection is totally automated.
+#
+# ## Screen Scraping
+#
+# In the context of `bom_manager` "screen scraping" is the process
+# of fetching a web page and obtaining information from the web page
+# to be feed into the ordering and footprint process.  In Python,
+# screen scraping is typically done using the `BeautifulSoup` library
+# which can parse and search HTML.  In general, every distributor
+# provides a web interface for searching the parts that they can
+# supply.  In addition, there are some electronic part aggregation
+# sites (e.g. Octopart, FindChips, SnapEDA, etc.) that serve up
+# useful information from their web servers.
+#
+# In general, the distribution and aggregation outfits are not
+# thrilled with screen scrapers.  Here are some reasons why:
+#
+# * The web vendors are constantly tweaking their HTML.  This causes
+#   screen scrapers to break on a regular basis.  They feel no
+#   particular obligation to support screen scrapers.
+#
+# * Distributors do not want it to be easy for their competitors
+#   to match prices.
+#
+# * Aggregators have a business model where they want to sell
+#   premium access to their databases.  Screen scraping makes
+#   easier for other aggregators to set up shop.
+#
+# There are a number of ethical issues here.  It costs real money
+# to hire people to set up a good distributor web server.
+# In general, distributors recoup the web server development
+# expense when people purchase the parts from distributor.
+# Again, it costs real money to hire people and acquire data feeds
+# to set up aggregation web servers.  Charging users for access
+# is a reasonable business model for aggregations sites.
+#
+# The position of the `bom_manager` is that free market economics
+# is the way to go.  If the distributors/aggregators provide a
+# viable alternative to screen scrapers at a price that is acceptable
+# to the designers, the alternatives will be used; if not, screen
+# scrapers will continue to be developed and supported by the free
+# software community.
 
 # Import some libraries:
 import fnmatch
@@ -73,24 +154,105 @@ import sexpdata
 import sys
 import time
 
-# Data Structure and Algorith Overview;
+# Data Structure and Algorithm Overview:
+# 
+# There are a plethora of interlocking data structures.  The top level
+# concepts are listed below:
 #
-# For an *Order*, the user specifies a list of *Board*'s.  For each *Board*,
-# the number of boards to be poplulated is specified.  Also, the user
-# can specify a list of additional parts to add to the order.
-# Likewise, parts in the inventory can be specified to reduce the
-# number of ordered parts.
+# *Order*: An order corresponds to parts order.  The parts order may
+# be split between multiple *Vendor*'s.
 #
-# The list of excluded vendors starts out empty.  As the ordering process
-# nears completion, the user manually excludes vendors in order to eliminate
-# vendors where shipping costs exceed part cost savings.
+# *Vendor*: A vendor corresponds to a distributor such as DigiKey, Mouser,
+# Newark, etc.
 #
-# For each *Board*, the algorithm reads in the KiCad .net file and extracts
-# the list of *Board_Part*'s.  For each *Board_Part*, the parts database
-# is queried to look up the *Schamtic_Part* by name (e.g. R12;1608).
-# Missing entries are flagged as errors.  When there are no outstanding
-# errors, the .net file is updated to place the correct KiCad footprint
-# for each part.
+# *Board*: A board corresponds to a single PCB (e.g. a .kicad_pcb file.)
+# A single order may order specify multiple PCB's and different quantities
+# for each PCB.
+#
+# *Manufacturer*: A manufacturer is the company that owns the factory that
+# creates an electronic part (e.g. MicroChip, Atmel, Texas Instruments, etc.)
+# (Note: The *Manufacturer* class has not been defined in this code yet.)
+#
+# *Database*: The *Database* is responsible for maintaining the bindings
+# between various symbols, manufacturer parts, vendor part numbers, etc.
+# 
+# Footprint: A footprint is a description of the footprint to use
+# with the part.  There is a concept of a short footprint which
+# can be used to disambiguate between different packages of the
+# same basic part (e.g. QFP32 vs. DIP28) and a fully specified
+# KiCad footprint.
+#
+# Part: The concept of a part is a bit more fluid.  The manufacturer
+# has its parts, the vendor (i.e. distributor) has its parts, and
+# the schematic has it parts.
+#
+# There is a fairly complex set of data structures that link the above
+# data structures together.  They are listed below:
+#
+# *Board_Part*: A *Board_Part* is essentially one-to-one with a Schematic
+# symbol in KiCad.  In particular, it specifies both the annotation
+# reference (e.g. SW12, U7, R213, etc.) and a *Schematic_Symbol_Name*
+# (e.g. ATMEGA328-PU;QFP32, 74HC08;SOIC14, etc.)
+#
+# *Schematic_Symbol_Name*: A *Schematic_Symbol_Name" is string that
+# has the following structure "Name;Footprint:Comment", where "Name"
+# is a logical part name (e.g. ATmega328, 74HC08, 10K, .1uF, etc.),
+# "footprint" is a short footprint name (QFP32, SOIC14, 1608, etc.),
+# and ":Comment" is a optional comment like ":DNI" (Do Not Install, ...)
+# (Note: The *Schematic_Symbol_Name* has not yet been defined as a
+# Python class.)
+#
+# *Schematic_Part*: A schematic part is one-to-one with a
+# *Schematic_Symbol_Name* (excluding the comment field.)  A *Schematic_Part*
+# essentially provides a mapping from a *Schematic_Symbol_Name" to a list of
+# acceptable manufacturer parts, which in turn provides a mapping to
+# acceptable vendor parts.  There are three sub-classes of *Schematic_Part* --
+# *Choice_Part*, *Alias_Part*, and *Fractional_Part*.  As the algorithm
+# proceeds, all *Alias_Part*'s and *Fractional_Part*'s are converted into
+# associated *Choice_Part*'s.  Thus, *Choice_Part* is the most important
+# sub-class of *Schematic_Part*.
+#
+# *Choice_Part*: A *Choice_Part* is sub-classed from *Schematic_Part*
+# and lists one or more acceptable *Actual_Part*'s. (An actual part
+# is one-to-one with a manufacturer part -- see below.)  A *Choice_Part*
+# also specifies a full KiCad Footprint.
+#
+# *Alias_Part*: An *Alias_Part* is also sub-classed from *Schematic_Part*
+# and specifies one or more *Schematic_Parts* to substitute.
+#
+# *Fractional_Part*: A *Fractional_Part* is also sub-classed from
+# *Schematic_Part* and corresponds to a 1xN or 2xN break away header.
+# It is common special case that specifies a smaller number of pins
+# than the full length header.
+#
+# *Actual_Part*: An *Actual_Part* should probably have been defined
+# as a *Manufacturer_Part*.  An *Actual_Part* consists of a *Manufacturer*
+# (e.g "Atmel"), and Manufacturer part name (e.g. "ATMEGA328-PU".)
+#
+# *Vendor_Part*: A *Vendor_Part* should have probably been defined
+# as a *Distributor_Part*.  A *Vendor* part consists of a *Vendor*
+# (e.g. "Mouser") and a *Vendor_Part_Name* (e.g. "123-ATMEGA328-PU").
+#
+# Notice that there are 6 different part classes:  *Schematic_Part*,
+# *Choice_Part*, *Alias_Part*, *Fractional_Part*, *Actual_Part* and
+# *Vendor_Part*.  Having this many different part classes is needed
+# to precisely keep track of everything.
+#
+# There are a few more classes to worry about:
+#
+# *Order*: An *Order* specifies a list of *Board*'s and a quantity
+# for each *Board*.  Also, an order can specify a list of vendors
+# to exclude from the order.
+#
+# *Board*: A *Board* is one-to-one with KiCad PCB.  It is basicaly
+# consists of a list of *Board_Part*'s.
+#
+# *Board_Part*: A *Board_Part* is basically a *Schematic_Symbol_Name*
+# along with a board annotation reference (e.g. R123, U7, etc.)
+#
+
+# **:
+#
 #
 # There are three sub_classes of *Schematic_Part*:
 #
