@@ -146,6 +146,7 @@
 # Import some libraries:
 from bs4 import BeautifulSoup	# HTML/XML data structucure searching
 import fnmatch			# File Name Matching
+import json			# Another pickling format
 import math			# Math
 import os.path			# File names/paths
 import pickle			# Python data structure pickle/unpickle
@@ -306,6 +307,9 @@ class Database:
     def __init__(self):
 	""" *Database*: Initialize *self* to be a database of
 	    *Schematic_part*'s. """
+
+	self.euro_to_dollar_exchange_rate = self.exchange_rate("EUR", "USD")
+	self.pound_to_dollar_exchange_rate = self.exchange_rate("GBP", "USD")
 
 	bom_parts_file_name = "bom_parts.pkl"
 
@@ -1122,6 +1126,34 @@ class Database:
 
 	return self.insert(choice_part)
 
+    def exchange_rate(self, from_currency, to_currency):
+	""" *Database*: Lookup current currency exchange rate:
+	"""
+
+	# Verify argument types:
+	assert isinstance(from_currency, str)
+	assert isinstance(to_currency, str)
+
+	# The documenation for this API can be found at:
+	#    https://currency-api.appspot.com/
+
+	# First construct the *exchange_url*:
+	exchange_url = \
+	  "https://currency-api.appspot.com/api/{0}/{1}.json".format(
+	    from_currency, to_currency)
+	#print("exchange_url='{0}'".format(exchange_url))
+
+	# Now fetch the infromation from the server:
+	exchange_response = requests.get(exchange_url)
+	exchange_text = \
+	  exchange_response.text.encode("ascii", "ignore").strip(" \n")
+	#print("exchange_text='{0}'".format(exchange_text))
+
+	# Now extract the exchange rate and return it:
+	exchange_information = json.loads(exchange_text)
+	#print("exchange_information=", exchange_information)
+	return exchange_information["rate"]
+
     def findchips_scrape(self, actual_part):
 	""" *Database*: Return a list of *Vendor_Parts* associated with
 	    *actual_part* scraped from the findchips.com web page.
@@ -1129,28 +1161,35 @@ class Database:
 
 	# Verify argument types:
 	assert isinstance(actual_part, Actual_Part)
+
+
+	# Grab some values from *actual_part*:
 	manufacturer_name =      actual_part.manufacturer_name
 	manufacturer_part_name = actual_part.manufacturer_part_name
 	original_manufacturer_part_name = manufacturer_part_name
 
+	# Trace every time we send a message to findchips:
        	print("Find '{0}:{1}'".
 	  format(manufacturer_name, manufacturer_part_name))
 
 	# Set to *trace* to *True* to enable tracing:
 	trace = False
-	#if manufacturer_part_name == "MCP1825S-5002E/DB":
-	#    trace = True
-	#    print("tracing on")
 
-	# Grab a page of information about *part_name*:
-	findchips_url = "http://www.findchips.com/search/"
+	# Generate *url_part_name* which is a %XX encoded version of
+	# *manufactuerer_part_name*:
 	ok = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" + "0123456789" + "-.:;" + \
 	     "abcdefghijklmnopqrstuvwxyz"
+	url_part_name = ""
 	for character in manufacturer_part_name:
 	    if ok.find(character) >= 0:
-		findchips_url += character
+		# Let this *character* through unchanged:
+		url_part_name += character
 	    else:
-		findchips_url += format("%{0:02x}".format(ord(character)))
+		# Convert *character* to %XX:
+		url_part_name += format("%{0:02x}".format(ord(character)))
+
+	# Grab a page of information about *part_name* using *findchips_url*:
+	findchips_url = "http://www.findchips.com/search/" + url_part_name
 	if trace:
 	    print("findchips_url='{0}'".format(findchips_url))
 	findchips_response = requests.get(findchips_url)
@@ -1173,9 +1212,9 @@ class Database:
 	# each distributor:
 	for distributor_tree in findchips_tree.find_all("div",
 	  class_="distributor-results"):
-	    if trace:
-		print("**************************************************")
-		print(distributor_tree.prettify())
+	    #if trace:
+	    #	print("**************************************************")
+	    #	print(distributor_tree.prettify())
 
 	    # The vendor name is burried in:
 	    #   <h3 class="distributor-title"><a ...>vendor name</a></h3>:
@@ -1205,7 +1244,8 @@ class Database:
 	    if vendor_name == None:
 		continue
 
-	    currency = "?"
+	    # Extract *currency* from *distributor_tree*:
+	    currency = "USD"
 	    try:
 		currency = distributor_tree["data-currencycode"]
 	    except:
@@ -1221,11 +1261,10 @@ class Database:
 		for row_tree in table_tree.find_all("tr", class_="row"):
 		    if trace:
 			print("==============================================")
-		    #print(row_tree.prettify())
+			#print(row_tree.prettify())
 	
-
 		    # Now we grab the *vendor_part_name*.  Some vendors
-		    # (like Arrow) use the manufacture part number as their
+		    # (like Arrow) use the *manufacturer_part_name* as their
 		    # *vendor_part_name*.  The data is in:
 		    #     <span class="additional-value"> ... </span>:
 		    vendor_part_name = manufacturer_part_name
@@ -1234,31 +1273,53 @@ class Database:
 			#print(span1_tree.prettify())
 			for span2_tree in span1_tree.find_all(
 			  "span", class_="additional-value"):
+			    # Found it; grab it, encode it, and strip it:
 			    vendor_part_name = span2_tree.get_text(). \
 			      encode("ascii", "ignore").strip(" \n")
 
+		    # The *stock* count is found as:
+		    #    <td class="td-stock">stock</td>
 		    stock = 0
 		    stock_tree = row_tree.find("td", class_="td-stock")
 		    if stock_tree != None:
+			# Strip out commas, space, etc.:
 			stock_text = \
 			  digits_only_re.sub("", stock_tree.get_text())
+			# Some sites do not report stock, and leave them
+			# empty.  We just leave *stock* as zero in this case:
  			if len(stock_text) != 0:
 			    stock = int(stock_text)
 
+		    # The *manufacturer_name* is found as:
+		    #    <td class="td-mfg"><span>manufacturer_name</span></td>
 		    manufacturer_name = ""
 		    for mfg_name_tree in row_tree.find_all(
 		      "td", class_="td-mfg"):
 			for span_tree in mfg_name_tree.find_all("span"):
+			    # Found it; grab it, encode it, and strip it:
 			    manufacturer_name = span_tree.get_text(). \
 			      encode("ascii", "ignore").strip(" \n")
 
+		    # The *manufacturer_part_name* is found as:
+		    #    <td class="td_part"><a ...>mfg_part_name</a></td>
 		    manufacturer_part_name = ""
 		    for mfg_part_tree in row_tree.find_all(
 		      "td", class_="td-part"):
 			for a_tree in mfg_part_tree.find_all("a"):
+			    # Found it; grab it, encode it, and strip it:
 			    manufacturer_part_name = a_tree.get_text(). \
 			      encode("ascii", "ignore").strip(" \n")
 
+		    # The price breaks are encode in a <ul> tree as follows:
+		    #    <td class="td_price">
+		    #       <ul>
+		    #          <li>
+		    #            <span class="label">quantity</span>
+		    #            <span class="value">price</span>
+		    #          </li>
+	            #          ...
+                    #       </ul>
+		    #    </td>
 		    price_breaks = []
 		    price_list_tree = row_tree.find("td", class_="td-price")
 		    if price_list_tree != None:
@@ -1266,20 +1327,30 @@ class Database:
 			    quantity_tree = li_tree.find("span", class_="label")
 			    price_tree = li_tree.find("span", class_="value")
 			    if quantity_tree != None and price_tree != None:
+				# We extract *quantity*:
 			        quantity_text = digits_only_re.sub("",
 				  quantity_tree.get_text())
 				quantity = 1
 				if quantity_text != "":
 				    quantity = int(quantity_text)
+
+				# Extract *price* using only digits and '.':
 				price_text = ""
 				for character in price_tree.get_text():
 				    if character.isdigit() or character == ".":
 					price_text += character
 				price = float(price_text)
+
+				# Sometimes we get a bogus price of 0.0 and
+				# we just need to ignore the whole record:
 				if price > 0.0:
-				    price_break = Price_Break(quantity, price)
+				    price_break = Price_Break(
+				      quantity, price, currency=currency)
 				    price_breaks.append(price_break)
 
+		    # Now if we have an exact match on the *manufacturer_name*
+		    # we can construct the *vendor_part* and append it to
+		    # *vendor_parts*:
 		    if original_manufacturer_part_name == \
 		      manufacturer_part_name:
 			now = time.time()
@@ -1288,6 +1359,7 @@ class Database:
 			  stock, price_breaks, now)
 			vendor_parts.append(vendor_part)
 
+			# Print stuff out if *trace* in enabled:
 			if trace:
 			    # Print everything out:
 			    print("vendor_name='{0}'".format(vendor_name))
@@ -1303,6 +1375,9 @@ class Database:
 				print("{0}: {1:.6f} ({2})".
 				  format(price_break.quantity,
 				  price_break.price, currency))
+
+	# For debugging, let the user now that we are looking for a
+	# part and not finding it at all:
 	if len(vendor_parts) == 0:
        	    print("**********Find '{0}:{1}': {2} matches".
 	      format(actual_part.manufacturer_name,
@@ -2639,13 +2714,25 @@ class Vendor_Part:
 class Price_Break:
     # A price break is where a the pricing changes:
     
-    def __init__(self, quantity, price):
+    def __init__(self, quantity, price, currency="USD"):
 	""" *Price_Break*: Initialize *self* to contain *quantity*
 	    and *price*.  """
 
 	# Verify argument types:
 	assert isinstance(quantity, int)
 	assert isinstance(price, float)
+	assert currency == "USD" or currency == "EUR" or currency == "GBP"
+
+	# This needs to be looked up:
+	rate = 1.0
+	if currency == "USD":
+	    exchange_rate = 1.0
+	elif currency == "EUR":
+	    exchange_rate = self.euro_to_dollar_exchange_rate
+	elif currency == "GBP":
+	    exchange_rate= self.pound_to_dollar_exchange_rate
+	else:
+	    assert False, "Unrecognized currencty '{0}'".format(currency)
 
 	# Load up *self*;
 	self.quantity = quantity
@@ -2693,6 +2780,8 @@ def se_find(se, base_name, key_name):
 
 def main():
     database = Database()
+    euros = database.exchange_rate("USD", "EUR", 1.0)
+    print("euros = {0}".format(euros))
     order = Order(database)
     order.board("bom_test", "E.1", "bom_test.net", 9)
     order.process()
