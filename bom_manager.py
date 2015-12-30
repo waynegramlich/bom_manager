@@ -144,15 +144,20 @@
 # software community.
 
 # Import some libraries:
-import fnmatch
-import kicost # `ln -s ~/public_html/project/KiCost/kicost/kicost.py`
-import math
-import os.path
-import pickle
-from sexpdata import Symbol
-import sexpdata
-import sys
-import time
+from bs4 import BeautifulSoup	# HTML/XML data structucure searching
+import fnmatch			# File Name Matching
+import math			# Math
+import os.path			# File names/paths
+import pickle			# Python data structure pickle/unpickle
+import re			# Regular expressions
+import requests			# HTML Requests
+import sexpdata			# (LISP) S_EXpresson Data
+from sexpdata import Symbol	# (LISP) S-EXpression Symbol
+import sys			# Miscellanesous SYStem stuff
+import time			# Time package
+
+# Old:
+#import kicost # `ln -s ~/public_html/project/KiCost/kicost/kicost.py`
 
 # Data Structure and Algorithm Overview:
 # 
@@ -294,6 +299,7 @@ import time
 # sorting by cost, etc.  The final BOM's for each board is generated
 # as a .csv file.
 
+
 class Database:
     # Database of *Schematic_Parts*:
 
@@ -301,55 +307,40 @@ class Database:
 	""" *Database*: Initialize *self* to be a database of
 	    *Schematic_part*'s. """
 
-	# Initialize the vendors:
-	vendors = {}
-	vendors["Digikey"] = Vendor_Digikey()
-	vendors["Mouser"] = Vendor_Mouser()
-	vendors["Newark"] = Vendor_Newark()
-
 	bom_parts_file_name = "bom_parts.pkl"
-	vendor_parts = {}
 
 	# Initialize the various tables:
-	self.actual_parts = {}	  # (manufacturer_name, manufacturer_part_name)
+	self.actual_parts = {} # Key:(manufacturer_name, manufacturer_part_name)
 	self.bom_parts_file_name = bom_parts_file_name
-	self.schematic_parts = {} # schematic symbol name
-	self.vendors = vendors    # vendor table
-	self.vendor_parts = vendor_parts # (vendor_name, vendor_part_name)
+	self.schematic_parts = {}   # Key: "part_name;footprint:comment"
+	self.vendor_parts_cache = {} # Key:(actual_key)
 
+	vendor_parts_cache = self.vendor_parts_cache
 	# Read in any previously created *vendor_parts*:
 	if os.path.isfile(bom_parts_file_name):
 	    #print("Start reading BOM parts file: '{0}'".
 	    #  format(bom_parts_file_name))
 
-	    # Read in picked *vendors_parts* from *bom_file_name*.
-	    # *vendors_parts* is a *dict<vendor_name, dict<part_key>>*:
+	    # Read in picked *vendor_parts* from *bom_file_name*:
 	    bom_pickle_file = open(bom_parts_file_name, "r")
-	    vendors_parts = pickle.load(bom_pickle_file)
+	    pickled_vendor_parts_cache = pickle.load(bom_pickle_file)
 	    bom_pickle_file.close()
 
-	    # Visit each *vendor* and load up the cached *vendor_parts*:
-	    for vendor in vendors.values():
-		vendor_name = vendor.name
-		if vendor_name in vendors_parts:
-		    #print("  processing vendor parts for vendor {0}".
-		    #  format(vendor_name))
-		    vendor_parts = vendors_parts[vendor_name]
-		    vendor.vendor_parts = vendor_parts
+	    # Flush out old (stale) vendor parts from *pickled_vendor_parts*:
+	    now = time.time()
+	    old = now - 2.0 * 24.0 * 60.0 * 60.0
+	    for actual_key in pickled_vendor_parts_cache.keys():
+		vendor_parts = pickled_vendor_parts_cache[actual_key]
+		for vendor_part in vendor_parts:
+		    assert isinstance(vendor_part, Vendor_Part)
+		    if vendor_part.timestamp < old:
+			del vendor_parts[vendor_part.vendor_key]
+		if len(vendor_parts) > 0:
+		    vendor_parts_cache[actual_key] = vendor_parts
 
-		    # Delete stale *vendor_parts*:
-		    now = time.time()
-		    # 2 Days in in past
-		    stale = now - 2.0 * 24.0 * 60.0 * 60.0
-		    for vendor_part_key in vendor_parts.keys():
-			vendor_part = vendor_parts[vendor_part_key]
-			if vendor_part.timestamp < stale:
-			    del vendor_parts[vendor_part_key]
-	    #print("Done reading BOM parts file: '{0}'".
-	    #  format(bom_parts_file_name))
+	# Now here is where we initialize the database:
 
 	# Boxes:
-
 	self.choice_part("JB-3955;102Lx152Wx152H", "102Lx152Wx152H", "",
 	  "BOX STEEL GRAY 102Lx152Wx152H").actual_part(
 	  "Bud Industries", "JB-3955", [
@@ -840,7 +831,6 @@ class Database:
 	  "Yageo", "PE2512FKE070R02L").actual_part(
 	  "TE", "RLP73V3AR020JTE").actual_part(
 	  "TT/Welwyn", "LRMAP2512-R02FT4").actual_part(
-	  "Yageo", "PLRMAP2512-R02FT4").actual_part(
 	  "Bourns", "CRF2512-FZ-R020ELF").actual_part(
 	  "Yageo", "RL2512FK-070R02L").actual_part(
 	  "TT/IRC", "LRC-LRF2512LF-01-R020F").actual_part(
@@ -932,7 +922,7 @@ class Database:
 	  "Stackpole", "RMCF0603JG100K").actual_part(
 	  "Bourns", "CR0603-JW-104GLF").actual_part(
 	  "Yageo", "RC0603JR-10100KL").actual_part(
-	  "Rohm", "MCR03ERTJ104	").actual_part(
+	  "Rohm", "MCR03ERTJ104").actual_part(
 	  "Vishay Dale", "RCA0603100KJNEA").actual_part(
 	  "Rohm", "KTR03EZPJ104")
 
@@ -1132,6 +1122,194 @@ class Database:
 
 	return self.insert(choice_part)
 
+    def findchips_scrape(self, actual_part):
+	""" *Database*: Return a list of *Vendor_Parts* associated with
+	    *actual_part* scraped from the findchips.com web page.
+	"""
+
+	# Verify argument types:
+	assert isinstance(actual_part, Actual_Part)
+	manufacturer_name =      actual_part.manufacturer_name
+	manufacturer_part_name = actual_part.manufacturer_part_name
+	original_manufacturer_part_name = manufacturer_part_name
+
+       	print("Find '{0}:{1}'".
+	  format(manufacturer_name, manufacturer_part_name))
+
+	# Set to *trace* to *True* to enable tracing:
+	trace = False
+	#if manufacturer_part_name == "MCP1825S-5002E/DB":
+	#    trace = True
+	#    print("tracing on")
+
+	# Grab a page of information about *part_name*:
+	findchips_url = "http://www.findchips.com/search/"
+	ok = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" + "0123456789" + "-.:;" + \
+	     "abcdefghijklmnopqrstuvwxyz"
+	for character in manufacturer_part_name:
+	    if ok.find(character) >= 0:
+		findchips_url += character
+	    else:
+		findchips_url += format("%{0:02x}".format(ord(character)))
+	if trace:
+	    print("findchips_url='{0}'".format(findchips_url))
+	findchips_response = requests.get(findchips_url)
+	findchips_text = findchips_response.text.encode("ascii", "ignore")
+
+	# Parse the *findchips_text* into *find_chips_tree*:
+	findchips_tree = BeautifulSoup(findchips_text, "html.parser")
+	  
+	#if trace:
+	#    print(findchips_tree.prettify())
+
+	# We use regular expressions to strip out unnecessary characters
+	# in numbrers:
+	digits_only_re = re.compile("\D")
+
+	# Result is returned in *vendor_parts*:
+	vendor_parts = []
+
+	# Currently, there is a <div class="distributor_results"> tag for
+	# each distributor:
+	for distributor_tree in findchips_tree.find_all("div",
+	  class_="distributor-results"):
+	    if trace:
+		print("**************************************************")
+		print(distributor_tree.prettify())
+
+	    # The vendor name is burried in:
+	    #   <h3 class="distributor-title"><a ...>vendor name</a></h3>:
+	    vendor_name = None
+	    for h3_tree in distributor_tree.find_all(
+	      "h3", class_="distributor-title"):
+		#print("&&&&&&&&&&&&&&&&&&&&&&&")
+		#print(h3_tree.prettify())
+		for a_tree in h3_tree.find_all("a"):
+		    vendor_name = a_tree.get_text(). \
+		      encode("ascii", "ignore").strip(" \n")
+
+		    # Strip some boring stuff off the end of *vendor_name*:
+		    if vendor_name.endswith("Authorized Distributor"):
+			# Remove "Authorized Distributor" from end
+			# of *vendor_name*:
+			vendor_name = vendor_name[:-22].strip(" ")
+		    if vendor_name.endswith("Member"):
+			# Remove "Member" from end of *vendor_name*:
+			vendor_name = vendor_name[:-6].strip(" ")
+		    if vendor_name.endswith("ECIA (NEDA)"):
+			# Remove "ECIA (NEDA)" from end of *vendor_name*:
+			vendor_name = vendor_name[:-11].strip(" ")
+
+	    # If we can not extact a valid *vendor_name* there is no
+	    # point in continuing to work on this *distributor_tree*:
+	    if vendor_name == None:
+		continue
+
+	    currency = "?"
+	    try:
+		currency = distributor_tree["data-currencycode"]
+	    except:
+		pass
+
+	    # All of the remaining information is found in <table>...</table>:
+	    for table_tree in distributor_tree.find_all("table"):
+		#print(table_tree.prettify())
+
+		# There two rows per table.  The first row has the headings
+		# and the second row has the data.  The one with the data
+		# has a class of "row" -- <row clase="row"...> ... </row>:
+		for row_tree in table_tree.find_all("tr", class_="row"):
+		    if trace:
+			print("==============================================")
+		    #print(row_tree.prettify())
+	
+
+		    # Now we grab the *vendor_part_name*.  Some vendors
+		    # (like Arrow) use the manufacture part number as their
+		    # *vendor_part_name*.  The data is in:
+		    #     <span class="additional-value"> ... </span>:
+		    vendor_part_name = manufacturer_part_name
+		    for span1_tree in row_tree.find_all(
+		      "span", class_="td-desc-distributor"):
+			#print(span1_tree.prettify())
+			for span2_tree in span1_tree.find_all(
+			  "span", class_="additional-value"):
+			    vendor_part_name = span2_tree.get_text(). \
+			      encode("ascii", "ignore").strip(" \n")
+
+		    stock = 0
+		    stock_tree = row_tree.find("td", class_="td-stock")
+		    if stock_tree != None:
+			stock_text = \
+			  digits_only_re.sub("", stock_tree.get_text())
+ 			if len(stock_text) != 0:
+			    stock = int(stock_text)
+
+		    manufacturer_name = ""
+		    for mfg_name_tree in row_tree.find_all(
+		      "td", class_="td-mfg"):
+			for span_tree in mfg_name_tree.find_all("span"):
+			    manufacturer_name = span_tree.get_text(). \
+			      encode("ascii", "ignore").strip(" \n")
+
+		    manufacturer_part_name = ""
+		    for mfg_part_tree in row_tree.find_all(
+		      "td", class_="td-part"):
+			for a_tree in mfg_part_tree.find_all("a"):
+			    manufacturer_part_name = a_tree.get_text(). \
+			      encode("ascii", "ignore").strip(" \n")
+
+		    price_breaks = []
+		    price_list_tree = row_tree.find("td", class_="td-price")
+		    if price_list_tree != None:
+			for li_tree in price_list_tree.find_all("li"):
+			    quantity_tree = li_tree.find("span", class_="label")
+			    price_tree = li_tree.find("span", class_="value")
+			    if quantity_tree != None and price_tree != None:
+			        quantity_text = digits_only_re.sub("",
+				  quantity_tree.get_text())
+				quantity = 1
+				if quantity_text != "":
+				    quantity = int(quantity_text)
+				price_text = ""
+				for character in price_tree.get_text():
+				    if character.isdigit() or character == ".":
+					price_text += character
+				price = float(price_text)
+				if price > 0.0:
+				    price_break = Price_Break(quantity, price)
+				    price_breaks.append(price_break)
+
+		    if original_manufacturer_part_name == \
+		      manufacturer_part_name:
+			now = time.time()
+			vendor_part = Vendor_Part(actual_part,
+			  vendor_name, vendor_part_name,
+			  stock, price_breaks, now)
+			vendor_parts.append(vendor_part)
+
+			if trace:
+			    # Print everything out:
+			    print("vendor_name='{0}'".format(vendor_name))
+			    print("vendor_part_name='{0}'".
+			     format(vendor_part_name))
+			    print("manufacturer_part_name='{0}'".
+			      format(manufacturer_part_name))
+			    print("manufacturer_name='{0}'".
+			      format(manufacturer_name))
+			    print("stock={0}".format(stock))
+			    price_breaks.sort()
+			    for price_break in price_breaks:
+				print("{0}: {1:.6f} ({2})".
+				  format(price_break.quantity,
+				  price_break.price, currency))
+	if len(vendor_parts) == 0:
+       	    print("**********Find '{0}:{1}': {2} matches".
+	      format(actual_part.manufacturer_name,
+	      actual_part.manufacturer_part_name, len(vendor_parts)))
+
+	return vendor_parts
+
     def fractional_part(self, schematic_part_name, kicad_footprint,
       whole_part_name, numerator, denominator, description):
 	""" *Fractional_Part*: Insert a new *Fractional_Part* named
@@ -1186,24 +1364,20 @@ class Database:
 	return schematic_part
 
     def save(self):
-	""" *Database*: Save the contents of the *Database* object
-	    (i.e. *self*).
+	""" *Database*: Save the *vendor_parts* portion of the *Database*
+	    object (i.e. *self*).
 	"""
 
 	#print("=>Database.save")
 
-	# Remove any vendor parts that were not actually looked up
-	# from the vendor web site:
-	vendors_parts = {}
-	for vendor in self.vendors.values():
-	    vendor_name = vendor.name
-	    vendor_parts = vendor.vendor_parts
-	    vendors_parts[vendor_name] = vendor_parts
-	    #print("  Database.save: vendor:{0} size:{1}".
-	    #  format(vendor_name, len(vendor_parts)))
+	vendor_parts_cache = self.vendor_parts_cache
+	for vendor_parts in vendor_parts_cache.values():
+	    assert isinstance(vendor_parts, list)
+	    for vendor_part in vendor_parts:
+		assert isinstance(vendor_part, Vendor_Part)
 
 	bom_pickle_file = open(self.bom_parts_file_name, "w")
-	pickle.dump(vendors_parts, bom_pickle_file)
+	pickle.dump(self.vendor_parts_cache, bom_pickle_file)
 	bom_pickle_file.close()
 
 	#print("<=Database.save")
@@ -1260,7 +1434,7 @@ class Order:
 	assert isinstance(database, Database)
 
 	self.boards = []	  # List[Board]: Boards	
-	self.vendor_excludes = [] # List[String]: Excluded vendors
+	self.excluded_vendor_names = {} # Dict[String]: Excluded vendors
 	self.requests = []	  # List[Request]: Additional requested parts
 	self.inventories = []	  # List[Inventory]: Existing inventoried parts
 	self.database = database
@@ -1292,7 +1466,7 @@ class Order:
 
 	# Grab *database* and *vendors*:
 	database = self.database
-	vendors = database.vendors
+	excluded_vendor_names = self.excluded_vendor_names
 
 	# Open *bom_file*
 	bom_file = sys.stdout
@@ -1322,7 +1496,7 @@ class Order:
 	      choice_part.count_get(), choice_part.references_text_get()))
 
 	    # Select the vendor_part and associated quantity/cost
-	    choice_part.select()
+	    choice_part.select(excluded_vendor_names)
 	    selected_actual_part = choice_part.selected_actual_part
 	    selected_vendor_part = choice_part.selected_vendor_part
 	    selected_order_quantity = choice_part.selected_order_quantity
@@ -1333,8 +1507,6 @@ class Order:
 		# Grab the *vendor_name*:
 		assert isinstance(selected_vendor_part, Vendor_Part)
 		vendor_name = selected_vendor_part.vendor_name
-		assert vendor_name in vendors, \
-		  "No vendor named '{0}'".format(vendor_name)
 
 		# Show the *price breaks* on each side of the
 		# *selected_price_breaks_index*:
@@ -1354,9 +1526,15 @@ class Order:
 		      price_break.quantity, price_break.price)
 
 		# Print out the line:
-		bom_file.write("    {0}:{1} {2}\n".
+		selected_actual_key = selected_vendor_part.actual_part_key
+		selected_manufacturer_name = selected_actual_key[0]
+		selected_manufacturer_part_name = selected_actual_key[1]
+		bom_file.write("    {0}:{1} [{2}: {3}] {4}\n".
 		  format(selected_vendor_part.vendor_name,
-		  selected_vendor_part.vendor_part_name, price_breaks_text))
+		    selected_vendor_part.vendor_part_name,
+		    selected_manufacturer_name,
+		    selected_manufacturer_part_name,		
+		    price_breaks_text))
 
 		# Print out the result:
 		bom_file.write("        {0}@({1}/${2:.3f})={3:.2f}\n".format(
@@ -1378,7 +1556,6 @@ class Order:
 	# Grab the *database* and *vendors*:
 	boards = self.boards
 	database = self.database
-	vendors = database.vendors
 
 	# Sort *boards* by name (opitional step):
 	boards.sort(key = lambda board:board.name)
@@ -1437,24 +1614,26 @@ class Order:
 		    choice_part.board_parts.append(board_part)
 
 		    # Refresh the vendor part cache for each *actual_part*:
+                    vendor_parts_cache = database.vendor_parts_cache
+
 		    actual_parts = choice_part.actual_parts
 		    for actual_part in actual_parts:
 			actual_key = actual_part.key
-			#print("  actual_part: {0}".format(actual_key))
-			for vendor in vendors.values():
-			    # Load the *vendor_part* for this vendor:
-			    vendor_part = vendor.lookup(actual_part)
+			if actual_key in vendor_parts_cache:
+			    vendor_parts = vendor_parts_cache[actual_key]
+			else:
+			    vendor_parts = \
+			      database.findchips_scrape(actual_part)
+			    vendor_parts_cache[actual_key] = vendor_parts
+			#assert len(actual_part.vendor_parts) == 0
+			for vendor_part in vendor_parts:
 			    actual_part.vendor_part_append(vendor_part)
-			    #print("    vendor_part: {0}".
-			    #  format(vendor_part.vendor_part_name))
 
-	# Save the *database* because we've loaded all of the *vendor_part*'s:
+	# Save the *database* because we've loaded all of the *vendor_parts*'s:
 	database.save()
 
 	# Sort by *final_choice_parts* by schematic part name:
 	final_choice_parts = choice_parts_table.values()
-	final_choice_parts.sort(key = lambda choice_part:
-	  choice_part.schematic_part_name)
 	self.final_choice_parts = final_choice_parts
 
 	# Open the CSV (Comma Separated Value) file for BOM uploading:
@@ -1464,6 +1643,8 @@ class Order:
 
 	# Open each vendor output file:
 	vendor_files = {}
+
+	excluded_vendor_names = self.excluded_vendor_names
 
 	# Now generate a BOM summary:
 	total_cost = 0.0
@@ -1481,7 +1662,7 @@ class Order:
 	    #  choice_part.count_get(), choice_part.references_text_get()))
 
 	    # Select the vendor_part and associated quantity/cost
-	    choice_part.select()
+	    choice_part.select(excluded_vendor_names)
 	    selected_actual_part = choice_part.selected_actual_part
 	    selected_vendor_part = choice_part.selected_vendor_part
 	    selected_order_quantity = choice_part.selected_order_quantity
@@ -1567,10 +1748,8 @@ class Order:
 	# Verify argument typees:
 	assert isinstance(vendor_name, str)
 
-	# Revmove *vendor_name* from 
-	vendors = self.database.vendors
-	if vendor_name in vendors:
-	    del vendors[vendor_name]
+	# Mark *vendor_name* from being selectable:
+	self.excluded_vendor_names[vendor_name] = None
 
 class Request:
     def __init__(self, schematic_part, amount):
@@ -2046,9 +2225,10 @@ class Choice_Part(Schematic_Part):
 	references_text += "]"
 	return references_text
 
-    def select(self):
+    def select(self, excluded_vendor_names):
 	""" *Choice_Part*: Select and return the best priced *Actual_Part*
-	    for the *Choice_Part* (i.e. *self*).
+	    for the *Choice_Part* (i.e. *self*) excluding any vendors
+	    in the *excluded_vendor_names* dictionary.
 	"""
 
 	# This lovely piece of code basically brute forces the decision
@@ -2082,7 +2262,8 @@ class Choice_Part(Schematic_Part):
 
 		    # Assemble the *quint* and append to *quints* if there
 		    # enough parts available:
-		    if vendor_part.quantity_available >= order_quantity:
+		    if not vendor_part.vendor_name in excluded_vendor_names \
+		      and vendor_part.quantity_available >= order_quantity:
 			assert price_break_index < len(price_breaks)
 		        quint = (total_cost, order_quantity,
 		          actual_part_index, vendor_part_index,
@@ -2116,6 +2297,8 @@ class Choice_Part(Schematic_Part):
 	    self.selected_price_break_index = selected_price_break_index
 	    assert selected_price_break_index < \
 	      len(selected_vendor_part.price_breaks)
+
+	    #print("selected_vendor_name='{0}'".format(selected_vendor_name))
 
 	#actual_parts = self.actual_parts
 	#for actual_part in actual_parts:
@@ -2214,6 +2397,8 @@ class Actual_Part:
 	key = (manufacturer_name, manufacturer_part_name)
 	
 	# Load up *self*:
+	self.manufacturer_name = manufacturer_name
+	self.manufacturer_part_name = manufacturer_part_name
 	self.key = key
 	# Fields used by algorithm:
 	self.quantity_needed = 0
@@ -2227,191 +2412,191 @@ class Actual_Part:
 	assert isinstance(vendor_part, Vendor_Part)
 	self.vendor_parts.append(vendor_part)
 
-class Vendor:
-    # *Vendor* is a base class for a vendor (i.e. distributor.)
-    # Each vendor with a screen scraper is sub-classed off this class.
+#class Vendor:
+#    # *Vendor* is a base class for a vendor (i.e. distributor.)
+#    # Each vendor with a screen scraper is sub-classed off this class.
+#
+#    def __init__(self, name):
+#	assert isinstance(name, str)
+#	self.name = name
+#	self.vendor_parts = {}
+#
+#    def tiers_to_price_breaks(self, price_tiers):
+#	""" *Vendor*: 
+#	"""
+#
+#	# Check argument types:
+#	assert isinstance(price_tiers, dict)
+#
+#	price_breaks = []
+#	quantities = price_tiers.keys()
+#	quantities.sort()
+#	for quantity in quantities:
+#	    price = price_tiers[quantity]
+#	    assert isinstance(price, float)
+#	    price_break = Price_Break(quantity, price)
+#	    price_breaks.append(price_break)
+#	return price_breaks
+#
+#    def cache_lookup(self, actual_part):
+#	assert isinstance(actual_part, Actual_Part)
+#	vendor_part = None
+#	key = actual_part.key
+#	manufacturer_part_name = key[1]
+#	vendor_parts = self.vendor_parts
+#	if manufacturer_part_name in vendor_parts:
+#	    vendor_part = vendor_parts[manufacturer_part_name]
+#	return vendor_part
+#
+#    def vendor_part_insert(self, vendor_part):
+#	assert vendor_part.vendor_name == self.name
+#	self.vendor_parts[vendor_part.vendor_part_name] = vendor_part
+#
+#class Vendor_Digikey(Vendor):
+#    def __init__(self):
+#	""" *Vendor_Digikey*: Initialize the Digikey scraper code:
+#	"""
+#
+#	# Initialize super class:
+#	Vendor.__init__(self, "Digikey")
+#	
+#    def lookup(self, actual_part):
+#	""" *Vendor_Digikey*: Return the *Vendor_Part* object for *
+#	"""
+#
+#	# Check argument types:
+#	assert isinstance(actual_part, Actual_Part)
+#
+#	manufacturer_part_name = actual_part.key[1]
+#	vendor_part = self.cache_lookup(actual_part)
+#	if isinstance(vendor_part, Vendor_Part):
+#	    #print("Using part from Digikey cache: {0}".
+#	    #  format(vendor_part.vendor_part_name))
+#	    pass
+#	else:
+#	    try:
+#		html_tree, digikey_url = \
+#		  kicost.get_digikey_part_html_tree(manufacturer_part_name)
+#		price_tiers = kicost.get_digikey_price_tiers(html_tree)
+#		price_breaks = self.tiers_to_price_breaks(price_tiers)
+#		quantity_available = kicost.get_digikey_qty_avail(html_tree)
+#		vendor_part_name = kicost.get_digikey_part_num(html_tree)
+#		vendor_part_name = vendor_part_name.encode('ascii', 'ignore')
+#		print("Found DigiKey: VP#:{0} Avail:{1}".format(
+#		  vendor_part_name, quantity_available))
+#		vendor_part = Vendor_Part(actual_part,
+#		  self.name, vendor_part_name,
+#		  quantity_available, price_breaks, time.time())
+#		self.vendor_parts[manufacturer_part_name] = vendor_part
+#		#print("Digikey has part: {0}".format(manufacturer_part_name))
+#	    except kicost.PartHtmlError:
+#		# Create a place holder that indicates that we attempted
+#		# to look up the part and failed:
+#		print("Digikey does not have part: {0}".
+#		  format(manufacturer_part_name))
+#		vendor_part = Vendor_Part(actual_part,
+#		  self.name, "", 0, [], time.time())
+#		self.vendor_parts[manufacturer_part_name] = vendor_part
+#	return vendor_part
+#	
+#class Vendor_Mouser(Vendor):
+#    def __init__(self):
+#	""" *Vendor_Mouser*: Initialize the Mouser scraper code:
+#	"""
+#
+#	# Initialize super class:
+#	Vendor.__init__(self, "Mouser")
+#	
+#    def lookup(self, actual_part):
+#	""" *Vendor_Mouser*: Return the *Vendor_Part* object for *
+#	"""
+#
+#	# Check argument types:
+#	assert isinstance(actual_part, Actual_Part)
+#
+#	manufacturer_part_name = actual_part.key[1]
+#	vendor_part = self.cache_lookup(actual_part)
+#	if isinstance(vendor_part, Vendor_Part):
+#	    #print("Using part from Mouser cache: {0}".
+#	    #  format(vendor_part.vendor_part_name))
+#	    pass
+#	else:
+#	    try:
+#		html_tree, mouser_url = \
+#		  kicost.get_mouser_part_html_tree(manufacturer_part_name)
+#		price_tiers = kicost.get_mouser_price_tiers(html_tree)
+#		price_breaks = self.tiers_to_price_breaks(price_tiers)
+#		if len(price_breaks) == 0:
+#		    raise kicost.PartHtmlError
+#		quantity_available = kicost.get_mouser_qty_avail(html_tree)
+#		vendor_part_name = kicost.get_mouser_part_num(html_tree)
+#		vendor_part_name = vendor_part_name.encode('ascii', 'ignore')
+#		print("Found Mouser: VP#:{0} Avail:{1}".format(
+#		  vendor_part_name, quantity_available))
+#		vendor_part = Vendor_Part(actual_part,
+#		  self.name, vendor_part_name,
+#		  quantity_available, price_breaks, time.time())
+#		self.vendor_parts[manufacturer_part_name] = vendor_part
+#		#print("Mouser has part: {0}".format(manufacturer_part_name))
+#	    except kicost.PartHtmlError:
+#		# Create a place holder that indicates that we attempted
+#		# to look up the part and failed:
+#		print("Mouser does not have part: {0}".
+#		  format(manufacturer_part_name))
+#		vendor_part = Vendor_Part(actual_part,
+#		  self.name, "", 0, [], time.time())
+#		self.vendor_parts[manufacturer_part_name] = vendor_part
+#	return vendor_part
+#	
+#class Vendor_Newark(Vendor):
+#    def __init__(self):
+#	""" *Vendor_Newark*: Initialize the Newark scraper code:
+#	"""
+#
+#	# Initialize super class:
+#	Vendor.__init__(self, "Newark")
+#	
+#    def lookup(self, actual_part):
+#	""" *Vendor_Newark*: Return the *Vendor_Part* object for *
+#	"""
+#
+#	# Check argument types:
+#	assert isinstance(actual_part, Actual_Part)
+#
+#	manufacturer_part_name = actual_part.key[1]
+#	vendor_part = self.cache_lookup(actual_part)
+#	if isinstance(vendor_part, Vendor_Part):
+#	    #print("Using part from Newark cache: {0}".
+#	    #  format(vendor_part.vendor_part_name))
+#	    pass
+#	else:
+#	    try:
+#		html_tree, newark_url = \
+#		  kicost.get_newark_part_html_tree(manufacturer_part_name)
+#		price_tiers = kicost.get_newark_price_tiers(html_tree)
+#		price_breaks = self.tiers_to_price_breaks(price_tiers)
+#		if len(price_breaks) == 0:
+#		    raise kicost.PartHtmlError
+#		quantity_available = kicost.get_newark_qty_avail(html_tree)
+#		vendor_part_name = kicost.get_newark_part_num(html_tree)
+#		vendor_part_name = vendor_part_name.encode('ascii', 'ignore')
+#		print("Found Newark: VP#:{0} Avail:{1}".format(
+#		  vendor_part_name, quantity_available))
+#		vendor_part = Vendor_Part(actual_part,
+#		  self.name, vendor_part_name,
+#		  quantity_available, price_breaks, time.time())
+#		self.vendor_parts[manufacturer_part_name] = vendor_part
+#		#print("Newark has part: {0}".format(manufacturer_part_name))
+#	    except kicost.PartHtmlError:
+#		# Create a place holder that indicates that we attempted
+#		# to look up the part and failed:
+#		print("Newark does not have part: {0}".
+#		  format(manufacturer_part_name))
+#		vendor_part = Vendor_Part(actual_part,
+#		  self.name, "", 0, [], time.time())
+#		self.vendor_parts[manufacturer_part_name] = vendor_part
+#	return vendor_part
 
-    def __init__(self, name):
-	assert isinstance(name, str)
-	self.name = name
-	self.vendor_parts = {}
-
-    def tiers_to_price_breaks(self, price_tiers):
-	""" *Vendor*: 
-	"""
-
-	# Check argument types:
-	assert isinstance(price_tiers, dict)
-
-	price_breaks = []
-	quantities = price_tiers.keys()
-	quantities.sort()
-	for quantity in quantities:
-	    price = price_tiers[quantity]
-	    assert isinstance(price, float)
-	    price_break = Price_Break(quantity, price)
-	    price_breaks.append(price_break)
-	return price_breaks
-
-    def cache_lookup(self, actual_part):
-	assert isinstance(actual_part, Actual_Part)
-	vendor_part = None
-	key = actual_part.key
-	manufacturer_part_name = key[1]
-	vendor_parts = self.vendor_parts
-	if manufacturer_part_name in vendor_parts:
-	    vendor_part = vendor_parts[manufacturer_part_name]
-	return vendor_part
-
-    def vendor_part_insert(self, vendor_part):
-	assert vendor_part.vendor_name == self.name
-	self.vendor_parts[vendor_part.vendor_part_name] = vendor_part
-
-class Vendor_Digikey(Vendor):
-    def __init__(self):
-	""" *Vendor_Digikey*: Initialize the Digikey scraper code:
-	"""
-
-	# Initialize super class:
-	Vendor.__init__(self, "Digikey")
-	
-    def lookup(self, actual_part):
-	""" *Vendor_Digikey*: Return the *Vendor_Part* object for *
-	"""
-
-	# Check argument types:
-	assert isinstance(actual_part, Actual_Part)
-
-	manufacturer_part_name = actual_part.key[1]
-	vendor_part = self.cache_lookup(actual_part)
-	if isinstance(vendor_part, Vendor_Part):
-	    #print("Using part from Digikey cache: {0}".
-	    #  format(vendor_part.vendor_part_name))
-	    pass
-	else:
-	    try:
-		html_tree, digikey_url = \
-		  kicost.get_digikey_part_html_tree(manufacturer_part_name)
-		price_tiers = kicost.get_digikey_price_tiers(html_tree)
-		price_breaks = self.tiers_to_price_breaks(price_tiers)
-		quantity_available = kicost.get_digikey_qty_avail(html_tree)
-		vendor_part_name = kicost.get_digikey_part_num(html_tree)
-		vendor_part_name = vendor_part_name.encode('ascii', 'ignore')
-		print("Found DigiKey: VP#:{0} Avail:{1}".format(
-		  vendor_part_name, quantity_available))
-		vendor_part = Vendor_Part(actual_part,
-		  self.name, vendor_part_name,
-		  quantity_available, price_breaks, time.time())
-		self.vendor_parts[manufacturer_part_name] = vendor_part
-		#print("Digikey has part: {0}".format(manufacturer_part_name))
-	    except kicost.PartHtmlError:
-		# Create a place holder that indicates that we attempted
-		# to look up the part and failed:
-		print("Digikey does not have part: {0}".
-		  format(manufacturer_part_name))
-		vendor_part = Vendor_Part(actual_part,
-		  self.name, "", 0, [], time.time())
-		self.vendor_parts[manufacturer_part_name] = vendor_part
-	return vendor_part
-	
-class Vendor_Mouser(Vendor):
-    def __init__(self):
-	""" *Vendor_Mouser*: Initialize the Mouser scraper code:
-	"""
-
-	# Initialize super class:
-	Vendor.__init__(self, "Mouser")
-	
-    def lookup(self, actual_part):
-	""" *Vendor_Mouser*: Return the *Vendor_Part* object for *
-	"""
-
-	# Check argument types:
-	assert isinstance(actual_part, Actual_Part)
-
-	manufacturer_part_name = actual_part.key[1]
-	vendor_part = self.cache_lookup(actual_part)
-	if isinstance(vendor_part, Vendor_Part):
-	    #print("Using part from Mouser cache: {0}".
-	    #  format(vendor_part.vendor_part_name))
-	    pass
-	else:
-	    try:
-		html_tree, mouser_url = \
-		  kicost.get_mouser_part_html_tree(manufacturer_part_name)
-		price_tiers = kicost.get_mouser_price_tiers(html_tree)
-		price_breaks = self.tiers_to_price_breaks(price_tiers)
-		if len(price_breaks) == 0:
-		    raise kicost.PartHtmlError
-		quantity_available = kicost.get_mouser_qty_avail(html_tree)
-		vendor_part_name = kicost.get_mouser_part_num(html_tree)
-		vendor_part_name = vendor_part_name.encode('ascii', 'ignore')
-		print("Found Mouser: VP#:{0} Avail:{1}".format(
-		  vendor_part_name, quantity_available))
-		vendor_part = Vendor_Part(actual_part,
-		  self.name, vendor_part_name,
-		  quantity_available, price_breaks, time.time())
-		self.vendor_parts[manufacturer_part_name] = vendor_part
-		#print("Mouser has part: {0}".format(manufacturer_part_name))
-	    except kicost.PartHtmlError:
-		# Create a place holder that indicates that we attempted
-		# to look up the part and failed:
-		print("Mouser does not have part: {0}".
-		  format(manufacturer_part_name))
-		vendor_part = Vendor_Part(actual_part,
-		  self.name, "", 0, [], time.time())
-		self.vendor_parts[manufacturer_part_name] = vendor_part
-	return vendor_part
-	
-class Vendor_Newark(Vendor):
-    def __init__(self):
-	""" *Vendor_Newark*: Initialize the Newark scraper code:
-	"""
-
-	# Initialize super class:
-	Vendor.__init__(self, "Newark")
-	
-    def lookup(self, actual_part):
-	""" *Vendor_Newark*: Return the *Vendor_Part* object for *
-	"""
-
-	# Check argument types:
-	assert isinstance(actual_part, Actual_Part)
-
-	manufacturer_part_name = actual_part.key[1]
-	vendor_part = self.cache_lookup(actual_part)
-	if isinstance(vendor_part, Vendor_Part):
-	    #print("Using part from Newark cache: {0}".
-	    #  format(vendor_part.vendor_part_name))
-	    pass
-	else:
-	    try:
-		html_tree, newark_url = \
-		  kicost.get_newark_part_html_tree(manufacturer_part_name)
-		price_tiers = kicost.get_newark_price_tiers(html_tree)
-		price_breaks = self.tiers_to_price_breaks(price_tiers)
-		if len(price_breaks) == 0:
-		    raise kicost.PartHtmlError
-		quantity_available = kicost.get_newark_qty_avail(html_tree)
-		vendor_part_name = kicost.get_newark_part_num(html_tree)
-		vendor_part_name = vendor_part_name.encode('ascii', 'ignore')
-		print("Found Newark: VP#:{0} Avail:{1}".format(
-		  vendor_part_name, quantity_available))
-		vendor_part = Vendor_Part(actual_part,
-		  self.name, vendor_part_name,
-		  quantity_available, price_breaks, time.time())
-		self.vendor_parts[manufacturer_part_name] = vendor_part
-		#print("Newark has part: {0}".format(manufacturer_part_name))
-	    except kicost.PartHtmlError:
-		# Create a place holder that indicates that we attempted
-		# to look up the part and failed:
-		print("Newark does not have part: {0}".
-		  format(manufacturer_part_name))
-		vendor_part = Vendor_Part(actual_part,
-		  self.name, "", 0, [], time.time())
-		self.vendor_parts[manufacturer_part_name] = vendor_part
-	return vendor_part
-	
 class Vendor_Part:
     # A vendor part represents a part that can be ordered from a vendor.
 
