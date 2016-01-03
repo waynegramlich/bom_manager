@@ -157,9 +157,6 @@ from sexpdata import Symbol	# (LISP) S-EXpression Symbol
 import sys			# Miscellanesous SYStem stuff
 import time			# Time package
 
-# Old:
-#import kicost # `ln -s ~/public_html/project/KiCost/kicost/kicost.py`
-
 # Data Structure and Algorithm Overview:
 # 
 # There are a plethora of interlocking data structures.  The top level
@@ -1669,26 +1666,172 @@ class Order:
 	bom_file.write("Total: ${0:.2f}\n".format(total_cost))
 	bom_file.close()
 
-    def process(self):
-	""" *Order*: Process the order. """
+    def exclude_vendors_to_reduce_shipping_costs(self,
+      choice_parts, excluded_vendor_names):
+	""" *Order*: Sweep through *choice_parts* and figure out which vendors
+	    to add to *excluded_vendor_names* to reduce shipping costs.
+	"""
 
-	#print("=>Order.process()")
+	# Verify argument types:
+	assert isinstance(choice_parts, list)
+	assert isinstance(excluded_vendor_names, dict)
 
-	# Grab the *database* and *vendors*:
+	# First figure out the total *missing_parts*.  We will stop if
+	# excluding a vendor increases above the *missing_parts* number:
+	quad = \
+	  self.quad_compute(choice_parts, excluded_vendor_names, "")
+	missing_parts = quad[0]
+
+	# Sweep through and figure out what vendors to order from:
+	done = False
+	while not done:
+	    # Get the base cost for the current *excluded_vendor_names*:
+	    base_quad = \
+	      self.quad_compute(choice_parts, excluded_vendor_names, "")
+	    #print("base_quad={0}".format(base_quad))
+
+	    # If the *base_missing_parts* increases, we need to stop because
+	    # excluding additional vendors will cause the order to become
+	    # incomplete:
+	    base_missing_parts = base_quad[0]
+	    assert isinstance(base_missing_parts, int)
+	    if base_missing_parts > missing_parts:
+		break
+
+            # Grab *base_cost*:
+	    base_cost = base_quad[1]
+	    assert isinstance(base_cost, float)
+	    
+	    # Figure out what vendors are still available for *choice_parts*:
+	    base_vendor_names = \
+	      self.vendor_names_get(choice_parts, excluded_vendor_names)
+	    assert isinstance(base_vendor_names, tuple)
+	    #print("base: {0} {1}".format(base_cost, base_vendor_names))
+
+	    # For small designs, sometimes the algorithm will attempt to
+	    # throw everything out.  The test below makes sure we always
+	    # have one last remaining vendor:
+	    if len(base_vendor_names) <= 1:
+		break
+
+	    # Iterate through *vendor_names*, excluding one *vendor_name*
+	    # at a time:
+	    trial_quads = []
+            for vendor_name in base_vendor_names:
+		# Create *trial_excluded_vendor_names* which is a copy
+		# of *excluded_vendor_names* plus *vendor_name*:
+		trial_excluded_vendor_names = dict(excluded_vendor_names)
+		trial_excluded_vendor_names[vendor_name] = None
+
+		# Get the base cost for *trial_excluded_vendor_names*
+		# and tack it onto *trial_quads*:
+		trial_quad = self.quad_compute(choice_parts,
+		  trial_excluded_vendor_names, vendor_name)
+		trial_quads.append(trial_quad)
+
+		# For debugging only:
+		#trial_cost = trial_quad[0]
+		#trial_vendor_name = trial_quad[1]
+		#print("    {0:.2f} with {1} excluded".
+		#  format(trial_cost, trial_vendor_name))
+
+	    # Sort the *trial_quads* to bring the most interesting one to the
+	    # front:
+	    trial_quads.sort()
+	    # For debugging:
+	    #for trial_quad in trial_quads:
+	    #	print("   {0}".format(trial_quad))
+
+	    # Quickly ignore all vendors that have zero cost savings:
+	    while len(trial_quads) >= 2:
+		# We want to ensure that *trial_quads* always has at least 2
+		# entries for so that the next step after this loop will be
+		# guaranteed to have at least one entry in *trial_quads*:
+		lowest_quad = trial_quads[0]
+		lowest_cost = lowest_quad[1]
+		lowest_vendor_name = lowest_quad[3]
+		savings = lowest_cost - base_cost
+		if savings == 0.0:
+		    # This vendor offers no savings; get rid of the vendor:
+		    print("Excluding '{0}': saves nothing".
+		      format(lowest_vendor_name, savings))
+		    excluded_vendor_names[lowest_vendor_name] = None
+		    del trial_quads[0]
+		else:
+		    # We are done skipping over zero *savings*:
+		    break
+	    assert len(trial_quads) >= 1
+		
+	    # Grab some values from *lowest_quad*:
+	    lowest_quad = trial_quads[0]
+	    lowest_cost = lowest_quad[1]
+	    lowest_vendor_name = lowest_quad[3]
+	    savings = lowest_cost - base_cost
+	    #print("      Lowest {0} with {1} exlcuded".
+	    #  format(lowest_cost, lowest_vendor_name))
+
+	    # We use $5.00 as an approximate minimum shipping cost.
+	    # If the savings is less that the shipping cost, we exclude
+	    # the vendor:
+	    if savings < 5.0 and len(trial_quads) >= 2:
+		# The shipping costs are too high and there at lease one
+		# vendor left; exclude this vendor:
+		print("Excluding '{0}': only saves {1:.2f}".
+		  format(lowest_vendor_name, savings))
+		excluded_vendor_names[lowest_vendor_name] = None
+	    else:
+		# We are done when *lowest_quad* is worth shipping:
+		#print("lowest_cost={0:.2f}".format(lowest_cost))
+		done = True
+
+    def exclude_vendors_with_high_minimums(self,
+      choice_parts, excluded_vendor_names):
+	""" *Order*: Sweep through *choice* parts and figure out if the
+	    vendors with large minimum orders can be dropped:
+	"""
+
+	# Verify argument types:
+	assert isinstance(choice_parts, list)
+	assert isinstance(excluded_vendor_names, dict)
+
+	# Grab the talb eof *vendor_minimums*:
+	database = self.database
+	vendor_minimums = database.vendor_minimums
+
+	# Now visit each vendor a decide if we should dump them because
+	# they cost too much:
+	for vendor_name in vendor_minimums.keys():
+	    # Grab the *vendor_minimum_cost*:
+	    vendor_minimum_cost = vendor_minimums[vendor_name]
+
+	    # Compute *vendor_total_cost* by visiting each *choice_part*
+	    # to figure out if it has be selected to from *vendor_name*:
+	    vendor_total_cost = 0.0
+	    for choice_part in choice_parts:
+		choice_part.select(excluded_vendor_names)
+                if choice_part.selected_vendor_name == vendor_name:
+		    vendor_total_cost += choice_part.selected_total_cost
+
+	    # If the amount of order parts does not exceed the minimum,
+	    # exclude *vendor_name*:
+	    if vendor_total_cost < vendor_minimum_cost:
+		excluded_vendor_names[vendor_name] = None
+		print("Excluding '{0}': needed order {1} < minimum order {2}".
+		  format(vendor_name, vendor_total_cost, vendor_minimum_cost))
+
+    def final_choice_parts_compute(self):
+	""" *Order*: Return a list of final *Choice_Part* objects to order
+	    for the the *Order* object (i.e. *self*).  This routine also
+	    has the side effect of looking up the vendor information for
+	    each selected *Choice_Part* object.
+	"""
+
+	# Grab the *boards* and *database*:
 	boards = self.boards
 	database = self.database
 
-	# Sort *boards* by name (opitional step):
+	# Sort *boards* by name (not really needed, but why not?):
 	boards.sort(key = lambda board:board.name)
-
-	# We need to contruct a list of *Choice_Part* objects.  This
-        # will land in *final_choice_parts* below.   Only *Choice_Part*
-	# objects can actually be ordered because they list one or
-	# more *Actual_Part* objects to choose from.  Both *Alias_Part*
-	# objects and *Fractional_Part* objects eventually get
-	# converted to *Choice_Part* objects.  Once we have
-	# *final_choice_parts* it can be sorted various different ways
-	# (by vendor, by cost, by part_name, etc.)
 
 	# Visit each *board* in *boards* to locate the associated
 	# *Choice_Part* objects.  We want to eliminate duplicate
@@ -1758,11 +1901,10 @@ class Order:
 	database.save()
 
 	# Sort by *final_choice_parts* by schematic part name:
-	final_choice_parts = choice_parts_table.values()
+	final_choice_parts = list(choice_parts_table.values())
+	final_choice_parts.sort(
+	  key = lambda choice_part: choice_part.schematic_part_name)
 	self.final_choice_parts = final_choice_parts
-
-	# Open each vendor output file:
-	vendor_files = {}
 
 	# Sweep through *final_choice_parts* and force the associated
 	# *Board_Part*'s to be in a reasonable order:
@@ -1771,154 +1913,53 @@ class Order:
 	    assert isinstance(choice_part, Choice_Part)
 	    choice_part.board_parts_sort()
 
+	return final_choice_parts
+
+    def process(self):
+	""" *Order*: Process the order. """
+
+	#print("=>Order.process()")
+
+	# We need to contruct a list of *Choice_Part* objects.  This
+        # will land in *final_choice_parts* below.   Only *Choice_Part*
+	# objects can actually be ordered because they list one or
+	# more *Actual_Part* objects to choose from.  Both *Alias_Part*
+	# objects and *Fractional_Part* objects eventually get
+	# converted to *Choice_Part* objects.  Once we have
+	# *final_choice_parts* it can be sorted various different ways
+	# (by vendor, by cost, by part_name, etc.)
+	final_choice_parts = self.final_choice_parts_compute()
+
 	# Now we winnow down the total number of vendors to order from
-	# to minimize the number of orders that can be messed up
-	# (i.e. supply chain simplication) and to save shipping costs:
+	# to 1) minimize the number of orders that can be messed up
+	# (i.e. supply chain simplication) and to save shipping costs.
 	# There are two steps -- throw out vendors with excessive minimum
 	# order amounts followed by throwing out vendors where the savings
 	# do not exceed additional shipping costs.
-
-	# Step 1: Figure out which vendors have minimum order amounts that
-	# are so onerous that they are not worth ordering from:
 	excluded_vendor_names = self.excluded_vendor_names
-	vendor_minimums = database.vendor_minimums
-	for vendor_name in vendor_minimums.keys():
-	    vendor_minimum_cost = vendor_minimums[vendor_name]
+	self.exclude_vendors_with_high_minimums(
+	  final_choice_parts, excluded_vendor_names)
+	self.exclude_vendors_to_reduce_shipping_costs(
+	  final_choice_parts, excluded_vendor_names)
 
-	    # Evaluate each *choice_part* to figure out if it is
-	    # selected to match *vendor_name*:
-	    vendor_total_cost = 0.0
-	    for choice_part in final_choice_parts:
-		choice_part.select(excluded_vendor_names)
-                if choice_part.selected_vendor_name == vendor_name:
-		    vendor_total_cost += choice_part.selected_total_cost
+	# Print out the final selected vendor summary:
+	self.summary_print(final_choice_parts, excluded_vendor_names)
 
-	    # If the amount of order parts does not exceed the minimum,
-	    # exclude *vendor_name*:
-	    if vendor_total_cost < vendor_minimum_cost:
-		excluded_vendor_names[vendor_name] = None
-		print("Excluding '{0}': needed order {1} < minimum order {2}".
-		  format(vendor_name, vendor_total_cost, vendor_minimum_cost))
+	# Generate the bom file reports for *self.final_choice_parts*:
+	self.bom_write("bom_by_price.txt", lambda choice_part:
+	  (choice_part.selected_total_cost,
+	   choice_part.selected_vendor_name,
+	   choice_part.schematic_part_name) )
+	self.bom_write("bom_by_vendor.txt", lambda choice_part:
+	  (choice_part.selected_vendor_name,
+	  choice_part.selected_total_cost,
+	   choice_part.schematic_part_name) )
+	self.bom_write("bom_by_name.txt", lambda choice_part:
+	  (choice_part.schematic_part_name,
+	  choice_part.selected_vendor_name,
+	  choice_part.selected_total_cost) )
 
-	# First figure out the total *missing_parts*.  We will stop if
-	# excluding a vendor increases above this number:
-	quad = \
-	  self.process_helper1(final_choice_parts, excluded_vendor_names, "")
-	missing_parts = quad[0]
-
-	# Sweep through and figure out what vendors to order from:
-	done = False
-	while not done:
-	    # Get the base cost for the current *excluded_vendor_names*:
-	    base_quad = self.process_helper1(final_choice_parts,
-	      excluded_vendor_names, "")
-	    #print("base_quad={0}".format(base_quad))
-
-	    # If the *base_missing_parts* increases, we need to stop because
-	    # excluding additional vendors will cause the order to become
-	    # incomplete:
-	    base_missing_parts = base_quad[0]
-	    assert isinstance(base_missing_parts, int)
-	    if base_missing_parts > missing_parts:
-		break
-	    base_cost = base_quad[1]
-	    assert isinstance(base_cost, float)
-	    
-	    # Figure out what vendors are still available for *choice_parts*:
-	    base_vendor_names = \
-	      self.vendor_names_get(final_choice_parts, excluded_vendor_names)
-	    assert isinstance(base_vendor_names, tuple)
-	    #print("base: {0} {1}".format(base_cost, base_vendor_names))
-
-	    # For small designs, sometimes the algorithm will attempt to
-	    # throw everything out.  The test below makes sure we always
-	    # have one last remaining vendor:
-	    if len(base_vendor_names) <= 1:
-		break
-
-	    # Iterate through *vendor_names*, excluding one *vendor_name*
-	    # at a time:
-	    trial_quads = []
-            for vendor_name in base_vendor_names:
-		# Create *trial_excluded_vendor_names* which is a copy
-		# of *excluded_vendor_names* plus *vendor_name*:
-		trial_excluded_vendor_names = dict(excluded_vendor_names)
-		trial_excluded_vendor_names[vendor_name] = None
-
-		# Get the base cost for *trial_excluded_vendor_names*
-		# and tack it onto *trial_quads*:
-		trial_quad = self.process_helper1(final_choice_parts,
-		  trial_excluded_vendor_names, vendor_name)
-		trial_quads.append(trial_quad)
-
-		# For debugging only:
-		#trial_cost = trial_quad[0]
-		#trial_vendor_name = trial_quad[1]
-		#print("    {0:.2f} with {1} excluded".
-		#  format(trial_cost, trial_vendor_name))
-
-	    # Sort the *trial_quads* to bring the most interesting one to the
-	    # front:
-	    trial_quads.sort()
-	    # For debugging:
-	    #for trial_quad in trial_quads:
-	    #	print("   {0}".format(trial_quad))
-
-	    # Quickly ignore all vendors that have zero cost savings:
-	    while len(trial_quads) >= 2:
-		# We want to ensure that *trial_quads* always has at least 2
-		# entries for so that the next step after this loop will be
-		# guaranteed to have at least one entry in *trial_quads*:
-		lowest_quad = trial_quads[0]
-		lowest_cost = lowest_quad[1]
-		lowest_vendor_name = lowest_quad[3]
-		savings = lowest_cost - base_cost
-		if savings == 0.0:
-		    # This vendor offers no savings; get rid of the vendor:
-		    print("Excluding '{0}': saves nothing".
-		      format(lowest_vendor_name, savings))
-		    excluded_vendor_names[lowest_vendor_name] = None
-		    del trial_quads[0]
-		else:
-		    # We are done skipping over zero *savings*:
-		    break
-	    assert len(trial_quads) >= 1
-		
-	    # Grab some values from *lowest_quad*:
-	    lowest_quad = trial_quads[0]
-	    lowest_cost = lowest_quad[1]
-	    lowest_vendor_name = lowest_quad[3]
-	    savings = lowest_cost - base_cost
-	    #print("      Lowest {0} with {1} exlcuded".
-	    #  format(lowest_cost, lowest_vendor_name))
-
-	    # We use $5.00 as an approximate minimum shipping cost.
-	    # If the savings is less that the shipping cost, we exclude
-	    # the vendor:
-	    if savings < 5.0 and len(trial_quads) >= 2:
-		# The shipping costs are too high and there at lease one
-		# vendor left; exclude this vendor:
-		print("Excluding '{0}': only saves {1:.2f}".
-		  format(lowest_vendor_name, savings))
-		excluded_vendor_names[lowest_vendor_name] = None
-	    else:
-		# We are done when *lowest_quad* is worth shipping:
-		#print("lowest_cost={0:.2f}".format(lowest_cost))
-		done = True
-
-	# Let the user know what we winnowed the vendor list down to:
-	final_vendor_names = \
-	  self.vendor_names_get(final_choice_parts, excluded_vendor_names)
-	print("Final selected vendors:")
-	for vendor_name in final_vendor_names:
-	    print("    {0}".format(vendor_name))
-
-	# Print the fianl *total_cost*:
-	total_cost = 0.0
-	for choice_part in final_choice_parts:
-	    choice_part.select(excluded_vendor_names, False)
-	    total_cost += choice_part.selected_total_cost
-	print("Total Cost: {0}".format(total_cost))
+	#FIXME: This final part needs some additional work!!!:
 
 	# Now generate a BOM summary:
 	if False:
@@ -1987,37 +2028,22 @@ class Order:
 	    for csv_file in vendor_files.values():
 	        csv_file.close()
 
-	#print("Total: ${0:.2f}".format(total_cost))
-
 	#print("<=Order.process()")
 
-	# Generate the bom file reports:
-	self.bom_write("bom_by_price.txt", lambda choice_part:
-	  (choice_part.selected_total_cost,
-	   choice_part.selected_vendor_name,
-	   choice_part.schematic_part_name) )
-	self.bom_write("bom_by_vendor.txt", lambda choice_part:
-	  (choice_part.selected_vendor_name,
-	  choice_part.selected_total_cost,
-	   choice_part.schematic_part_name) )
-	self.bom_write("bom_by_name.txt", lambda choice_part:
-	  (choice_part.schematic_part_name,
-	  choice_part.selected_vendor_name,
-	  choice_part.selected_total_cost) )
 
-    def process_helper1(self,
+    def quad_compute(self,
       choice_parts, excluded_vendor_names, excluded_vendor_name, trace=False):
 	""" *Order*: Return quad tuple of the form:
 	       (*missing_parts*, *total_cost*,
-		*vendor_priority*, *excluded_vendor_name*).
-	    *missing_parts* is number of parts that can not be fullfilled.
-	    *total_cost* is the sum the parts costs for all *Choice_Part*
+		*vendor_priority*, *excluded_vendor_name*) where:
+	    * *missing_parts* is number of parts that can not be fullfilled.
+	    * *total_cost* is the sum the parts costs for all *Choice_Part*
 	      objects in *choice_parts* that do not use any vendors in
 	      *excluded_vendor_names*.
-	    *vendor_priority* is a sort order for *excluded_vendor_name*.
-	    *excluded_vendor_name* is the current vendor that is excluded.
+	    * *vendor_priority* is a sort order for *excluded_vendor_name*.
+	    * *excluded_vendor_name* is the current vendor that is excluded.
 	    The returned key is structured to sort so that most interesting
-	    vendor to exclude sorts first.
+	    vendor to exclude sorts to the first item.
 	"""
 
 	# Verify argument types:
@@ -2028,7 +2054,7 @@ class Order:
 
 	# *trace* is set to *True* to debug stuff:
 	if trace:
-	    print("=>process_helper1({0}, {1}, '{2}')".format(
+	    print("=>quad_compute({0}, {1}, '{2}')".format(
 	      [choice_part.schematic_part_name for choice_part in choice_parts],
 	      excluded_vendor_names.keys(), excluded_vendor_name))
 
@@ -2073,7 +2099,7 @@ class Order:
 
 	# *trace* for debugging:
 	if trace:
-	    print("<=process_helper1({0}, {1}, '{2}')=>{3}".format(
+	    print("<=quad_compute({0}, {1}, '{2}')=>{3}".format(
 	      [choice_part.schematic_part_name for choice_part in choice_parts],
 	      excluded_vendor_names.keys(), excluded_vendor_name, quad))
 
@@ -2085,6 +2111,41 @@ class Order:
 	assert isinstance(name, str)
 	assert isinstance(amount, int)
 	inventory = Inventory(name, str)
+
+	final_vendor_names = \
+	  self.vendor_names_get(final_choice_parts, excluded_vendor_names)
+	print("Final selected vendors:")
+	for vendor_name in final_vendor_names:
+	    print("    {0}".format(vendor_name))
+
+	# Print the fianl *total_cost*:
+	total_cost = 0.0
+	for choice_part in final_choice_parts:
+	    choice_part.select(excluded_vendor_names, False)
+	    total_cost += choice_part.selected_total_cost
+	print("Total Cost: {0}".format(total_cost))
+
+    def summary_print(self, choice_parts, excluded_vendor_names):
+	""" *Order*: Print a summary of the selected vendors.
+	"""
+
+	# Verify argument types:
+	assert isinstance(choice_parts, list)
+	assert isinstance(excluded_vendor_names, dict)
+
+	# Let the user know what we winnowed the vendor list down to:
+	final_vendor_names = \
+	  self.vendor_names_get(choice_parts, excluded_vendor_names)
+	print("Final selected vendors:")
+	for vendor_name in final_vendor_names:
+	    print("    {0}".format(vendor_name))
+
+	# Print the final *total_cost*:
+	total_cost = 0.0
+	for choice_part in choice_parts:
+	    choice_part.select(excluded_vendor_names, False)
+	    total_cost += choice_part.selected_total_cost
+	print("Total Cost: {0}".format(total_cost))
 
     def vendor_exclude(self, vendor_name):
 	""" *Order*: Exclude *vendor_name* from the *Order* object (i.e. *self*)
