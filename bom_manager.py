@@ -313,11 +313,41 @@ class Database:
 
 	bom_parts_file_name = "bom_parts.pkl"
 
+	# Initialize *vendor_minimums* to contain minimum order amounts for
+	# vendors that have a serious mininum:
+	vendor_minimums = {}
+	vendor_minimums["Verical"] = 100.00
+	vendor_minimums["Chip1Stop"] = 100.00
+
+	# Initialize "vendor_priorities" to contain specify preferred
+	# vendor priority.  Higher is more preferred.
+	vendor_priorities = {}
+
+	# Priorities 0-9 are for vendors with significant minimum
+	# order amounts or trans-oceanic shipping costs:
+	vendor_priorities["Verical"] = 0
+	vendor_priorities["Chip1Stop"] = 1
+	vendor_priorities["Farnell element14"] = 2
+	vendor_priorities["element14 Asia-Pacific"] = 2
+
+	# Priorities 100-999 are auto assigned for vendors that are
+	# not explicitly prioritiezed below.
+	
+	# Prioritins 1000+ are for explicitly preferred vendors:
+	vendor_priorities["Arrow"] = 1000
+	vendor_priorities["Avnet Express"] = 1001
+	vendor_priorities["Newark"] = 1002
+	vendor_priorities["Mouser"] = 1003
+	vendor_priorities["Digi-Key"] = 1004
+
 	# Initialize the various tables:
 	self.actual_parts = {} # Key:(manufacturer_name, manufacturer_part_name)
 	self.bom_parts_file_name = bom_parts_file_name
 	self.schematic_parts = {}   # Key: "part_name;footprint:comment"
+	self.vendor_minimums = vendor_minimums
 	self.vendor_parts_cache = {} # Key:(actual_key)
+	self.vendor_priorities = vendor_priorities
+	self.vendor_priority = 10
 
 	vendor_parts_cache = self.vendor_parts_cache
 	# Read in any previously created *vendor_parts*:
@@ -348,7 +378,7 @@ class Database:
 	self.choice_part("JB-3955;102Lx152Wx152H", "102Lx152Wx152H", "",
 	  "BOX STEEL GRAY 102Lx152Wx152H").actual_part(
 	  "Bud Industries", "JB-3955", [
-	  ("Digikey", "377-1838-ND",
+	  ("Digi-Key", "377-1838-ND",
 	   "1/12.35 6/10.25000 100/9.25")])
 
 	# Buttons:
@@ -358,7 +388,7 @@ class Database:
 	  "TE_Connectivity_2-1437565-9",
 	  "SWITCH TACTILE SPST-NO 0.05A 12V").actual_part(
 	  "TE", "2-1437565-9", [
-	  ("Digikey", "450-1792-1-ND",
+	  ("Digi-Key", "450-1792-1-ND",
 	   "1/.26 10/.249 25/.2408 50/.232 100/.219 200/.206")]).actual_part(
 	  "C&K", "PTS645SH50SMTR92 LFS").actual_part(
 	  "C&K", "PTS645SK50SMTR92 LFS").actual_part(
@@ -378,7 +408,7 @@ class Database:
 	self.choice_part("18pF;1608", "IPC7351:CAPC1608X90N", "",
 	  "CAP CER 18PF 25V+ 10% SMD 0603").actual_part(
 	  "Kamet", "C0603C180J5GACTU", [
-	   ("Digikey", "399-1052-1-ND",
+	   ("Digi-Key", "399-1052-1-ND",
 	    "1/.10 10/.034 50/.0182 100/.0154 250/.0126")]).actual_part(
 	  "Samsung", "CL10C180JB8NNNC").actual_part(
 	  "TDK", "C1608C0G1H180J080AA").actual_part(
@@ -394,7 +424,7 @@ class Database:
 	self.choice_part(".1uF;1608", "IPC7351:CAPC1608X90N", "",
 	  "CAP CER 0.1UF 25V+ 10% SMD 0603").actual_part(
 	  "Murata", "GRM188R71E104KA01D", [
-	  ("Digikey", "490-1524-1-ND",
+	  ("Digi-Key", "490-1524-1-ND",
 	   "1/.10 10/.019 50/.0104 100/.0088 250/.0072")]).actual_part(
 	  "TDK", "C1608X7R1E104K080AA").actual_part(
 	  "Kemet", "C0603C104K3RACTU").actual_part(
@@ -442,7 +472,7 @@ class Database:
 	self.choice_part("1500UF_200V;R35MM", "R35MM", "",
 	  "CAP ALUM 1500UF 200V SCREW").actual_part(
 	  "Unitied Chemi-Con", "E36D201LPN152TA79M", [
-	  ("Digikey", "565-3307-ND",
+	  ("Digi-Key", "565-3307-ND",
 	   "1/12.10 10/11.495 100/9.075")])
 
 	# Connectors:
@@ -453,7 +483,7 @@ class Database:
 	self.choice_part("M1X40;M1X40", "Pin_Header_Straight_1x40", "",
 	  "CONN HEADER .100\" SNGL STR 40POS").actual_part(
 	  "Sullins", "PREC040SAAN-RC", [
-	   ("Digikey", "S1012EC-40-ND",
+	   ("Digi-Key", "S1012EC-40-ND",
 	    "1/.56 10/.505 100/.4158 500/.32868 1000/.28215")])
 
 	self.fractional_part("M1X1;M1X1", "Pin_Header_Straight_1x01",
@@ -501,7 +531,7 @@ class Database:
 	  "Pin_header_Straight_2x05_Shrouded", "",
 	  "BOX HEADER .100\" MALE STR 10POS").actual_part(
 	  "On Shore", "302-S101", [
-	   ("Digikey", "ED1543-ND",
+	   ("Digi-Key", "ED1543-ND",
 	    "1/.28 10/.263 50/.1912 100/.1838 250/.165")]).actual_part(
 	  "Assmann", "AWHW-10G-0202-T").actual_part(
 	  "CNC Tech", "3020-10-0100-00").actual_part(
@@ -518,7 +548,7 @@ class Database:
 	  "Pin_Header_Straight_2x40",
 	  "CONN HEADER .100\" DUAL STR 80POS").actual_part(
 	  "Sullins", "PREC040DAAN-RC", [
-	   ("Digikey", "S2212EC-40-ND",
+	   ("Digi-Key", "S2212EC-40-ND",
 	    "1/1.28 10/1.14200 100/.9408 500/.74368")]).actual_part(
 	  "Sullins", "PREC040DFAN-RC").actual_part(
 	  "Sullins", "PRPC040DAAN-RC").actual_part(
@@ -592,7 +622,7 @@ class Database:
 	self.choice_part("16MHZ;HC49S", "IPC7351:XTAL1150X480X430N", "",
 	  "CRYSTAL 16.0000MHZ SMD").actual_part(
 	  "TXC", "9C-16.000MBBK-T", [
-	   ("Digikey", "887-2425-1-ND",
+	   ("Digi-Key", "887-2425-1-ND",
 	    "1/.38 10/.316 50/.2832 100/.252 500/.24")]).actual_part(
 	  "TXC", "9C-16.000MAAE-T").actual_part(
 	  "TXC", "9C-16.000MAGJ-T").actual_part(
@@ -609,7 +639,7 @@ class Database:
         self.choice_part("VAC_FUSE_SW;10C1", "10C1", "",
 	  "MODULE PWR ENTRY SCREW-ON").actual_part(
 	  "Delta Electronics", "10C2", [
-	   ("Digikey", "603-1262-ND",
+	   ("Digi-Key", "603-1262-ND",
 	    "1/8.28 10/7.454 50/5.6318 100/5.3005")])
 
 	# Diodes:
@@ -617,13 +647,13 @@ class Database:
 	self.choice_part("4.56V_ZENER;SOD323F", "SOD323F", "",
 	  "DIODE ZENER 4.56V 500MW SOD323F").actual_part(
 	  "Diodes Inc", "DDZ4V7ASF-7", [
-	  ("Digikey", "DDZ4V7ASF-7DICT-ND",
+	  ("Digi-Key", "DDZ4V7ASF-7DICT-ND",
 	   "1/.16 10/.143 100/.0781 500/.04802 1000/.03275")])
 
 	self.choice_part("BRIDGE_35A_1000V;GBPC", "GBPC", "",
 	  "RECT BRIDGE GPP 1000V 35A GBPC").actual_part(
 	  "Comchip Tech", "GBPC3510-G", [
-	  ("Digikey", "641-1380-ND",
+	  ("Digi-Key", "641-1380-ND",
 	   "1/2.54 10/2.296 25/2.05 100/1.845 250/1.64")])
 
 	self.choice_part("SMALL_SCHOTTKY;SOT23-3", "SOT95P280X145-3N", "",
@@ -666,7 +696,7 @@ class Database:
 	self.choice_part("GROMMET;GR9.5MM", "GR9.5MM", "",
 	  "BUSHING SPLIT 0.260\" NYLON BLACK").actual_part(
 	  "Essentra", "PGSB-0609A", [
-	  ("Digikey", "RPC1251-ND",
+	  ("Digi-Key", "RPC1251-ND",
 	   "1/.18 10/.166 25/.1536 100/.1281")])
 
 	# Holes:
@@ -683,7 +713,7 @@ class Database:
 	self.choice_part("3A;LF649", "LF649", "",
 	  "FUSE BLOCK CART 250V 6.3A PCB").actual_part(
 	  "Littelfuse", "64900001039", [
-	  ("Digikey", "WK0011-ND",
+	  ("Digi-Key", "WK0011-ND",
 	    "1/.40 10/.378 25/.348 50/.318 100/.264 250/.24 500/.204")])
 	# This alias should be removed:
 	self.alias_part("3A;LF349", ["3A;LF649"], "LF649")
@@ -693,7 +723,7 @@ class Database:
 	self.choice_part("?uH;I1X10", "Inductor_1x10", "",
 	  "INLINE INDUCTER").actual_part(
 	  "Bourns", "5258-RC", [
-	  ("Digikey", "M8275-ND",
+	  ("Digi-Key", "M8275-ND",
 	   "1/1.51 10/1.392 25/1.276 50/1.0904 100/.97440")])
 
 	self.choice_part("CIB10P100NC;1608", "IPC7351:INDC1608X95", "",
@@ -705,7 +735,7 @@ class Database:
 	self.choice_part("5V_LDO;SOT223", "SOT223", "",
 	  "IC REG LDO 5V SOT223-3").actual_part(
 	  "Diodes Inc", "AP1117E50G-13", [
-	   ("Digikey", "AP1117E50GDICT-ND",
+	   ("Digi-Key", "AP1117E50GDICT-ND",
 	    "1/.47 10/.377 100/.2571 500/.19242 1000/.14412")]).actual_part(
 	  "Diodes Inc", "ZLDO1117G50TA").actual_part(
 	  "Microchip", "MCP1824ST-5002E/DB").actual_part(
@@ -731,7 +761,7 @@ class Database:
 	self.choice_part("74HC1G14;SOT23-5", "SOT95P280X145-5N", "",
 	  "IC INVERTER SGL SCHMITT SOT23-5").actual_part(
 	  "On Semi", "MC74HC1G14DTT1G", [
-	   ("Digikey", "MC74HC1G14DTT1GOSCT-ND",
+	   ("Digi-Key", "MC74HC1G14DTT1GOSCT-ND",
 	    "1/.39 10/.319 100/.1691 500/.11116 1000/.07574")])
 
 	self.choice_part("74HC1G175;SOT23-6", "SOT95P280X145-6N", "",
@@ -742,13 +772,13 @@ class Database:
 	self.choice_part("ATMEGA328;QFP32", "QFP80P900X900X120-32N", "",
 	  "IC MCU 8BIT 32KB FLASH 32QFP").actual_part(
 	  "Atmel", "ATMEGA328-AUR", [
-	  ("Digikey", "ATMEGA328-AURCT-ND",
+	  ("Digi-Key", "ATMEGA328-AURCT-ND",
 	   "1/3.38 10/3.015 25/2.7136 100/2.4723 250/2.23112")])
 
 	self.choice_part("LM311;SOIC8", "SOIC127P600X173-8N", "",
 	  "IC COMPARATOR SGL 8SOIC").actual_part(
 	  "TI", "LM311DR",[
-	   ("Digikey", "296-1388-1-ND",
+	   ("Digi-Key", "296-1388-1-ND",
 	    "1/.47000 10/.361 100/.19 1000/.17")]).actual_part(
 	  "On Semi", "LM311DR2G").actual_part(
 	  "TI", "LM311DRG4").actual_part(
@@ -757,7 +787,7 @@ class Database:
 	self.choice_part("MCP2562;SOIC8", "SOIC127P600X175-8N", "",
 	  "IC TXRX CAN 8SOIC").actual_part(
 	  "Microchip", "MCP2562T-E/SN", [
-	  ("Digikey", "MCP2562T-E/SNCT-ND",
+	  ("Digi-Key", "MCP2562T-E/SNCT-ND",
 	   "1/1.08 10/.90 25/.75 100/.68")])
 	self.choice_part("MCP7940;SOIC8", "SOIC127P600X175-8N", "",
 	  "IC RTC CLK/CALENDAR I2C 8-SOIC").actual_part(
@@ -773,7 +803,7 @@ class Database:
 	self.choice_part("GREEN_LED;1608", "DIOC1608X55N", "",
 	  "LED 0603 GRN WATER CLEAR").actual_part(
 	  "Wurth", "150060GS75000", [
-	   ("Digikey", "732-4971-1-ND",
+	   ("Digi-Key", "732-4971-1-ND",
 	    "1/.24 50/.21 100/.192 500/.17400 1000/.162")]).actual_part(
 	  "Wurth", "150060VS75000").actual_part(
 	  "Rohm", "SML-310MTT86").actual_part(
@@ -803,7 +833,7 @@ class Database:
 	self.choice_part("10K;9MM", "10X5MM_TRIM_POT", "",
 	  "TRIMMER 10K OHM 0.2W PC PIN").actual_part(
 	  "Bourns", "3319P-1-103", [
-	   ("Digikey", "3319P-103-ND",
+	   ("Digi-Key", "3319P-103-ND",
 	    "1/.40 10/.366 25/.33 50/.319 100/.308 250/.286")]).actual_part(
 	  "Bourns", "3309P-1-103")
 
@@ -812,7 +842,7 @@ class Database:
 	self.choice_part("9V_444MA_4W;RAC04", "RAC04", "",
 	  "AC/DC CONVERTER 9V 4W").actual_part(
 	  "Recom Power", "RAC04-09SC/W", [
-	   ("Digikey", "945-2211-ND",
+	   ("Digi-Key", "945-2211-ND",
 	    "1/14.35 5/14.146 10/13.94 50/12.71 100/12.30")])
 
 	# Resistors:
@@ -828,7 +858,7 @@ class Database:
 	self.choice_part("0.20_1W;6432", "IPC7351:RESC6432X70N", "",
 	  "RES SMD 0.02 OHM 1% 1W 6432").actual_part(
 	  "TE", "2176057-8", [
-	    ("Digikey", "A109677CT-ND",
+	    ("Digi-Key", "A109677CT-ND",
 	     "1/.30 10/.27 100/.241")]).actual_part(
 	  "TT/Welwyn", "LRMAM2512-R02FT4").actual_part(
 	  "Bourns", "CRA2512-FZ-R020ELF").actual_part(
@@ -843,7 +873,7 @@ class Database:
 	self.choice_part("120;1608", "IPC7351:RESC1608X55N", "",
 	  "RES SMD 120 OHM 5% 1/10W 1608").actual_part(
 	  "Vishay Dale", "CRCW0603120RJNEA", [
-	   ("Digikey", "541-120GCT-ND",
+	   ("Digi-Key", "541-120GCT-ND",
 	    "10/.074 50/.04 200/.02295 1000/.01566")]).actual_part(
 	  "Vishay Dale", "CRCW0603120RFKEA").actual_part(
 	  "Rohm", "MCR03ERTJ121").actual_part(
@@ -854,7 +884,7 @@ class Database:
 	self.choice_part("470;1608", "IPC7351:RESC1608X55N", "",
 	  "RES SMD 470 5% 1/10W 1608").actual_part(
 	  "Vishay Dale", "CRCW0603470RJNEA", [
-	   ("Digikey", "541-470GCT-ND",
+	   ("Digi-Key", "541-470GCT-ND",
 	    "10/.074 50/.04 200/.02295 1000/.01566")]).actual_part(
 	  "Rohm", "MCR03ERTJ471").actual_part(
 	  "Samsung", "RC1608J471CS").actual_part(
@@ -887,7 +917,7 @@ class Database:
 	self.choice_part("10K;1608", "IPC7351:RESC1608X55N", "",
 	  "RES SMD 10K OHM 5% 1/10W 1608").actual_part(
 	  "Vishay Dale", "RCG060310K0JNEA", [
-	    ("Digikey", "541-1804-1-ND",
+	    ("Digi-Key", "541-1804-1-ND",
 	     "1/.10 10/.067 25/.0484 50/.037 100/.0273")]).actual_part(
 	  "Yageo", "RC0603JR-0710KL").actual_part(
 	  "Panasonic", "ERJ-3GEYJ103V").actual_part(
@@ -915,7 +945,7 @@ class Database:
 	self.choice_part("100K;1608", "IPC7351:RESC1608X55N", "",
 	  "RES SMD 100K OHM 5% 1/10W 1608").actual_part(
 	  "Vishay Dale", "CRCW0603100KJNEAIF", [
-	     ("Digikey", "541-100KAQCT-ND",
+	     ("Digi-Key", "541-100KAQCT-ND",
 	      "1/.45 10/.345 25/.2628 50/.1952 100/.1451")]).actual_part(
 	  "Yageo", "RC0603JR-07100KL").actual_part(
 	  "Panasonic", "ERJ-3GEYJ104V").actual_part(
@@ -990,7 +1020,7 @@ class Database:
 	self.choice_part("BSS138;SOT23", "SOT95P280X145-3N", "",
 	  "MOSFET N-CH 50V+ 200MA+ SOT23").actual_part(
 	  "Fairchild", "BSS138L", [
-            ("Digikey", "BSS138CT-ND",
+            ("Digi-Key", "BSS138CT-ND",
 	     "1/.23 10/.207 25/.1492 100/.1161 250/.07292")]).actual_part(
 	  "Fairchild", "BSS138").actual_part(
 	  "NXP", "BSS138P,215").actual_part(
@@ -1006,7 +1036,7 @@ class Database:
 	self.choice_part("200V_NFET;DPAK", "DPAK", "",
 	  "MOSFET N-CH 200V DPAK").actual_part(
 	  "Fairchild", "FDD7N20TM", [
-	   ("Digikey", "FDD7N20TMCT-ND",
+	   ("Digi-Key", "FDD7N20TMCT-ND",
 	    "1/.62 10/.542 25/.4792 100/.41760 250/.36348")]).actual_part(
 	  "Fairchild", "FDD6N25TM").actual_part(
 	  "Fairchild", "FDD3N40TM").actual_part(
@@ -1046,15 +1076,15 @@ class Database:
 
 	# Connectors:
 	#self.vendor_part("Phoenix Contact", "1935161",
-	#  "Digikey", "277-1667-ND",
+	#  "Digi-Key", "277-1667-ND",
 	#  ".37/1 .352/10 .3366/50 .3274/100 .306/250 .28152/500 .255/1000")
 
 	# Diodes:
 	#self.vendor_part("Fairchild", "S320",
-	#  "Digikey", "S320FSCT-ND",
+	#  "Digi-Key", "S320FSCT-ND",
 	#  ".70/1 .614/10 .5424/25 .4726/100 .4114/250 .3502/500 .2805/1000")
 	#self.vendor_part("Diodes Inc", "BAT54-7-F",
-	#  "Digikey", "BAT54-FDICT-ND",
+	#  "Digi-Key", "BAT54-FDICT-ND",
 	#  ".15/1 .142/10 .128/25 .0927/100 .0546/250 .0453/500 .0309/1000")
 	  
 	# Holes:
@@ -1063,20 +1093,20 @@ class Database:
 
 	# Integrated Circuits:
 	#self.vendor_part("TI", "SN74LVC1G175DBVR",
-	#  "Digikey", "296-17617-1-ND",
+	#  "Digi-Key", "296-17617-1-ND",
 	#  ".40/1 .315/10 .266/25 .2166/100 .1794/250 .1482/500 .1236/750")
 	#self.vendor_part("Fairchild", "MM74HCT08MX",
-	#  "Digikey", "MM74HCT08MXCT-ND",
+	#  "Digi-Key", "MM74HCT08MXCT-ND",
 	#  ".49/1 .412/10 .3612/25 .309/100 .268/250 .227/500 .175/1000")
 
 	# LED's:
 	#self.vendor_part("Cree", "CXA3050-0000-000N0HW440F",
-	#  "Digikey", "CXA3050-0000-000N0HW440F-ND",
+	#  "Digi-Key", "CXA3050-0000-000N0HW440F-ND",
 	#  "36./1 34.2/10 33.23/50 30.6/100 27.83/200 26.06/500 24/1000")
 
 	# Resistors:
 	#self.vendor_part("Vishay Dale", "CRCW060322K0JNEA",
-	#  "Digikey", "541-22KGCT-ND",
+	#  "Digi-Key", "541-22KGCT-ND",
 	#  ".074/10 .04/50 .02295/200 .01566/1000")
 
     def alias_part(self,
@@ -1341,11 +1371,26 @@ class Database:
 					price_text += character
 				price = float(price_text)
 
+				# This needs to be looked up:
+				rate = 1.0
+				if currency == "USD":
+				    exchange_rate = 1.0
+				elif currency == "EUR":
+				    exchange_rate = \
+				      self.euro_to_dollar_exchange_rate
+				elif currency == "GBP":
+				    exchange_rate = \
+				      self.pound_to_dollar_exchange_rate
+				else:
+				    assert False, \
+				      "Unrecognized currency '{0}'". \
+				      format(currency)
+
 				# Sometimes we get a bogus price of 0.0 and
 				# we just need to ignore the whole record:
 				if price > 0.0:
 				    price_break = Price_Break(
-				      quantity, price, currency=currency)
+				      quantity, price * exchange_rate)
 				    price_breaks.append(price_break)
 
 		    # Now if we have an exact match on the *manufacturer_name*
@@ -1572,7 +1617,7 @@ class Order:
 	      choice_part.count_get(), choice_part.references_text_get()))
 
 	    # Select the vendor_part and associated quantity/cost
-	    choice_part.select(excluded_vendor_names)
+	    choice_part.select(excluded_vendor_names, True)
 	    selected_actual_part = choice_part.selected_actual_part
 	    selected_vendor_part = choice_part.selected_vendor_part
 	    selected_order_quantity = choice_part.selected_order_quantity
@@ -1674,34 +1719,38 @@ class Order:
 		# load it into *choice_parts_table*:
 		choice_parts = schematic_part.choice_parts()
 		for choice_part in choice_parts:
-		    choice_part_name = choice_part.schematic_part_name
-		    #print("Order.process():    {0}".format(choice_part_name))
-
 		    # Do some consistency checking:
 		    assert isinstance(choice_part, Choice_Part), \
 		      "Not a choice part '{0}'".format(choice_part_name)
 
 		    # Make sure *choice_part* is in *choice_parts_table*
 		    # exactly once:
+		    choice_part_name = choice_part.schematic_part_name
 		    if not choice_part_name in choice_parts_table:
 			choice_parts_table[choice_part_name] = choice_part
 
 		    # Remember *board_part* in *choice_part*:
-		    choice_part.board_parts.append(board_part)
+		    choice_part.board_part_append(board_part)
 
 		    # Refresh the vendor part cache for each *actual_part*:
                     vendor_parts_cache = database.vendor_parts_cache
-
 		    actual_parts = choice_part.actual_parts
 		    for actual_part in actual_parts:
+			# Check for errors:
+			assert isinstance(actual_part, Actual_Part)
+
+			# Get *vendor_parts* from the cache or from
+			# a screen scrape:
 			actual_key = actual_part.key
 			if actual_key in vendor_parts_cache:
+			    # Reuse cached *vendor_parts*:
 			    vendor_parts = vendor_parts_cache[actual_key]
 			else:
+			    # Grab the *vendor* parts via a screen scrape:
 			    vendor_parts = \
 			      database.findchips_scrape(actual_part)
 			    vendor_parts_cache[actual_key] = vendor_parts
-			#assert len(actual_part.vendor_parts) == 0
+
 			for vendor_part in vendor_parts:
 			    actual_part.vendor_part_append(vendor_part)
 
@@ -1712,39 +1761,184 @@ class Order:
 	final_choice_parts = choice_parts_table.values()
 	self.final_choice_parts = final_choice_parts
 
-	# Open the CSV (Comma Separated Value) file for BOM uploading:
-	csv_file = open("/tmp/order.csv", "wa")
-	# Output a one line header
-	csv_file.write("Quantity,Vendor Part Name,Reference\n")
-
 	# Open each vendor output file:
 	vendor_files = {}
 
-	excluded_vendor_names = self.excluded_vendor_names
+	# Sweep through *final_choice_parts* and force the associated
+	# *Board_Part*'s to be in a reasonable order:
+	for choice_part in final_choice_parts:
+	    # Make sure that we only have *Choice_Part* objects:
+	    assert isinstance(choice_part, Choice_Part)
+	    choice_part.board_parts_sort()
 
-	# Now generate a BOM summary:
+	# Now we winnow down the total number of vendors to order from
+	# to minimize the number of orders that can be messed up
+	# (i.e. supply chain simplication) and to save shipping costs:
+	# There are two steps -- throw out vendors with excessive minimum
+	# order amounts followed by throwing out vendors where the savings
+	# do not exceed additional shipping costs.
+
+	# Step 1: Figure out which vendors have minimum order amounts that
+	# are so onerous that they are not worth ordering from:
+	excluded_vendor_names = self.excluded_vendor_names
+	vendor_minimums = database.vendor_minimums
+	for vendor_name in vendor_minimums.keys():
+	    vendor_minimum_cost = vendor_minimums[vendor_name]
+
+	    # Evaluate each *choice_part* to figure out if it is
+	    # selected to match *vendor_name*:
+	    vendor_total_cost = 0.0
+	    for choice_part in final_choice_parts:
+		choice_part.select(excluded_vendor_names)
+                if choice_part.selected_vendor_name == vendor_name:
+		    vendor_total_cost += choice_part.selected_total_cost
+
+	    # If the amount of order parts does not exceed the minimum,
+	    # exclude *vendor_name*:
+	    if vendor_total_cost < vendor_minimum_cost:
+		excluded_vendor_names[vendor_name] = None
+		print("Excluding '{0}': needed order {1} < minimum order {2}".
+		  format(vendor_name, vendor_total_cost, vendor_minimum_cost))
+
+	# First figure out the total *missing_parts*.  We will stop if
+	# excluding a vendor increases above this number:
+	quad = \
+	  self.process_helper1(final_choice_parts, excluded_vendor_names, "")
+	missing_parts = quad[0]
+
+	# Sweep through and figure out what vendors to order from:
+	done = False
+	while not done:
+	    # Get the base cost for the current *excluded_vendor_names*:
+	    base_quad = self.process_helper1(final_choice_parts,
+	      excluded_vendor_names, "")
+	    #print("base_quad={0}".format(base_quad))
+
+	    # If the *base_missing_parts* increases, we need to stop because
+	    # excluding additional vendors will cause the order to become
+	    # incomplete:
+	    base_missing_parts = base_quad[0]
+	    assert isinstance(base_missing_parts, int)
+	    if base_missing_parts > missing_parts:
+		break
+	    base_cost = base_quad[1]
+	    assert isinstance(base_cost, float)
+	    
+	    # Figure out what vendors are still available for *choice_parts*:
+	    base_vendor_names = \
+	      self.vendor_names_get(final_choice_parts, excluded_vendor_names)
+	    assert isinstance(base_vendor_names, tuple)
+	    #print("base: {0} {1}".format(base_cost, base_vendor_names))
+
+	    # For small designs, sometimes the algorithm will attempt to
+	    # throw everything out.  The test below makes sure we always
+	    # have one last remaining vendor:
+	    if len(base_vendor_names) <= 1:
+		break
+
+	    # Iterate through *vendor_names*, excluding one *vendor_name*
+	    # at a time:
+	    trial_quads = []
+            for vendor_name in base_vendor_names:
+		# Create *trial_excluded_vendor_names* which is a copy
+		# of *excluded_vendor_names* plus *vendor_name*:
+		trial_excluded_vendor_names = dict(excluded_vendor_names)
+		trial_excluded_vendor_names[vendor_name] = None
+
+		# Get the base cost for *trial_excluded_vendor_names*
+		# and tack it onto *trial_quads*:
+		trial_quad = self.process_helper1(final_choice_parts,
+		  trial_excluded_vendor_names, vendor_name)
+		trial_quads.append(trial_quad)
+
+		# For debugging only:
+		#trial_cost = trial_quad[0]
+		#trial_vendor_name = trial_quad[1]
+		#print("    {0:.2f} with {1} excluded".
+		#  format(trial_cost, trial_vendor_name))
+
+	    # Sort the *trial_quads* to bring the most interesting one to the
+	    # front:
+	    trial_quads.sort()
+	    # For debugging:
+	    #for trial_quad in trial_quads:
+	    #	print("   {0}".format(trial_quad))
+
+	    # Quickly ignore all vendors that have zero cost savings:
+	    while len(trial_quads) >= 2:
+		# We want to ensure that *trial_quads* always has at least 2
+		# entries for so that the next step after this loop will be
+		# guaranteed to have at least one entry in *trial_quads*:
+		lowest_quad = trial_quads[0]
+		lowest_cost = lowest_quad[1]
+		lowest_vendor_name = lowest_quad[3]
+		savings = lowest_cost - base_cost
+		if savings == 0.0:
+		    # This vendor offers no savings; get rid of the vendor:
+		    print("Excluding '{0}': saves nothing".
+		      format(lowest_vendor_name, savings))
+		    excluded_vendor_names[lowest_vendor_name] = None
+		    del trial_quads[0]
+		else:
+		    # We are done skipping over zero *savings*:
+		    break
+	    assert len(trial_quads) >= 1
+		
+	    # Grab some values from *lowest_quad*:
+	    lowest_quad = trial_quads[0]
+	    lowest_cost = lowest_quad[1]
+	    lowest_vendor_name = lowest_quad[3]
+	    savings = lowest_cost - base_cost
+	    #print("      Lowest {0} with {1} exlcuded".
+	    #  format(lowest_cost, lowest_vendor_name))
+
+	    # We use $5.00 as an approximate minimum shipping cost.
+	    # If the savings is less that the shipping cost, we exclude
+	    # the vendor:
+	    if savings < 5.0 and len(trial_quads) >= 2:
+		# The shipping costs are too high and there at lease one
+		# vendor left; exclude this vendor:
+		print("Excluding '{0}': only saves {1:.2f}".
+		  format(lowest_vendor_name, savings))
+		excluded_vendor_names[lowest_vendor_name] = None
+	    else:
+		# We are done when *lowest_quad* is worth shipping:
+		#print("lowest_cost={0:.2f}".format(lowest_cost))
+		done = True
+
+	# Let the user know what we winnowed the vendor list down to:
+	final_vendor_names = \
+	  self.vendor_names_get(final_choice_parts, excluded_vendor_names)
+	print("Final selected vendors:")
+	for vendor_name in final_vendor_names:
+	    print("    {0}".format(vendor_name))
+
+	# Print the fianl *total_cost*:
 	total_cost = 0.0
 	for choice_part in final_choice_parts:
-	    # Sort the *board_parts* by *board* followed by reference:
-	    board_parts = choice_part.board_parts
-	    board_parts.sort(key = lambda board_part:
-	      (board_part.board.name, board_part.reference.upper(),
-	       int(filter(str.isdigit, board_part.reference))))
+	    choice_part.select(excluded_vendor_names, False)
+	    total_cost += choice_part.selected_total_cost
+	print("Total Cost: {0}".format(total_cost))
 
-	    assert isinstance(choice_part, Choice_Part)
-	    #print("  {0}:{1};{2} {3}:{4}".\
-	    #  format(choice_part.schematic_part_name,
-	    #  choice_part.kicad_footprint, choice_part.description,
-	    #  choice_part.count_get(), choice_part.references_text_get()))
+	# Now generate a BOM summary:
+	if False:
+	    total_cost = 0.0
+	    for choice_part in final_choice_parts:
+		# Open *csv_file* for summary spread sheet:
+		csv_file = open("/tmp/order.csv", "wa")
+		# Output a one line header
+		csv_file.write("Quantity,Vendor Part Name,Reference\n")
 
-	    # Select the vendor_part and associated quantity/cost
-	    choice_part.select(excluded_vendor_names)
-	    selected_actual_part = choice_part.selected_actual_part
-	    selected_vendor_part = choice_part.selected_vendor_part
-	    selected_order_quantity = choice_part.selected_order_quantity
-	    selected_total_cost = choice_part.selected_total_cost
-	    selected_price_break_index = choice_part.selected_price_break_index
+		# Select the vendor_part and associated quantity/cost
+		choice_part.select(excluded_vendor_names, False)
+		selected_actual_part = choice_part.selected_actual_part
+		selected_vendor_part = choice_part.selected_vendor_part
+		selected_order_quantity = choice_part.selected_order_quantity
+		selected_total_cost = choice_part.selected_total_cost
+		selected_price_break_index = \
+		  choice_part.selected_price_break_index
 
+	    # Per vendor order lists need some more thought:
 	    if isinstance(selected_vendor_part, Vendor_Part):
 		vendor_name = selected_vendor_part.vendor_name
 		if not vendor_name in vendor_files:
@@ -1789,14 +1983,15 @@ class Order:
 		  selected_vendor_part.vendor_part_name,
 		  choice_part.schematic_part_name))
 
-	# Close all the vendor files:
-	for csv_file in vendor_files.values():
-	    csv_file.close()
+	    # Close all the vendor files:
+	    for csv_file in vendor_files.values():
+	        csv_file.close()
 
 	#print("Total: ${0:.2f}".format(total_cost))
 
 	#print("<=Order.process()")
 
+	# Generate the bom file reports:
 	self.bom_write("bom_by_price.txt", lambda choice_part:
 	  (choice_part.selected_total_cost,
 	   choice_part.selected_vendor_name,
@@ -1809,6 +2004,80 @@ class Order:
 	  (choice_part.schematic_part_name,
 	  choice_part.selected_vendor_name,
 	  choice_part.selected_total_cost) )
+
+    def process_helper1(self,
+      choice_parts, excluded_vendor_names, excluded_vendor_name, trace=False):
+	""" *Order*: Return quad tuple of the form:
+	       (*missing_parts*, *total_cost*,
+		*vendor_priority*, *excluded_vendor_name*).
+	    *missing_parts* is number of parts that can not be fullfilled.
+	    *total_cost* is the sum the parts costs for all *Choice_Part*
+	      objects in *choice_parts* that do not use any vendors in
+	      *excluded_vendor_names*.
+	    *vendor_priority* is a sort order for *excluded_vendor_name*.
+	    *excluded_vendor_name* is the current vendor that is excluded.
+	    The returned key is structured to sort so that most interesting
+	    vendor to exclude sorts first.
+	"""
+
+	# Verify argument types:
+	assert isinstance(choice_parts, list)
+	assert isinstance(excluded_vendor_names, dict)
+	assert isinstance(excluded_vendor_name, str)
+	assert isinstance(trace, bool)
+
+	# *trace* is set to *True* to debug stuff:
+	if trace:
+	    print("=>process_helper1({0}, {1}, '{2}')".format(
+	      [choice_part.schematic_part_name for choice_part in choice_parts],
+	      excluded_vendor_names.keys(), excluded_vendor_name))
+
+	# Verify argument types:
+	assert isinstance(choice_parts, list)
+	assert isinstance(excluded_vendor_names, dict)
+	assert isinstance(excluded_vendor_name, str)
+	assert isinstance(trace, bool)
+
+	missing_parts = 0
+	total_cost = 0.0
+	for choice_part in choice_parts:
+	    # Make sure *choice_part* is actually a *Choice_Part*:
+	    assert isinstance(choice_part, Choice_Part)
+
+	    # Perform the vendor selection excluding all vendors in
+	    # *excluded_vendor_names*:
+	    missing_parts += choice_part.select(excluded_vendor_names, False)
+
+	    # Grab some values out of *choice_part*:
+	    selected_vendor_name = choice_part.selected_vendor_name
+	    selected_total_cost = choice_part.selected_total_cost
+		
+	    # Keep a running total of everything:
+	    total_cost += selected_total_cost
+
+	# Figure out *vendor_priority* for *excluded_vendor_name*:
+	database = self.database
+	vendor_priorities = database.vendor_priorities
+	if excluded_vendor_name in vendor_priorities:
+	    # Priority already assigned to *excluded_vendor_name*:
+	    vendor_priority = vendor_priorities[excluded_vendor_name]
+	else:
+	    # Assigned a new priority for *excluded_vendor_name*:
+	    vendor_priority = database.vendor_priority
+	    vendor_priorities[excluded_vendor_name] = vendor_priority
+	    database.vendor_priority = vendor_priority + 1
+
+	# Return the final *quad*:
+	quad = \
+	  (missing_parts, total_cost, vendor_priority, excluded_vendor_name)
+
+	# *trace* for debugging:
+	if trace:
+	    print("<=process_helper1({0}, {1}, '{2}')=>{3}".format(
+	      [choice_part.schematic_part_name for choice_part in choice_parts],
+	      excluded_vendor_names.keys(), excluded_vendor_name, quad))
+
+	return quad
 
     def request(self, name, amount):
 	""" *Order*: Request *amount* parts named *name*. """
@@ -1826,6 +2095,23 @@ class Order:
 
 	# Mark *vendor_name* from being selectable:
 	self.excluded_vendor_names[vendor_name] = None
+
+    def vendor_names_get(self, choice_parts, excluded_vendor_names):
+	""" *Order*: Return all possible vendor names for *choice_parts*:
+	"""
+
+	# Verify argument types:
+	assert isinstance(choice_parts, list)
+	assert isinstance(excluded_vendor_names, dict)
+
+	# Load up *vendor_names_table*:
+	vendor_names_table = {}
+	for choice_part in choice_parts:
+	    choice_part.vendor_names_load(
+	      vendor_names_table, excluded_vendor_names)
+
+	# Return the sorted list of vendor names:
+	return tuple(sorted(vendor_names_table.keys()))
 
 class Request:
     def __init__(self, schematic_part, amount):
@@ -2223,6 +2509,36 @@ class Choice_Part(Schematic_Part):
 
 	return self
 
+    def board_part_append(self, board_part):
+	""" *Choice_Part*: Store *board_part* into the *Choice_Part* object
+	    (i.e. *self*.)
+	"""
+
+	# Verify argument types:
+	assert isinstance(board_part, Board_Part)
+
+	# Append *board_part* to *board_parts*:
+	self.board_parts.append(board_part)
+
+    def board_parts_sort(self):
+	""" *Choice_Part*: Sort the *board_parts* of the *Choice_Part* object
+	    (i.e. *self*.)
+	"""
+
+	# Sort the *board_parts* using a key of
+	# (board_name, reference, reference_number).  A reference of
+	# "SW123" gets conferted to (..., "SW123", 123):
+	board_parts = self.board_parts
+	board_parts.sort(key = lambda board_part:
+	  (board_part.board.name,
+	  filter(str.isalpha, board_part.reference.upper()),
+	  int(filter(str.isdigit, board_part.reference))) )
+
+	#print("  {0}:{1};{2} {3}:{4}".\
+	#  format(choice_part.schematic_part_name,
+	#choice_part.kicad_footprint, choice_part.description,
+	#  choice_part.count_get(), choice_part.references_text_get()))
+
     def count_get(self):
 	""" *Choice_Part*: Return the number of needed instances of *self*. """
 
@@ -2301,7 +2617,7 @@ class Choice_Part(Schematic_Part):
 	references_text += "]"
 	return references_text
 
-    def select(self, excluded_vendor_names):
+    def select(self, excluded_vendor_names, announce=False):
 	""" *Choice_Part*: Select and return the best priced *Actual_Part*
 	    for the *Choice_Part* (i.e. *self*) excluding any vendors
 	    in the *excluded_vendor_names* dictionary.
@@ -2349,8 +2665,9 @@ class Choice_Part(Schematic_Part):
 
 	if len(quints) == 0:
 	    choice_part_name = self.schematic_part_name
-	    print("No vendor parts found for Part '{0}'".
-	      format(choice_part_name))
+	    if announce:
+		print("No vendor parts found for Part '{0}'".
+		  format(choice_part_name))
 	else:
 	    # Now sort in ascending order:
 	    quints.sort()
@@ -2395,7 +2712,27 @@ class Choice_Part(Schematic_Part):
 	#    selected_actual_part.selected_vendor_part = vendor_parts[0]
 
 	#assert isinstance(selected_actual_part, Actual_Part)
-	#return selected_actual_part
+
+	missing_part = 0
+	if len(quints) == 0:
+	    missing_part = 1
+	return missing_part
+
+    def vendor_names_load(self, vendor_names_table, excluded_vendor_names):
+	""" *Choice_Part*: Add each possible vendor name possible for the
+	    *Choice_Part* object (i.e. *self*) to *vendor_names_table*
+	    provided it is not in *excluded_vendor_names*:
+	"""
+
+	# Verify argument types:
+	assert isinstance(vendor_names_table, dict)
+	assert isinstance(excluded_vendor_names, dict)
+
+	# Visit each *actual_part* and add the vendor names to
+	# *vendor_names_table*:
+	for actual_part in self.actual_parts:
+	    actual_part.vendor_names_load(
+	      vendor_names_table, excluded_vendor_names)
 
 class Alias_Part(Schematic_Part):
     # An *Alias_Part* specifies one or more *Schematic_Parts* to use.
@@ -2488,6 +2825,22 @@ class Actual_Part:
 	assert isinstance(vendor_part, Vendor_Part)
 	self.vendor_parts.append(vendor_part)
 
+    def vendor_names_load(self, vendor_names_table, excluded_vendor_names):
+	""" *Actual_Part*:*: Add each possible to vendor name for the
+	    *Actual_Part* object (i.e. *self*) to *vendor_names_table*:
+	"""
+
+	# Verify argument types:
+	assert isinstance(vendor_names_table, dict)
+	assert isinstance(excluded_vendor_names, dict)
+
+	# Add the possible vendor names for *vendor_part* to
+	# *vendor_names_table*:
+	for vendor_part in self.vendor_parts:
+	    vendor_name = vendor_part.vendor_name
+	    if not vendor_name in excluded_vendor_names:
+		vendor_names_table[vendor_name] = None
+
 class Vendor_Part:
     # A vendor part represents a part that can be ordered from a vendor.
 
@@ -2520,8 +2873,11 @@ class Vendor_Part:
 	actual_part.vendor_part_append(self)
 
     def price_breaks_text_get(self):
-	price_breaks_text = ""
+	""" *Vendor_Part*: Return the prices breaks for the *Vendor_Part*
+	    object (i.e. *self*) as a text string:
+	"""
 
+	price_breaks_text = ""
 	for price_break in self.price_breaks:
 	    price_breaks_text += "{0}/${1:.3f} ".format(
 	      price_break.quantity, price_break.price)
@@ -2530,25 +2886,13 @@ class Vendor_Part:
 class Price_Break:
     # A price break is where a the pricing changes:
     
-    def __init__(self, quantity, price, currency="USD"):
+    def __init__(self, quantity, price):
 	""" *Price_Break*: Initialize *self* to contain *quantity*
 	    and *price*.  """
 
 	# Verify argument types:
 	assert isinstance(quantity, int)
 	assert isinstance(price, float)
-	assert currency == "USD" or currency == "EUR" or currency == "GBP"
-
-	# This needs to be looked up:
-	rate = 1.0
-	if currency == "USD":
-	    exchange_rate = 1.0
-	elif currency == "EUR":
-	    exchange_rate = self.euro_to_dollar_exchange_rate
-	elif currency == "GBP":
-	    exchange_rate= self.pound_to_dollar_exchange_rate
-	else:
-	    assert False, "Unrecognized currencty '{0}'".format(currency)
 
 	# Load up *self*;
 	self.quantity = quantity
