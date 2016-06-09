@@ -72,7 +72,7 @@
 #
 # * *comment* is an optional comment field that is ignored by `bom_manager`
 #
-# For example the Atmel ATmega382 comes in 4 different IC packages --
+# For example the Atmel ATmega328 comes in 4 different IC packages --
 # DIP28, QFP32, and QFN32.  The `bom_manager` program wants
 # to see these symbols show up in the schematic as `ATMEGA328;DIP28`,
 # `ATMEGA328;QFP32`, and `ATMEGA328;QFN32`.  There is a textual database
@@ -369,6 +369,9 @@ class Database:
 		if len(vendor_parts) > 0:
 		    vendor_parts_cache[actual_key] = vendor_parts
 
+	    with open("/tmp/database.dmp", "w") as dump_stream:
+		self.dump(dump_stream)
+
 	# Now here is where we initialize the database:
 
 	# Boxes:
@@ -527,15 +530,10 @@ class Database:
 	self.choice_part("M2X5S;M2X5S",
 	  "Pin_header_Straight_2x05_Shrouded", "",
 	  "BOX HEADER .100\" MALE STR 10POS").actual_part(
-	  "On Shore", "302-S101", [
-	   ("Digi-Key", "ED1543-ND",
-	    "1/.28 10/.263 50/.1912 100/.1838 250/.165")]).actual_part(
 	  "Assmann", "AWHW-10G-0202-T").actual_part(
-	  "CNC Tech", "3020-10-0100-00").actual_part(
 	  "Sullins", "SBH11-PBPC-D05-ST-BK").actual_part(
 	  "3M", "30310-6002HB").actual_part(
 	  "TE Tech", "5103308-1").actual_part(
-	  "CNC Tech", "3010-10-001-11-00").actual_part(
 	  "Wurth", "61201021621")
 	self.alias_part("BUS_MASTER_HEADER;M2X5S",
 	  ["M2X5S;M2X5S"], "Pin_Header_Straight_2x05")
@@ -598,13 +596,10 @@ class Database:
 	  "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
 	  "TERM BLOCK PCB 2POS 5.0MM").actual_part(
 	  "Phoenix Contact", "1935161").actual_part(
-	  "On Shore", "OSTTA020161").actual_part(
 	  "Phoenix Contact", "1935776").actual_part(
-	  "On Shore", "OSTTC020162").actual_part(
 	  "TE", "1546216-2").actual_part(
 	  "TE", "282836-2").actual_part(
-	  "On Shore", "ED100/2DS").actual_part(
-	  "On Shore", "ED500/2DS")
+	  "On Shore", "ED100/2DS")
 
 	# There is a flipped/non-flipped issue here:
 	self.choice_part("F2X20RAK;F2X20RAK",
@@ -618,15 +613,8 @@ class Database:
 
 	self.choice_part("16MHZ;HC49S", "IPC7351:XTAL1150X480X430N", "",
 	  "CRYSTAL 16.0000MHZ SMD").actual_part(
-	  "TXC", "9C-16.000MBBK-T", [
-	   ("Digi-Key", "887-2425-1-ND",
-	    "1/.38 10/.316 50/.2832 100/.252 500/.24")]).actual_part(
 	  "TXC", "9C-16.000MAAE-T").actual_part(
-	  "TXC", "9C-16.000MAGJ-T").actual_part(
-	  "Cardinal", "CSM1Z-A5B2C5-40-16.0D18").actual_part(
-	  "Cardinal", "CSM1Z-A0B2C3-50-16.0D18").actual_part(
-	  "Cardinal", "CSM1Z-A5B2C3-40-16.0D18").actual_part(
-	  "Cardinal", "CSM4Z-A2B3C3-40-16.0D18")
+	  "TXC", "9C-16.000MAGJ-T")
 	# This alias should be removed:
 	self.alias_part("16MHZ;HC49",
 	  ["16MHZ;HC49S"], "IPC7351:XTAL1150X480X430N")
@@ -663,7 +651,6 @@ class Database:
 	  "NXP", "BAT54,235").actual_part(
 	  "Comchip", "BAT54-G").actual_part(
 	  "NXP", "BAS70,215").actual_part(
-	  "Panasonic", "DB3Y313KEL").actual_part(
 	  "Micro Commercial", "BAS40-TP")
 
 	self.choice_part("SMALL_SCHOTTKY;DO214AA", "DO214AA", "",
@@ -805,9 +792,7 @@ class Database:
 	  "Wurth", "150060VS75000").actual_part(
 	  "Rohm", "SML-310MTT86").actual_part(
 	  "Rohm", "SML-310FTT86").actual_part(
-	  "QTB", "QBLP601-YG").actual_part(
 	  "Rohm", "SML-310PTT86").actual_part(
-	  "QTB", "QBLP601-IG").actual_part(
 	  "Lite-On", "LTST-C190KGKT").actual_part(
 	  "Lite-On", "LTST-C190GKT").actual_part(
 	  "Lite-On", "LTST-C191KGKT").actual_part(
@@ -850,8 +835,7 @@ class Database:
 	  "Rohm", "MCR03EZPJ000").actual_part(
 	  "Panasonic", "ERJ-3GEY0R00V").actual_part(
 	  "Stackpole", "RMCF0603ZT0R00").actual_part(
-	  "Bourns", "CR0603-J/-000ELF").actual_part(
-	  "Yageo", "RC0603JR-070RL")
+	  "Bourns", "CR0603-J/-000ELF")
 	self.choice_part("0.20_1W;6432", "IPC7351:RESC6432X70N", "",
 	  "RES SMD 0.02 OHM 1% 1W 6432").actual_part(
 	  "TE", "2176057-8", [
@@ -860,7 +844,6 @@ class Database:
 	  "TT/Welwyn", "LRMAM2512-R02FT4").actual_part(
 	  "Bourns", "CRA2512-FZ-R020ELF").actual_part(
 	  "Yageo", "PE2512FKE070R02L").actual_part(
-	  "TE", "RLP73V3AR020JTE").actual_part(
 	  "TT/Welwyn", "LRMAP2512-R02FT4").actual_part(
 	  "Bourns", "CRF2512-FZ-R020ELF").actual_part(
 	  "Yageo", "RL2512FK-070R02L").actual_part(
@@ -885,8 +868,6 @@ class Database:
 	    "10/.074 50/.04 200/.02295 1000/.01566")]).actual_part(
 	  "Rohm", "MCR03ERTJ471").actual_part(
 	  "Samsung", "RC1608J471CS").actual_part(
-	  "Yageo", "RC0603JR-07470RP").actual_part(
-	  "Vishay Dale", "RCG0603470RJNEA").actual_part(
 	  "Rohm", "KTR03EZPJ471")
 	self.choice_part("1K;1608", "IPC7351:RESC1608X55N", "",
 	  "RES SMD 1K 5% 1/10W 0603").actual_part(
@@ -913,15 +894,11 @@ class Database:
 	  "Bourns", "CR0603-JW-472GLF")
 	self.choice_part("10K;1608", "IPC7351:RESC1608X55N", "",
 	  "RES SMD 10K OHM 5% 1/10W 1608").actual_part(
-	  "Vishay Dale", "RCG060310K0JNEA", [
-	    ("Digi-Key", "541-1804-1-ND",
-	     "1/.10 10/.067 25/.0484 50/.037 100/.0273")]).actual_part(
 	  "Yageo", "RC0603JR-0710KL").actual_part(
 	  "Panasonic", "ERJ-3GEYJ103V").actual_part(
 	  "Rohm", "MCR03ERTJ103").actual_part(
 	  "Rohm", "MCR03EZPJ103").actual_part(
 	  "Stackpole", "RMCF0603JT10K0").actual_part(
-	  "Yageo", "RC0603JR-0710KP").actual_part(
 	  "Bourns", "CR0603-JW-103ELF").actual_part(
 	  "Samsung", "RC1608J103CS").actual_part(
 	  "Bourns", "CR0603-JW-103GLF").actual_part(
@@ -954,7 +931,6 @@ class Database:
 	  "Bourns", "CR0603-JW-104GLF").actual_part(
 	  "Yageo", "RC0603JR-10100KL").actual_part(
 	  "Rohm", "MCR03ERTJ104").actual_part(
-	  "Vishay Dale", "RCA0603100KJNEA").actual_part(
 	  "Rohm", "KTR03EZPJ104")
 
 	# Switches
@@ -1152,6 +1128,23 @@ class Database:
 	  kicad_footprint, location, description)
 
 	return self.insert(choice_part)
+
+    def dump(self, out_stream):
+	""" *Database*: Output the *Database* object (i.e. *self*) out to *out_stream*
+	    in human readable form.
+	"""
+
+	# Verify argument types:
+	assert isinstance(out_stream, file);
+
+	vendor_parts_cache = self.vendor_parts_cache
+	actual_keys = sorted(vendor_parts_cache.keys())
+	for actual_key in actual_keys:
+	    out_stream.write("{0}:\n".format(actual_key))
+	    vendor_parts = vendor_parts_cache[actual_key]
+	    for vendor_part in vendor_parts:
+		vendor_part.dump(out_stream, 2);
+	    out_stream.write("\n")
 
     def exchange_rate(self, from_currency, to_currency):
 	""" *Database*: Lookup current currency exchange rate:
@@ -1666,6 +1659,74 @@ class Order:
 	bom_file.write("Total: ${0:.2f}\n".format(total_cost))
 	bom_file.close()
 
+    def csv_write(self):
+	""" *Order*: Write out the *Order* object (i.e. *self) BOM (Bill Of Materials)
+	    for each vendor as a .csv (Comma Seperated Values).
+	"""
+
+	# Grab *database* and *vendors*:
+	database = self.database
+	excluded_vendor_names = self.excluded_vendor_names
+
+	# Sort *final_choice_parts* using *key_function*.
+	final_choice_parts = self.final_choice_parts
+	final_choice_parts.sort(key = lambda choice_part:
+	  (choice_part.selected_vendor_name,
+	  choice_part.selected_total_cost,
+	  choice_part.schematic_part_name) )
+
+	vendor_boms = {}
+	for choice_part in final_choice_parts:
+	    assert isinstance(choice_part, Choice_Part)
+
+	    # Sort the *board_parts* by *board* followed by reference:
+	    board_parts = choice_part.board_parts
+	    board_parts.sort(key = lambda board_part:
+	      (board_part.board.name, board_part.reference.upper(),
+	       int(filter(str.isdigit, board_part.reference))))
+
+	    # Select the vendor_part and associated quantity/cost
+	    choice_part.select(excluded_vendor_names, True)
+	    selected_actual_part = choice_part.selected_actual_part
+	    selected_vendor_part = choice_part.selected_vendor_part
+	    selected_order_quantity = choice_part.selected_order_quantity
+
+	    if isinstance(selected_vendor_part, Vendor_Part):
+		# Grab the *vendor_name* and *vendor_part_name*:
+		assert isinstance(selected_vendor_part, Vendor_Part)
+		vendor_name = selected_vendor_part.vendor_name
+		vendor_part_name = selected_vendor_part.vendor_name
+
+		# Make sure we have a *vendor_bom* line list:
+		if not vendor_name in vendor_boms:
+		    vendor_boms[vendor_name] = []
+		lines = vendor_boms[vendor_name]
+
+		# Create *line* and append it to *vendor_bom*:
+		line = "{0},{1},{2},{3},{4}".format(
+		  selected_order_quantity,
+		  selected_vendor_part.vendor_part_name,
+		  selected_actual_part.manufacturer_name,
+		  selected_actual_part.manufacturer_part_name,
+		  choice_part.schematic_part_name)
+		lines.append(line)
+
+	# Wrap up the *bom_file*:
+	for vendor_name in vendor_boms.keys():
+	    # Open *csv_file*:
+	    csv_file_name = "/tmp/{0}.csv".format(vendor_name)
+	    print("Opening '{0}' for writing".format(csv_file_name))
+            csv_file = open(csv_file_name, "w")
+	    
+	    # Write out each line in *lines*:
+	    lines = vendor_boms[vendor_name]
+	    for line in lines:
+		csv_file.write(line)
+		csv_file.write("\n")
+	
+	    # Close *csv_file*:
+	    csv_file.close()
+
     def exclude_vendors_to_reduce_shipping_costs(self,
       choice_parts, excluded_vendor_names):
 	""" *Order*: Sweep through *choice_parts* and figure out which vendors
@@ -1688,7 +1749,7 @@ class Order:
 	    # Get the base cost for the current *excluded_vendor_names*:
 	    base_quad = \
 	      self.quad_compute(choice_parts, excluded_vendor_names, "")
-	    #print("base_quad={0}".format(base_quad))
+	    print("base_quad={0}".format(base_quad))
 
 	    # If the *base_missing_parts* increases, we need to stop because
 	    # excluding additional vendors will cause the order to become
@@ -1773,7 +1834,7 @@ class Order:
 	    # We use $5.00 as an approximate minimum shipping cost.
 	    # If the savings is less that the shipping cost, we exclude
 	    # the vendor:
-	    if savings < 5.0 and len(trial_quads) >= 2:
+	    if savings < 5.0 and len(trial_quads) >= 2 and lowest_vendor_name != "Digi-Key":
 		# The shipping costs are too high and there at lease one
 		# vendor left; exclude this vendor:
 		print("Excluding '{0}': only saves {1:.2f}".
@@ -1893,6 +1954,7 @@ class Order:
 			    vendor_parts = \
 			      database.findchips_scrape(actual_part)
 			    vendor_parts_cache[actual_key] = vendor_parts
+			    database.save()
 
 			for vendor_part in vendor_parts:
 			    actual_part.vendor_part_append(vendor_part)
@@ -1948,16 +2010,17 @@ class Order:
 	# Generate the bom file reports for *self.final_choice_parts*:
 	self.bom_write("bom_by_price.txt", lambda choice_part:
 	  (choice_part.selected_total_cost,
-	   choice_part.selected_vendor_name,
-	   choice_part.schematic_part_name) )
+	  choice_part.selected_vendor_name,
+	  choice_part.schematic_part_name) )
 	self.bom_write("bom_by_vendor.txt", lambda choice_part:
 	  (choice_part.selected_vendor_name,
 	  choice_part.selected_total_cost,
-	   choice_part.schematic_part_name) )
+	  choice_part.schematic_part_name) )
 	self.bom_write("bom_by_name.txt", lambda choice_part:
 	  (choice_part.schematic_part_name,
 	  choice_part.selected_vendor_name,
 	  choice_part.selected_total_cost) )
+	self.csv_write()
 
 	#FIXME: This final part needs some additional work!!!:
 
@@ -2933,6 +2996,29 @@ class Vendor_Part:
 	# Append *self* to the vendor parts of *actual_part*:
 	actual_part.vendor_part_append(self)
 
+    def dump(self, out_stream, indent):
+	""" *Vendor_Part*: Dump the *Vendor_Part* (i.e. *self*) out to
+	    *out_stream* in human readable form indented by *indent* spaces.
+	"""
+
+	# Verify argument types:
+	assert isinstance(out_stream, file)
+	assert isinstance(indent, int)
+
+	# Dump out *self*:
+	out_stream.write("{0}Actual_Part_Key:{1}\n".
+	  format(" " * indent, self.actual_part_key))
+	out_stream.write("{0}Vendor_Key:{1}\n".
+	  format(" " * indent, self.vendor_key))
+	out_stream.write("{0}Vendor_Name:{1}\n".
+	  format(" " * indent, self.vendor_name))
+	out_stream.write("{0}Vendor_Part_Name:{1}\n".
+	  format(" " * indent, self.vendor_part_name))
+	out_stream.write("{0}Quantity_Available:{1}\n".
+	  format(" " * indent, self.quantity_available))
+	out_stream.write("{0}Price_Breaks: (skip)\n".
+	  format(" " * indent))
+
     def price_breaks_text_get(self):
 	""" *Vendor_Part*: Return the prices breaks for the *Vendor_Part*
 	    object (i.e. *self*) as a text string:
@@ -3001,7 +3087,7 @@ def se_find(se, base_name, key_name):
 
 def main():
     database = Database()
-    euros = database.exchange_rate("USD", "EUR", 1.0)
+    euros = database.exchange_rate("USD", "EUR")
     print("euros = {0}".format(euros))
     order = Order(database)
     order.board("bom_test", "E.1", "bom_test.net", 9)
