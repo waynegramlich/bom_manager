@@ -48,8 +48,9 @@ are not shown.
 The ECAD system will take all of the schematic sheets and output
 a file called a net list.  A *net* is a ultimately a list of
 (reference name, pin number) pairs that indicate which electrical
-component pins are electrically wired together.  Each ECAD system
-typically has its own unique file format for the net list file.
+component pins are electrically wired together.  A *net list* is
+a list of all of the nets.  Each ECAD system typically has its own
+nique file format for the net list file.
 
 Each electrical component has a *footprint* that consist of a
 list of *landings*.  A *landing* is an

@@ -374,6 +374,13 @@ class Database:
 
 	# Now here is where we initialize the database:
 
+	# Batteries and Holders:
+	self.choice_part("BAT_HOLDER;2032_THRU", "BU2032-1", "",
+	  "HOLDER COIN CELL 2032 PC PIN").actual_part(
+	  "MPD", "BU2032-1-HD-G").actual_part(
+	  "MPD", "BU2032-1").actual_part(
+	  "MPD", "BU2032-1-G")
+
 	# Boxes:
 	self.choice_part("JB-3955;102Lx152Wx152H", "102Lx152Wx152H", "",
 	  "BOX STEEL GRAY 102Lx152Wx152H").actual_part(
@@ -384,12 +391,10 @@ class Database:
 	# Buttons:
 
 	# Change KiCAD Footprint name -- it is totally wrong:
-	self.choice_part("BUTTON;6X6MM", "FCI214376569",
+	self.choice_part("BUTTON;6X6MM", "TE_Connectivity_2-1437565-9",
 	  "TE_Connectivity_2-1437565-9",
 	  "SWITCH TACTILE SPST-NO 0.05A 12V").actual_part(
-	  "TE", "2-1437565-9", [
-	  ("Digi-Key", "450-1792-1-ND",
-	   "1/.26 10/.249 25/.2408 50/.232 100/.219 200/.206")]).actual_part(
+	  "TE", "2-1437565-9").actual_part(
 	  "C&K", "PTS645SH50SMTR92 LFS").actual_part(
 	  "C&K", "PTS645SK50SMTR92 LFS").actual_part(
 	  "TE", "FSM4JSMATR").actual_part(
@@ -504,19 +509,29 @@ class Database:
 	  ["M1X1;M1X1"], "Pin_Header_Straight_1x01")
 	self.alias_part("TEST_POINT;M1X1",
 	  ["M1X1;M1X1"], "Pin_Header_Straight_1x01")
+	self.alias_part("TEST_POINT;1X1",
+	  ["M1X1;M1X1"], "Pin_Header_Straight_1x01")
 
 	# M1X2:
 	self.alias_part("CURRENT_SHUNT;M1X2",
+	  ["M1X2;M1X2"], "Pin_Header_Straight_1x02")
+	self.alias_part("CURRENT_SHUNT;1X2",
 	  ["M1X2;M1X2"], "Pin_Header_Straight_1x02")
 
 	# M1X3:
 	self.alias_part("TERMINATE_JUMPER;M1X3",
 	  ["M1X3;M1X3"], "Pin_Header_Straight_1x03")
+	self.alias_part("TERMINATE_JUMPER;1X3",
+	  ["M1X3;M1X3"], "Pin_Header_Straight_1x03")
 	self.alias_part("SERVO;M1X3",
+	  ["M1X3;M1X3"], "Pin_Header_Straight_1x03")
+	self.alias_part("SERVO;1X3",
 	  ["M1X3;M1X3"], "Pin_Header_Straight_1x03")
 
 	# M1X4:
 	self.alias_part("I2C_CONN;M1X4",
+	  ["M1X4;M1X4"], "Pin_Header_Straight_1x04")
+	self.alias_part("I2C_CONN;1X4",
 	  ["M1X4;M1X4"], "Pin_Header_Straight_1x04")
 
 	# M1X6:
@@ -524,19 +539,12 @@ class Database:
 	  ["M1X6;M1X6"], "Pin_Header_Straight_1x06")
 	self.alias_part("FTDI_HEADER;M1X6",
 	  ["M1X6;M1X6"], "Pin_Header_Straight_1x06")
+	self.alias_part("FTDI_HEADER;1X6",
+	  ["M1X6;M1X6"], "Pin_Header_Straight_1x06")
 	self.alias_part("FTDI_HEADER_ALT;M1X6",
 	  ["M1X6;M1X6"], "Pin_Header_Straight_1x06")
-
-	self.choice_part("M2X5S;M2X5S",
-	  "Pin_header_Straight_2x05_Shrouded", "",
-	  "BOX HEADER .100\" MALE STR 10POS").actual_part(
-	  "Assmann", "AWHW-10G-0202-T").actual_part(
-	  "Sullins", "SBH11-PBPC-D05-ST-BK").actual_part(
-	  "3M", "30310-6002HB").actual_part(
-	  "TE Tech", "5103308-1").actual_part(
-	  "Wurth", "61201021621")
-	self.alias_part("BUS_MASTER_HEADER;M2X5S",
-	  ["M2X5S;M2X5S"], "Pin_Header_Straight_2x05")
+	self.alias_part("FTDI_HEADER_ALT;1X6",
+	  ["M1X6;M1X6"], "Pin_Header_Straight_1x06")
 
 	### Create the fractional parts for the 2XN male headers:
 	self.choice_part("M2X40;M2X40", "Pin_Header_Straight_2x40",
@@ -559,6 +567,21 @@ class Database:
 
 	self.fractional_part("AVR_SPI;M2X3", "Pin_Header_Straight_2x03",
 	  "M2X40;M2X40", 6, 80, "CONN HEADER .100\" DBL STR 6POS")
+	self.fractional_part("ISP_HEADER;2X3", "Pin_Header_Straight_2x03",
+	  "M2X40;M2X40", 6, 80, "CONN HEADER .100\" DBL STR 6POS")
+
+	self.choice_part("M2X5S;M2X5S",
+	  "Pin_header_Straight_2x05_Shrouded", "",
+	  "BOX HEADER .100\" MALE STR 10POS").actual_part(
+	  "Assmann", "AWHW-10G-0202-T").actual_part(
+	  "Sullins", "SBH11-PBPC-D05-ST-BK").actual_part(
+	  "3M", "30310-6002HB").actual_part(
+	  "TE Tech", "5103308-1").actual_part(
+	  "Wurth", "61201021621")
+	self.alias_part("BUS_MASTER_HEADER;M2X5S",
+	  ["M2X5S;M2X5S"], "Pin_Header_Straight_2x05")
+	self.alias_part("BUS_MASTER_HEADER;2X5S",
+	  ["M2X5S;M2X5S"], "Pin_Header_Straight_2x05")
 
 	self.fractional_part("M2X6;M2X6", "Pin_Header_Straight_2x06",
 	  "M2X40;M2X40", 12, 80, "CONN HEADER .100\" DBL STR 12POS")
@@ -575,7 +598,21 @@ class Database:
 	  "3M", "929850-01-03-RA").actual_part(
 	  "FCI", "66951-003LF")
 	self.alias_part("REGULATOR;F1X3",
-	  ["F1X3;F1X3"], "Pin_Header_Straight_1x03",)
+	  ["F1X3;F1X3"], "Pin_Header_Straight_1x03")
+	self.alias_part("POLOLU_VR;F1X3",
+	  ["F1X3;F1X3"], "Pin_Header_Straight_1x03")
+
+	self.choice_part("F1X6;F1X6", "Pin_Header_Straight_1x06", "",
+	  "CONN HEADER FEMALE 6POS .1\"").actual_part(
+	  "Sullins", "PPTC061LFBN-RC").actual_part(
+	  "Sullins", "PPPC061LFBN-RC").actual_part(
+	  "Molex", "0022022065").actual_part(
+	  "3M", "929974-01-06-RK").actual_part(
+	  "Harwin", "M20-7820646").actual_part(
+	  "Harwin", "M20-7820642").actual_part(
+	  "Molex", "22-18-2061")
+	self.alias_part("ENCODER_CONNECTOR;F1X6",
+	  ["F1X6;F1X6"], "Pin_Header_Straight_1x06")
 
 	self.choice_part("F2X4;F2X4", "Pin_Header_Straight_2x04", "",
 	  "CONN RCPT .100\" 8POS DUAL").actual_part(
@@ -590,7 +627,27 @@ class Database:
 	  "FCI", "68683-304LF").actual_part(
 	  "Samtec", "SSQ-104-03-T-D")
 	self.alias_part("HC_SR04;F2X4",
-	  ["F2X4;F2X4"], "Pin_Header_Straight_2x04",)
+	  ["F2X4;F2X4"], "Pin_Header_Straight_2x04")
+
+	self.choice_part("F2X10RA;F2X10RA", "Pin_Receptale_Angled_2x10", "",
+	  "CONN RCPT .100\" 20POS DUAL").actual_part(
+	  "Sullins", "SFH11-PBPC-D10-RA-BK").actual_part(
+	  "Sullins", "PPTC102LJBN-RC").actual_part(
+	  "Sullins", "PPPC102LJBN-RC").actual_part(
+	  "Samtec", "SSQ-110-02-T-D-RA").actual_part(
+	  "TE", "5535512-2").actual_part(
+	  "Samtec", "SSW-110-02-G-D-RA").actual_part(
+	  "Samtec", "SSW-110-02-S-D-RA").actual_part(
+	  "Hirose", "HIF3H-20DB-2.54DS(71)")
+
+	self.choice_part("F2X20RA;F2X20RA", "Pin_Receptale_Angled_2x20", "",
+	  "CONN RCPT .100\" 40POS DUAL").actual_part(
+	  "Sullins", "PPTC202LJBN-RC").actual_part(
+	  "Sullins", "SFH11-PBPC-D20-RA-BK").actual_part(
+	  "Sullins", "PPPC202LJBN-RC").actual_part(
+	  "3M", "960240-7102-AR	")
+	self.alias_part("SBC_CONNECTOR40;F2X20RA",
+	  ["F2X20RA;F2X20RA"], "Pin_Receptale_Angled_2x20")
 
 	self.choice_part("2POS_TERM_BLOCK;5MM", "5MM_TERMINAL_BLOCK_2_POS",
 	  "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
@@ -602,12 +659,21 @@ class Database:
 	  "On Shore", "ED100/2DS")
 
 	# There is a flipped/non-flipped issue here:
-	self.choice_part("F2X20RAK;F2X20RAK",
+	self.choice_part("F2X20RAKF;F2X20RAKF",
 	  "Pin_Receptacle_Angle_2x20_Flipped", "",
-	  "CONN HEADER FEMALE 40POS 0.100\" ANGLED KEYED").actual_part(
+	  "CONN HEADER FEMALE 40POS 0.100\" ANGLED KEYED FLIPPED").actual_part(
 	  "Sullins", "SFH11-PBPC-D20-RA-BK")
-	self.alias_part("SBC_CONNECTOR40;F2X20RAKF", ["F2X20RAK;F2X20RAK"],
+	self.alias_part("SBC_CONNECTOR40;F2X20RAKF", ["F2X20RAKF;F2X20RAKF"],
 	  "Pin_Receptacle_Angle_2x20_Flipped")
+
+	# USB connectors:
+        self.choice_part("USB_MICRO_B;S+T", "FCI_10118194_0001LF", "",
+	  "CONN USB MICRO B RECPT SMT R/A").actual_part(
+	  "Amphenol", "10118194-0001LF")
+
+	self.choice_part("USB_B_ALT;ALT", "USB_B", "",
+	  "CONN USB TYPE B JACK").actual_part(
+	  "Pulse Electronics", "E8144-B02022-L")
 
 	# Crystals:
 
@@ -618,6 +684,31 @@ class Database:
 	# This alias should be removed:
 	self.alias_part("16MHZ;HC49",
 	  ["16MHZ;HC49S"], "IPC7351:XTAL1150X480X430N")
+
+	self.choice_part("32.7680KHZ;4SOJ_P5.5", "OSCL550P380X800X250-4N", "",
+          "CRYSTAL 32.7680KHZ 12.5PF SMD").actual_part(
+	  "Abracon", "ABS25-32.768KHZ-T").actual_part(
+	  "Abracon", "ABS25-32.768KHZ-6-T").actual_part(
+	  "ECS", "ECS-.327-12.5-17X-TR").actual_part(
+	  "Epson", "MC-306 32.7680K-A0:ROHS").actual_part(
+	  "Epson", "MC-306 32.768K-E3:ROHS").actual_part(
+	  "Pericom", "G43270021").actual_part(
+	  "Abracon", "ABS25-32.768KHZ-4-T").actual_part(
+	  "Fox", "FSRLF327").actual_part(
+	  "Abracon", "ABS25-32.768KHZ-6-1-T").actual_part(
+	  "Abracon", "ABS25-32.768KHZ-1-T").actual_part(
+	  "Cardinal", "CPFBZ-A2C4-32.768KD6").actual_part(
+	  "Cardinal", "CPFBZ-A2C5-32.768KD12.5").actual_part(
+	  "Cardinal", "CPFBZ-A2C4-32.768KD12.5").actual_part(
+	  "Cardinal", "CPFBZ-A2C5-32.768KD6").actual_part(
+	  "ECS", "ECS-.327-6-17X-TR").actual_part(
+	  "ECS", "ECS-.327-6-17X-C-TR").actual_part(
+	  "Citizen", "CM200C32768AZFT").actual_part(
+	  "Fox", "FSRLF327-6").actual_part(
+	  "ECS", "ECS-.327-12.5-17X-C-TR").actual_part(
+	  "Citizen", "CM200C32768DZFT").actual_part(
+	  "Citizen", "CM200C32768DZYT").actual_part(
+	  "Citizen", "CM200C32768DZCT")
 
 	# Miscellaneous connectors:
 
@@ -670,6 +761,9 @@ class Database:
 	  "Fairchild", "SS25").actual_part(
 	  "Fairchild", "SS22").actual_part(
 	  "Fairchild", "SS26")
+	self.alias_part("SCHOTTKY_1A+_15V+;DO214AA",
+	  ["SMALL_SCHOTTKY;DO214AA;1608"], "DIOC1608X55N")
+
 	self.choice_part("SCHOTTKY_3A_200V;DO214AA", "DO214AA", "",
 	  "DIODE SCHOTTKY 200V 3A DO214AA").actual_part(
 	  "Fairchild", "S320").actual_part(
@@ -691,6 +785,9 @@ class Database:
 	self.choice_part("HOLE;2MM", "2MM_HOLE", "",
 	  "2MM HOLE").actual_part(
 	  "McMaster-Carr", "2MM_Hole")
+	self.choice_part("SLOT_HOLE;10X20MM", "10X20MM_HOLE", "",
+	  "10X20MM HOLE").actual_part(
+	  "McMaster-Carr", "10X20MM_Hole")
 
 	# Fuses:
 
@@ -703,6 +800,10 @@ class Database:
 	self.alias_part("3A;LF349", ["3A;LF649"], "LF649")
 
 	# Inductors:
+
+	self.choice_part("SRR1280-221K;12.5MM", "SRR1280", "",
+	  "FIXED IND 220UH 1.6A 400 MOHM").actual_part(
+	  "Bourns", "SRR1280-221K")
 
 	self.choice_part("?uH;I1X10", "Inductor_1x10", "",
 	  "INLINE INDUCTER").actual_part(
@@ -728,7 +829,6 @@ class Database:
 	  "Microchip", "MCP1703-5002E/DB").actual_part(
 	  "Microchip", "MCP1703T-5002E/DB")
 
-
 	self.choice_part("74xHC08;SOIC8", "SOIC127P600X175-14N", "",
 	  "IC GATE AND 4CH 2-INP 14-SOIC").actual_part(
 	  "Fairchild", "MM74HCT08MX").actual_part(
@@ -741,6 +841,20 @@ class Database:
 	  "TI", "CD74HC08M96").actual_part(
 	  "TI", "CD74HCT08M96").actual_part(
 	  "Fairchild", "74VHC08MX")
+
+	self.choice_part("74HC32;SOIC14", "SOIC127P600X175-14N", "",
+	  "IC GATE OR 4CH 2-INP 14-SOIC").actual_part(
+	  "Toshiba", "74HC32D(BJ)").actual_part(
+	  "TI", "SN74HC32D").actual_part(
+	  "On Semi", "MC74HC32ADG").actual_part(
+	  "Fairchild", "MM74HC32M").actual_part(
+	  "On Semi", "MC74HC32ADR2G").actual_part(
+	  "Fairchild", "MM74HC32MX").actual_part(
+	  "TI", "SN74HC32DR").actual_part(
+	  "TI", "SN74HC32DRG4").actual_part(
+	  "TI", "CD74HC32M96").actual_part(
+	  "TI", "CD74HC32M").actual_part(
+	  "TI", "SN74HC32DT")
 
 	self.choice_part("74HC1G14;SOT23-5", "SOT95P280X145-5N", "",
 	  "IC INVERTER SGL SCHMITT SOT23-5").actual_part(
@@ -758,6 +872,22 @@ class Database:
 	  "Atmel", "ATMEGA328-AUR", [
 	  ("Digi-Key", "ATMEGA328-AURCT-ND",
 	   "1/3.38 10/3.015 25/2.7136 100/2.4723 250/2.23112")])
+
+	self.choice_part("ATMEGA2560_16MHZ;QFP100", "QFP50P1600X1600X120-100N", "",
+	  "IC MCU 8BIT 256KB FLASH 100TQFP").actual_part(
+	  "Atmel", "ATMEGA2560-16AU")
+
+	self.choice_part("L293;DIP16", "DIP-16__300", "",
+	  "IC MOTOR DRIVER PAR 16-DIP").actual_part(
+	  "TI", "L293DNE").actual_part(
+	  "ST Micro", "L293D").actual_part(
+	  "TI", "L293NE").actual_part(
+	  "TI", "L293DNEE4").actual_part(
+	  "ST Micro", "LD293B")
+
+	self.choice_part("L293;SOIC20", "SOIC127P1032X265-20N", "",
+	  "IC MOTOR DRIVER PAR 20-SOIC").actual_part(
+	  "ST Micro", "L293DD")
 
 	self.choice_part("LM311;SOIC8", "SOIC127P600X173-8N", "",
 	  "IC COMPARATOR SGL 8SOIC").actual_part(
@@ -982,6 +1112,8 @@ class Database:
 	self.alias_part("FTDI;M1X6",
 	  ["M1X6;M1X6"], "Pin_Header_Straight_1x06")
 	self.alias_part("ISP_CONN;M2X3",
+	  ["M2X3;M2X3"], "Pin_Header_Straight_2x03")
+	self.alias_part("ISP_CONN;2X3",
 	  ["M2X3;M2X3"], "Pin_Header_Straight_2x03")
 	self.alias_part("ID6;M2X6",
 	  ["M2X6;M2X6"], "Pin_Header_Straight_2x06")
