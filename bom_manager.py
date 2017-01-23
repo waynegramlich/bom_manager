@@ -486,23 +486,23 @@ class Database:
 
 	### Create the fractional parts for 1XN male headers:
 	self.choice_part("M1X40;M1X40", "Pin_Header_Straight_1x40", "",
-	  "CONN HEADER .100\" SNGL STR 40POS").actual_part(
+	  "CONN HEADER .100in SNGL STR 40POS").actual_part(
 	  "Sullins", "PREC040SAAN-RC", [
 	   ("Digi-Key", "S1012EC-40-ND",
 	    "1/.56 10/.505 100/.4158 500/.32868 1000/.28215")])
 
 	self.fractional_part("M1X1;M1X1", "Pin_Header_Straight_1x01",
-	   "M1X40;M1X40", 1, 40, "CONN HEADER .100\" SNGL STR 1POS")
+	   "M1X40;M1X40", 1, 40, "CONN HEADER .100in SNGL STR 1POS")
 	self.fractional_part("M1X2;M1X2", "Pin_Header_Straight_1x02",
-	   "M1X40;M1X40", 2, 40, "CONN HEADER .100\" SNGL STR 2POS")
+	   "M1X40;M1X40", 2, 40, "CONN HEADER .100in SNGL STR 2POS")
 	self.fractional_part("M1X3;M1X3", "Pin_Header_Straight_1x03",
-	   "M1X40;M1X40", 3, 40, "CONN HEADER .100\" SNGL STR 3POS")
+	   "M1X40;M1X40", 3, 40, "CONN HEADER .100in SNGL STR 3POS")
 	self.fractional_part("M1X4;M1X4", "Pin_Header_Straight_1x04",
-	   "M1X40;M1X40", 4, 40, "CONN HEADER .100\" SNGL STR 4POS")
+	   "M1X40;M1X40", 4, 40, "CONN HEADER .100in SNGL STR 4POS")
 	self.fractional_part("M1X5;M1X5", "Pin_Header_Straight_1x05",
-	   "M1X40;M1X40", 5, 40, "CONN HEADER .100\" SNGL STR 5POS")
+	   "M1X40;M1X40", 5, 40, "CONN HEADER .100in SNGL STR 5POS")
 	self.fractional_part("M1X6;M1X6", "Pin_Header_Straight_1x06",
-	   "M1X40;M1X40", 6, 40, "CONN HEADER .100\" SNGL STR 6POS")
+	   "M1X40;M1X40", 6, 40, "CONN HEADER .100in SNGL STR 6POS")
 
 	# Test points M1X1:
 	self.alias_part("CAN_RXD;M1X1",
@@ -549,7 +549,7 @@ class Database:
 	### Create the fractional parts for the 2XN male headers:
 	self.choice_part("M2X40;M2X40", "Pin_Header_Straight_2x40",
 	  "Pin_Header_Straight_2x40",
-	  "CONN HEADER .100\" DUAL STR 80POS").actual_part(
+	  "CONN HEADER .100in DUAL STR 80POS").actual_part(
 	  "Sullins", "PREC040DAAN-RC", [
 	   ("Digi-Key", "S2212EC-40-ND",
 	    "1/1.28 10/1.14200 100/.9408 500/.74368")]).actual_part(
@@ -563,16 +563,16 @@ class Database:
 	  "TE", "9-146258-0")
 
 	self.fractional_part("M2X3;M2X3", "Pin_Header_Straight_2x03",
-	  "M2X40;M2X40", 6, 80, "CONN HEADER .100\" DBL STR 6POS")
+	  "M2X40;M2X40", 6, 80, "CONN HEADER .100in DBL STR 6POS")
 
 	self.fractional_part("AVR_SPI;M2X3", "Pin_Header_Straight_2x03",
-	  "M2X40;M2X40", 6, 80, "CONN HEADER .100\" DBL STR 6POS")
+	  "M2X40;M2X40", 6, 80, "CONN HEADER .100in DBL STR 6POS")
 	self.fractional_part("ISP_HEADER;2X3", "Pin_Header_Straight_2x03",
-	  "M2X40;M2X40", 6, 80, "CONN HEADER .100\" DBL STR 6POS")
+	  "M2X40;M2X40", 6, 80, "CONN HEADER .100in DBL STR 6POS")
 
 	self.choice_part("M2X5S;M2X5S",
 	  "Pin_header_Straight_2x05_Shrouded", "",
-	  "BOX HEADER .100\" MALE STR 10POS").actual_part(
+	  "BOX HEADER .100in MALE STR 10POS").actual_part(
 	  "Assmann", "AWHW-10G-0202-T").actual_part(
 	  "Sullins", "SBH11-PBPC-D05-ST-BK").actual_part(
 	  "3M", "30310-6002HB").actual_part(
@@ -584,12 +584,12 @@ class Database:
 	  ["M2X5S;M2X5S"], "Pin_Header_Straight_2x05")
 
 	self.fractional_part("M2X6;M2X6", "Pin_Header_Straight_2x06",
-	  "M2X40;M2X40", 12, 80, "CONN HEADER .100\" DBL STR 12POS")
+	  "M2X40;M2X40", 12, 80, "CONN HEADER .100in DBL STR 12POS")
 
 	## Female connectors:
 
 	self.choice_part("F1X3;F1X3", "Pin_Header_Straight_1x03", "",
-	  "CONN HEADER FEMALE 3POS .1\"").actual_part(
+	  "CONN HEADER FEMALE 3POS .1inch").actual_part(
 	  "Sullins", "PPPC031LFBN-RC").actual_part(
 	  "Sullins", "PPTC031LFBN-RC").actual_part(
 	  "3M", "960103-6202-AR").actual_part(
@@ -603,7 +603,7 @@ class Database:
 	  ["F1X3;F1X3"], "Pin_Header_Straight_1x03")
 
 	self.choice_part("F1X6;F1X6", "Pin_Header_Straight_1x06", "",
-	  "CONN HEADER FEMALE 6POS .1\"").actual_part(
+	  "CONN HEADER FEMALE 6POS .1in").actual_part(
 	  "Sullins", "PPTC061LFBN-RC").actual_part(
 	  "Sullins", "PPPC061LFBN-RC").actual_part(
 	  "Molex", "0022022065").actual_part(
@@ -615,7 +615,7 @@ class Database:
 	  ["F1X6;F1X6"], "Pin_Header_Straight_1x06")
 
 	self.choice_part("F2X4;F2X4", "Pin_Header_Straight_2x04", "",
-	  "CONN RCPT .100\" 8POS DUAL").actual_part(
+	  "CONN RCPT .100in 8POS DUAL").actual_part(
 	  "Sullins", "PPTC042LFBN-RC").actual_part(
 	  "Sullins", "PPPC042LFBN-RC").actual_part(
 	  "Harwin", "M20-7830446").actual_part(
@@ -630,7 +630,7 @@ class Database:
 	  ["F2X4;F2X4"], "Pin_Header_Straight_2x04")
 
 	self.choice_part("F2X10RA;F2X10RA", "Pin_Receptale_Angled_2x10", "",
-	  "CONN RCPT .100\" 20POS DUAL").actual_part(
+	  "CONN RCPT .100in 20POS DUAL").actual_part(
 	  "Sullins", "SFH11-PBPC-D10-RA-BK").actual_part(
 	  "Sullins", "PPTC102LJBN-RC").actual_part(
 	  "Sullins", "PPPC102LJBN-RC").actual_part(
@@ -641,7 +641,7 @@ class Database:
 	  "Hirose", "HIF3H-20DB-2.54DS(71)")
 
 	self.choice_part("F2X20RA;F2X20RA", "Pin_Receptale_Angled_2x20", "",
-	  "CONN RCPT .100\" 40POS DUAL").actual_part(
+	  "CONN RCPT .100in 40POS DUAL").actual_part(
 	  "Sullins", "PPTC202LJBN-RC").actual_part(
 	  "Sullins", "SFH11-PBPC-D20-RA-BK").actual_part(
 	  "Sullins", "PPPC202LJBN-RC").actual_part(
@@ -661,7 +661,7 @@ class Database:
 	# There is a flipped/non-flipped issue here:
 	self.choice_part("F2X20RAKF;F2X20RAKF",
 	  "Pin_Receptacle_Angle_2x20_Flipped", "",
-	  "CONN HEADER FEMALE 40POS 0.100\" ANGLED KEYED FLIPPED").actual_part(
+	  "CONN HEADER FEMALE 40POS 0.100in ANGLED KEYED FLIPPED").actual_part(
 	  "Sullins", "SFH11-PBPC-D20-RA-BK")
 	self.alias_part("SBC_CONNECTOR40;F2X20RAKF", ["F2X20RAKF;F2X20RAKF"],
 	  "Pin_Receptacle_Angle_2x20_Flipped")
@@ -762,7 +762,7 @@ class Database:
 	  "Fairchild", "SS22").actual_part(
 	  "Fairchild", "SS26")
 	self.alias_part("SCHOTTKY_1A+_15V+;DO214AA",
-	  ["SMALL_SCHOTTKY;DO214AA;1608"], "DIOC1608X55N")
+	  ["SMALL_SCHOTTKY;DO214AA"], "DIOC1608X55N")
 
 	self.choice_part("SCHOTTKY_3A_200V;DO214AA", "DO214AA", "",
 	  "DIODE SCHOTTKY 200V 3A DO214AA").actual_part(
@@ -781,13 +781,13 @@ class Database:
 
 	self.choice_part("HOLE;3MM", "3MM_HOLE", "",
 	  "3MM HOLE").actual_part(
-	  "McMaster-Carr", "3MM_Hole")
+	  "Digikey", "PMS 440 0063 SL")	# Kludge
 	self.choice_part("HOLE;2MM", "2MM_HOLE", "",
 	  "2MM HOLE").actual_part(
-	  "McMaster-Carr", "2MM_Hole")
+	  "Digikey", "PMS 632 0031 SL") # Kludge
 	self.choice_part("SLOT_HOLE;10X20MM", "10X20MM_HOLE", "",
-	  "10X20MM HOLE").actual_part(
-	  "McMaster-Carr", "10X20MM_Hole")
+	  "10X20MM HOLE").actual_part( # Kludge
+	  "Digikey", "PMS 632 0063 SL")
 
 	# Fuses:
 
@@ -883,7 +883,7 @@ class Database:
 	  "ST Micro", "L293D").actual_part(
 	  "TI", "L293NE").actual_part(
 	  "TI", "L293DNEE4").actual_part(
-	  "ST Micro", "LD293B")
+	  "ST Micro", "L293B")
 
 	self.choice_part("L293;SOIC20", "SOIC127P1032X265-20N", "",
 	  "IC MOTOR DRIVER PAR 20-SOIC").actual_part(
@@ -1860,7 +1860,7 @@ class Order:
 	    csv_file.close()
 
     def exclude_vendors_to_reduce_shipping_costs(self,
-      choice_parts, excluded_vendor_names):
+      choice_parts, excluded_vendor_names, reduced_vendor_messages):
 	""" *Order*: Sweep through *choice_parts* and figure out which vendors
 	    to add to *excluded_vendor_names* to reduce shipping costs.
 	"""
@@ -1868,6 +1868,7 @@ class Order:
 	# Verify argument types:
 	assert isinstance(choice_parts, list)
 	assert isinstance(excluded_vendor_names, dict)
+	assert isinstance(reduced_vendor_messages, list)
 
 	# First figure out the total *missing_parts*.  We will stop if
 	# excluding a vendor increases above the *missing_parts* number:
@@ -1881,7 +1882,7 @@ class Order:
 	    # Get the base cost for the current *excluded_vendor_names*:
 	    base_quad = \
 	      self.quad_compute(choice_parts, excluded_vendor_names, "")
-	    print("base_quad={0}".format(base_quad))
+	    #print("base_quad={0}".format(base_quad))
 
 	    # If the *base_missing_parts* increases, we need to stop because
 	    # excluding additional vendors will cause the order to become
@@ -1946,7 +1947,7 @@ class Order:
 		savings = lowest_cost - base_cost
 		if savings == 0.0:
 		    # This vendor offers no savings; get rid of the vendor:
-		    print("Excluding '{0}': saves nothing".
+		    reduced_vendor_messages.append("Excluding '{0}': saves nothing\n".
 		      format(lowest_vendor_name, savings))
 		    excluded_vendor_names[lowest_vendor_name] = None
 		    del trial_quads[0]
@@ -1969,7 +1970,7 @@ class Order:
 	    if savings < 5.0 and len(trial_quads) >= 2 and lowest_vendor_name != "Digi-Key":
 		# The shipping costs are too high and there at lease one
 		# vendor left; exclude this vendor:
-		print("Excluding '{0}': only saves {1:.2f}".
+		reduced_vendor_messages.append("Excluding '{0}': only saves {1:.2f}\n".
 		  format(lowest_vendor_name, savings))
 		excluded_vendor_names[lowest_vendor_name] = None
 	    else:
@@ -1978,7 +1979,7 @@ class Order:
 		done = True
 
     def exclude_vendors_with_high_minimums(self,
-      choice_parts, excluded_vendor_names):
+      choice_parts, excluded_vendor_names, reduced_vendor_messages):
 	""" *Order*: Sweep through *choice* parts and figure out if the
 	    vendors with large minimum orders can be dropped:
 	"""
@@ -1986,6 +1987,7 @@ class Order:
 	# Verify argument types:
 	assert isinstance(choice_parts, list)
 	assert isinstance(excluded_vendor_names, dict)
+	assert isinstance(reduced_vendor_messages, list)
 
 	# Grab the talb eof *vendor_minimums*:
 	database = self.database
@@ -2009,7 +2011,8 @@ class Order:
 	    # exclude *vendor_name*:
 	    if vendor_total_cost < vendor_minimum_cost:
 		excluded_vendor_names[vendor_name] = None
-		print("Excluding '{0}': needed order {1} < minimum order {2}".
+		reduced_vendor_messages.append(
+                  "Excluding '{0}': needed order {1} < minimum order {2}\n".
 		  format(vendor_name, vendor_total_cost, vendor_minimum_cost))
 
     def final_choice_parts_compute(self):
@@ -2029,7 +2032,7 @@ class Order:
 	# Visit each *board* in *boards* to locate the associated
 	# *Choice_Part* objects.  We want to eliminate duplicate
 	# *Choice_Part* objects, so we use *choice_parts_table* to
-	# eliminate dupliccates.
+	# eliminate duplicates.
 	choice_parts_table = {}
 	for board in boards:
 	    #print("Order.process(): board:{0}".format(board.name))
@@ -2042,6 +2045,20 @@ class Order:
 	    board_parts.sort(key = lambda board_part:
 	      (    filter(str.isalpha, board_part.reference).upper(),
 	       int(filter(str.isdigit, board_part.reference)) ))
+
+	    # Collect all of the *do_not_install_board_parts*:
+	    install_board_parts = []
+	    do_not_install_board_parts = []
+	    for board_part in board_parts:
+		if board_part.do_not_install:
+		    do_not_install_board_parts.append(board_part)
+		else:
+		    install_board_parts.append(board_part)
+            self.do_not_install_board_parts = do_not_install_board_parts
+
+	    # From now on *board_parts* only contains installable board parts:
+	    board_parts = install_board_parts
+	    self.boad_parts = install_board_parts
 
 	    # Visit each *board_part* in *board_parts*:
 	    for board_part in board_parts:
@@ -2114,6 +2131,9 @@ class Order:
 
 	#print("=>Order.process()")
 
+	# Collect the messages from each vendor reduction operation into *reduced_vendor_messages*:
+	reduced_vendor_messages = []
+
 	# We need to contruct a list of *Choice_Part* objects.  This
         # will land in *final_choice_parts* below.   Only *Choice_Part*
 	# objects can actually be ordered because they list one or
@@ -2132,9 +2152,18 @@ class Order:
 	# do not exceed additional shipping costs.
 	excluded_vendor_names = self.excluded_vendor_names
 	self.exclude_vendors_with_high_minimums(
-	  final_choice_parts, excluded_vendor_names)
+	  final_choice_parts, excluded_vendor_names, reduced_vendor_messages)
 	self.exclude_vendors_to_reduce_shipping_costs(
-	  final_choice_parts, excluded_vendor_names)
+	  final_choice_parts, excluded_vendor_names, reduced_vendor_messages)
+
+	# Write out *reduced_vendor_messages* to a report file:
+	reduced_vendor_messages_file_name = "/tmp/vendor_reduction_report.txt"
+	reduced_vendor_messages_file = open(reduced_vendor_messages_file_name, "w")
+	for reduced_vendor_message in reduced_vendor_messages:
+            reduced_vendor_messages_file.write(reduced_vendor_message)
+	reduced_vendor_messages_file.close()
+	print("{0} vendors eliminated.  See '{1}' file for why".
+	  format(len(reduced_vendor_messages), reduced_vendor_messages_file_name))
 
 	# Print out the final selected vendor summary:
 	self.summary_print(final_choice_parts, excluded_vendor_names)
@@ -2153,6 +2182,11 @@ class Order:
 	  choice_part.selected_vendor_name,
 	  choice_part.selected_total_cost) )
 	self.csv_write()
+
+	
+	# Write a part summary file for each board:
+	for board in self.boards:
+	    board.assembly_summary_write(final_choice_parts)
 
 	#FIXME: This final part needs some additional work!!!:
 
@@ -2410,6 +2444,7 @@ class Board:
 	self.count = count
 	self.order = order
 	self.board_parts = []	    # List[Board_Part] board parts needed
+	self.do_not_install_board_parts = []
 
 	self.net_file_read()
 
@@ -2475,7 +2510,7 @@ class Board:
 		colon_index = part_name.find(':')
 		if colon_index >= 0:
 		    comment = part_name[colon_index + 1:]
-                    part_name = part_naem[0:colon_index]
+                    part_name = part_name[0:colon_index]
 
 		# Now see if we have a match for *part_name* in *database*:
 		schematic_part = database.lookup(part_name)
@@ -2624,6 +2659,94 @@ class Board:
 
 	return errors
 
+    def assembly_summary_write(self, final_choice_parts):
+        """ *Board*: Write out an assembly summary .csv file for *Board* object (i.e. *self*). """
+
+	# Verify argument types:
+        assert isinstance(final_choice_parts, list)
+
+	#TODO: Deal with installed or non installed parts!!!
+	installed_board_parts = self.board_parts
+	do_not_install_parts = self.do_not_install_board_parts
+
+	# Each *final_choice_part* that is part of the board (i.e. *self*) will wind up
+        # an list in *board_parts_table*.  The key is the schematic name.
+	board_parts_table = {}
+	for final_choice_part in final_choice_parts:
+	    # Now figure out if final choice part is part of *board_parts*:
+	    board_parts = final_choice_part.board_parts
+            for board_part in board_parts:
+		# We only care care about *final_choice_part* if is used on *board*:
+		if board_part.board == self:
+		    # We are on the board; create *schemati_part_key*:
+		    schematic_part = board_part.schematic_part
+		    schematic_part_key = "{0}:{1}".format(
+		      schematic_part.base_name, schematic_part.short_footprint)
+
+		    # Create/append a list to *board_parts_table*, keyed on *schematic_part_key*:
+		    if not schematic_part_key in board_parts_table:
+                        board_parts_table[schematic_part_key] = []
+		    board_parts_list = board_parts_table[schematic_part_key]
+		    board_final_pair = (board_part, final_choice_part)
+		    board_parts_list.append(board_final_pair)
+
+	# Now organize everything around the reference list:
+	reference_board_parts = {}
+	for board_parts_key, board_parts_value in board_parts_table.items():
+	    # We want to sort base on *reference_value* which is converted into *reference_text*:
+	    reference_list = \
+	      [board_part[0].reference.upper() for board_part in board_parts_value]
+	    reference_text = ", ".join(reference_list)
+	    reference_board_parts[reference_text] = board_parts_value[0]
+
+	# Sort the *reference_parts_keys*:
+	reference_board_parts_keys = reference_board_parts.keys()
+	reference_board_parts_keys.sort()
+
+	# Open *board_file*:
+	board_file_name = "/tmp/{0}.csv".format(self.name)
+	board_file = open(board_file_name, "w")
+
+	# Write out the column headings:
+	board_file.write(
+          '"Reference","Schematic Name","Description",' + \
+          '"Manufacturer","Manufacture PN","Vendor","Vendor PN"\n\n')
+
+	# Now dig down until we all the information we need for output the line in the .csv file:
+        for reference_board_parts_key in reference_board_parts_keys:
+	    # Extract the *board_part* and *final_choice_part*:
+	    board_final_pair = reference_board_parts[reference_board_parts_key]
+	    board_part = board_final_pair[0]
+	    final_choice_part = board_final_pair[1]
+	    assert isinstance(final_choice_part, Choice_Part)
+
+	    # Now get the corresponding *schematic_part*:
+	    schematic_part = board_part.schematic_part
+	    schematic_part_key = "{0}:{1}".format(
+	      schematic_part.base_name, schematic_part.short_footprint)
+	    assert isinstance(schematic_part, Schematic_Part)
+
+	    # Now get the *actual_part*:
+	    actual_part = final_choice_part.selected_actual_part
+	    assert isinstance(actual_part, Actual_Part)
+
+	    # Now get the Vendor_Part:
+	    manufacturer_name = actual_part.manufacturer_name
+	    manufacturer_part_name = actual_part.manufacturer_part_name
+	    vendor_part = final_choice_part.selected_vendor_part
+	    assert isinstance(vendor_part, Vendor_Part)
+
+	    # Output the line for the .csv file:
+	    vendor_name = vendor_part.vendor_name
+	    vendor_part_name = vendor_part.vendor_part_name
+	    board_file.write('"{0}","{1}","{2}","{3}","{4}","{5}","{6}"\n'.format(
+	      reference_board_parts_key, schematic_part_key, final_choice_part.description,
+	      manufacturer_name, manufacturer_part_name, vendor_name, vendor_part_name))
+
+        # Close *board_file* and print out a summary announcement:
+        board_file.close()
+	print("Wrote out assembly file '{0}'".format(board_file_name))
+
 class Board_Part:
     # A Board_Part basically specifies the binding of a Schematic_Part
     # and is associated schemtatic reference.  Reference strings must
@@ -2644,6 +2767,7 @@ class Board_Part:
 	self.schematic_part = schematic_part
 	self.reference = reference
 	self.comment = comment
+	self.do_not_install = (comment == "DNI")
 
 class Schematic_Part:
     # A *Schematic_Part* represents part with a footprint.  The schematic
@@ -2671,6 +2795,7 @@ class Schematic_Part:
 	    # Load up *self*:
 	    self.schematic_part_name = schematic_part_name
 	    self.base_name = base_name
+	    self.short_footprint = short_footprint
 	    self.kicad_footprint = kicad_footprint
 	    self.board_parts = []
 	else:
