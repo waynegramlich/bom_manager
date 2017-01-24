@@ -2035,36 +2035,22 @@ class Order:
 	# eliminate duplicates.
 	choice_parts_table = {}
 	for board in boards:
-	    #print("Order.process(): board:{0}".format(board.name))
+	    #print("Order.final_choice_parts_compute(): board:{0}".format(board.name))
 	
 	    # Sort *board_parts* by reference.  A reference is a sequence
 	    # letters followed by an integer (e.g. SW1, U12, D123...)
 	    # Sort alphabetically followed by numerically.  The lambda
 	    # expression converts "SW123" into ("SW", 123).  
-	    board_parts = board.board_parts
+	    board_parts = board.all_board_parts
 	    board_parts.sort(key = lambda board_part:
 	      (    filter(str.isalpha, board_part.reference).upper(),
 	       int(filter(str.isdigit, board_part.reference)) ))
-
-	    # Collect all of the *do_not_install_board_parts*:
-	    install_board_parts = []
-	    do_not_install_board_parts = []
-	    for board_part in board_parts:
-		if board_part.do_not_install:
-		    do_not_install_board_parts.append(board_part)
-		else:
-		    install_board_parts.append(board_part)
-            self.do_not_install_board_parts = do_not_install_board_parts
-
-	    # From now on *board_parts* only contains installable board parts:
-	    board_parts = install_board_parts
-	    self.boad_parts = install_board_parts
 
 	    # Visit each *board_part* in *board_parts*:
 	    for board_part in board_parts:
 		schematic_part = board_part.schematic_part
 		schematic_part_name = schematic_part.schematic_part_name
-		#print("Order.process():  {0}: {1}".
+		#print("Order.final_choice_parts_compute():  {0}: {1}".
 		#  format(board_part.reference, schematic_part_name))
 
 		# Only *choice_parts* can be ordered from a vendor:
@@ -2081,6 +2067,12 @@ class Order:
 		    choice_part_name = choice_part.schematic_part_name
 		    if not choice_part_name in choice_parts_table:
 			choice_parts_table[choice_part_name] = choice_part
+		    #	print(("Order.final_choice_parts_compute():" +
+		    #	  " Insert {0:s} into table under key {1} (size={2})").format(
+		    #	  choice_part, choice_part_name, len(choice_parts_table)))
+		    #else:
+                    #    print("Order.final_choice_parts_compute(): Key {0} in table".format(
+		    #	  choice_part_name))
 
 		    # Remember *board_part* in *choice_part*:
 		    choice_part.board_part_append(board_part)
@@ -2123,6 +2115,9 @@ class Order:
 	    # Make sure that we only have *Choice_Part* objects:
 	    assert isinstance(choice_part, Choice_Part)
 	    choice_part.board_parts_sort()
+
+	#for choice_part in final_choice_parts:
+	#    print("End_Order.final_choice_parts_compute(): board:{0}".format(choice_part))
 
 	return final_choice_parts
 
@@ -2187,8 +2182,6 @@ class Order:
 	# Write a part summary file for each board:
 	for board in self.boards:
 	    board.assembly_summary_write(final_choice_parts)
-
-	#FIXME: This final part needs some additional work!!!:
 
 	# Now generate a BOM summary:
 	if False:
@@ -2443,16 +2436,29 @@ class Board:
 	self.net_file_name = net_file_name
 	self.count = count
 	self.order = order
-	self.board_parts = []	    # List[Board_Part] board parts needed
-	self.do_not_install_board_parts = []
+	self.all_board_parts = []	    # List[Board_Part] of all board parts
+	self.installed_board_parts = []	    # List[Board_Part] board parts to be installed
+	self.uninstalled_board_parts = []   # List[Board_Part] board parts not to be installed
 
 	self.net_file_read()
+
+    def board_part_append(self, board_part):
+        """ *Board*: Append *board_part* onto the *Board* object (i.e. *self*). """
+
+	# Verify argument types:
+        assert isinstance(board_part, Board_Part)
+
+	self.all_board_parts.append(board_part)
+	if board_part.install:
+            self.installed_board_parts.append(board_part)
+	else:
+            self.uninstalled_board_parts.append(board_part)
 
     def net_file_read(self):
 	""" *Board*: Read in net file for {self}. """
 
 	# Prevent accidental double read:
-	board_parts = self.board_parts
+	board_parts = self.all_board_parts
 	assert len(board_parts) == 0
 
 	errors = 0
@@ -2522,9 +2528,8 @@ class Board:
 		    errors += 1
 		else:
 		    # We have a match; create the *board_part*:
-                    board_part = Board_Part(self,
-		      schematic_part, reference, comment)
-		    board_parts.append(board_part)
+                    board_part = Board_Part(self, schematic_part, reference, comment)
+		    self.board_part_append(board_part)
 
                     # Grab *kicad_footprint* from *schematic_part*:
 		    kicad_footprint = schematic_part.kicad_footprint
@@ -2635,7 +2640,7 @@ class Board:
 			    # The footprints match:
 			    board_part = \
 			      Board_Part(self, part, reference, footprint)
-			    board_parts.append(board_part)
+			    self.board_parts_append(board_part)
 			    part.board_parts.append(board_part)
 			else:
 			    print ("File '{0}',  line {1}: {2}:{3} Footprint" +
@@ -2660,48 +2665,12 @@ class Board:
 	return errors
 
     def assembly_summary_write(self, final_choice_parts):
-        """ *Board*: Write out an assembly summary .csv file for *Board* object (i.e. *self*). """
+        """ *Board*: Write out an assembly summary .csv file for the *Board* object (i.e. *self*)
+	    using *final_choice_parts*.
+	"""
 
 	# Verify argument types:
         assert isinstance(final_choice_parts, list)
-
-	#TODO: Deal with installed or non installed parts!!!
-	installed_board_parts = self.board_parts
-	do_not_install_parts = self.do_not_install_board_parts
-
-	# Each *final_choice_part* that is part of the board (i.e. *self*) will wind up
-        # an list in *board_parts_table*.  The key is the schematic name.
-	board_parts_table = {}
-	for final_choice_part in final_choice_parts:
-	    # Now figure out if final choice part is part of *board_parts*:
-	    board_parts = final_choice_part.board_parts
-            for board_part in board_parts:
-		# We only care care about *final_choice_part* if is used on *board*:
-		if board_part.board == self:
-		    # We are on the board; create *schemati_part_key*:
-		    schematic_part = board_part.schematic_part
-		    schematic_part_key = "{0}:{1}".format(
-		      schematic_part.base_name, schematic_part.short_footprint)
-
-		    # Create/append a list to *board_parts_table*, keyed on *schematic_part_key*:
-		    if not schematic_part_key in board_parts_table:
-                        board_parts_table[schematic_part_key] = []
-		    board_parts_list = board_parts_table[schematic_part_key]
-		    board_final_pair = (board_part, final_choice_part)
-		    board_parts_list.append(board_final_pair)
-
-	# Now organize everything around the reference list:
-	reference_board_parts = {}
-	for board_parts_key, board_parts_value in board_parts_table.items():
-	    # We want to sort base on *reference_value* which is converted into *reference_text*:
-	    reference_list = \
-	      [board_part[0].reference.upper() for board_part in board_parts_value]
-	    reference_text = ", ".join(reference_list)
-	    reference_board_parts[reference_text] = board_parts_value[0]
-
-	# Sort the *reference_parts_keys*:
-	reference_board_parts_keys = reference_board_parts.keys()
-	reference_board_parts_keys.sort()
 
 	# Open *board_file*:
 	board_file_name = "/tmp/{0}.csv".format(self.name)
@@ -2709,10 +2678,82 @@ class Board:
 
 	# Write out the column headings:
 	board_file.write(
-          '"Reference","Schematic Name","Description",' + \
+	  '"Quan.","Reference","Schematic Name","Description","Fractional",' + \
           '"Manufacturer","Manufacture PN","Vendor","Vendor PN"\n\n')
 
-	# Now dig down until we all the information we need for output the line in the .csv file:
+	# Output the installed parts:
+	has_fractional_parts1 = \
+	  self.assembly_summary_write_helper(True, final_choice_parts, board_file)
+
+	# Output the uninstalled parts:
+	board_file.write("\nDo Not Install\n")
+
+	# Output the installed parts:
+	has_fractional_parts2 = \
+	  self.assembly_summary_write_helper(False, final_choice_parts, board_file)
+
+	# Explain what a fractional part is:
+	if has_fractional_parts1 or has_fractional_parts2:
+            board_file.write(
+	      '"","\nFractional parts are snipped off 1xN or 2xN break-way headers"\n')
+
+        # Close *board_file* and print out a summary announcement:
+        board_file.close()
+	print("Wrote out assembly file '{0}'".format(board_file_name))
+
+    def assembly_summary_write_helper(self, install, final_choice_parts, board_file):
+        """ *Board*: Write out an assembly summary .csv file for *Board* object (i.e. *self*)
+	    out to *board_file*.  *install* is set *True* to list the installable parts from
+	    *final_choice_parts* and *False* for an uninstallable parts listing.
+	    This routine returns *True* if there are any fractional parts output to *board_file*.
+	"""
+
+	# Verify argument types:
+	assert isinstance(install, bool)
+        assert isinstance(final_choice_parts, list)
+	assert isinstance(board_file, file)
+
+	# Each *final_choice_part* that is part of the board (i.e. *self*) will wind up
+        # in a list in *board_parts_table*.  The key is the *schematic_part_key*:
+	board_parts_table = {}
+	for final_choice_part in final_choice_parts:
+	    # Now figure out if final choice part is part of *board_parts*:
+	    board_parts = final_choice_part.board_parts
+            for board_part in board_parts:
+		# We only care care about *final_choice_part* if is used on *board* and
+                # it matches the *install* selector:
+		if board_part.board == self and board_part.install == install:
+		    # We are on the board; create *schemati_part_key*:
+		    schematic_part = board_part.schematic_part
+		    schematic_part_key = "{0};{1}".format(
+		      schematic_part.base_name, schematic_part.short_footprint)
+
+		    # Create/append a list to *board_parts_table*, keyed on *schematic_part_key*:
+		    if not schematic_part_key in board_parts_table:
+                        board_parts_table[schematic_part_key] = []
+		    pairs_list = board_parts_table[schematic_part_key]
+
+		    # Append a pair of *board_part* and *final_choice_part* onto *pairs_list*:
+		    board_final_pair = (board_part, final_choice_part)
+		    pairs_list.append(board_final_pair)
+
+	# Now organize everything around the *reference_list*:
+	reference_board_parts = {}
+	for pairs_list in board_parts_table.values():
+	    # We want to sort base on *reference_value* which is converted into *reference_text*:
+	    reference_list = \
+	      [board_final_pair[0].reference.upper() for board_final_pair in pairs_list]
+	    reference_text = ", ".join(reference_list)
+	    #print("reference_text='{0}'".format(reference_text))
+	    board_part = pairs_list[0]
+	    reference_board_parts[reference_text] = board_part
+
+	# Sort the *reference_parts_keys*:
+	reference_board_parts_keys = reference_board_parts.keys()
+	reference_board_parts_keys.sort()
+
+	# Now dig down until we have all the information we need for output the next .csv file line:
+	has_fractional_parts = False
         for reference_board_parts_key in reference_board_parts_keys:
 	    # Extract the *board_part* and *final_choice_part*:
 	    board_final_pair = reference_board_parts[reference_board_parts_key]
@@ -2722,7 +2763,7 @@ class Board:
 
 	    # Now get the corresponding *schematic_part*:
 	    schematic_part = board_part.schematic_part
-	    schematic_part_key = "{0}:{1}".format(
+	    schematic_part_key = "{0};{1}".format(
 	      schematic_part.base_name, schematic_part.short_footprint)
 	    assert isinstance(schematic_part, Schematic_Part)
 
@@ -2739,13 +2780,19 @@ class Board:
 	    # Output the line for the .csv file:
 	    vendor_name = vendor_part.vendor_name
 	    vendor_part_name = vendor_part.vendor_part_name
-	    board_file.write('"{0}","{1}","{2}","{3}","{4}","{5}","{6}"\n'.format(
+	    quantity = final_choice_part.count_get()
+	    fractional = "No"
+            if len(final_choice_part.fractional_parts) > 0:
+                fractional = "Yes"
+                has_fractional_parts = True
+	    board_file.write('"{0} x","{1}","{2}","{3}","{4}","{5}","{6}","{7}","{8}"\n'.
+	      format(quantity,
 	      reference_board_parts_key, schematic_part_key, final_choice_part.description,
+	      fractional,
 	      manufacturer_name, manufacturer_part_name, vendor_name, vendor_part_name))
 
-        # Close *board_file* and print out a summary announcement:
-        board_file.close()
-	print("Wrote out assembly file '{0}'".format(board_file_name))
+	return has_fractional_parts
+
 
 class Board_Part:
     # A Board_Part basically specifies the binding of a Schematic_Part
@@ -2767,7 +2814,7 @@ class Board_Part:
 	self.schematic_part = schematic_part
 	self.reference = reference
 	self.comment = comment
-	self.do_not_install = (comment == "DNI")
+	self.install = (comment != "DNI")
 
 class Schematic_Part:
     # A *Schematic_Part* represents part with a footprint.  The schematic
@@ -2802,6 +2849,17 @@ class Schematic_Part:
 	    print("Schematic Part Name '{0}' has no ';' separator!".
 	      format(schematic_part_name))
 
+    def __format__(self, format):
+        """ *Schematic_Part*: Format the *Schematic_Part* object (i.e. *self*) using *format***. """
+
+	if format == "s":
+            # Short format:
+	    return "{0};{1}".format(self.base_name, self.short_footprint)
+	else:
+	    # Long format:
+	    return "{0};{1}::{2}".format(self.base_name, self.short_footprint, self.kicad_footprint)
+
+        
 class Choice_Part(Schematic_Part):
     # A *Choice_Part* specifies a list of *Actual_Part*'s to choose from.
 
@@ -2831,6 +2889,18 @@ class Choice_Part(Schematic_Part):
 	self.selected_vendor_name = ""
 	self.selected_price_break_index = -1
 	self.selected_price_break = None
+
+    def __format__(self, format):
+        """ *Choice_Part*: Return the *Choice_Part object (i.e. *self* as a string formatted by
+	    *format*.
+	"""
+        
+	if format == "s":
+	    result = "{0};{1}".format(self.base_name, self.short_footprint)
+        else:
+	    result = "{0};{1}".format(self.base_name, self.short_footprint)
+        return result
+
 
     def actual_part(self,
       manufacturer_name, manufacturer_part_name, vendor_triples = []):
