@@ -509,29 +509,19 @@ class Database:
 	  ["M1X1;M1X1"], "Pin_Header_Straight_1x01")
 	self.alias_part("TEST_POINT;M1X1",
 	  ["M1X1;M1X1"], "Pin_Header_Straight_1x01")
-	self.alias_part("TEST_POINT;1X1",
-	  ["M1X1;M1X1"], "Pin_Header_Straight_1x01")
 
 	# M1X2:
 	self.alias_part("CURRENT_SHUNT;M1X2",
-	  ["M1X2;M1X2"], "Pin_Header_Straight_1x02")
-	self.alias_part("CURRENT_SHUNT;1X2",
 	  ["M1X2;M1X2"], "Pin_Header_Straight_1x02")
 
 	# M1X3:
 	self.alias_part("TERMINATE_JUMPER;M1X3",
 	  ["M1X3;M1X3"], "Pin_Header_Straight_1x03")
-	self.alias_part("TERMINATE_JUMPER;1X3",
-	  ["M1X3;M1X3"], "Pin_Header_Straight_1x03")
 	self.alias_part("SERVO;M1X3",
-	  ["M1X3;M1X3"], "Pin_Header_Straight_1x03")
-	self.alias_part("SERVO;1X3",
 	  ["M1X3;M1X3"], "Pin_Header_Straight_1x03")
 
 	# M1X4:
 	self.alias_part("I2C_CONN;M1X4",
-	  ["M1X4;M1X4"], "Pin_Header_Straight_1x04")
-	self.alias_part("I2C_CONN;1X4",
 	  ["M1X4;M1X4"], "Pin_Header_Straight_1x04")
 
 	# M1X6:
@@ -539,11 +529,7 @@ class Database:
 	  ["M1X6;M1X6"], "Pin_Header_Straight_1x06")
 	self.alias_part("FTDI_HEADER;M1X6",
 	  ["M1X6;M1X6"], "Pin_Header_Straight_1x06")
-	self.alias_part("FTDI_HEADER;1X6",
-	  ["M1X6;M1X6"], "Pin_Header_Straight_1x06")
 	self.alias_part("FTDI_HEADER_ALT;M1X6",
-	  ["M1X6;M1X6"], "Pin_Header_Straight_1x06")
-	self.alias_part("FTDI_HEADER_ALT;1X6",
 	  ["M1X6;M1X6"], "Pin_Header_Straight_1x06")
 
 	### Create the fractional parts for the 2XN male headers:
@@ -567,7 +553,7 @@ class Database:
 
 	self.fractional_part("AVR_SPI;M2X3", "Pin_Header_Straight_2x03",
 	  "M2X40;M2X40", 6, 80, "CONN HEADER .100in DBL STR 6POS")
-	self.fractional_part("ISP_HEADER;2X3", "Pin_Header_Straight_2x03",
+	self.fractional_part("ISP_HEADER;M2X3", "Pin_Header_Straight_2x03",
 	  "M2X40;M2X40", 6, 80, "CONN HEADER .100in DBL STR 6POS")
 
 	self.choice_part("M2X5S;M2X5S",
@@ -579,8 +565,6 @@ class Database:
 	  "TE Tech", "5103308-1").actual_part(
 	  "Wurth", "61201021621")
 	self.alias_part("BUS_MASTER_HEADER;M2X5S",
-	  ["M2X5S;M2X5S"], "Pin_Header_Straight_2x05")
-	self.alias_part("BUS_MASTER_HEADER;2X5S",
 	  ["M2X5S;M2X5S"], "Pin_Header_Straight_2x05")
 
 	self.fractional_part("M2X6;M2X6", "Pin_Header_Straight_2x06",
@@ -1112,8 +1096,6 @@ class Database:
 	self.alias_part("FTDI;M1X6",
 	  ["M1X6;M1X6"], "Pin_Header_Straight_1x06")
 	self.alias_part("ISP_CONN;M2X3",
-	  ["M2X3;M2X3"], "Pin_Header_Straight_2x03")
-	self.alias_part("ISP_CONN;2X3",
 	  ["M2X3;M2X3"], "Pin_Header_Straight_2x03")
 	self.alias_part("ID6;M2X6",
 	  ["M2X6;M2X6"], "Pin_Header_Straight_2x06")
@@ -2695,7 +2677,7 @@ class Board:
 	# Explain what a fractional part is:
 	if has_fractional_parts1 or has_fractional_parts2:
             board_file.write(
-	      '"","\nFractional parts are snipped off 1xN or 2xN break-way headers"\n')
+	      '"","\nFractional parts are snipped off of 1xN or 2xN break-way headers"\n')
 
         # Close *board_file* and print out a summary announcement:
         board_file.close()
