@@ -593,10 +593,14 @@ class Database:
 	  "Molex", "0022022065").actual_part(
 	  "3M", "929974-01-06-RK").actual_part(
 	  "Harwin", "M20-7820646").actual_part(
-	  "Harwin", "M20-7820642").actual_part(
-	  "Molex", "22-18-2061")
+	  "Harwin", "M20-7820642")
 	self.alias_part("ENCODER_CONNECTOR;F1X6",
 	  ["F1X6;F1X6"], "Pin_Header_Straight_1x06")
+
+	# Total kludge here.  We need to make this into the correct 1x6 JST connector:
+	self.choice_part("MICRO_GEARMOTOR;F1X6", "MICRO_GEARMOTOR", "",
+          "1x6 JST MALE CONNECTOR").actual_part(
+	  "Molex", "22-18-2061")
 
 	self.choice_part("F2X4;F2X4", "Pin_Header_Straight_2x04", "",
 	  "CONN RCPT .100in 8POS DUAL").actual_part(
@@ -648,7 +652,7 @@ class Database:
 	  "CONN HEADER FEMALE 40POS 0.100in ANGLED KEYED FLIPPED").actual_part(
 	  "Sullins", "SFH11-PBPC-D20-RA-BK")
 	self.alias_part("SBC_CONNECTOR40;F2X20RAKF", ["F2X20RAKF;F2X20RAKF"],
-	  "Pin_Receptacle_Angle_2x20_Flipped")
+	  "Pin_Receptacle_Angled_2x20_Flipped")
 
 	# USB connectors:
         self.choice_part("USB_MICRO_B;S+T", "FCI_10118194_0001LF", "",
@@ -683,7 +687,6 @@ class Database:
 	  "Abracon", "ABS25-32.768KHZ-1-T").actual_part(
 	  "Cardinal", "CPFBZ-A2C4-32.768KD6").actual_part(
 	  "Cardinal", "CPFBZ-A2C5-32.768KD12.5").actual_part(
-	  "Cardinal", "CPFBZ-A2C4-32.768KD12.5").actual_part(
 	  "Cardinal", "CPFBZ-A2C5-32.768KD6").actual_part(
 	  "ECS", "ECS-.327-6-17X-TR").actual_part(
 	  "ECS", "ECS-.327-6-17X-C-TR").actual_part(
@@ -795,7 +798,7 @@ class Database:
 	  ("Digi-Key", "M8275-ND",
 	   "1/1.51 10/1.392 25/1.276 50/1.0904 100/.97440")])
 
-	self.choice_part("CIB10P100NC;1608", "IPC7351:INDC1608X95", "",
+	self.choice_part("CIB10P100NC;1608", "IPC7351:INDC1608X95N", "",
 	  "FERRITE CHIP 10 OHM 1000MA 0603").actual_part(
 	  "Samsung", "CIB10P100NC")
 
@@ -836,7 +839,6 @@ class Database:
 	  "Fairchild", "MM74HC32MX").actual_part(
 	  "TI", "SN74HC32DR").actual_part(
 	  "TI", "SN74HC32DRG4").actual_part(
-	  "TI", "CD74HC32M96").actual_part(
 	  "TI", "CD74HC32M").actual_part(
 	  "TI", "SN74HC32DT")
 
@@ -1016,8 +1018,7 @@ class Database:
 	  "Bourns", "CR0603-JW-103ELF").actual_part(
 	  "Samsung", "RC1608J103CS").actual_part(
 	  "Bourns", "CR0603-JW-103GLF").actual_part(
-	  "Rohm", "TRR03EZPJ103").actual_part(
-	  "Yageo", "AC0603JR-0710KL")
+	  "Rohm", "TRR03EZPJ103")
 	self.choice_part("22K;1608", "IPC7351:RESC1608X55N", "",
 	  "RES SMD 22K OHM 5% 1/10W 1608").actual_part(
 	  "Vishay Dale", "CRCW060322K0JNEA").actual_part(
@@ -2569,7 +2570,53 @@ class Board:
 		print("Updating '{0}' with new footprints".
 		  format(net_file_name))
 		net_file = open(net_file_name, "wa")
-		sexpdata.dump(net_se, net_file)
+		#sexpdata.dump(net_se, net_file)
+		net_se_string = sexpdata.dumps(net_se)
+		#sexpdata.dump(net_se, net_file)
+
+		# Now use some regular expressions to improve formatting to be more like
+                # what KiCad outputs:
+		net_se_string = re.sub(" \(design ", "\n  (design ", net_se_string)
+
+		# Sheet part of file:
+		net_se_string = re.sub(" \(sheet ",       "\n    (sheet ",         net_se_string)
+		net_se_string = re.sub(" \(title_block ", "\n      (title_block ", net_se_string)
+		net_se_string = re.sub(" \(title ",       "\n        (title ",     net_se_string)
+		net_se_string = re.sub(" \(company ",     "\n        (company ",   net_se_string)
+		net_se_string = re.sub(" \(rev ",         "\n        (rev ",       net_se_string)
+		net_se_string = re.sub(" \(date ",        "\n        (date ",      net_se_string)
+		net_se_string = re.sub(" \(source ",      "\n        (source ",    net_se_string)
+		net_se_string = re.sub(" \(comment ",     "\n        (comment ",   net_se_string)
+
+                # Components part of file:
+		net_se_string = re.sub(" \(components ", "\n  (components ",    net_se_string)
+		net_se_string = re.sub(" \(comp ",       "\n    (comp ",        net_se_string)
+		net_se_string = re.sub(" \(value ",      "\n      (value ",     net_se_string)
+		net_se_string = re.sub(" \(footprint ",  "\n      (footprint ", net_se_string)
+		net_se_string = re.sub(" \(libsource ",  "\n      (libsource ", net_se_string)
+		net_se_string = re.sub(" \(sheetpath ",  "\n      (sheetpath ", net_se_string)
+		net_se_string = re.sub(" \(path ",       "\n      (path ",      net_se_string)
+		net_se_string = re.sub(" \(tstamp ",     "\n      (tstamp ",    net_se_string)
+
+                # Library parts part of file
+		net_se_string = re.sub(" \(libparts ",    "\n  (libparts ",    net_se_string)
+		net_se_string = re.sub(" \(libpart ",     "\n    (libpart ",   net_se_string)
+		net_se_string = re.sub(" \(description ", "\n      (description ",  net_se_string)
+		net_se_string = re.sub(" \(fields ",      "\n      (fields ",  net_se_string)
+		net_se_string = re.sub(" \(field ",       "\n        (field ", net_se_string)
+		net_se_string = re.sub(" \(pins ",        "\n      (pins ",    net_se_string)
+		#net_se_string = re.sub(" \(pin ",         "\n        (pin ",   net_se_string)
+
+		# Network portion of file:
+		net_se_string = re.sub(" \(nets ", "\n  (nets ", net_se_string)
+		net_se_string = re.sub(" \(net ",  "\n    (net ", net_se_string)
+		net_se_string = re.sub(" \(node ", "\n      (node ", net_se_string)
+
+		# General substitutions:
+		#net_se_string = re.sub(" \\;", ";", net_se_string)
+		#net_se_string = re.sub(" \\.", ".", net_se_string)
+
+		net_file.write(net_se_string)
 		net_file.close()
 
         elif file_name.ends_with(".cmp"):
