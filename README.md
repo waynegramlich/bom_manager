@@ -129,4 +129,11 @@ The software does the following:
 
 5. Selects the vendors and generates an order for each vendor.
 
+## Installation Issues
+
+All the code lives in one file -- `bom_manager.py`.  However, you have
+to install a bunch of libraries:
+
+    sudo pip install bs4 requests sexpdata
+
 
