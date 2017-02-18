@@ -410,6 +410,11 @@ class Database:
 
 	# Capacitors:
 
+	self.choice_part("6pF;1608", "IPC7351:CAPC1608X90N", "",
+	  "CAP CER 6PF 50V+ NP0 0603").actual_part(
+	  "TDK", "C1608CH2A060D080AA").actual_part(
+	  "KEMET Corporation", "CBR06C609BAGAC").actual_part(
+	  "Yageo", "CC0603DRNPO9BN6R0")
 	self.choice_part("18pF;1608", "IPC7351:CAPC1608X90N", "",
 	  "CAP CER 18PF 25V+ 10% SMD 0603").actual_part(
 	  "Kamet", "C0603C180J5GACTU", [
@@ -598,9 +603,9 @@ class Database:
 	  ["F1X6;F1X6"], "Pin_Header_Straight_1x06")
 
 	# Total kludge here.  We need to make this into the correct 1x6 JST connector:
-	self.choice_part("MICRO_GEARMOTOR;F1X6", "MICRO_GEARMOTOR", "",
+	self.choice_part("MICRO_GEARMOTOR;M1X6_JST", "MICRO_GEARMOTOR", "",
           "1x6 JST MALE CONNECTOR").actual_part(
-	  "Molex", "22-18-2061")
+	  "JST Manufacturing", "B6B-ZR(LF)(SN)")
 
 	self.choice_part("F2X4;F2X4", "Pin_Header_Straight_2x04", "",
 	  "CONN RCPT .100in 8POS DUAL").actual_part(
@@ -816,6 +821,13 @@ class Database:
 	  "Microchip", "MCP1703-5002E/DB").actual_part(
 	  "Microchip", "MCP1703T-5002E/DB")
 
+	self.choice_part("AP2210N-3.3T;SOT-23-3", "extra-nominal:SOT95P280X145-3N", "",
+	  "3.3V LDO").actual_part(
+	  "Diodes Inc", "AP2210N-3.3TRG1").actual_part(
+          "Microchip", "MCP1700T-3302E/TT").actual_part(
+          "Microchip", "MCP1700T-3302E/MB")
+
+
 	self.choice_part("74xHC08;SOIC8", "SOIC127P600X175-14N", "",
 	  "IC GATE AND 4CH 2-INP 14-SOIC").actual_part(
 	  "Fairchild", "MM74HCT08MX").actual_part(
@@ -897,6 +909,9 @@ class Database:
 	  "Microchip", "MCP79400-I/SN").actual_part(
 	  "Microchip", "MCP79402-I/SN").actual_part(
 	  "Microchip", "MCP79401-I/SN")
+	self.choice_part("CAT24C32;SOIC8", "IPC7351:SOIC127P600X175-8N", "",
+	  "IC EEPROM 32KBIT 400KHZ 8SOIC").actual_part(
+	  "ON Semiconductor", "CAT24C32WI-GT3")
 	
 	# LED's:
 	
@@ -3446,7 +3461,7 @@ def main():
     euros = database.exchange_rate("USD", "EUR")
     print("euros = {0}".format(euros))
     order = Order(database)
-    order.board("bom_test", "E.1", "bom_test.net", 9)
+    order.board("bus_loki", "F.1", "bus_loki.net", 1)
     order.process()
 
 if __name__ == "__main__":
