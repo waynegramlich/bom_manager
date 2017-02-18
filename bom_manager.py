@@ -575,6 +575,12 @@ class Database:
 	self.fractional_part("M2X6;M2X6", "Pin_Header_Straight_2x06",
 	  "M2X40;M2X40", 12, 80, "CONN HEADER .100in DBL STR 12POS")
 
+        # Non-fractional part Male connectors:
+
+        self.choice_part("ENCODER_CONNECTOR;M1X6_JST", "M1X6_JST", "M1X6_JST",
+	  "CONN HEADER ZH SIDE 6POS 1.5MM").actual_part(
+	  "JST", "S6B-ZR(LF)(SN)")
+
 	## Female connectors:
 
 	self.choice_part("F1X3;F1X3", "Pin_Header_Straight_1x03", "",
