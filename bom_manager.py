@@ -777,10 +777,10 @@ class Database:
 
 	# Holes:
 
-	self.choice_part("HOLE;2.5MM", "2.5MM_HOLE", "",
+	self.choice_part("HOLE;2.5MM", "2_5MM_HOLE", "",
 	  "2.5MM HOLE").actual_part(
 	  "Digi-Key", "RM2X8MM 2701") # Kludge
-	self.choice_part("HOLE;3MM_SLOT", "CASTOR_SLOT", "",
+	self.choice_part("HOLE;3MM_SLOT", "CASTER_SLOT", "",
           "3MM SLOT HOLE").actual_part(
 	  "Digi-Key", "RM3X10MM 2701") # Kludge
 	self.choice_part("HOLE;3MM", "3MM_HOLE", "",
