@@ -570,7 +570,7 @@ class Database:
 	  "TE Tech", "5103308-1").actual_part(
 	  "Wurth", "61201021621")
 	self.alias_part("BUS_MASTER_HEADER;M2X5S",
-	  ["M2X5S;M2X5S"], "Pin_Header_Straight_2x05")
+	  ["M2X5S;M2X5S"], "Pin_Header_Straight_2x05_Shrouded")
 
 	self.fractional_part("M2X6;M2X6", "Pin_Header_Straight_2x06",
 	  "M2X40;M2X40", 12, 80, "CONN HEADER .100in DBL STR 12POS")
@@ -777,15 +777,21 @@ class Database:
 
 	# Holes:
 
+	self.choice_part("HOLE;2.5MM", "2.5MM_HOLE", "",
+	  "2.5MM HOLE").actual_part(
+	  "Digi-Key", "RM2X8MM 2701") # Kludge
+	self.choice_part("HOLE;3MM_SLOT", "BUS_LOKI:CASTOR_SLOT", "",
+          "3MM SLOT HOLE").actual_part(
+	  "Digi-Key", "RM3X10MM 2701") # Kludge
 	self.choice_part("HOLE;3MM", "3MM_HOLE", "",
 	  "3MM HOLE").actual_part(
-	  "Digikey", "PMS 440 0063 SL")	# Kludge
+	  "Digi-Key", "PMS 440 0063 SL")	# Kludge
 	self.choice_part("HOLE;2MM", "2MM_HOLE", "",
 	  "2MM HOLE").actual_part(
-	  "Digikey", "PMS 632 0031 SL") # Kludge
+	  "Digi-Key", "PMS 632 0031 SL") # Kludge
 	self.choice_part("SLOT_HOLE;10X20MM", "10X20MM_HOLE", "",
 	  "10X20MM HOLE").actual_part( # Kludge
-	  "Digikey", "PMS 632 0063 SL")
+	  "Digi-Key", "PMS 632 0063 SL")
 
 	# Fuses:
 
