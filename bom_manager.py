@@ -520,6 +520,8 @@ class Database:
 	  ["M1X2;M1X2"], "Pin_Header_Straight_1x02")
 
 	# M1X3:
+	self.alias_part("CURRENT_SHUNT;M1X3",
+	  ["M1X3;M1X3"], "Pin_Header_Straight_1x02")
 	self.alias_part("TERMINATE_JUMPER;M1X3",
 	  ["M1X3;M1X3"], "Pin_Header_Straight_1x03")
 	self.alias_part("SERVO;M1X3",
