@@ -1,1 +1,36 @@
-(export (version D) (design (source /home/wayne/public_html/projects/bom_manager/bom_test\.sch) (date "Thu 10 Dec 2015 01:26:32 PM PST") (tool "Eeschema (2015-09-26 BZR 6224, Git b504252)-product") (sheet (number 1) (name /) (tstamps /) (title_block (title "BOM Test") (company) (rev A) (date 2015-12-10) (source bom_test\.sch) (comment (number 1) (value "")) (comment (number 2) (value "")) (comment (number 3) (value "")) (comment (number 4) (value ""))))) (components (comp (ref R1) (value 1K\;1608) (libsource (lib device) (part R)) (sheetpath (names /) (tstamps /)) (tstamp 5669D4AE) (footprint IPC7351:RESC1608X50N))) (libparts (libpart (lib device) (part R) (description Resistance) (footprints (fp R\?) (fp SM0603) (fp SM0805) (fp R\?-*) (fp SM1206)) (fields (field (name Reference) R) (field (name Value) R)) (pins (pin (num 1) (name ~) (type passive)) (pin (num 2) (name ~) (type passive))))) (libraries (library (logical device) (uri /usr/local/share/kicad/library/device\.lib))) (nets (net (code 1) (name "Net-(R1-Pad1)") (node (ref R1) (pin 1)) (node (ref R1) (pin 2)))))
+(export (version D)
+  (design
+        (source /home/wayne/public_html/projects/bom_manager/bom_test\.sch)
+        (date "Thu 10 Dec 2015 01:26:32 PM PST") (tool "Eeschema (2015-09-26 BZR 6224, Git b504252)-product")
+    (sheet (number 1) (name /) (tstamps /)
+      (title_block
+        (title "BOM Test") (company)
+        (rev A)
+        (date 2015-12-10)
+        (source bom_test\.sch)
+        (comment (number 1)
+      (value ""))
+        (comment (number 2)
+      (value ""))
+        (comment (number 3)
+      (value ""))
+        (comment (number 4)
+      (value "")))))
+  (components
+    (comp (ref R1)
+      (value 1K\;1608)
+      (libsource (lib device) (part R))
+      (sheetpath (names /) (tstamps /))
+      (tstamp 5669D4AE)
+      (footprint IPC7351:RESC1608X55N)))
+  (libparts
+    (libpart (lib device) (part R)
+      (description Resistance) (footprints (fp R\?) (fp SM0603) (fp SM0805) (fp R\?-*) (fp SM1206))
+      (fields
+        (field (name Reference) R)
+        (field (name Value) R))
+      (pins (pin (num 1) (name ~) (type passive)) (pin (num 2) (name ~) (type passive))))) (libraries (library (logical device) (uri /usr/local/share/kicad/library/device\.lib)))
+  (nets
+    (net (code 1) (name "Net-(R1-Pad1)")
+      (node (ref R1) (pin 1))
+      (node (ref R1) (pin 2)))))

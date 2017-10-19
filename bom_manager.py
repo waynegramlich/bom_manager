@@ -4,7 +4,6 @@
 #
 # ## Overview:
 #
-#
 # This program is called *bom_manager* (i.e. Bill of Materials Manager.)
 # The program fundamentally deals with the task of binding parts in a
 # schematic with actual parts that can be ordered from one or more
@@ -72,7 +71,7 @@
 #
 # * *comment* is an optional comment field that is ignored by `bom_manager`
 #
-# For example the Atmel ATmega328 comes in 4 different IC packages --
+# For example the Atmel ATmega328 comes in several different IC packages --
 # DIP28, QFP32, and QFN32.  The `bom_manager` program wants
 # to see these symbols show up in the schematic as `ATMEGA328;DIP28`,
 # `ATMEGA328;QFP32`, and `ATMEGA328;QFN32`.  There is a textual database
@@ -377,9 +376,7 @@ class Database:
 	# Batteries and Holders:
 	self.choice_part("BAT_HOLDER;2032_THRU", "BU2032-1", "",
 	  "HOLDER COIN CELL 2032 PC PIN").actual_part(
-	  "MPD", "BU2032-1-HD-G").actual_part(
-	  "MPD", "BU2032-1").actual_part(
-	  "MPD", "BU2032-1-G")
+	  "MPD", "BU2032-1-HD-G")
 
 	# Boxes:
 	self.choice_part("JB-3955;102Lx152Wx152H", "102Lx152Wx152H", "",
@@ -410,12 +407,12 @@ class Database:
 
 	# Capacitors:
 
-	self.choice_part("6pF;1608", "IPC7351:CAPC1608X90N", "",
+	self.choice_part("6pF;1608", "CAPC1608X90N", "",
 	  "CAP CER 6PF 50V+ NP0 0603").actual_part(
 	  "TDK", "C1608CH2A060D080AA").actual_part(
 	  "KEMET Corporation", "CBR06C609BAGAC").actual_part(
 	  "Yageo", "CC0603DRNPO9BN6R0")
-	self.choice_part("18pF;1608", "IPC7351:CAPC1608X90N", "",
+	self.choice_part("18pF;1608", "CAPC1608X90N", "",
 	  "CAP CER 18PF 25V+ 10% SMD 0603").actual_part(
 	  "Kamet", "C0603C180J5GACTU", [
 	   ("Digi-Key", "399-1052-1-ND",
@@ -431,7 +428,45 @@ class Database:
 	  "TDK", "C1608CH1H180J080AA").actual_part(
 	  "AVX", "06035A180JAT2A").actual_part(
 	  "Yageo", "CC0603JRNPO9BN180")
-	self.choice_part(".1uF;1608", "IPC7351:CAPC1608X90N", "",
+	self.choice_part(".01uF;1608", "CAPC1608X90N", "",
+	  "CAP CER 0.01UF 25V+ 10% SMD 0603").actual_part(
+	  "Yageo", "CC0603KRX7R9BB103").actual_part(
+	  "KEMET", "C0603C103K5RACTU").actual_part(
+	  "AVX", "06035C103KAT2A").actual_part(
+	  "TDK", "CGA3E2X7R1H103K080AA").actual_part(
+	  "KEMET", "C0603C103J5RACTU").actual_part(
+	  "Murata", "GCM188R72A103KA37D").actual_part(
+	  "Murata", "GRM188R71H103KA01D").actual_part(
+	  "Murata", "GCM188R71H103KA37D").actual_part(
+	  "TDK", "C1608X7R2A103M080AA").actual_part(
+	  "TDK", "C1608X7R2A103K080AA").actual_part(
+	  "Samsung", "CL10B103KB8NCNC").actual_part(
+	  "Samsung", "CL10B103KB8NNNC").actual_part(
+	  "Samsung", "CL10B103KA8NNNC").actual_part(
+	  "Samsung", "CL10B103KO8NNNC").actual_part(
+	  "Samsung", "CL10B103MB8NCNC").actual_part(
+	  "AV/X", "06035C103KAT4A")
+	self.alias_part("10nF;1608",
+	  [".01uF;1608"], "CAPC1608X90N")
+	self.choice_part(".033uF;1608", "CAPC1608X90N", "",
+	  "CAP CER 0.01UF 25V+ 10% SMD 0603").actual_part(
+	  "Samsung", "CL10B333KB8NNNC").actual_part(
+	  "Samsung", "CL10B333KA8NNNC").actual_part(
+	  "Samsung", "CL10B333KB8SFNC").actual_part(
+	  "Yageo", "CC0603KRX7R9BB333").actual_part(
+	  "KEMET", "C0603C333K3RACTU").actual_part(
+	  "KEMET", "C0603C333K4RACTU").actual_part(
+	  "KEMET", "C0603C333K5RACTU").actual_part(
+	  "Samsung", "CL10F333ZB8NNNC").actual_part(
+	  "Samsung", "CL10B333KO8NNWC").actual_part(
+	  "Samsung", "CL10B333KA8WPNC").actual_part(
+	  "KEMET", "C0603C333M5RAC7867").actual_part(
+	  "Samsung", "CL10B333KB8NFNC").actual_part(
+	  "Wurth", "885012206068").actual_part(
+	  "Wurth", "885012206043")
+	self.alias_part("33nF;1608",
+	  [".033uF;1608"], "CAPC1608X90N")
+	self.choice_part(".1uF;1608", "CAPC1608X90N", "",
 	  "CAP CER 0.1UF 25V+ 10% SMD 0603").actual_part(
 	  "Murata", "GRM188R71E104KA01D", [
 	  ("Digi-Key", "490-1524-1-ND",
@@ -452,7 +487,48 @@ class Database:
 	  "Samsung", "CL10B104MA8NNNC").actual_part(
 	  "Kamet", "C0603C104Z3VACTU").actual_part(
 	  "TDK", "C1608X7R1E104M080AA")
-	self.choice_part("1uF;1608", "IPC7351:CAPC1608X90N", "",
+	self.alias_part("100nF;1608",
+	  [".1uF;1608"], "CAPC1608X90N")
+	self.choice_part(".33uF;1608", "CAPC1608X90N", "",
+	  "CAP CER .33UF 25V+ 10% SMD 0603").actual_part(
+	  "Yageo", "CC0603KRX7R7BB334").actual_part(
+	  "Samsung", "CL10F334ZA8NNNC").actual_part(
+	  "Samsung", "CL10F334ZO8NNNC").actual_part(
+	  "Samsung", "CL10B334KP8NNNC").actual_part(
+	  "Samsung", "CL10B334KO8NNNC").actual_part(
+	  "Yageo", "CC0603KRX7R6BB334").actual_part(
+	  "Wruth", "885012106014").actual_part(
+	  "Samsung", "CL10B334KO8NFNC").actual_part(
+	  "AVX", "0603YC334KAT2A").actual_part(
+	  "KEMET", "C0603C334K8RACTU").actual_part(
+	  "Wurth", "885012106007").actual_part(
+	  "Murata", "GRM188R71C334KA01D").actual_part(
+	  "TDK", "CGA3E1X7R1C334K080AC").actual_part(
+	  "Wurth", "885012206023")
+	self.alias_part("330nF;1608",
+	  [".33uF;1608"], "CAPC1608X90N")
+	self.choice_part(".47uF;1608", "CAPC1608X90N", "",
+	  "CAP CER .47UF 25V+ 10% SMD 0603").actual_part(
+	  "KMET", "C0603C473M4RACTU").actual_part(
+	  "Samsung", "CL10B473KB8NNNC").actual_part(
+	  "Samsung", "CL10B473KA8NFNC").actual_part(
+	  "Yageo", "CL10B473KA8NFNC").actual_part(
+	  "Yageo", "CC0603KRX7R8BB473").actual_part(
+	  "KMET", "C0603C473K4RACTU").actual_part(
+	  "KMET", "C0603C473K3RACTU").actual_part(
+	  "Yageo", "CC0603KRX7R7BB473").actual_part(
+	  "Murata", "GRM188R71C473KA01D").actual_part(
+	  "AVX", "06033C473KAT2A").actual_part(
+	  "Johanson", "500R14W473KV4T").actual_part(
+	  "KMET", "C0603C473K5RACTU").actual_part(
+	  "Samsung", "CL10B473KO8WPNC").actual_part(
+	  "Samsung", "CL10B473KA8WPNC").actual_part(
+	  "Samsung", "CL10B473KB8NFNC").actual_part(
+	  "Samsung", "CL10B473KO8NNNC").actual_part(
+	  "Yalyo Yuden", "GMK107BJ473KAHT")
+	self.alias_part("470nF;1608",
+	  [".47uF;1608"], "CAPC1608X90N")
+	self.choice_part("1uF;1608", "CAPC1608X90N", "",
 	  "CAP CER 1UF 25V+ 10% SMD 0603").actual_part(
 	  "Murata", "GRM188R61E105KA12D").actual_part(
 	  "Taiyo Yuden", "TMK107BJ105KA-T").actual_part(
@@ -466,6 +542,27 @@ class Database:
 	  "Murata", "GRM188R61E105MA12D").actual_part(
 	  "Samsung", "CL10A105KA8NFNC").actual_part(
 	  "Yageo", "CC0603ZRY5V8BB105")
+	self.choice_part("10uF;1608", "CAPC1608X90N", "",
+	  "CAP CER 10UF 4V X6S 0603").actual_part(
+	  "Murata", "GRM188R60G106ME47D").actual_part(
+	  "Murata", "GRM188C80G106KE47D").actual_part(
+	  "Taiyo Yuden", "JMK107BJ106MA-T").actual_part(
+	  "Murata", "GRM188R60J106ME47D").actual_part(
+	  "Taiyo Yuden", "AMK107ABJ106MAHT").actual_part(
+	  "TDK", "C1608X5R0J106M080AB").actual_part(
+	  "Samsung", "CL10A106MQ8NNNC").actual_part(
+	  "Samsung", "CL10A106MR5LQNC").actual_part(
+	  "Taiyo Yuden", "LMK107BBJ106MALT").actual_part(
+	  "Taiyo Yuden", "JMK107ABJ106MAHT").actual_part(
+	  "Yageo", "CC0603MRX5R4BB106").actual_part(
+	  "AVX", "06036D106MAT2A").actual_part(
+	  "Taiyo Yuden", "AMK107AC6106MA-T").actual_part(
+	  "Murata", "GRM188R61A106ME69D").actual_part(
+	  "KMET", "C0603C106M7PAC7867").actual_part(
+	  "Yageo", "CC0603MRX5R5BB106").actual_part(
+	  "Taiyo Yuden", "JMK107BC6106MA-T").actual_part(
+	  "Samsung", "CL10X106MO8NRNC").actual_part(
+	  "Wurth", "885012106006")
 	self.choice_part("470uF;D10P5", "CAP_D10P5", "",
 	  "CAP ALUM 470UF 20% 16V+ RADIAL").actual_part(
 	  "Kemet", "ESK477M025AH1EA").actual_part(
@@ -478,7 +575,6 @@ class Database:
 	  "Nichicon", "UVZ1E471MPD1TD").actual_part(
 	  "Kemet", "ESK477M035AH2EA").actual_part(
 	  "Nichicon", "UVK1E471MPD1TD")
-
 	self.choice_part("1500UF_200V;R35MM", "R35MM", "",
 	  "CAP ALUM 1500UF 200V SCREW").actual_part(
 	  "Unitied Chemi-Con", "E36D201LPN152TA79M", [
@@ -508,6 +604,8 @@ class Database:
 	   "M1X40;M1X40", 5, 40, "CONN HEADER .100in SNGL STR 5POS")
 	self.fractional_part("M1X6;M1X6", "Pin_Header_Straight_1x06",
 	   "M1X40;M1X40", 6, 40, "CONN HEADER .100in SNGL STR 6POS")
+	self.fractional_part("M1X7;M1X7", "Pin_Header_Straight_1x07",
+	   "M1X40;M1X40", 7, 40, "CONN HEADER .100in SNGL STR 6POS")
 
 	# Test points M1X1:
 	self.alias_part("CAN_RXD;M1X1",
@@ -526,10 +624,20 @@ class Database:
 	  ["M1X3;M1X3"], "Pin_Header_Straight_1x03")
 	self.alias_part("SERVO;M1X3",
 	  ["M1X3;M1X3"], "Pin_Header_Straight_1x03")
+	self.alias_part("SIGNAL_SEL;M1X3",
+	  ["M1X3;M1X3"], "Pin_Header_Straight_1x03")
+	self.alias_part("PWR_SEL;M1X3",
+	  ["M1X3;M1X3"], "Pin_Header_Straight_1x03")
 
 	# M1X4:
 	self.alias_part("I2C_CONN;M1X4",
 	  ["M1X4;M1X4"], "Pin_Header_Straight_1x04")
+	self.alias_part("MTR_ID_CON;M1X4",
+	  ["M1X4;M1X4"], "Pin_Header_Straight_1x04")
+
+	# M1X5:
+	self.alias_part("MTR_DRV_CON;M1X5",
+	  ["M1X5;M1X5"], "Pin_Header_Straight_1x05")
 
 	# M1X6:
 	self.alias_part("ENCODER_CONNECTOR;M1X6",
@@ -538,6 +646,10 @@ class Database:
 	  ["M1X6;M1X6"], "Pin_Header_Straight_1x06")
 	self.alias_part("FTDI_HEADER_ALT;M1X6",
 	  ["M1X6;M1X6"], "Pin_Header_Straight_1x06")
+
+	# M1X7:
+	#self.alias_part("MTR_TRN_CON;M1X7",
+	#  ["M1X7;M1X7"], "Pin_Header_Straight_1x07")
 
 	### Create the fractional parts for the 2XN male headers:
 	self.choice_part("M2X40;M2X40", "Pin_Header_Straight_2x40",
@@ -564,7 +676,7 @@ class Database:
 	  "M2X40;M2X40", 6, 80, "CONN HEADER .100in DBL STR 6POS")
 
 	self.choice_part("M2X5S;M2X5S",
-	  "Pin_header_Straight_2x05_Shrouded", "",
+	  "Pin_Header_Straight_2x05_Shrouded", "",
 	  "BOX HEADER .100in MALE STR 10POS").actual_part(
 	  "Assmann", "AWHW-10G-0202-T").actual_part(
 	  "Sullins", "SBH11-PBPC-D05-ST-BK").actual_part(
@@ -573,15 +685,102 @@ class Database:
 	  "Wurth", "61201021621")
 	self.alias_part("BUS_MASTER_HEADER;M2X5S",
 	  ["M2X5S;M2X5S"], "Pin_Header_Straight_2x05_Shrouded")
+	self.alias_part("MSTR_BUS;M2X5S",
+	  ["M2X5S;M2X5S"], "Pin_Header_Straight_2x05_Shrouded")
+	self.alias_part("MASTER_BUS;M2X5S",
+	  ["M2X5S;M2X5S"], "Pin_Header_Straight_2x05_Shrouded")
+	self.alias_part("BUS_MASTER;M2X5S",
+	  ["M2X5S;M2X5S"], "Pin_Header_Straight_2x05_Shrouded")
 
 	self.fractional_part("M2X6;M2X6", "Pin_Header_Straight_2x06",
 	  "M2X40;M2X40", 12, 80, "CONN HEADER .100in DBL STR 12POS")
+
+	# Quick Disconnect Tereminals:
+	self.choice_part("TERMINAL;MQD187", "MQD250", "",
+	  "CONN QC TAB 0.187 SOLDER").actual_part(
+	  "Molex", "0197084013").actual_part(
+	  "Keystone", "1285").actual_part(
+	  "Amp", "1217332-1").actual_part(
+	  "Amp", "1217133-1").actual_part(
+	  "Keystone", "1285-ST").actual_part(
+	  "Amp", "63823-1").actual_part(
+	  "Keystone", "1212-ST").actual_part(
+	  "Keystone", "1212").actual_part(
+	  "Molex", "0197084001").actual_part(
+	  "Amp", "1742361-1").actual_part(
+	  "Keystone", "4900")
+	self.alias_part("TERMINAL_PI;MQD187",
+	  ["TERMINAL;MQD187"], "MQD250")
+	self.alias_part("TERMINAL_PO;MQD187",
+	  ["TERMINAL;MQD187"], "MQD250")
+
+	self.choice_part("TERMINAL;MQD250", "MQD250", "",
+	  "CONN QC TAB 0.250 SOLDER").actual_part(
+	  "Amp", "1217861-1").actual_part(
+	  "Amp", "63824-1").actual_part(
+	  "Amp", "63839-1").actual_part(
+	  "Molex", "0197054203").actual_part(
+	  "Amp", "63862-1").actual_part(
+	  "Molex", "0197054303").actual_part(
+	  "Amp", "62650-1").actual_part(
+	  "Amp", "1217126-1").actual_part(
+	  "Amp", "63066-1").actual_part(
+	  "Amp", "62409-1").actual_part(
+	  "Keystone", "1287").actual_part(
+	  "Keystone", "1287-ST").actual_part(
+	  "Keystone", "1289-ST").actual_part(
+	  "Keystone", "1289").actual_part(
+	  "Keystone", "1292").actual_part(
+	  "Keystone", "4901").actual_part(
+	  "Amp", "1217169-1").actual_part(
+	  "Keystone", "7812")
+	self.alias_part("TERMINAL_PI;MQD250",
+	  ["TERMINAL;MQD250"], "MQD250")
+	self.alias_part("TERMINAL_PO;MQD250",
+	  ["TERMINAL;MQD250"], "MQD250")
 
         # Non-fractional part Male connectors:
 
         self.choice_part("ENCODER_CONNECTOR;M1X6_JST", "M1X6_JST", "M1X6_JST",
 	  "CONN HEADER ZH SIDE 6POS 1.5MM").actual_part(
 	  "JST", "S6B-ZR(LF)(SN)")
+
+	self.choice_part("JSTPH2;JSTPH2", "JSTPH2", "",
+	  "CONN HEADER PH TOP 2POS 2MM").actual_part(
+	  "JST", "B2B-PH-K-S(LF)(SN)")
+
+	self.choice_part("JSTPH3;JSTPH3", "JSTPH3", "",
+	  "CONN HEADER PH TOP 3POS 2MM").actual_part(
+	  "JST", "B3B-PH-K-S(LF)(SN)")
+
+	self.choice_part("JSTPH4;JSTPH4", "JSTPH4", "",
+	  "CONN HEADER PH TOP 4POS 2MM").actual_part(
+	  "JST", "B4B-PH-K-S(LF)(SN)")
+
+	self.choice_part("JSTPH5;JSTPH5", "JSTPH5", "",
+	  "CONN HEADER PH TOP 5POS 2MM").actual_part(
+	  "JST", "B5B-PH-K-S(LF)(SN)")
+
+	self.choice_part("JSTPH6;JSTPH6", "JSTPH6", "",
+	  "CONN HEADER PH TOP 6POS 2MM").actual_part(
+	  "JST", "B6B-PH-K-S(LF)(SN)")
+
+	self.choice_part("JSTPH7;JSTPH7", "JSTPH7", "",
+	  "CONN HEADER PH TOP 7POS 2MM").actual_part(
+	  "JST", "B7B-PH-K-S(LF)(SN)")
+
+	self.alias_part("MTR_ID_CON;JSTPH4",
+	  ["JSTPH4;JSTPH4"], "JSTPH4")
+	self.alias_part("MTR_ID;JSTPH4",
+	  ["JSTPH4;JSTPH4"], "JSTPH4")
+	self.alias_part("MTR_DRV_CON;JSTPH5",
+	  ["JSTPH5;JSTPH5"], "JSTPH5")
+	self.alias_part("SLV_DRV_CON;JSTPH5",
+	  ["JSTPH5;JSTPH5"], "JSTPH5")
+	self.alias_part("MTR_TRN_CON;JSTPH7",
+	  ["JSTPH7;JSTPH7"], "JSTPH7")
+	self.alias_part("SLV_TRN_CON;JSTPH7",
+	  ["JSTPH7;JSTPH7"], "JSTPH7")
 
 	## Female connectors:
 
@@ -598,6 +797,40 @@ class Database:
 	  ["F1X3;F1X3"], "Pin_Header_Straight_1x03")
 	self.alias_part("POLOLU_VR;F1X3",
 	  ["F1X3;F1X3"], "Pin_Header_Straight_1x03")
+
+	self.choice_part("F1X4;F1X4", "Pin_Header_Straight_1x03", "",
+	  "CONN HEADER FEMALE 4POS .1inch").actual_part(
+	  "Sullins", "PPTC041LFBN-RC").actual_part(
+	  "Sullins", "PPPC041LFBN-RC").actual_part(
+	  "Amp", "215299-4").actual_part(
+	  "Samtec", "SLW-104-01-F-S").actual_part(
+	  "Samtec", "SS-104-TT-2").actual_part(
+	  "Samtec", "SSA-104-S-T").actual_part(
+	  "3M", "929974-01-04-RK").actual_part(
+	  "Harwin", "M20-7820446").actual_part(
+	  "Samtec", "SLW-104-01-L-S").actual_part(
+	  "Harwin", "M20-7820442").actual_part(
+	  "Samtec", "SSW-104-01-F-S").actual_part(
+	  "Samtec", "SSQ-104-01-F-S")
+
+	self.choice_part("F1X5;F1X5", "Pin_Header_Straight_1x05", "",
+	  "CONN HEADER FEMALE 5POS .1inch").actual_part(
+	  "Sullins", "PPTC051LFBN-RC").actual_part(
+	  "Sullins", "PPPC051LFBN-RC").actual_part(
+	  "Samtec", "SS-105-TT-2").actual_part(
+	  "Amp", "215299-5").actual_part(
+	  "Samtec", "SSA-105-S-T").actual_part(
+	  "Samtec", "SSW-105-01-F-S").actual_part(
+	  "Harwin", "M20-7820542").actual_part(
+	  "Amp", "215297-5").actual_part(
+	  "Samtec", "SSW-105-01-T-S").actual_part(
+	  "Samtec", "SSW-105-02-T-S")
+
+	#FIXME: This should be a multiple alias part:
+	self.alias_part("V18V20Fx;S18V20Fx",
+	  ["F1X5;F1X5"], "S18V20Fx")
+	self.alias_part("V18V20F6;S18V20Fx",
+	  ["F1X5;F1X5"], "S18V20Fx")
 
 	self.choice_part("F1X6;F1X6", "Pin_Header_Straight_1x06", "",
 	  "CONN HEADER FEMALE 6POS .1in").actual_part(
@@ -630,7 +863,7 @@ class Database:
 	self.alias_part("HC_SR04;F2X4",
 	  ["F2X4;F2X4"], "Pin_Header_Straight_2x04")
 
-	self.choice_part("F2X10RA;F2X10RA", "Pin_Receptale_Angled_2x10", "",
+	self.choice_part("F2X10RA;F2X10", "Pin_Receptale_Angled_2x10", "",
 	  "CONN RCPT .100in 20POS DUAL").actual_part(
 	  "Sullins", "SFH11-PBPC-D10-RA-BK").actual_part(
 	  "Sullins", "PPTC102LJBN-RC").actual_part(
@@ -641,6 +874,22 @@ class Database:
 	  "Samtec", "SSW-110-02-S-D-RA").actual_part(
 	  "Hirose", "HIF3H-20DB-2.54DS(71)")
 
+	self.choice_part("RASPI40;F2X20", "Pin_Header_Straight_2x20", "",
+	  "CONN HEADR FMALE 20POS .1").actual_part(
+	      "Sullins", "SFH11-PBPC-D10-ST-BK").actual_part(
+	      "Amphenol", "87606-810LF").actual_part(
+	      "Sullins", "PPPC102LFBN-RC").actual_part(
+	      "Sullins", "PPTC102LFBN-RC").actual_part(
+	      "3M", "929975-01-10-RK").actual_part(
+	      "Samtec", "SSW-110-01-F-D").actual_part(
+	      "Amphenol", "87606-310LF").actual_part(
+	      "Harwin", "M20-7831042").actual_part(
+	      "Samtec", "SSW-110-01-T-D").actual_part(
+	      "Amp", "1-215309-0").actual_part(
+	      "Samtec", "SSQ-110-01-F-D").actual_part(
+	      "Samtec", "CES-110-01-T-D")
+	self.alias_part("RASPI;RASPI", ["RASPI40;F2X20"], "RASPI")
+                             
 	self.choice_part("F2X20RA;F2X20RA", "Pin_Receptale_Angled_2x20", "",
 	  "CONN RCPT .100in 40POS DUAL").actual_part(
 	  "Sullins", "PPTC202LJBN-RC").actual_part(
@@ -667,6 +916,39 @@ class Database:
 	self.alias_part("SBC_CONNECTOR40;F2X20RAKF", ["F2X20RAKF;F2X20RAKF"],
 	  "Pin_Receptacle_Angled_2x20_Flipped")
 
+	self.choice_part("F2X19;F2X19", "Pin_Header_Straight_2x19", "",
+	  "CONN HEADER .100in DBL STR 38POS").actual_part(
+	  "Sullins", "PPPC192LFBN-RC").actual_part(
+	  "3M", "929975-01-19-RK").actual_part(
+	  "Samtec", "SSW-119-01-T-D").actual_part(
+	  "Samtec", "CES-119-01-T-D").actual_part(
+	  "Samtec", "SSQ-119-01-T-D").actual_part(
+	  "Samtec", "SLW-119-01-T-D").actual_part(
+	  "Samtec", "SSQ-119-02-T-D").actual_part(
+	  "Samtec", "SSQ-119-03-T-D").actual_part(
+	  "3M", "929852-01-19-RA")
+	self.alias_part("NUCLEO64_CN7;F2X19", ["F2X19;F2X19"],
+	   "Pin_Header_Straight_2x19")
+	self.alias_part("NUCLEO64_CN10;F2X19", ["F2X19;F2X19"],
+	   "Pin_Header_Straight_2x19")
+	# Kludge: Use M2X40 instead of F2X35.  This works around a bug in vendor exclude:
+	self.alias_part("NUCLEO64;NUCLEO64", ["M2X40;M2X40"], "NUCLEO64")
+
+	self.choice_part("F2X35;F2X35", "Pin_Header_Straight_2x35", "",
+	  "CONN HEADER .100in DBL STR 70POS").actual_part(
+	  "3M", "929975-01-35-RK").actual_part(
+	  "Samtec", "SSW-135-01-T-D").actual_part(
+	  "Samtec", "SSQ-135-01-T-D").actual_part(
+	  "Samtec", "SLW-135-01-T-D").actual_part(
+	  "Samtec", "SSQ-135-02-T-D").actual_part(
+	  "Samtec", "SSQ-135-03-T-D").actual_part(
+	  "3M", "929852-01-35-RA").actual_part(
+	  "Samtec", "SSW-135-01-G-D").actual_part(
+	  "Samtec", "SSW-135-02-G-D").actual_part(
+	  "Samtec", "SSW-135-01-S-D")
+	# Kludge: Use M2X40 instead of F2X35.  This works around a bug in vendor exclude:
+	self.alias_part("NUCLEO144;NUCLEO144", ["M2X40;M2X40"], "NUCLEO144")
+
 	# USB connectors:
         self.choice_part("USB_MICRO_B;S+T", "FCI_10118194_0001LF", "",
 	  "CONN USB MICRO B RECPT SMT R/A").actual_part(
@@ -678,13 +960,13 @@ class Database:
 
 	# Crystals:
 
-	self.choice_part("16MHZ;HC49S", "IPC7351:XTAL1150X480X430N", "",
+	self.choice_part("16MHZ;HC49S", "XTAL1150X480X430N", "",
 	  "CRYSTAL 16.0000MHZ SMD").actual_part(
 	  "TXC", "9C-16.000MAAE-T").actual_part(
 	  "TXC", "9C-16.000MAGJ-T")
 	# This alias should be removed:
 	self.alias_part("16MHZ;HC49",
-	  ["16MHZ;HC49S"], "IPC7351:XTAL1150X480X430N")
+	  ["16MHZ;HC49S"], "XTAL1150X480X430N")
 
 	self.choice_part("32.7680KHZ;4SOJ_P5.5", "OSCL550P380X800X250-4N", "",
           "CRYSTAL 32.7680KHZ 12.5PF SMD").actual_part(
@@ -698,16 +980,12 @@ class Database:
 	  "Fox", "FSRLF327").actual_part(
 	  "Abracon", "ABS25-32.768KHZ-6-1-T").actual_part(
 	  "Abracon", "ABS25-32.768KHZ-1-T").actual_part(
-	  "Cardinal", "CPFBZ-A2C4-32.768KD6").actual_part(
-	  "Cardinal", "CPFBZ-A2C5-32.768KD12.5").actual_part(
-	  "Cardinal", "CPFBZ-A2C5-32.768KD6").actual_part(
 	  "ECS", "ECS-.327-6-17X-TR").actual_part(
 	  "ECS", "ECS-.327-6-17X-C-TR").actual_part(
 	  "Citizen", "CM200C32768AZFT").actual_part(
 	  "Fox", "FSRLF327-6").actual_part(
 	  "ECS", "ECS-.327-12.5-17X-C-TR").actual_part(
 	  "Citizen", "CM200C32768DZFT").actual_part(
-	  "Citizen", "CM200C32768DZYT").actual_part(
 	  "Citizen", "CM200C32768DZCT")
 
 	# Miscellaneous connectors:
@@ -717,6 +995,9 @@ class Database:
 	  "Delta Electronics", "10C2", [
 	   ("Digi-Key", "603-1262-ND",
 	    "1/8.28 10/7.454 50/5.6318 100/5.3005")])
+	self.choice_part("MINI_ATC;MINI_ATC", "MINI_ATC", "",
+	  "FUSE HOLDER BLADE PCB").actual_part(
+          "MPD", "BK-6013")
 
 	# Diodes:
 
@@ -725,6 +1006,22 @@ class Database:
 	  "Diodes Inc", "DDZ4V7ASF-7", [
 	  ("Digi-Key", "DDZ4V7ASF-7DICT-ND",
 	   "1/.16 10/.143 100/.0781 500/.04802 1000/.03275")])
+
+	self.choice_part("18V_ZENER;SOD123", "SOD-123", "",
+	  "DIODE ZENER 18V SOT23").actual_part(
+	  "Micro Commercial", "MMSZ5248B-TP").actual_part(
+	  "Micro Commercial", "BZT52C18-TP").actual_part(
+	  "Diodes", "BZT52C18-7-F").actual_part(
+	  "Micro Commercial", "MMSZ4705-TP").actual_part(
+	  "On", "MMSZ18T1G").actual_part(
+	  "On", "MMSZ5248BT1G").actual_part(
+	  "On", "MMSZ4705T1G").actual_part(
+	  "Diodes", "MMSZ5248B-7-F").actual_part(
+	  "Vishay", "BZT52C18-E3-08").actual_part(
+	  "Diodes", "DDZ18C-7").actual_part(
+	  "Vishay", "MMSZ5248B-E3-08").actual_part(
+	  "Diodes", "DDZ9705-7").actual_part(
+	  "Central", "CMHZ5248B TR")
 
 	self.choice_part("BRIDGE_35A_1000V;GBPC", "GBPC", "",
 	  "RECT BRIDGE GPP 1000V 35A GBPC").actual_part(
@@ -751,7 +1048,6 @@ class Database:
 	  "Micro Commercial", "SK14-LTP").actual_part(
 	  "Micro Commercial", "SK12-LTP").actual_part(
 	  "Micro Commercial", "SK16-LTP").actual_part(
-	  "Micro Commercial", "SK18-LTP").actual_part(
 	  "Fairchild", "SS23").actual_part(
 	  "Micro Commercial", "SK13-LTP").actual_part(
 	  "Comchip", "CDBB260-G").actual_part(
@@ -817,13 +1113,61 @@ class Database:
 	  ("Digi-Key", "M8275-ND",
 	   "1/1.51 10/1.392 25/1.276 50/1.0904 100/.97440")])
 
-	self.choice_part("CIB10P100NC;1608", "IPC7351:INDC1608X95N", "",
+	self.choice_part("CIB10P100NC;1608", "INDC1608X95N", "",
 	  "FERRITE CHIP 10 OHM 1000MA 0603").actual_part(
 	  "Samsung", "CIB10P100NC")
 
 	# Integrated Circuits:
 
-	self.choice_part("5V_LDO;SOT223", "SOT223", "",
+	# Note that the SOT89 package pin bindings to Vin/Gnd/Vout vary between parts.
+        # We ultimately selected OGI: 1=>Vout 2=>Gnd 3=>Vin
+	self.choice_part("3.3V_LDO;SOT89", "SOT-89-3", "",
+	  "IC REG LDO 3.3V SOT89").actual_part(
+	  # "Microchip", "MCP1700T-3302E/MB").actual_part(	# Gnd/Vin/Vout	GIO
+	  # "Microchip", "MCP1702T-3302E/MB").actual_part(	# Gnd/Vin/Vout	GIO
+	  # "Microchip", "MCP1703AT-3302E/MB").actual_part(	# Gnd/Vin/Vout	GIO
+	  # "On", "MC78FC33HT1G").actual_part(			# Gnd/Vin/Vout	GIO
+	  # "On", "MC78LC33HT1G").actual_part(			# Gnd/Vin/Vout	GIO
+	  # "Diodes", "AP2204RA-3.3TRG1").actual_part(		# Gnd/Vin/Vout	GIO
+
+	  # "Diodes", "AP2204R-3.3TRG1").actual_part(		# Vin/Gnd/Vout	IGO
+	  # "Richtek", "RT9058-33GX").actual_part(		# Vin/Gnd/Vout	IGO
+	  # "On", "NCP785AH33T1G").actual_part(			# Vin/Gnd/Vout	IGO
+
+	  "STM", "L78L33ACUTR").actual_part(			# Vout/Gnd/Vin	OGI
+	  "Torex", "XC6201P332PR-G").actual_part(		# Vout/Gnd/Vin	OGI
+	  "STM", "LD2981ABU33TR").actual_part(			# Vout/Gnd/Vin	OGI
+	  "Torex", "XC6216D332PR-G").actual_part(		# Vout/Gnd/Vin	OGI
+	  "Microchip", "MCP1804T-3302I/MB").actual_part(	# Vout/Gnd/Vin	OGI
+	  "STM", "L78L33ABUTR").actual_part(			# Vout/Gnd/Vin	OGI
+	  "STM", "LD2981CU33TR")				# Vout/Gnd/Vin	OGI
+
+	self.choice_part("5V_LDO;SOT89", "SOT-89-3", "",
+	  "IC REG LDO 5V SOT89").actual_part(
+	  #"Diodes", "AP2204R-5.0TRG1").actual_part(		# Vin/Gnd/Vout	IGO
+	  #"Richtek", "RT9064-50GX").actual_part(		# Vin/Gnd/Vout	IGO
+
+	  #"IC REG LDO 5V SOT89").actual_part(
+	  #"Microchip", "MCP1700T-5002E/MB").actual_part(	# Gnd/Vin/Vout	GIO
+	  #"Diodes", "AP2204RA-5.0TRG1").actual_part(		# Gnd/Vin/Vout	GIO
+	  #"Microchip", "MCP1702T-5002E/MB").actual_part(	# Gnd/Vin/Vout	GIO
+	  #"Microchip", "MCP1703AT-5002E/MB").actual_part(	# Gnd/Vin/Vout	GIO
+	  #"Diodes", "ZXTR2005Z-13").actual_part(		# Gnd/Vin/Vout	GIO
+	  #"Diodes", "ZXTR2005Z-7").actual_part(		# Gnd/Vin/Vout	GIO
+	  #"On", "MC78LC50HT1G").actual_part(			# Gnd/Vin/Vout	GIO
+
+	  "TI", "UA78L05AIPK").actual_part(			# Vout/Gnd/Vin	OGI
+	  "Micro Commercial", "MC78L05F-TP").actual_part(	# Vout/Gnd/Vin	OGI
+	  "TI", "UA78L05CPK").actual_part(			# Vout/Gnd/Vin	OGI
+	  "Fairchild", "MC78L05ACHX").actual_part(		# Vout/Gnd/Vin	OGI
+	  "NJR", "NJM78L05UA-TE1").actual_part(			# Vout/Gnd/Vin	OGI
+	  "Fairchild", "KA78L05AMTF").actual_part(		# Vout/Gnd/Vin	OGI
+	  "Fairchild", "KA78L05AIMTF").actual_part(		# Vout/Gnd/Vin	OGI
+	  "STM", "L78L05ABUTR").actual_part(			# Vout/Gnd/Vin	OGI
+	  "STM", "L78L05ACUTR").actual_part(			# Vout/Gnd/Vin	OGI
+	  "Torex", "XC6201P502PR-G")				# Vout/Gnd/Vin	OGI
+
+	self.choice_part("5V_LDO;SOT223", "SOT-223", "",
 	  "IC REG LDO 5V SOT223-3").actual_part(
 	  "Diodes Inc", "AP1117E50G-13", [
 	   ("Digi-Key", "AP1117E50GDICT-ND",
@@ -835,12 +1179,31 @@ class Database:
 	  "Microchip", "MCP1703-5002E/DB").actual_part(
 	  "Microchip", "MCP1703T-5002E/DB")
 
+	self.choice_part("3.3V_LDO;SOT223", "SOT-223", "",
+	  "IC REG LDO 3.3V SOT223-3").actual_part(
+	  "Diodes", "AP2114H-3.3TRG1").actual_part(
+	  "Richtek", "RT9164A-33GG").actual_part(
+	  "STM", "LD1117S33TR").actual_part(
+	  "STM", "LD1117S33CTR").actual_part(
+	  "Exar", "SPX1117M3-L-3-3/TR").actual_part(
+	  "Diodes", "AP2111H-3.3TRG1").actual_part(
+	  "Diodes", "AP7361-33E-13").actual_part(
+	  "On", "NCP1117LPST33T3G").actual_part(
+	  "Diodes", "AP7361C-33E-13").actual_part(
+	  "STM", "LD1117AS33TR").actual_part(
+	  "ON", "MC33375ST-3.3T3G").actual_part(
+	  "Microchip", "MIC5233-3.3YS-TR").actual_part(
+	  "Microchip", "MIC5233-3.3YS")
+
 	self.choice_part("AP2210N-3.3T;SOT-23-3", "extra-nominal:SOT95P280X145-3N", "",
 	  "3.3V LDO").actual_part(
 	  "Diodes Inc", "AP2210N-3.3TRG1").actual_part(
           "Microchip", "MCP1700T-3302E/TT").actual_part(
           "Microchip", "MCP1700T-3302E/MB")
 
+        self.choice_part("AS5601;SOIC8", "SOIC127P600X175-8N", "",
+	  "ENCODER 12BIT PROGR A/B 8SOIC").actual_part(
+	  "AMS", "AS5601-ASOM")
 
 	self.choice_part("74xHC08;SOIC8", "SOIC127P600X175-14N", "",
 	  "IC GATE AND 4CH 2-INP 14-SOIC").actual_part(
@@ -879,6 +1242,20 @@ class Database:
 	  "TI", "SN74LVC1G175DBVR").actual_part(
 	  "TI", "SN74LVC1G175DBVT")
 
+	self.choice_part("74HC595;TTSOP16", "SOP65P640X120-16N", "",
+	  "IC 8BIT SHIFT REGISTER 16TSSOP").actual_part(
+	  "Nexperia", "74HC595PW,112").actual_part(
+	  "Nexperia", "74HC595PW-Q100,118").actual_part(
+	  "Nexperia", "74HC595PW,118").actual_part(                         
+	  "On", "MC74HC595ADTG").actual_part(
+	  "Fairchild", "MM74HC595MTC").actual_part(
+	  "Diodes", "74HC595T16-13").actual_part(
+	  "On", "MC74HC595ADTR2G").actual_part(
+	  "Fairchild", "MM74HC595MTCX").actual_part(
+	  "TI", "SN74HC595PWR").actual_part(
+	  "STM", "M74HC595YTTR").actual_part(
+	  "TI", "SN74HC595PW")
+
 	self.choice_part("ATMEGA328;QFP32", "QFP80P900X900X120-32N", "",
 	  "IC MCU 8BIT 32KB FLASH 32QFP").actual_part(
 	  "Atmel", "ATMEGA328-AUR", [
@@ -910,6 +1287,10 @@ class Database:
 	  "TI", "LM311DRG4").actual_part(
 	  "TI", "LM311MX/NOPB")
 
+	self.choice_part("MC33883;SOIC20", "SOIC127P1032X265-20N", "",
+	  "IC H-BRIDGE PRE-DRIVER 20SOIC").actual_part(
+	  "NXP", "MC33883HEGR2")
+
 	self.choice_part("MCP2562;SOIC8", "SOIC127P600X175-8N", "",
 	  "IC TXRX CAN 8SOIC").actual_part(
 	  "Microchip", "MCP2562T-E/SN", [
@@ -923,7 +1304,7 @@ class Database:
 	  "Microchip", "MCP79400-I/SN").actual_part(
 	  "Microchip", "MCP79402-I/SN").actual_part(
 	  "Microchip", "MCP79401-I/SN")
-	self.choice_part("CAT24C32;SOIC8", "IPC7351:SOIC127P600X175-8N", "",
+	self.choice_part("CAT24C32;SOIC8", "SOIC127P600X175-8N", "",
 	  "IC EEPROM 32KBIT 400KHZ 8SOIC").actual_part(
 	  "ON Semiconductor", "CAT24C32WI-GT3")
 	
@@ -950,10 +1331,38 @@ class Database:
 	  "Lite-On", "LTST-C194TGKT")
 	self.alias_part("LED;1608",
 	  ["GREEN_LED;1608"], "DIOC1608X55N")
+	self.alias_part("GRN_LED;1608",
+	  ["GREEN_LED;1608"], "DIOC1608X55N")
+
+	self.choice_part("GRN_LED;T1", "T1_LED", "",
+	  "LED GRN 3MM ROUND").actual_part(
+	   "Everlight", "MV54643").actual_part(
+	   "Everlight", "HLMP1540").actual_part(
+	   "Lite-On", "LTL-4231").actual_part(
+	   "Lite-On", "LTL-4232N").actual_part(
+	   "Lite-On", "LTL-4231N-1").actual_part(
+	   "Lumex", "SSL-LX3044GD").actual_part(
+	   "Kingbright", "WP710A10PGD").actual_part(
+	   "Lumex", "SSL-LX3044GT").actual_part(
+	   "Lumex", "SSL-LX3054GD").actual_part(
+	   "Broadcom", "HLMP-1503").actual_part(
+	   "Broadcom", "HLMP-1521").actual_part(
+	   "Lumex", "SSL-LX3044PGD").actual_part(
+	   "Kingbright", "WP132XPGD")
 
 	self.choice_part("CREE_3050;CXA3050", "CXA3050", "",
 	  "CREE XLAMP CXA3050 23MM WHITE").actual_part(
 	  "Cree", "CXA3050-0000-000N0HW440F")
+
+	self.choice_part("SI8055;QSOP16", "SOP63P602X173-16N", "",
+	  "DGTL ISO 1KV 5CH GEN PURP 16QSOP").actual_part(
+	  "Silicon Labs", "SI8055AA-B-IU")
+
+	# Slot interrupters:
+
+	self.choice_part("OPB200;OPB200", "OPB200", "",
+	  "SENSR OPTO SLOT 5.1MM TRANS THRU").actual_part(
+	  "TE Electronics/Optek", "OPB200")
 
 	# Potentiometers:
 
@@ -974,14 +1383,28 @@ class Database:
 
 	# Resistors:
 
-	self.choice_part("0;1608", "IPC7351:RESC1608X55N", "",
+	self.choice_part("0;1608", "RESC1608X55N", "",
 	  "RES SMD 0.0 OHM JUMPER 1/10W").actual_part(
 	  "Vishay Dale", "CRCW06030000Z0EA").actual_part(
 	  "Rohm", "MCR03EZPJ000").actual_part(
 	  "Panasonic", "ERJ-3GEY0R00V").actual_part(
 	  "Stackpole", "RMCF0603ZT0R00").actual_part(
 	  "Bourns", "CR0603-J/-000ELF")
-	self.choice_part("0.20_1W;6432", "IPC7351:RESC6432X70N", "",
+	self.choice_part("10;1608", "RESC1608X55N", "",
+	  "RES SMD 10 5% 1/10W 1608").actual_part(
+	  "Yageo", "RC0603FR-0710RL").actual_part(
+	  "Yageo", "RC0603JR-0710RL").actual_part(
+	  "Stackpole", "RMCF0603JT10R0").actual_part(
+	  "Panasonic", "ERJ-3GEYJ100V").actual_part(
+	  "Stackpole", "RMCF0603FT10R0").actual_part(
+	  "Bourns", "CR0603-JW-100ELF").actual_part(
+	  "Samsung", "RC1608J100CS").actual_part(
+	  "Yageo", "RC0603JR-0710RP").actual_part(
+	  "Yageo", "AC0603FR-0710RL").actual_part(
+	  "Stackpole", "RNCP0603FTD10R0").actual_part(
+	  "Bourns", "CR0603-FX-10R0GLF").actual_part(
+	  "Yageo", "RT0603FRE0710RL")
+	self.choice_part("0.20_1W;6432", "RESC6432X70N", "",
 	  "RES SMD 0.02 OHM 1% 1W 6432").actual_part(
 	  "TE", "2176057-8", [
 	    ("Digi-Key", "A109677CT-ND",
@@ -994,19 +1417,29 @@ class Database:
 	  "Yageo", "RL2512FK-070R02L").actual_part(
 	  "TT/IRC", "LRC-LRF2512LF-01-R020F").actual_part(
 	  "Stackpole", "CSRN2512FK20L0")
-	
-	self.choice_part("120;1608", "IPC7351:RESC1608X55N", "",
+	self.choice_part("47;1608", "RESC1608X55N", "",
+	  "RES SMD 50 5% 1/10W 1608").actual_part(
+	  "Yageo", "RC0603JR-0747RL").actual_part(
+	  "Stackpole", "RMCF0603JT47R0").actual_part(
+	  "Yageo", "RC0603FR-0747RL").actual_part(
+	  "Panasonic", "ERJ-3GEYJ470V").actual_part(
+	  "Panasonic", "ERJ-3EKF47R0V").actual_part(
+	  "Samsung", "RC1608F470CS").actual_part(
+	  "Vishay Dale", "CRCW060347R0JNEA").actual_part(
+	  "Yageo", "AC0603FR-0747RL").actual_part(
+	  "Yageo", "AC0603JR-0747RL").actual_part(
+	  "Bourns", "CR0603-JW-470GLF").actual_part(
+	  "Bourns", "CR0603-JW-470ELF").actual_part(
+	  "Vishay Dale", "CRCW060347R0FKEA")
+	self.choice_part("120;1608", "RESC1608X55N", "",
 	  "RES SMD 120 OHM 5% 1/10W 1608").actual_part(
-	  "Vishay Dale", "CRCW0603120RJNEA", [
-	   ("Digi-Key", "541-120GCT-ND",
-	    "10/.074 50/.04 200/.02295 1000/.01566")]).actual_part(
 	  "Vishay Dale", "CRCW0603120RFKEA").actual_part(
 	  "Rohm", "MCR03ERTJ121").actual_part(
 	  "Rohm", "MCR03ERTF1200").actual_part(
 	  "Samsung", "RC1608J121CS").actual_part(
 	  "Samsung", "RC1608F121CS").actual_part(
 	  "Rohm", "KTR03EZPF1200")
-	self.choice_part("470;1608", "IPC7351:RESC1608X55N", "",
+	self.choice_part("470;1608", "RESC1608X55N", "",
 	  "RES SMD 470 5% 1/10W 1608").actual_part(
 	  "Vishay Dale", "CRCW0603470RJNEA", [
 	   ("Digi-Key", "541-470GCT-ND",
@@ -1014,18 +1447,15 @@ class Database:
 	  "Rohm", "MCR03ERTJ471").actual_part(
 	  "Samsung", "RC1608J471CS").actual_part(
 	  "Rohm", "KTR03EZPJ471")
-	self.choice_part("1K;1608", "IPC7351:RESC1608X55N", "",
+	self.choice_part("1K;1608", "RESC1608X55N", "",
 	  "RES SMD 1K 5% 1/10W 0603").actual_part(
-	  "Vishay Dale", "CRCW06031K00JNEA").actual_part(
 	  "Rohm", "MCR03ERTJ102").actual_part(
 	  "Yageo", "RC0603JR-071KP").actual_part(
 	  "Samsung", "RC1608J102CS").actual_part(
 	  "Rohm", "TRR03EZPJ102").actual_part(
-	  "Vishay Dale", "RCG06031K00JNEA").actual_part(
 	  "Rohm", "KTR03EZPJ102")
-	self.choice_part("4K7;1608", "IPC7351:RESC1608X55N", "",
+	self.choice_part("4K7;1608", "RESC1608X55N", "",
 	  "RES SMD 4.7K 5% 1/10W 1608").actual_part(
-	  "Vishay Dale", "CRCW06034K70JNEA").actual_part(
 	  "Yageo", "RC0603JR-074K7L").actual_part(
 	  "Panasonic", "ERJ-3GEYJ472V").actual_part(
 	  "Rohm", "MCR03EZPJ472").actual_part(
@@ -1035,9 +1465,8 @@ class Database:
 	  "Samsung", "RC1608J472CS").actual_part(
 	  "Yageo", "RC0603JR-074K7P").actual_part(
 	  "Rohm", "TRR03EZPJ472").actual_part(
-	  "Vishay Dale", "RCG06034K70JNEA").actual_part(
 	  "Bourns", "CR0603-JW-472GLF")
-	self.choice_part("10K;1608", "IPC7351:RESC1608X55N", "",
+	self.choice_part("10K;1608", "RESC1608X55N", "",
 	  "RES SMD 10K OHM 5% 1/10W 1608").actual_part(
 	  "Yageo", "RC0603JR-0710KL").actual_part(
 	  "Panasonic", "ERJ-3GEYJ103V").actual_part(
@@ -1048,7 +1477,7 @@ class Database:
 	  "Samsung", "RC1608J103CS").actual_part(
 	  "Bourns", "CR0603-JW-103GLF").actual_part(
 	  "Rohm", "TRR03EZPJ103")
-	self.choice_part("22K;1608", "IPC7351:RESC1608X55N", "",
+	self.choice_part("22K;1608", "RESC1608X55N", "",
 	  "RES SMD 22K OHM 5% 1/10W 1608").actual_part(
 	  "Vishay Dale", "CRCW060322K0JNEA").actual_part(
 	  "Vishay Beyschlag", "MCT06030C2202FP500").actual_part(
@@ -1060,7 +1489,7 @@ class Database:
 	  "Panasonic", "ERJ-3GEYJ223V").actual_part(
 	  "Stackpole", "RMCF0603FT22K0").actual_part(
 	  "Panasonic", "ERJ-3EKF2202V")
-	self.choice_part("100K;1608", "IPC7351:RESC1608X55N", "",
+	self.choice_part("100K;1608", "RESC1608X55N", "",
 	  "RES SMD 100K OHM 5% 1/10W 1608").actual_part(
 	  "Vishay Dale", "CRCW0603100KJNEAIF", [
 	     ("Digi-Key", "541-100KAQCT-ND",
@@ -1078,6 +1507,9 @@ class Database:
 	  "Rohm", "KTR03EZPJ104")
 
 	# Switches
+	self.choice_part("DPDT_4A;2X3_8.65X7.92", "GF_426_0020", "",
+	  "SWITCH SLIDE DPDT 4A 125V").actual_part(
+	  "CW Industries", "GF-426-0020")
 
 	# Test Points:
 	# (These need to be moved to `prices.py` on a per board basis):
@@ -1130,7 +1562,7 @@ class Database:
 	self.alias_part("ID6;M2X6",
 	  ["M2X6;M2X6"], "Pin_Header_Straight_2x06")
 	self.alias_part("BUS_SLAVE;M2X5S",
-	  ["M2X5S;M2X5S"], "Pin_Header_Straight_2x05")
+	  ["M2X5S;M2X5S"], "Pin_Header_Straight_2x05_Shrouded")
 
 	# Transistors:
 
@@ -1164,6 +1596,43 @@ class Database:
 	  "ST Micro", "STD1NK60T4").actual_part(
 	  "ST Micro", "STD1NK80ZT4").actual_part(
 	  "On Semi", "NDD04N60ZT4G")
+
+	self.choice_part("NFET_10A;TO220", "TO-220_FET-GDS_Horizontal_LargePads", "",
+	  "MOSFET N-CH >10A TO-220").actual_part(
+	  "Fairchild", "FQP13N10").actual_part(
+	  "Fairchild", "FQP13N10L").actual_part(
+	  "Toshiba", "TK40E06N1,S1X").actual_part(
+	  "Fairchild", "FQP33N10").actual_part(
+	  "Toshiba", "TK30E06N1,S1X").actual_part(
+	  "Fairchild", "FQP17P10").actual_part(
+	  "Alpha", "AOTF2910L").actual_part(
+	  "Fairchild", "FQP19N20C").actual_part(
+	  "Fairchild", "FQP15P12").actual_part(
+	  "Fairchild", "FQP27P06").actual_part(
+	  "Fairchild", "FDP55N06").actual_part(
+	  "Fairchild", "MTP3055VL").actual_part(
+	  "TI", "CSD18504KCS")
+
+	self.choice_part("NFET_10A;DPAK", "DPAK", "",
+	  "MOSFET N-CH >10A DPAK").actual_part(
+	  "Diodes", "DMN6040SK3-13").actual_part(
+	  "Alpha & Omega", "AOD514").actual_part(
+	  "Diodes", "DMN3010LK3-13").actual_part(
+	  "Taiwan", "TSM090N03ECP ROG").actual_part(
+	  "Diodes", "DMN3016LK3-13").actual_part(
+	  "Diodes", "DMG4800LK3-13").actual_part(
+	  "Fairchild", "FDD6630A").actual_part(
+	  "Diodes", "DMN10H170SK3-13").actual_part(
+	  "Diodes", "DMN4026SK3-13").actual_part(
+	  "Diodes", "DMN10H099SK3-13").actual_part(
+	  "Taiwan", "TSM090N03CP ROG").actual_part(
+	  "Fairchild", "FDD8880").actual_part(
+	  "Infineon", "IRLR2705TRPBF").actual_part(
+	  "Alpha & Omega", "AOD454A").actual_part(
+	  "Infineon", "IRFR024NTRPBF").actual_part(
+	  "Infineon", "IRLR8729TRPBF").actual_part(
+	  "Infineon", "IRFR024NTRLPBF").actual_part(
+	  "STM", "STD17NF03LT4")
 
 	# Now extract all of the actual parts:
 	#print("-------------------------")
@@ -1251,6 +1720,7 @@ class Database:
 		  format(alias_part_name, schematic_part_name))
 
 	# Create and return the new *alias_part*:
+	assert len(alias_parts) == 1, "alias_parts={0}".format(alias_parts)
 	alias_part = Alias_Part(schematic_part_name, \
 	  alias_parts, kicad_footprint)
 	return self.insert(alias_part)
@@ -1980,7 +2450,7 @@ class Order:
 	    # If the savings is less that the shipping cost, we exclude
 	    # the vendor:
 	    if savings < 5.0 and len(trial_quads) >= 2 and lowest_vendor_name != "Digi-Key":
-		# The shipping costs are too high and there at lease one
+		# The shipping costs are too high and there at least one
 		# vendor left; exclude this vendor:
 		reduced_vendor_messages.append("Excluding '{0}': only saves {1:.2f}\n".
 		  format(lowest_vendor_name, savings))
@@ -2133,6 +2603,60 @@ class Order:
 
 	return final_choice_parts
 
+    def footprints_check(self, final_choice_parts):
+	""" *Order*: Verify that footprints exist. """
+
+	# Verify argument types:
+	assert isinstance(final_choice_parts, list)
+
+	# Visit each *schematic_part* in all of the *boards*:
+	kicad_footprints = {}
+	for board in self.boards:
+	    for board_part in board.all_board_parts:
+		assert isinstance(board_part, Board_Part)
+		schematic_part = board_part.schematic_part
+		assert isinstance(schematic_part, Schematic_Part)
+		
+		#FIXME: this should be done with some recursive methods!!!
+
+		# Sweep through aliases:
+		while isinstance(schematic_part, Alias_Part):
+		    alias_part = schematic_part
+		    schematic_parts = alias_part.schematic_parts
+		    # Conceptually, alias parts can reference one or more parts.
+		    # For now, assume it is 1-to-1:
+		    assert len(schematic_parts) == 1, \
+		      "Multiple Schematic Parts for {0}".format(alias_part.base_name)
+		    schematic_part = schematic_parts[0]
+		assert isinstance(schematic_part, Schematic_Part)
+		assert not isinstance(schematic_part, Alias_Part)
+		    
+		# Dispatch on type of *schematic_part*.  This really should be done with
+		# with a method:
+		if isinstance(schematic_part, Fractional_Part):
+		    fractional_part = schematic_part
+		    #print("{0} is fractional {1}".
+		    #  format(fractional_part.base_name, fractional_part.kicad_footprint))
+		    kicad_footprints[fractional_part.kicad_footprint] = \
+		      schematic_part.schematic_part_name
+		elif isinstance(schematic_part, Choice_Part):
+		    choice_part = schematic_part
+		    #print("{0} is choice".format(choice_part.base_name))
+		    kicad_footprint = choice_part.kicad_footprint
+		    kicad_footprints[kicad_footprint] = schematic_part.schematic_part_name
+		else:
+		    print("{0} is ??".format(schematic_part.base_name))
+		    assert False
+
+	# Now verify that each footprint exists:
+	sorted_kicad_footprints = sorted(kicad_footprints.keys())
+	for footprint_name in sorted_kicad_footprints:
+	    footprint_path = "pretty/{0}.kicad_mod".format(footprint_name)
+	    if not os.path.isfile(footprint_path):
+		
+		print("Footprint '{0}' does not exist for {1}".
+		  format(footprint_path, kicad_footprints[footprint_name]))
+
     def process(self):
 	""" *Order*: Process the order. """
 
@@ -2172,6 +2696,9 @@ class Order:
 	print("{0} vendors eliminated.  See '{1}' file for why".
 	  format(len(reduced_vendor_messages), reduced_vendor_messages_file_name))
 
+	# Check for missing footprints:
+	self.footprints_check(final_choice_parts)
+
 	# Print out the final selected vendor summary:
 	self.summary_print(final_choice_parts, excluded_vendor_names)
 
@@ -2189,7 +2716,6 @@ class Order:
 	  choice_part.selected_vendor_name,
 	  choice_part.selected_total_cost) )
 	self.csv_write()
-
 	
 	# Write a part summary file for each board:
 	for board in self.boards:
@@ -2339,7 +2865,7 @@ class Order:
 
 	return quad
 
-    def request(self, name, amount):
+    def xxxrequest(self, name, amount):
 	""" *Order*: Request *amount* parts named *name*. """
 
 	assert isinstance(name, str)
@@ -2370,16 +2896,23 @@ class Order:
 	# Let the user know what we winnowed the vendor list down to:
 	final_vendor_names = \
 	  self.vendor_names_get(choice_parts, excluded_vendor_names)
-	print("Final selected vendors:")
-	for vendor_name in final_vendor_names:
-	    print("    {0}".format(vendor_name))
 
 	# Print the final *total_cost*:
 	total_cost = 0.0
 	for choice_part in choice_parts:
 	    choice_part.select(excluded_vendor_names, False)
 	    total_cost += choice_part.selected_total_cost
-	print("Total Cost: {0}".format(total_cost))
+	print("Total Cost: ${0:.2f}".format(total_cost))
+
+	# Print out the sub-totals for each vendor:
+	print("Final selected vendors:")
+	for vendor_name in final_vendor_names:
+	    vendor_cost = 0.0
+	    for choice_part in choice_parts:
+		if choice_part.selected_vendor_name == vendor_name:
+		    vendor_cost += choice_part.selected_total_cost
+	    print("    {0}: ${1:.2f}".format(vendor_name, vendor_cost))
+
 
     def vendor_exclude(self, vendor_name):
 	""" *Order*: Exclude *vendor_name* from the *Order* object (i.e. *self*)
@@ -2557,7 +3090,7 @@ class Board:
 			component_se.append(
 			  [Symbol("footprint"), Symbol(kicad_footprint)])
 			print("Part {0}: Adding binding to footprint '{1}'".
-			  format(kicad_footprint))
+			  format(part_name, kicad_footprint))
 			net_file_changed = True
 		    else:
 			# We have a footprint in .net file:
@@ -2810,7 +3343,8 @@ class Board:
 	reference_board_parts_keys = reference_board_parts.keys()
 	reference_board_parts_keys.sort()
 
-	# Now dig down until we have all the information we need for output the next .csv file line:
+	# Now dig down until we have all the information we need for output the next
+        # `.csv` file line:
 	has_fractional_parts = False
         for reference_board_parts_key in reference_board_parts_keys:
 	    # Extract the *board_part* and *final_choice_part*:
@@ -2827,27 +3361,29 @@ class Board:
 
 	    # Now get the *actual_part*:
 	    actual_part = final_choice_part.selected_actual_part
-	    assert isinstance(actual_part, Actual_Part)
+	    if isinstance(actual_part, Actual_Part):
 
-	    # Now get the Vendor_Part:
-	    manufacturer_name = actual_part.manufacturer_name
-	    manufacturer_part_name = actual_part.manufacturer_part_name
-	    vendor_part = final_choice_part.selected_vendor_part
-	    assert isinstance(vendor_part, Vendor_Part)
+		# Now get the Vendor_Part:
+		manufacturer_name = actual_part.manufacturer_name
+		manufacturer_part_name = actual_part.manufacturer_part_name
+		vendor_part = final_choice_part.selected_vendor_part
+		assert isinstance(vendor_part, Vendor_Part)
 
-	    # Output the line for the .csv file:
-	    vendor_name = vendor_part.vendor_name
-	    vendor_part_name = vendor_part.vendor_part_name
-	    quantity = final_choice_part.count_get()
-	    fractional = "No"
-            if len(final_choice_part.fractional_parts) > 0:
-                fractional = "Yes"
-                has_fractional_parts = True
-	    board_file.write('"{0} x","{1}","{2}","{3}","{4}","{5}","{6}","{7}","{8}"\n'.
-	      format(quantity,
-	      reference_board_parts_key, schematic_part_key, final_choice_part.description,
-	      fractional,
-	      manufacturer_name, manufacturer_part_name, vendor_name, vendor_part_name))
+		# Output the line for the .csv file:
+		vendor_name = vendor_part.vendor_name
+		vendor_part_name = vendor_part.vendor_part_name
+		quantity = final_choice_part.count_get()
+		fractional = "No"
+		if len(final_choice_part.fractional_parts) > 0:
+		    fractional = "Yes"
+	            has_fractional_parts = True
+		board_file.write('"{0} x","{1}","{2}","{3}","{4}","{5}","{6}","{7}","{8}"\n'.
+		  format(quantity,
+		  reference_board_parts_key, schematic_part_key, final_choice_part.description,
+		  fractional,
+		  manufacturer_name, manufacturer_part_name, vendor_name, vendor_part_name))
+	    else:
+                print("Problems with actual_part", actual_part)
 
 	return has_fractional_parts
 
@@ -2889,7 +3425,7 @@ class Schematic_Part:
 	# Verify argument types:
 	assert isinstance(schematic_part_name, str)
 	assert isinstance(kicad_footprint, str)
-	assert kicad_footprint != ""
+	assert kicad_footprint != "", "Empty Footprint for {0}".format(schematic_part_name)
 	
 	# Split *schematic_part_name" into *base_name* and *short_footprint*:
 	base_name_short_footprint = schematic_part_name.split(';')
@@ -3141,16 +3677,31 @@ class Choice_Part(Schematic_Part):
 	# When we are done, we sort *quints* and select the first one
 	# off the head of the list.
 
+	
+	tracing = False
+	#tracing = self.schematic_part_name == "F2X35;F2X35"
+	if tracing:
+	    print("=>Choice_Part.select()")
+	    print(" Choice_part:{0}".format(self.schematic_part_name))
+
 	quints = []
 	required_quantity = self.count_get()
 	actual_parts = self.actual_parts
 	for actual_part_index in range(len(actual_parts)):
 	    actual_part = actual_parts[actual_part_index]
+	    if tracing:
+		print(" Manufacturer: {0} {1}".
+	      format(actual_part.manufacturer_name, actual_part.manufacturer_part_name))
 	    vendor_parts = actual_part.vendor_parts
 	    for vendor_part_index in range(len(vendor_parts)):
 		vendor_part = vendor_parts[vendor_part_index]
+		if tracing:
+		    print("  Vendor: {0} {1}".
+		      format(vendor_part.vendor_name, vendor_part.vendor_part_name))
 		price_breaks = vendor_part.price_breaks
 		for price_break_index in range(len(price_breaks)):
+		    if tracing:
+			print("  B")
 		    price_break = price_breaks[price_break_index]
 
 		    # We not have an *actual_part*, *vendor_part* and
@@ -3163,8 +3714,11 @@ class Choice_Part(Schematic_Part):
 
 		    # Assemble the *quint* and append to *quints* if there
 		    # enough parts available:
-		    if not vendor_part.vendor_name in excluded_vendor_names \
-		      and vendor_part.quantity_available >= order_quantity:
+		    is_excluded = vendor_part.vendor_name in excluded_vendor_names
+		    if tracing:
+			print("   Quantity Available: {0} Is excluded: {1}".
+			  format(vendor_part.quantity_available, is_excluded))
+		    if not is_excluded and vendor_part.quantity_available >= order_quantity:
 			assert price_break_index < len(price_breaks)
 		        quint = (total_cost, order_quantity,
 		          actual_part_index, vendor_part_index,
@@ -3225,6 +3779,9 @@ class Choice_Part(Schematic_Part):
 	missing_part = 0
 	if len(quints) == 0:
 	    missing_part = 1
+
+	if tracing:
+	    print("<=Choice_Part.select()\n")
 	return missing_part
 
     def vendor_names_load(self, vendor_names_table, excluded_vendor_names):
@@ -3255,6 +3812,8 @@ class Alias_Part(Schematic_Part):
 	assert isinstance(schematic_parts, list)
 	for schematic_part in schematic_parts:
 	    assert isinstance(schematic_part, Schematic_Part)
+
+	assert len(schematic_parts) == 1, "schematic_parts={0}".format(schematic_parts)
 
 	# Load up *self*:
 	Schematic_Part.__init__(self, schematic_part_name, kicad_footprint)
