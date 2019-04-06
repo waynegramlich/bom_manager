@@ -339,15 +339,17 @@ class Database:
 	vendor_priorities["Digi-Key"] = 1004
 
 	# Initialize the various tables:
-	self.actual_parts = {} # Key:(manufacturer_name, manufacturer_part_name)
-	self.bom_parts_file_name = bom_parts_file_name
-	self.schematic_parts = {}   # Key: "part_name;footprint:comment"
-	self.vendor_minimums = vendor_minimums
-	self.vendor_parts_cache = {} # Key:(actual_key)
-	self.vendor_priorities = vendor_priorities
-	self.vendor_priority = 10
+	database = self
+	database.actual_parts = {} # Key:(manufacturer_name, manufacturer_part_name)
+	database.bom_parts_file_name = bom_parts_file_name
+	database.footprints = {} # Key: "footprint_name"
+	database.schematic_parts = {}   # Key: "part_name;footprint:comment"
+	database.vendor_minimums = vendor_minimums
+	database.vendor_parts_cache = {} # Key:(actual_key)
+	database.vendor_priorities = vendor_priorities
+	database.vendor_priority = 10
 
-	vendor_parts_cache = self.vendor_parts_cache
+	vendor_parts_cache = database.vendor_parts_cache
 	# Read in any previously created *vendor_parts*:
 	if os.path.isfile(bom_parts_file_name):
 	    #print("Start reading BOM parts file: '{0}'".
@@ -371,7 +373,7 @@ class Database:
 		    vendor_parts_cache[actual_key] = vendor_parts
 
 	    with open("/tmp/database.dmp", "w") as dump_stream:
-		self.dump(dump_stream)
+		database.dump(dump_stream)
 
 	# Now here is where we initialize the database:
 
@@ -410,12 +412,12 @@ class Database:
 	# Capacitors:
 
 	self.choice_part("6pF;1608", "CAPC1608X90N", "",
-	  "CAP CER 6PF 50V+ NP0 0603").actual_part(
+	  "CAP CER 6PF 50V+ NP0 0603", rotation=90.0).actual_part(
 	  "TDK", "C1608CH2A060D080AA").actual_part(
 	  "KEMET Corporation", "CBR06C609BAGAC").actual_part(
 	  "Yageo", "CC0603DRNPO9BN6R0")
 	self.choice_part("18pF;1608", "CAPC1608X90N", "",
-	  "CAP CER 18PF 25V+ 10% SMD 0603").actual_part(
+	  "CAP CER 18PF 25V+ 10% SMD 0603", rotation=90.0).actual_part(
 	  "Kamet", "C0603C180J5GACTU", [
 	   ("Digi-Key", "399-1052-1-ND",
 	    "1/.10 10/.034 50/.0182 100/.0154 250/.0126")]).actual_part(
@@ -429,7 +431,7 @@ class Database:
 	  "AVX", "06035A180JAT2A").actual_part(
 	  "Yageo", "CC0603JRNPO9BN180")
 	self.choice_part(".01uF;1608", "CAPC1608X90N", "",
-	  "CAP CER 0.01UF 25V+ 10% SMD 0603").actual_part(
+	  "CAP CER 0.01UF 25V+ 10% SMD 0603", rotation=90.0).actual_part(
 	  "Yageo", "CC0603KRX7R9BB103").actual_part(
 	  "KEMET", "C0603C103K5RACTU").actual_part(
 	  "AVX", "06035C103KAT2A").actual_part(
@@ -445,9 +447,9 @@ class Database:
 	  "Samsung", "CL10B103MB8NCNC").actual_part(
 	  "AV/X", "06035C103KAT4A")
 	self.alias_part("10nF;1608",
-	  [".01uF;1608"], "CAPC1608X90N")
+	  [".01uF;1608"], "CAPC1608X90N", feeder_name="10nF", rotation=90.0, part_height=0.90)
 	self.choice_part(".033uF;1608", "CAPC1608X90N", "",
-	  "CAP CER 0.01UF 25V+ 10% SMD 0603").actual_part(
+	  "CAP CER 0.01UF 25V+ 10% SMD 0603", rotation=90.0).actual_part(
 	  "Samsung", "CL10B333KB8NNNC").actual_part(
 	  "Samsung", "CL10B333KA8NNNC").actual_part(
 	  "Samsung", "CL10B333KB8SFNC").actual_part(
@@ -463,9 +465,9 @@ class Database:
 	  "Wurth", "885012206068").actual_part(
 	  "Wurth", "885012206043")
 	self.alias_part("33nF;1608",
-	  [".033uF;1608"], "CAPC1608X90N")
+	  [".033uF;1608"], "CAPC1608X90N", feeder_name="33nF", rotation=90.0, part_height=0.90)
 	self.choice_part(".1uF;1608", "CAPC1608X90N", "",
-	  "CAP CER 0.1UF 25V+ 10% SMD 0603").actual_part(
+	  "CAP CER 0.1UF 25V+ 10% SMD 0603", rotation=90.0).actual_part(
 	  "TDK", "C1608X7R1E104K080AA").actual_part(
 	  "Kemet", "C0603C104K3RACTU").actual_part(
 	  "Kemet", "C0603C104M5RACTU").actual_part(
@@ -482,9 +484,9 @@ class Database:
 	  "Kamet", "C0603C104Z3VACTU").actual_part(
 	  "TDK", "C1608X7R1E104M080AA")
 	self.alias_part("100nF;1608",
-	  [".1uF;1608"], "CAPC1608X90N")
+	  [".1uF;1608"], "CAPC1608X90N", feeder_name="0.1uF", rotation=90.0, part_height=0.90)
 	self.choice_part(".33uF;1608", "CAPC1608X90N", "",
-	  "CAP CER .33UF 25V+ 10% SMD 0603").actual_part(
+	   "CAP CER .33UF 25V+ 10% SMD 0603", rotation=90.0, part_height=0.90).actual_part(
 	  "Yageo", "CC0603KRX7R7BB334").actual_part(
 	  "Samsung", "CL10F334ZA8NNNC").actual_part(
 	  "Samsung", "CL10F334ZO8NNNC").actual_part(
@@ -499,9 +501,9 @@ class Database:
 	  "TDK", "CGA3E1X7R1C334K080AC").actual_part(
 	  "Wurth", "885012206023")
 	self.alias_part("330nF;1608",
-	  [".33uF;1608"], "CAPC1608X90N")
+	  [".33uF;1608"], "CAPC1608X90N", feeder_name="330nF", rotation=90.0, part_height=0.90)
 	self.choice_part(".47uF;1608", "CAPC1608X90N", "",
-	  "CAP CER .47UF 25V+ 10% SMD 0603").actual_part(
+	  "CAP CER .47UF 25V+ 10% SMD 0603", rotation=90.0, part_height=0.90).actual_part(
 	  "KMET", "C0603C473M4RACTU").actual_part(
 	  "Samsung", "CL10B473KB8NNNC").actual_part(
 	  "Samsung", "CL10B473KA8NFNC").actual_part(
@@ -519,9 +521,9 @@ class Database:
 	  "Samsung", "CL10B473KO8NNNC").actual_part(
 	  "Yalyo Yuden", "GMK107BJ473KAHT")
 	self.alias_part("470nF;1608",
-	  [".47uF;1608"], "CAPC1608X90N")
+	  [".47uF;1608"], "CAPC1608X90N", feeder_name="470nF", rotation=90.0, part_height=0.90)
 	self.choice_part("1uF;1608", "CAPC1608X90N", "",
-	  "CAP CER 1UF 25V+ 10% SMD 0603").actual_part(
+	  "CAP CER 1UF 25V+ 10% SMD 0603", rotation=90.0).actual_part(
 	  "Taiyo Yuden", "TMK107BJ105KA-T").actual_part(
 	  "Samsung", "CL10B105KA8NNNC").actual_part(
 	  "Taiyo Yuden", "TMK107B7105KA-T").actual_part(
@@ -532,7 +534,7 @@ class Database:
 	  "Samsung", "CL10A105KA8NFNC").actual_part(
 	  "Yageo", "CC0603ZRY5V8BB105")
 	self.choice_part("10uF;1608", "CAPC1608X90N", "",
-	  "CAP CER 10UF 4V X6S 0603").actual_part(
+	  "CAP CER 10UF 4V X6S 0603", rotation=90.0).actual_part(
 	  "Taiyo Yuden", "JMK107BJ106MA-T").actual_part(
 	  "Taiyo Yuden", "AMK107ABJ106MAHT").actual_part(
 	  "TDK", "C1608X5R0J106M080AB").actual_part(
@@ -1256,7 +1258,8 @@ class Database:
 	   "1/.16 10/.143 100/.0781 500/.04802 1000/.03275")])
 
 	self.choice_part("18V_ZENER;SOD123", "SOD-123", "",
-	  "DIODE ZENER 18V SOT23").actual_part(
+	  "DIODE ZENER 18V SOT23",
+	   rotation=270.0, feeder_name="18V_ZENER", part_height=0.95).actual_part(
 	  "Micro Commercial", "MMSZ5248B-TP").actual_part(
 	  "Micro Commercial", "BZT52C18-TP").actual_part(
 	  "Diodes", "BZT52C18-7-F").actual_part(
@@ -1350,7 +1353,8 @@ class Database:
 	  "Digi-Key", "PMS 632 0063 SL")
 
 	# Fiducials:
-	self.alias_part("FID;FID", ["M1X40;M1X40"], "Fiducial")
+	self.alias_part("FID;FID", ["M1X40;M1X40"], "Fiducial",
+	  feeder_name="FID", rotation=0.0, part_height=0.0)
 	  
 	# Fuses:
 
@@ -1395,7 +1399,8 @@ class Database:
 	# Note that the SOT89 package pin bindings to Vin/Gnd/Vout vary between parts.
         # We ultimately selected OGI: 1=>vOut 2=>Gnd 3=>vIn
 	self.choice_part("3.3V_LDO;SOT89", "SOT-89-3", "",
-	  "IC REG LDO 3.3V SOT89").actual_part(
+	  "IC REG LDO 3.3V SOT89",
+	  rotation=270.0, feeder_name="3.3V_LDO", part_height=1.60).actual_part(
 	  # "Microchip", "MCP1700T-3302E/MB").actual_part(	# Gnd/Vin/Vout	GIO
 	  # "Microchip", "MCP1702T-3302E/MB").actual_part(	# Gnd/Vin/Vout	GIO
 	  # "Microchip", "MCP1703AT-3302E/MB").actual_part(	# Gnd/Vin/Vout	GIO
@@ -1417,16 +1422,18 @@ class Database:
 
 
 	self.choice_part("15V_REG;SOT89", "SOT-89-3", "",
-	  "IC REG LINEAR 15V 100MA SOT89-3").actual_part(
+	  "IC REG LINEAR 15V 100MA SOT89-3", rotation=270.0).actual_part(
 	  "STM", "L78L15ACUTR").actual_part(			# OGI
 	  "STM", "L78L15ABUTR").actual_part(			# OGI
 	  "TI", "UA78L15ACPK")
 	self.choice_part("18V_REG;SOT89", "SOT-89-3", "",
-	  "IC REG LINEAR 18V 100MA SOT89-3").actual_part(
+	  "IC REG LINEAR 18V 100MA SOT89-3",
+	  rotation=270.0, feeder_name="18V_REG", part_height=1.60).actual_part(
 	  "STM", "L78L18ACUTR")					# OGI
 
 	self.choice_part("5V_REG;SOT89", "SOT-89-3", "",
-	  "IC REG LINEAR 5V 100MA SOT89-3").actual_part(
+	  "IC REG LINEAR 5V 100MA SOT89-3",
+ 	  rotation=90.0, feeder_name="5V_REG/LDO", part_height=1.60).actual_part(
 	  "ON Semiconductor", "KA78L05AIMTF").actual_part(
 	  "STM", "L78L05ABUTR").actual_part(
 	  "STM", "L78L05ACUTR").actual_part(
@@ -1443,7 +1450,8 @@ class Database:
 	  "On Semiconductor", "NCV8675DS50R4G")
 
 	self.choice_part("5V_LDO;SOT89", "SOT-89-3", "",
-	  "IC REG LDO 5V SOT89").actual_part(
+	  "IC REG LDO 5V SOT89",
+	  rotation=90.0, feeder_name="5V_REG/LDO", part_height=1.60).actual_part(
 	  #"Diodes", "AP2204R-5.0TRG1").actual_part(		# Vin/Gnd/Vout	IGO
 	  #"Richtek", "RT9064-50GX").actual_part(		# Vin/Gnd/Vout	IGO
 
@@ -1496,7 +1504,7 @@ class Database:
           "Microchip", "MCP1700T-3302E/MB")
 
         self.choice_part("AS5601;SOIC8", "SOIC127P600X175-8N", "",
-	  "ENCODER 12BIT PROGR A/B 8SOIC").actual_part(
+	  "ENCODER 12BIT PROGR A/B 8SOIC", rotation=0.0).actual_part(
 	  "AMS", "AS5601-ASOM")
 
         self.choice_part("MIC7221;SOT23-5", "SOT23-5", "",
@@ -1517,7 +1525,8 @@ class Database:
 	#  "Fairchild", "74VHC08MX")
 
 	self.choice_part("74HC08;SOIC8", "SOIC127P600X175-14N", "",
-	  "IC GATE AND 4CH 2-INP 14-SOIC").actual_part(
+	  "IC GATE AND 4CH 2-INP 14-SOIC",
+	  rotation=0.0, feeder_name="74HC08", part_height=1.75).actual_part(
 	  "Nexperia", "74HC08D,652").actual_part(
 	  "Nexperia", "74HC08D-Q100,118").actual_part(
 	  "Toshiba", "74HC08D").actual_part(
@@ -1549,7 +1558,7 @@ class Database:
 	  "TI", "SN74AHC1GU04DBVT")
 
 	self.choice_part("74HC32;SOIC14", "SOIC127P600X175-14N", "",
-	  "IC GATE OR 4CH 2-INP 14-SOIC").actual_part(
+	  "IC GATE OR 4CH 2-INP 14-SOIC", rotation=0.0).actual_part(
 	  "Toshiba", "74HC32D(BJ)").actual_part(
 	  "TI", "SN74HC32D").actual_part(
 	  "On Semi", "MC74HC32ADG").actual_part(
@@ -1578,7 +1587,7 @@ class Database:
 	    "1/.39 10/.319 100/.1691 500/.11116 1000/.07574")])
 
 	self.choice_part("74HC21;SOIC14", "SOIC127P600X175-14N", "",
-	   "IC GATE AND 2CH 4-INP 14SOP").actual_part(
+	   "IC GATE AND 2CH 4-INP 14SOP", rotation=0.0).actual_part(
 	   "Toshiba", "74HC21D").actual_part(
 	   "TI", "SN74HC21D").actual_part(
 	   "Nexperia", "74HC21D,653").actual_part(
@@ -1588,7 +1597,7 @@ class Database:
 	   "TI", "CD74HC21M96")
 
 	self.choice_part("74HC74;SOIC14",  "SOIC127P600X175-14N", "",
-	   "IC FF D-TYPE DUAL 1BIT 14SO").actual_part(
+	   "IC FF D-TYPE DUAL 1BIT 14SO", rotation=0.0).actual_part(
 	   "Nexperia", "74HC74D,652").actual_part(
 	   "Nexperia", "74HC74D,653").actual_part(
 	   "TI", "SN74HC74D").actual_part(
@@ -1669,7 +1678,7 @@ class Database:
 	  "ST Micro", "L293B")
 
 	self.choice_part("L293;SOIC20", "SOIC127P1032X265-20N", "",
-	  "IC MOTOR DRIVER PAR 20-SOIC").actual_part(
+	  "IC MOTOR DRIVER PAR 20-SOIC", rotation=0.0).actual_part(
 	  "ST Micro", "L293DD")
 
 	self.choice_part("LM311;SOIC8", "SOIC127P600X173-8N", "",
@@ -1682,16 +1691,17 @@ class Database:
 	  "TI", "LM311MX/NOPB")
 
 	self.choice_part("MC33883;SOIC20", "SOIC127P1032X265-20N", "",
-	  "IC H-BRIDGE PRE-DRIVER 20SOIC").actual_part(
+	  "IC H-BRIDGE PRE-DRIVER 20SOIC",
+	  rotation=0.0, feeder_name="MC33883", part_height=2.65).actual_part(
 	  "NXP", "MC33883HEGR2")
 
 	self.choice_part("MCP2562;SOIC8", "SOIC127P600X175-8N", "",
-	  "IC TXRX CAN 8SOIC").actual_part(
+	  "IC TXRX CAN 8SOIC", rotation=0.0, feeder_name="MCP2562", part_height=1.75).actual_part(
 	  "Microchip", "MCP2562T-E/SN", [
 	  ("Digi-Key", "MCP2562T-E/SNCT-ND",
 	   "1/1.08 10/.90 25/.75 100/.68")])
 	self.choice_part("MCP7940;SOIC8", "SOIC127P600X175-8N", "",
-	  "IC RTC CLK/CALENDAR I2C 8-SOIC").actual_part(
+	  "IC RTC CLK/CALENDAR I2C 8-SOIC", rotation=0.0).actual_part(
 	  "Microchip", "MCP7940M-I/SN").actual_part(
 	  "Microchip", "MCP7940N-I/SN").actual_part(
 	  "Microchip", "MCP7940N-E/SN").actual_part(
@@ -1699,13 +1709,13 @@ class Database:
 	  "Microchip", "MCP79402-I/SN").actual_part(
 	  "Microchip", "MCP79401-I/SN")
 	self.choice_part("CAT24C32;SOIC8", "SOIC127P600X175-8N", "",
-	  "IC EEPROM 32KBIT 400KHZ 8SOIC").actual_part(
+	  "IC EEPROM 32KBIT 400KHZ 8SOIC", rotation=0.0).actual_part(
 	  "ON Semiconductor", "CAT24C32WI-GT3")
 	
 	# LED's:
 	
 	self.choice_part("GREEN_LED;1608", "DIOC1608X55N", "",
-	  "LED 0603 GRN WATER CLEAR").actual_part(
+	                 "LED 0603 GRN WATER CLEAR", rotation=90.0).actual_part(
 	  "Wurth", "150060GS75000", [
 	   ("Digi-Key", "732-4971-1-ND",
 	    "1/.24 50/.21 100/.192 500/.17400 1000/.162")]).actual_part(
@@ -1726,7 +1736,8 @@ class Database:
 	self.alias_part("LED;1608",
 	  ["GREEN_LED;1608"], "DIOC1608X55N")
 	self.alias_part("GRN_LED;1608",
-	  ["GREEN_LED;1608"], "DIOC1608X55N")
+          ["GREEN_LED;1608"], "DIOC1608X55N",
+	    feeder_name="GRN_LED", rotation=90.0, part_height=0.80)
 
 	self.choice_part("GRN_LED;T1", "T1_LED", "",
 	  "LED GRN 3MM ROUND").actual_part(
@@ -1749,11 +1760,13 @@ class Database:
 	  "Cree", "CXA3050-0000-000N0HW440F")
 
 	self.choice_part("SI8055;QSOP16", "SOP63P602X173-16N", "",
-	  "DGTL ISO 1KV 5CH GEN PURP 16QSOP").actual_part(
+	  "DGTL ISO 1KV 5CH GEN PURP 16QSOP",
+	  rotation=0.0, feeder_name="SI8055", part_height=1.75).actual_part(
 	  "Silicon Labs", "SI8055AA-B-IU")
 
 	self.choice_part("OPTOISO2;SOIC8", "SOIC127P600X175-8N", "",
-	  "OPTOISOLATOR 4KV 2CH TRANS 8SOIC").actual_part(
+	  "OPTOISOLATOR 4KV 2CH TRANS 8SOIC",
+	    rotation=0.0, feeder_name="OPTOISO2", part_height=3.20).actual_part(
 	  "Vishay", "VOD205T").actual_part(
 	  "Vishay", "VOD206T").actual_part(
 	  "Vishay", "VOD207T").actual_part(
@@ -1794,14 +1807,16 @@ class Database:
 	# Resistors:
 
 	self.choice_part("0;1608", "RESC1608X55N", "",
-	  "RES SMD 0.0 OHM JUMPER 1/10W").actual_part(
+	  "RES SMD 0.0 OHM JUMPER 1/10W",
+	  rotation=90.0, feeder_name="0", part_height=0.45).actual_part(
 	  "Vishay Dale", "CRCW06030000Z0EA").actual_part(
 	  "Rohm", "MCR03EZPJ000").actual_part(
 	  "Panasonic", "ERJ-3GEY0R00V").actual_part(
 	  "Stackpole", "RMCF0603ZT0R00").actual_part(
 	  "Bourns", "CR0603-J/-000ELF")
 	self.choice_part("10;1608", "RESC1608X55N", "",
-	  "RES SMD 10 5% 1/10W 1608").actual_part(
+	  "RES SMD 10 5% 1/10W 1608",
+	   rotation=90.0, feeder_name="10", part_height=0.45).actual_part(
 	  "Yageo", "RC0603FR-0710RL").actual_part(
 	  "Yageo", "RC0603JR-0710RL").actual_part(
 	  "Stackpole", "RMCF0603JT10R0").actual_part(
@@ -1828,7 +1843,7 @@ class Database:
 	  "TT/IRC", "LRC-LRF2512LF-01-R020F").actual_part(
 	  "Stackpole", "CSRN2512FK20L0")
 	self.choice_part("47;1608", "RESC1608X55N", "",
-	  "RES SMD 50 5% 1/10W 1608").actual_part(
+	  "RES SMD 50 5% 1/10W 1608", rotation=90.0).actual_part(
 	  "Yageo", "RC0603JR-0747RL").actual_part(
 	  "Stackpole", "RMCF0603JT47R0").actual_part(
 	  "Yageo", "RC0603FR-0747RL").actual_part(
@@ -1842,28 +1857,31 @@ class Database:
 	  "Bourns", "CR0603-JW-470ELF").actual_part(
 	  "Vishay Dale", "CRCW060347R0FKEA")
 	self.choice_part("120;1608", "RESC1608X55N", "",
-	  "RES SMD 120 OHM 5% 1/10W 1608").actual_part(
+	  "RES SMD 120 OHM 5% 1/10W 1608",
+          rotation=90.0, feeder_name="120", part_height=0.45).actual_part(
 	  "Vishay Dale", "CRCW0603120RFKEA").actual_part(
 	  "Rohm", "MCR03ERTF1200").actual_part(
 	  "Samsung", "RC1608J121CS").actual_part(
 	  "Samsung", "RC1608F121CS").actual_part(
 	  "Rohm", "KTR03EZPF1200")
 	self.choice_part("470;1608", "RESC1608X55N", "",
-	  "RES SMD 470 5% 1/10W 1608").actual_part(
+	  "RES SMD 470 5% 1/10W 1608",
+	  rotation=90.0, feeder_name="470", part_height=0.45).actual_part(
 	  "Vishay Dale", "CRCW0603470RJNEA", [
 	   ("Digi-Key", "541-470GCT-ND",
 	    "10/.074 50/.04 200/.02295 1000/.01566")]).actual_part(
 	  "Samsung", "RC1608J471CS").actual_part(
 	  "Rohm", "KTR03EZPJ471")
 	self.choice_part("1K;1608", "RESC1608X55N", "",
-	  "RES SMD 1K 5% 1/10W 0603").actual_part(
+	  "RES SMD 1K 5% 1/10W 0603", rotation=90.0).actual_part(
 	  "Rohm", "MCR03ERTJ102").actual_part(
 	  "Yageo", "RC0603JR-071KP").actual_part(
 	  "Samsung", "RC1608J102CS").actual_part(
 	  "Rohm", "TRR03EZPJ102").actual_part(
 	  "Rohm", "KTR03EZPJ102")
 	self.choice_part("4K7;1608", "RESC1608X55N", "",
-	  "RES SMD 4.7K 5% 1/10W 1608").actual_part(
+	  "RES SMD 4.7K 5% 1/10W 1608",
+	  rotation=90.0, feeder_name="4.7k", part_height=0.45).actual_part(
 	  "Yageo", "RC0603JR-074K7L").actual_part(
 	  "Panasonic", "ERJ-3GEYJ472V").actual_part(
 	  "Rohm", "MCR03EZPJ472").actual_part(
@@ -1874,7 +1892,7 @@ class Database:
 	  "Rohm", "TRR03EZPJ472").actual_part(
 	  "Bourns", "CR0603-JW-472GLF")
 	self.choice_part("10K;1608", "RESC1608X55N", "",
-	  "RES SMD 10K OHM 5% 1/10W 1608").actual_part(
+	  "RES SMD 10K OHM 5% 1/10W 1608", rotation=90.0).actual_part(
 	  "Yageo", "RC0603JR-0710KL").actual_part(
 	  "Panasonic", "ERJ-3GEYJ103V").actual_part(
 	  "Rohm", "MCR03ERTJ103").actual_part(
@@ -1885,7 +1903,7 @@ class Database:
 	  "Bourns", "CR0603-JW-103GLF").actual_part(
 	  "Rohm", "TRR03EZPJ103")
 	self.choice_part("22K;1608", "RESC1608X55N", "",
-	  "RES SMD 22K OHM 5% 1/10W 1608").actual_part(
+	  "RES SMD 22K OHM 5% 1/10W 1608", rotation=90.0).actual_part(
 	  "Vishay Dale", "CRCW060322K0JNEA").actual_part(
 	  "Vishay Beyschlag", "MCT06030C2202FP500").actual_part(
 	  "Vishay Dale", "CRCW060322K0FKEA").actual_part(
@@ -1897,7 +1915,8 @@ class Database:
 	  "Stackpole", "RMCF0603FT22K0").actual_part(
 	  "Panasonic", "ERJ-3EKF2202V")
 	self.choice_part("100K;1608", "RESC1608X55N", "",
-	  "RES SMD 100K OHM 5% 1/10W 1608").actual_part(
+	  "RES SMD 100K OHM 5% 1/10W 1608",
+	  rotation=90.0, feeder_name="100K", part_height=0.45).actual_part(
 	  "Vishay Dale", "CRCW0603100KJNEAIF", [
 	     ("Digi-Key", "541-100KAQCT-ND",
 	      "1/.45 10/.345 25/.2628 50/.1952 100/.1451")]).actual_part(
@@ -1987,7 +2006,7 @@ class Database:
 	  "Diodes Inc", "BSS138TA")
 
 	self.choice_part("200V_NFET;DPAK", "DPAK", "",
-	  "MOSFET N-CH 200V DPAK").actual_part(
+	  "MOSFET N-CH 200V DPAK", rotation=180.0).actual_part(
 	  "Fairchild", "FDD7N20TM", [
 	   ("Digi-Key", "FDD7N20TMCT-ND",
 	    "1/.62 10/.542 25/.4792 100/.41760 250/.36348")]).actual_part(
@@ -2017,8 +2036,10 @@ class Database:
 	  "Fairchild", "MTP3055VL").actual_part(
 	  "TI", "CSD18504KCS")
 
+	position_dy = 2.625
 	self.choice_part("NFET_10A;DPAK", "DPAK", "",
-	  "MOSFET N-CH >10A DPAK").actual_part(
+	  "MOSFET N-CH >10A DPAK", rotation=180.0, feeder_name="NFET_10A",
+	  part_height=2.40, pick_dy=6.65 - position_dy).actual_part(
 	  "Diodes", "DMN6040SK3-13").actual_part(
 	  "Alpha & Omega", "AOD514").actual_part(
 	  "Diodes", "DMN3010LK3-13").actual_part(
@@ -2099,8 +2120,8 @@ class Database:
 	#  "Digi-Key", "541-22KGCT-ND",
 	#  ".074/10 .04/50 .02295/200 .01566/1000")
 
-    def alias_part(self,
-      schematic_part_name, alias_part_names, kicad_footprint=""):
+    def alias_part(self, schematic_part_name,
+      alias_part_names, kicad_footprint="", feeder_name=None, rotation=None,part_height=None):
 	""" *Database*: Create *Alias_Part* named *schematic_part_name* and containing
 	    *alias_names* and stuff it into the *Database* object (i.e. *self*).
 	    Each item in *alias_part_names* can be either a simple string or a tuple.
@@ -2111,6 +2132,9 @@ class Database:
 	# Verify argument types:
 	assert isinstance(schematic_part_name, str)
 	assert isinstance(alias_part_names, list)
+	assert isinstance(feeder_name, str) or feeder_name == None
+	assert isinstance(part_height, float) or part_height == None
+	assert isinstance(rotation, float) or rotation == None
 	for alias_part_name in alias_part_names:
 	    assert isinstance(alias_part_name, str) or isinstance(alias_part_name, tuple)
 
@@ -2134,7 +2158,8 @@ class Database:
 	#    print("expanded_alias_part_names={0}", expanded_alias_part_names)
 
 	# Lookup each *alias_name* in *expanded_alias_names* and tack it onto *alias_parts*:
-	schematic_parts = self.schematic_parts
+	database = self
+	schematic_parts = database.schematic_parts
 	alias_parts = []
 	for alias_part_name in expanded_alias_part_names:
 	    if alias_part_name in schematic_parts:
@@ -2147,12 +2172,26 @@ class Database:
 
 	# Create and return the new *alias_part*:
 	#assert len(alias_parts) == 1, "alias_parts={0}".format(alias_parts)
-	alias_part = Alias_Part(schematic_part_name, alias_parts, kicad_footprint)
-	return self.insert(alias_part)
+	if isinstance(feeder_name, str):
+	    footprint = database.footprint(feeder_name, rotation)
+	alias_part = Alias_Part(schematic_part_name,
+	  alias_parts, kicad_footprint, feeder_name, part_height)
+	return database.insert(alias_part)
 
-    def choice_part(self,
-      schematic_part_name, kicad_footprint, location, description):
+    def choice_part(self, schematic_part_name, kicad_footprint, location, description,
+      rotation=None, pick_dx=0.0, pick_dy=0.0, feeder_name=None, part_height=None):
 	""" *Database*: Add a *Choice_Part* to *self*. """
+
+	# Verify argument types:
+	assert isinstance(schematic_part_name, str)
+	assert isinstance(kicad_footprint, str)
+	assert isinstance(location, str)
+	assert isinstance(description, str)
+	assert (isinstance(rotation, float) and 0.0 <= rotation <= 360.0) or rotation == None
+	assert isinstance(pick_dx, float)
+	assert isinstance(pick_dy, float)
+	assert isinstance(feeder_name, str) or feeder_name == None
+	assert isinstance(part_height, float) or part_height == None
 
 	# Make sure we do not have a duplicate:
 	schematic_parts = self.schematic_parts
@@ -2163,10 +2202,13 @@ class Database:
 	#    print("part '{0}' has no associated library in footprint '{1}'".
 	#      format(schematic_part_name, kicad_footprint))
 
-	choice_part = Choice_Part(schematic_part_name,
-	  kicad_footprint, location, description)
+	database = self
+	if isinstance(feeder_name, str):
+	    footprint = database.footprint(feeder_name, rotation)
+	choice_part = Choice_Part(schematic_part_name, kicad_footprint, location, description,
+	  rotation, pick_dx, pick_dy, feeder_name, part_height)
 
-	return self.insert(choice_part)
+	return database.insert(choice_part)
 
     def dump(self, out_stream):
 	""" *Database*: Output the *Database* object (i.e. *self*) out to *out_stream*
@@ -2347,7 +2389,7 @@ class Database:
 			# Some sites do not report stock, and leave them
 			# empty.  We just leave *stock* as zero in this case:
  			if len(stock_text) != 0:
-			    stock = int(stock_text)
+			    stock = min(int(stock_text), 1000000)
 
 		    # The *manufacturer_name* is found as:
 		    #    <td class="td-mfg"><span>manufacturer_name</span></td>
@@ -2458,6 +2500,44 @@ class Database:
 	      actual_part.manufacturer_part_name, len(vendor_parts)))
 
 	return vendor_parts
+
+    def footprint(self, feeder_name, rotation):
+	""" *Database*: Return a *Footprint* object that matches *name*:
+
+	The arguments are:
+	* *feeder_name*: The feeder name to use for `.pos` file.
+	* *rotation*: The rotation to apply to the KiCAD footprint to match the feeder
+	  tape orientation.
+	"""
+
+	# Verify argument types:
+	assert isinstance(feeder_name, str)
+	assert not ';' in feeder_name
+	assert (isinstance(rotation, float) and 0.0 <= rotation <= 360.0) or rotation == None
+
+	database = self
+	footprints = database.footprints
+	if feeder_name in footprints:
+	    footprint = footprints[feeder_name]
+	    footprint_rotation = footprint.rotation
+	    if isinstance(rotation, float):
+		if isinstance(footprint_rotation, float):
+		    if rotation != footprint_rotation:
+			print("Footprint '{0}' mismatched rotations {1} != {2}".
+			  format(feeder_name, rotation, footprint_rotation))
+		else:
+		    print("Not all footprints '{0}' have a feeder rotation of {1}".
+		      format(feeder_name, rotataion))
+	    else:
+		if isinstance(footprint_rotation, float):
+		    print("Not all footprints '{0}' have a feeder rotation of {1}".
+		      format(feeder_name, footprint_rotation))
+	else:
+	    footprint = Footprint(feeder_name, rotation)
+	    footprints[feeder_name] = footprint
+	    assert feeder_name in footprints
+	    #print("footprints['{0}'].rotation={1}".format(feeder_name, rotation))
+	return footprint
 
     def fractional_part(self, schematic_part_name, kicad_footprint,
       whole_part_name, numerator, denominator, description):
@@ -2590,7 +2670,7 @@ class Order:
 	self.inventories = []	  # List[Inventory]: Existing inventoried parts
 	self.database = database
 
-    def board(self, name, revision, net_file_name, count):
+    def board(self, name, revision, net_file_name, count, positions_file_name=None):
 	""" *Order*: Create a *Board* containing *name*, *revision*,
 	    *net_file_name* and *count*. """
 
@@ -2599,10 +2679,12 @@ class Order:
 	assert isinstance(revision, str)
 	assert isinstance(net_file_name, str)
 	assert isinstance(count, int)
+	assert isinstance(positions_file_name, str) or positions_file_name == None
 
 	# Create the *Board*:
-	board = Board(name, revision, net_file_name, count, self)
-	self.boards.append(board)
+	order = self
+	board = Board(name, revision, net_file_name, count, order, positions_file_name)
+	order.boards.append(board)
 	return board
 
     def bom_write(self, bom_file_name, key_function):
@@ -3091,8 +3173,18 @@ class Order:
 	for footprint_name in sorted_kicad_footprints:
 	    footprint_path = "pretty/{0}.kicad_mod".format(footprint_name)
 	    if not os.path.isfile(footprint_path):
-		print("Footprint '{0}' does not exist for {1}".
+		print("Footprint '{0}' does not exist for '{1}'".
 		  format(footprint_path, kicad_footprints[footprint_name]))
+
+    def positions_process(self):
+	""" *Order*: Process any Pick and Place `.csv` or `.pos` file.
+	"""
+
+	order = self
+	database = order.database
+	boards = order.boards
+	for board in boards:
+	    board.positions_process(database)
 
     def process(self):
 	""" *Order*: Process the *Order* object (i.e. *self*.) """
@@ -3149,6 +3241,7 @@ class Order:
 
 	# Check for missing footprints:
 	order.footprints_check(final_choice_parts)
+	order.positions_process()
 
 	# Print out the final selected vendor summary:
 	order.summary_print(final_choice_parts, excluded_vendor_names)
@@ -3406,6 +3499,427 @@ class Order:
 	# Stuff *selected_vendors* into *order*:
 	order.selected_vendor_names = selected_vendor_names
 
+class PositionsTable:
+    """ PositionsTable: Represents a part positining table for a Pick and Place machine. """
+
+    def __init__(self, file_name, database):
+        """ *PositionsTable*: Initialize the *PositionsTable* object read in from *file_name*:
+
+	The arguments are:
+	* *file_name*: The file name to read positions table from.  *file_name* must 
+	  have one of the following suffixes:
+	  * `.csv`: A comma separated value format.
+	  * `.pos`: A text file with the columns separated by one or more spaces.
+            Usually the columns are aligned virtically when viewe using a fixed
+            pitch font.
+	"""
+
+	# Verify argument types:
+	assert isinstance(file_name, str) and (
+          file_name.endswith(".csv") or file_name.endswith(".pos"))
+	assert isinstance(database, Database)
+
+	#
+	positions_table = self
+	comments = list()
+	heading_indices = dict()
+	rows = list()
+	row_table = dict()
+	mapping = list()
+	trailers = list()	
+	headings_line = None
+	headings = list()
+	headings_size = 0
+	part_heights = dict()
+
+	# Process `.pos` and `.csv` *file_name*'s differently:
+	if file_name.endswith(".pos"):
+	    # `.pos` suffix:
+
+	    # Read in *file_name* and break it into a *lines* list with no carriage returns:
+	    with open(file_name, "r") as positions_file:
+		content = positions_file.read().replace('\r', "")
+		lines = content.split('\n')
+
+		# Start parsing the file *lines*:
+		for line_number, line in enumerate(lines):
+		    # Dispatch on the beginning of the *line*:
+		    if line.startswith("##"):
+			# Lines starting with "##" or "###" are just *comments*:
+			if headings_size <= 0:
+			    comments.append(line)
+			else:
+			    trailers.append(line)
+			#print("comment='{0}'".format(line))
+		    elif line.startswith("# "):
+			# Lines that start with "# " are the column headings:
+			assert headings_size <= 0
+			headings_line = line
+			headings = line[2:].split()
+			headings_size = len(headings)
+			assert headings_size > 0
+			for heading_index, heading in enumerate(headings):
+			    heading_indices[heading] = heading_index
+			    #print("key='{0}' index={1}".format(key, heading_index))
+
+			# Create the *mapping* used for formatting the output table:
+			heading_keys = ("Ref", "Val", "Package", "PosX", "PosY", "Rot", "Side")
+			for heading in heading_keys:
+			    heading_index = heading_indices[heading]
+			    mapping.append(heading_index)
+			#print("mapping={0}".format(mapping))
+		    else:
+			# Assume that everything else is a row of data:
+			columns = line.split()
+			columns_size = len(columns)
+			if columns_size == headings_size:
+			    #print("row={0}".format(row))
+			    reference = columns[heading_indices["Ref"]]
+			    value = columns[heading_indices["Val"]]
+			    value = value.replace('\\', "")
+			    part = database.lookup(value)
+			    if isinstance(part, Choice_Part):
+				choice_part = part
+				feeder_name = choice_part.feeder_name
+				part_height = choice_part.part_height
+				pick_dx     = choice_part.pick_dx
+				pick_dy     = choice_part.pick_dy
+				if isinstance(feeder_name, str) and isinstance(part_height, float):
+				    #print("'{0}'=>'{1}''".format(value, feeder_name))
+				    value = feeder_name
+				    part_heights[value] = part_height
+				#print("part_heights['{0}'] = {1}".format(value, part_height))
+			    elif isinstance(part, Alias_Part):
+				alias_part = part
+				feeder_name = alias_part.feeder_name
+				part_height = alias_part.part_height
+				pick_dx     = alias_part.pick_dx
+				pick_dy     = alias_part.pick_dy
+				if isinstance(feeder_name, str) and isinstance(part_height, float):
+				    #print("'{0}'=>'{1}''".format(value, feeder_name))
+				    value = feeder_name		
+				    part_heights[value] = part_height
+				#print("part_heights['{0}'] = {1}".format(value, part_height))
+			    package = columns[heading_indices["Package"]]
+			    x = float(columns[heading_indices["PosX"]])
+			    y = float(columns[heading_indices["PosY"]])
+			    rotation = float(columns[heading_indices["Rot"]])
+			    side = columns[heading_indices["Side"]]
+			    if isinstance(part_height, float):
+				row = PositionRow(reference, value, package, x, y, rotation,
+				  feeder_name, pick_dx, pick_dy, side, part_height)
+			        rows.append(row)
+			        row_table[reference] = row
+			    else:
+				print("Part '{0}' does not have a part_height".format(value))
+			elif columns_size != 0:
+			    assert False, "Row/Header mismatch {0} {1}".format(row, headers)
+	elif file_name.endswith(".csv"):
+	    assert ".csv reader not implemented yet."
+	else:
+	    assert "Bad file suffix for file: '{0}'".format(file_name)
+
+	feeders = {
+          "1uF":        "E1",
+          "2N7002":     "E2",
+          "27K":        "E4",
+          "0":          "E5",
+          "33":         "E7",
+          "4.7uF_?":    "E11",
+          "1.0M":       "E14",
+          "49.9K":      "E16",
+          "200K":       "E19",
+          "BAT54":      "E21",
+          "0.1uF":      "W4",
+          "49.9":       "W6",
+          "20k":        "W7",
+	  "330":        "W10",
+	  "10K":        "W11",
+	  "100":        "W15",
+	  "100K":       "W16",
+	  "5.1K":       "W17",
+          "GRN_LED":    "W14",
+	  "470":        "W20",
+	  "10uF":       "W21",
+	  "120":        "W22",
+	  "4.7k":       "W23",
+	  "220":        "W24",
+
+	  "33nF":       "E100",
+	  "470nF":      "E101",
+	  "10nF":       "E102",
+	  "NFET_10A":   "E103",
+	  "330nF":      "E104",
+	  "18V_ZENER":  "E105",
+	  "SI8055":     "E106",
+	  "MC33883":    "E107",
+	  "MCP2562":    "E108",
+	  "18V_REG":    "E109",
+	  "74HC08":     "E110",
+	  "OPTOISO2":   "E111",
+	  "5V_REG/LDO": "E112",
+	  "3.3V_LDO":   "E113",
+	  "FID":        "E114",
+	  "10":         "E115",
+	}
+
+	# Write out `feeders.txt`:
+	footprints = database.footprints
+	quintuples = list()
+	for key in feeders.keys():
+	    feeder_name = feeders[key]
+	    part_height = "{0:.2f}".format(part_heights[key]) if key in part_heights else "----"
+	    rotation = int(footprints[key].rotation) if key in footprints else "----"
+	    quintuple = (feeder_name[0], int(feeder_name[1:]), key, part_height, rotation)
+	    quintuples.append(quintuple)
+	quintuples.sort()
+	with open("/tmp/feeders.txt", "w") as feeders_file:
+	    feeders_file.write("Feeder\tHeight\tRotate\tValue\n")
+	    feeders_file.write(('=' * 50) + '\n')
+	    for quintuple in quintuples:
+		side = quintuple[0]
+		number = quintuple[1]
+		value = quintuple[2]
+		rotation = quintuple[2]
+		part_height = quintuple[3]
+		rotation = quintuple[4]
+		feeders_file.write("{0}{1}:\t{2}\t{3}\t{4}\n".
+		  format(side, number, part_height, rotation, value))
+
+	# Fill in the value of *positions_table* (i.e. *self*):
+	positions_table.comments         = comments
+	positions_table.headings_line    = headings_line
+	positions_table.headings         = headings
+	positions_table.headings_indices = heading_indices
+	positions_table.feeders          = feeders
+	positions_table.file_name        = file_name
+	positions_table.mapping          = mapping
+	positions_table.rows             = rows
+	positions_table.row_table        = row_table
+	positions_table.trailers         = trailers
+
+    def footprints_rotate(self, database):
+	""" *Positions_Table: ..."""
+
+	positions_table = self
+	file_name = positions_table.file_name
+	footprints = database.footprints
+	rows = positions_table.rows
+	for row_index, row in enumerate(rows):
+	    feeder_name = row.feeder_name
+	    debugging = False
+	    #debugging = package == "DPAK"
+	    #print("Row[{0}]: '{1}'".format(row_index, package))
+	    if feeder_name in footprints:
+		# We have a match:
+		footprint = footprints[feeder_name]
+		rotation = footprint.rotation
+		if debugging:
+		    print("rotation={0}".format(rotation))
+		if isinstance(rotation, float):
+		    row.part_rotate(rotation)
+                else:
+		    print("Footprint '{0}' does not have a feeder rotation.".format(feeder_name))
+	    else:
+        	# No match:            
+		print("Could not find footprint '{0}' from file '{1}'".
+		  format(feeder_name, file_name))
+	positions_table.write("/tmp/" + file_name)
+
+    def reorigin(self, reference):
+	"""
+	"""
+	
+	positions = self
+	row_table = positions.row_table
+	if reference in row_table:
+	    row = row_table[reference]
+	    dx = -row.x
+	    dy = -row.y
+	    positions.translate(dx, dy)
+
+    def translate(self, dx, dy):
+	"""
+	"""
+
+	positions = self
+	rows = positions.rows
+	for row in rows:
+	    row.translate(dx, dy)
+
+    def write(self, file_name):
+	""" *PositionsTable*: Write out the *PostionsTable* object to *file_name*.
+
+	The arguments are:
+	* *file_name*: specifies the file to write out to.  It must of a suffix of:
+	  * `.csv`: Writes the file out in Comma Separated Values format.
+	  * `.pos`: Writes the file out as a text file with data separated by spaces.
+	"""
+
+	# Verify argument types:
+	assert ( isinstance(file_name, str) and len(file_name) >= 4 and
+	  file_name[-4:] in (".csv", ".pos") )	  
+
+	# Unpack the *positions_table* (i.e. *self*):
+	positions_table = self
+	comments      = positions_table.comments
+	headings_line = positions_table.headings_line
+	headings      = positions_table.headings
+	rows          = positions_table.rows
+	mapping       = positions_table.mapping
+	trailers      = positions_table.trailers
+	feeders       = positions_table.feeders
+
+	# In order exactly match KiCAD output, the output formatting is adjusted based
+        # on the column heading. *spaces_table* specifies the extra spaces to add to the column.
+	# *aligns_table* specifies whether the data is left justified (i.e. "") or right
+        # justified (i.e. ">"):
+	extras_table = {"Ref": 5, "Val": 0, "Package": 1, "PosX": 0, "PosY": 0, "Rot": 0, "Side": 0}
+	aligns_table = {"Ref": "", "Val": "", "Package": "",
+	  "PosX": ">", "PosY": ">", "Rot": ">", "Side": ""}
+
+	# Build up the final output as a list of *final_lines*:
+	final_lines = list()
+
+	# Just copy the *comments* and *headings_line* into *final_lines*:
+	final_lines.extend(comments)
+	final_lines.append(headings_line)
+
+	# Dispatch on *file_name* suffix:
+	if file_name.endswith(".pos"):
+	    # We have a `.pos` file:
+	
+	    # Populate *string_rows* with strings containing the data:
+	    string_rows = list()
+	    for row in rows:
+		string_row = row.as_strings(mapping, feeders)
+		string_rows.append(string_row)
+	    
+	    # Figure out the maximum *sizes* for each column:
+	    sizes = [0] * len(headings)
+	    for string_row in string_rows:
+		for column_index, column in enumerate(string_row):
+		    sizes[column_index] = max(sizes[column_index], len(column))
+
+	    # Convert *aligns_table* into a properly ordered list of *aligns*:
+	    aligns = list()
+	    for header_index, header in enumerate(headings):
+	        sizes[header_index] += extras_table[header]
+	        aligns.append(aligns_table[header])
+		    
+	    # Create a *format_string* for outputing each row:
+	    format_columns = list()
+	    for size_index, size in enumerate(sizes):
+	        format_columns.append("{{{0}:{1}{2}}}".format(size_index, aligns[size_index], size))
+	        #format_columns.append("{" + str(size_index) +
+		#  ":" + aligns[size_index] + str(size) + "}")
+	    format_string = "  ".join(format_columns)
+	    #print("format_string='{0}'".format(format_string))
+
+	    # Now format each *string_row* and append the result to *final_lines*:
+	    for string_row in string_rows:
+		final_line = format_string.format(*string_row)
+		final_lines.append(final_line)
+
+	    # Tack *trailers* and an empty line onto *final_lines*:
+	    final_lines.extend(trailers)
+	    final_lines.append("")
+	elif file_name.endswith(".csv"):
+	    # File is a `.csv` file:
+	    assert False, ".csv file support not implemented yet."
+	else:
+	    assert False, ("File name ('{0}') does not have a suffixe of .csv or .pos".
+	      format(file_name))
+
+	# Write *final_lines* to *file_name*:
+	with open(file_name, "w") as output_file:
+	    output_file.write("\r\n".join(final_lines))
+	    
+class PositionRow:
+    """ PositionRow: Represents one row of data for a *PositionsTable*: """
+
+    def __init__(self,
+      reference, value, package, x, y, rotation, feeder_name, pick_dx, pick_dy, side, part_height):
+	""" *PositionRow*: ...
+	"""
+
+	# Verify argument types:
+	assert isinstance(reference, str)
+	assert isinstance(value, str)
+	assert isinstance(package, str)
+	assert isinstance(x, float)
+	assert isinstance(y, float)
+	assert isinstance(rotation, float) and 0.0 <= rotation <= 360.0
+	assert isinstance(feeder_name, str)
+	assert isinstance(pick_dx, float)
+	assert isinstance(pick_dy, float)
+	assert isinstance(side, str)
+	assert isinstance(part_height, float)
+	        
+	#if package.startswith("DPAK"):
+	#    print("Rotation={0}".format(rotation))
+
+	# Load up *position_row* (i.e. *self*):
+	position_row             = self
+	position_row.package     = package
+	position_row.part_height = part_height
+	position_row.feeder_name = feeder_name
+	position_row.rotation    = rotation
+	position_row.reference   = reference
+	position_row.side        = side
+	position_row.value       = value
+	position_row.x           = x - pick_dx
+	position_row.y           = y - pick_dy
+	position_row.pick_dx     = pick_dx
+	position_row.pick_dy     = pick_dx
+
+    def as_strings(self, mapping, feeders):
+	""" *PositionsRow*: Return a list of formatted strings.
+
+	The arguments are:
+	* *mapping*: The order to map the strings in.
+	"""
+
+	# Verify argument types:
+	assert isinstance(mapping, list) and len(mapping) == 7, "mapping={0}".format(mapping)
+	assert isinstance(feeders, dict)
+
+	positions_row = self
+	value = positions_row.value
+	if not value in feeders:
+	    print("There is no feeder for '{0}'".format(value))
+	row_strings = [""] * 7
+	row_strings[mapping[0]] = positions_row.reference
+	row_strings[mapping[1]] = positions_row.value
+	row_strings[mapping[2]] = positions_row.package
+	row_strings[mapping[3]] = "{0:.4f}".format(positions_row.x)
+	row_strings[mapping[4]] = "{0:.4f}".format(positions_row.y)
+	row_strings[mapping[5]] = "{0:.4f}".format(positions_row.rotation)
+	row_strings[mapping[6]] = positions_row.side
+	return row_strings
+
+    def part_rotate(self, rotation_adjust):
+	""" *PostitionRow*: """
+
+	assert isinstance(rotation_adjust, float)
+
+	row = self
+	rotation = row.rotation
+	rotation -= rotation_adjust
+	while rotation < 0.0:
+	    rotation += 360.0
+	while rotation > 360.0:
+	    rotation -= 360.0
+	row.rotation = rotation
+
+    def translate(self, dx, dy):
+	"""
+	"""
+
+	row = self
+	row.x += dx
+	row.y += dy
+
 class Request:
     def __init__(self, schematic_part, amount):
 	""" *Request*: Create *Request* containing *schematic_part*
@@ -3429,7 +3943,7 @@ class Inventory:
 	self.amount = amount
 
 class Board:
-    def __init__(self, name, revision, net_file_name, count, order):
+    def __init__(self, name, revision, net_file_name, count, order, positions_file_name=None):
 	""" *Board*: Create a new board containing *name*, *revision*,
 	    *net_file_name*, *count*. """
 
@@ -3439,12 +3953,15 @@ class Board:
 	assert isinstance(net_file_name, str)
 	assert isinstance(count, int)
 	assert isinstance(order, Order)
+	assert isinstance(positions_file_name, str) or positions_file_name == None
+
 
 	# Load up *self*:
 	self.name = name
 	self.revision = revision
 	self.net_file_name = net_file_name
 	self.count = count
+	self.positions_file_name = positions_file_name
 	self.order = order
 	self.all_board_parts = []	    # List[Board_Part] of all board parts
 	self.installed_board_parts = []	    # List[Board_Part] board parts to be installed
@@ -3543,6 +4060,7 @@ class Board:
 
                     # Grab *kicad_footprint* from *schematic_part*:
 		    kicad_footprint = schematic_part.kicad_footprint
+		    assert isinstance(kicad_footprint, str)
 
 		    # Grab *footprint_se* from *component_se* (if it exists):
 		    footprint_se = se_find(component_se, "comp", "footprint")
@@ -3852,6 +4370,14 @@ class Board:
 
 	return has_fractional_parts
 
+    def positions_process(self, database):
+	""" *Board*: """
+
+	board = self
+	positions_file_name = board.positions_file_name
+	positions_table = PositionsTable(positions_file_name, database)
+	positions_table.reorigin("FD1")
+	positions_table.footprints_rotate(database)
 
 class Board_Part:
     # A Board_Part basically specifies the binding of a Schematic_Part
@@ -3929,8 +4455,8 @@ class Schematic_Part:
 class Choice_Part(Schematic_Part):
     # A *Choice_Part* specifies a list of *Actual_Part*'s to choose from.
 
-    def __init__(self, schematic_part_name, kicad_footprint, location,
-      description):
+    def __init__(self, schematic_part_name,
+      kicad_footprint, location, description, rotation, pick_dx, pick_dy, feeder_name, part_height):
 	""" *Choice_Part*: Initiailize *self* to contain *schematic_part_name*
 	    *kicad_footprint* and *actual_parts*. """
 
@@ -3942,12 +4468,22 @@ class Choice_Part(Schematic_Part):
 	assert isinstance(kicad_footprint, str)
 	assert isinstance(location, str)
 	assert isinstance(description, str)
+	assert isinstance(rotation, float) or rotation == None
+	assert isinstance(pick_dx, float)
+	assert isinstance(pick_dy, float)
+	assert isinstance(feeder_name, str) or feeder_name == None
+	assert isinstance(part_height, float) or part_height == None
 
-	# Load up *self*:
+	# Load up *choice_part* (i.e. *self*):
 	Schematic_Part.__init__(choice_part, schematic_part_name, kicad_footprint)
-	choice_part.location = location
-	choice_part.description = description
 	choice_part.actual_parts = []
+	choice_part.description  = description
+	choice_part.feeder_name  = feeder_name
+	choice_part.location     = location
+	choice_part.part_height  = part_height
+	choice_part.rotation     = rotation
+	choice_part.pick_dx      = pick_dx
+	choice_part.pick_dy      = pick_dy
 
 	# Fields used by algorithm:
 	choice_part.fractional_parts = []
@@ -4148,6 +4684,7 @@ class Choice_Part(Schematic_Part):
 	kicad_footprint = choice_part.kicad_footprint
 	if kicad_footprint != "-":
 	    kicad_footprints[kicad_footprint] = choice_part.schematic_part_name
+	    rotation = choice_part.rotation
 
     def references_text_get(self):
 	""" *Choice_Part*: Return a string of references for *self*. """
@@ -4155,7 +4692,7 @@ class Choice_Part(Schematic_Part):
 	references_text = ""
 	previous_board = None
 	is_first = True
-        for board_part in self.board_parts:
+	for board_part in self.board_parts:
 	    board = board_part.board
 	    if board != previous_board:
 		if not is_first:
@@ -4311,21 +4848,31 @@ class Choice_Part(Schematic_Part):
 class Alias_Part(Schematic_Part):
     # An *Alias_Part* specifies one or more *Schematic_Parts* to use.
 
-    def __init__(self, schematic_part_name, schematic_parts, kicad_footprint):
+    def __init__(self, schematic_part_name, schematic_parts, kicad_footprint,
+      feeder_name=None, part_height=None, pick_dx=0.0, pick_dy=0.0):
 	""" *Alias_Part*: Initialize *self* to contain *schematic_part_name*,
 	    *kicad_footprint*, and *schematic_parts*. """
 
 	# Verify argument types:
 	assert isinstance(schematic_part_name, str)
 	assert isinstance(schematic_parts, list)
+	assert isinstance(feeder_name, str) or feeder_name == None
+	assert isinstance(part_height, float) or part_height == None
+	assert isinstance(pick_dx, float)
+	assert isinstance(pick_dy, float)
 	for schematic_part in schematic_parts:
 	    assert isinstance(schematic_part, Schematic_Part)
 
 	#assert len(schematic_parts) == 1, "schematic_parts={0}".format(schematic_parts)
 
-	# Load up *self*:
-	Schematic_Part.__init__(self, schematic_part_name, kicad_footprint)
-	self.schematic_parts = schematic_parts
+	# Load up *alias_part* (i.e *self*):
+	alias_part = self
+	Schematic_Part.__init__(alias_part, schematic_part_name, kicad_footprint)
+	alias_part.schematic_parts = schematic_parts
+	alias_part.feeder_name = feeder_name
+	alias_part.part_height = part_height
+	alias_part.pick_dx = pick_dx
+	alias_part.pick_dy = pick_dy
 	
     def choice_parts(self):
 	""" *Alias_Part*: Return a list of *Choice_Part*'s corresponding to *self*
@@ -4355,6 +4902,27 @@ class Alias_Part(Schematic_Part):
 	schematic_parts = alias_part.schematic_parts
 	for schematic_part in schematic_parts:
 	    schematic_part.footprints_check(kicad_footprints)
+
+class Footprint:
+    """ *Footprint*: Represents a PCB footprint. """
+
+    def __init__(self, name, rotation):
+	""" *Footprint*: Initialize a new *FootPrint* object.
+
+	The arguments are:
+	* *name* (str): The unique footprint name.
+	* *rotation* (degrees): The amount to rotate the footprint to match the feeder tape with
+	  holes on top.
+	"""
+
+	# Verify argument types:
+	assert isinstance(name, str)
+	assert isinstance(rotation, float) and 0.0 <= rotation <= 360.0 or rotation == None
+
+	# Stuff values into *footprint* (i.e. *self*):
+	footprint = self
+	footprint.name = name
+	footprint.rotation = rotation
 
 class Fractional_Part(Schematic_Part):
     # A *Fractional_Part* specifies a part that is constructed by
@@ -4469,7 +5037,8 @@ class Vendor_Part:
 	assert isinstance(actual_part, Actual_Part)
 	assert isinstance(vendor_name, str)
 	assert isinstance(vendor_part_name, str)
-	assert isinstance(quantity_available, int)
+	assert isinstance(quantity_available, int), \
+	  "quantity_available={0}".format(quantity_available)
 	assert isinstance(price_breaks, list)
 	assert isinstance(timestamp, float)
 	for price_break in price_breaks:
