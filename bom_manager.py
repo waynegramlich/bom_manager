@@ -1,4 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+
+#<----------------------------------- 100 characters --------------------------------------------->|
 
 # # bom_manager
 #
@@ -143,18 +145,19 @@
 # software community.
 
 # Import some libraries:
-from bs4 import BeautifulSoup        # HTML/XML data structucure searching
-import fnmatch                        # File Name Matching
-import json                        # Another pickling format
-import math                        # Math
-import os.path                        # File names/paths
-import pickle                        # Python data structure pickle/unpickle
-import re                        # Regular expressions
-import requests                        # HTML Requests
-import sexpdata                        # (LISP) S_EXpresson Data
-from sexpdata import Symbol        # (LISP) S-EXpression Symbol
+import currency_converter         # Currency converter
+from bs4 import BeautifulSoup     # HTML/XML data structucure searching
+import fnmatch                    # File Name Matching
+import io                         # I/O stuff
+import math                       # Math
+import os.path                    # File names/paths
+import pickle                     # Python data structure pickle/unpickle
+import re                         # Regular expressions
+import requests                   # HTML Requests
+import sexpdata                   # (LISP) S_EXpresson Data
+from sexpdata import Symbol       # (LISP) S-EXpression Symbol
 import sys                        # Miscellanesous SYStem stuff
-import time                        # Time package
+import time                       # Time package
 
 # Data Structure and Algorithm Overview:
 # 
@@ -296,6 +299,12 @@ import time                        # Time package
 # sorting by cost, etc.  The final BOM's for each board is generated
 # as a .csv file.
 
+def text_filter(text, function):
+    # Verify argument types:
+    assert isinstance(text, str)
+    assert callable(function)
+
+    return "".join([ character for character in text if function(character) ])
 
 class Database:
     # Database of *Schematic_Parts*:
@@ -356,7 +365,7 @@ class Database:
             #  format(bom_parts_file_name))
 
             # Read in picked *vendor_parts* from *bom_file_name*:
-            bom_pickle_file = open(bom_parts_file_name, "r")
+            bom_pickle_file = open(bom_parts_file_name, "rb")
             pickled_vendor_parts_cache = pickle.load(bom_pickle_file)
             bom_pickle_file.close()
 
@@ -2216,7 +2225,7 @@ class Database:
         """
 
         # Verify argument types:
-        assert isinstance(out_stream, file);
+        assert isinstance(out_stream, io.IOBase);
 
         vendor_parts_cache = self.vendor_parts_cache
         actual_keys = sorted(vendor_parts_cache.keys())
@@ -2235,25 +2244,9 @@ class Database:
         assert isinstance(from_currency, str)
         assert isinstance(to_currency, str)
 
-        # The documenation for this API can be found at:
-        #    https://currency-api.appspot.com/
-
-        # First construct the *exchange_url*:
-        exchange_url = \
-          "https://currency-api.appspot.com/api/{0}/{1}.json".format(
-            from_currency, to_currency)
-        #print("exchange_url='{0}'".format(exchange_url))
-
-        # Now fetch the infromation from the server:
-        exchange_response = requests.get(exchange_url)
-        exchange_text = \
-          exchange_response.text.encode("ascii", "ignore").strip(" \n")
-        #print("exchange_text='{0}'".format(exchange_text))
-
-        # Now extract the exchange rate and return it:
-        exchange_information = json.loads(exchange_text)
-        #print("exchange_information=", exchange_information)
-        return exchange_information["rate"]
+        converter = currency_converter.CurrencyConverter()
+        exchange_rate = converter.convert(1.0, from_currency, to_currency)
+        return exchange_rate
 
     def findchips_scrape(self, actual_part):
         """ *Database*: Return a list of *Vendor_Parts* associated with
@@ -2325,25 +2318,28 @@ class Database:
                 #print("&&&&&&&&&&&&&&&&&&&&&&&")
                 #print(h3_tree.prettify())
                 for a_tree in h3_tree.find_all("a"):
-                    vendor_name = a_tree.get_text(). \
-                      encode("ascii", "ignore").strip(" \n")
+                    vendor_name = a_tree.get_text()
 
-                    # Strip some boring stuff off the end of *vendor_name*:
-                    if vendor_name.endswith("Authorized Distributor"):
-                        # Remove "Authorized Distributor" from end
-                        # of *vendor_name*:
-                        vendor_name = vendor_name[:-22].strip(" ")
-                    if vendor_name.endswith("Member"):
-                        # Remove "Member" from end of *vendor_name*:
-                        vendor_name = vendor_name[:-6].strip(" ")
-                    if vendor_name.endswith("ECIA (NEDA)"):
-                        # Remove "ECIA (NEDA)" from end of *vendor_name*:
-                        vendor_name = vendor_name[:-11].strip(" ")
 
             # If we can not extact a valid *vendor_name* there is no
             # point in continuing to work on this *distributor_tree*:
             if vendor_name == None:
                 continue
+
+            # This code is in the *Vendor_Part* initialize now:
+            # Strip some boring stuff off the end of *vendor_name*:
+            #vendor_name = text_filter(vendor_name, str.isprintable)
+            #if vendor_name.endswith("Authorized Distributor"):
+            #    # Remove "Authorized Distributor" from end
+            #    # of *vendor_name*:
+            #    if vendor_name.endswith("Authorized Distributor"):
+            #        vendor_name = vendor_name[:-22].strip(" ")
+            #    if vendor_name.endswith("Member"):
+            #        # Remove "Member" from end of *vendor_name*:
+            #        vendor_name = vendor_name[:-6].strip(" ")
+            #    if vendor_name.endswith("ECIA (NEDA)"):
+            #        # Remove "ECIA (NEDA)" from end of *vendor_name*:
+            #        vendor_name = vendor_name[:-11].strip(" ")
 
             # Extract *currency* from *distributor_tree*:
             currency = "USD"
@@ -2375,8 +2371,7 @@ class Database:
                         for span2_tree in span1_tree.find_all(
                           "span", class_="additional-value"):
                             # Found it; grab it, encode it, and strip it:
-                            vendor_part_name = span2_tree.get_text(). \
-                              encode("ascii", "ignore").strip(" \n")
+                            vendor_part_name = span2_tree.get_text()
 
                     # The *stock* count is found as:
                     #    <td class="td-stock">stock</td>
@@ -2398,8 +2393,7 @@ class Database:
                       "td", class_="td-mfg"):
                         for span_tree in mfg_name_tree.find_all("span"):
                             # Found it; grab it, encode it, and strip it:
-                            manufacturer_name = span_tree.get_text(). \
-                              encode("ascii", "ignore").strip(" \n")
+                            manufacturer_name = span_tree.get_text()
 
                     # The *manufacturer_part_name* is found as:
                     #    <td class="td_part"><a ...>mfg_part_name</a></td>
@@ -2408,8 +2402,7 @@ class Database:
                       "td", class_="td-part"):
                         for a_tree in mfg_part_tree.find_all("a"):
                             # Found it; grab it, encode it, and strip it:
-                            manufacturer_part_name = a_tree.get_text(). \
-                              encode("ascii", "ignore").strip(" \n")
+                            manufacturer_part_name = a_tree.get_text()
 
                     # The price breaks are encoded in a <ul> tree as follows:
                     #    <td class="td_price">
@@ -2606,7 +2599,7 @@ class Database:
             for vendor_part in vendor_parts:
                 assert isinstance(vendor_part, Vendor_Part)
 
-        bom_pickle_file = open(self.bom_parts_file_name, "w")
+        bom_pickle_file = open(self.bom_parts_file_name, "wb")
         pickle.dump(self.vendor_parts_cache, bom_pickle_file)
         bom_pickle_file.close()
 
@@ -2705,7 +2698,7 @@ class Order:
         # Open *bom_file*
         bom_file = sys.stdout
         if bom_file_name != "":
-            bom_file = open(bom_file_name, "wa")
+            bom_file = open(bom_file_name, "w")
 
         # Sort *final_choice_parts* using *key_function*.
         final_choice_parts = self.final_choice_parts
@@ -2721,7 +2714,7 @@ class Order:
             board_parts = choice_part.board_parts
             board_parts.sort(key = lambda board_part:
               (board_part.board.name, board_part.reference.upper(),
-               int(filter(str.isdigit, board_part.reference))))
+               int(text_filter(board_part.reference, str.isdigit))) )
 
             # Write the first line out to *bom_file*:
             bom_file.write("  {0}:{1};{2} {3}:{4}\n".\
@@ -2806,7 +2799,7 @@ class Order:
             board_parts = choice_part.board_parts
             board_parts.sort(key = lambda board_part:
               (board_part.board.name, board_part.reference.upper(),
-               int(filter(str.isdigit, board_part.reference))))
+               int(text_filter(board_part.reference, str.isdigit))))
 
             # Select the vendor_part and associated quantity/cost
             choice_part.select(excluded_vendor_names, True)
@@ -2957,8 +2950,9 @@ class Order:
             lowest_quad = trial_quads[0]
             lowest_cost = lowest_quad[1]
             lowest_vendor_name = lowest_quad[3]
+            #lowest_vendor_name = text_filter(lowest_vendor_name, str.isprintable)
             savings = lowest_cost - base_cost
-            print("      Lowest {0} with {1} exlcuded".
+            print("      Price is ${0:.2f} when '{1}' is excluded".
               format(lowest_cost, lowest_vendor_name))
 
             # We use $15.00 as an approximate minimum shipping cost.
@@ -3046,8 +3040,8 @@ class Order:
             # expression converts "SW123" into ("SW", 123).  
             board_parts = board.all_board_parts
             board_parts.sort(key = lambda board_part:
-              (    filter(str.isalpha, board_part.reference).upper(),
-               int(filter(str.isdigit, board_part.reference)) ))
+              ( text_filter(board_part.reference, str.isalpha).upper(),
+                int(text_filter(board_part.reference, str.isdigit))))
 
             # Visit each *board_part* in *board_parts*:
             for board_part in board_parts:
@@ -3995,7 +3989,7 @@ class Board:
         net_file_name = self.net_file_name
         #print("Read '{0}'".format(net_file_name))
         if net_file_name.endswith(".net"):
-            with open(net_file_name, "ra") as net_stream:
+            with open(net_file_name, "r") as net_stream:
                 # Read contents of *net_file_name* in as a string *net_text*:
                 net_text = net_stream.read()
 
@@ -4247,8 +4241,8 @@ class Board:
                     line = line
                 else:
                     # Unrecognized {line}:
-                    print "'{0}', line {1}: Unrecognized line '{2}'". \
-                      format(cmp_file_name, line_number, line)
+                    print("'{0}', line {1}: Unrecognized line '{2}'". \
+                      format(cmp_file_name, line_number, line))
                     errors = errors + 1
         else:
             print("Net file '{0}' name does not have a recognized suffix".
@@ -4303,7 +4297,7 @@ class Board:
         # Verify argument types:
         assert isinstance(install, bool)
         assert isinstance(final_choice_parts, list)
-        assert isinstance(board_file, file)
+        assert isinstance(board_file, io.IOBase)
 
         # Each *final_choice_part* that is part of the board (i.e. *self*) will wind up
         # in a list in *board_parts_table*.  The key is the *schematic_part_key*:
@@ -4341,7 +4335,7 @@ class Board:
             reference_board_parts[reference_text] = board_part
 
         # Sort the *reference_parts_keys*:
-        reference_board_parts_keys = reference_board_parts.keys()
+        reference_board_parts_keys = list(reference_board_parts.keys())
         reference_board_parts_keys.sort()
 
         # Now dig down until we have all the information we need for output the next
@@ -4493,7 +4487,7 @@ class Choice_Part(Schematic_Part):
         assert isinstance(part_height, float) or part_height == None
 
         # Load up *choice_part* (i.e. *self*):
-        Schematic_Part.__init__(choice_part, schematic_part_name, kicad_footprint)
+        super().__init__(schematic_part_name, kicad_footprint)
         choice_part.actual_parts = []
         choice_part.description  = description
         choice_part.feeder_name  = feeder_name
@@ -4622,8 +4616,8 @@ class Choice_Part(Schematic_Part):
         board_parts = self.board_parts
         board_parts.sort(key = lambda board_part:
           (board_part.board.name,
-          filter(str.isalpha, board_part.reference.upper()),
-          int(filter(str.isdigit, board_part.reference))) )
+           text_filter(board_part.reference, str.isalpha).upper(),
+           int(text_filter(board_part.reference, str.isdigit))))
 
         #print("  {0}:{1};{2} {3}:{4}".\
         #  format(choice_part.schematic_part_name,
@@ -4885,7 +4879,7 @@ class Alias_Part(Schematic_Part):
 
         # Load up *alias_part* (i.e *self*):
         alias_part = self
-        Schematic_Part.__init__(alias_part, schematic_part_name, kicad_footprint)
+        super().__init__(schematic_part_name, kicad_footprint)
         alias_part.schematic_parts = schematic_parts
         alias_part.feeder_name = feeder_name
         alias_part.part_height = part_height
@@ -4958,7 +4952,7 @@ class Fractional_Part(Schematic_Part):
         assert isinstance(choice_part, Choice_Part)
 
         # Load up *self*:
-        Schematic_Part.__init__(self, schematic_part_name, kicad_footprint)
+        super().__init__(schematic_part_name, kicad_footprint)
         self.choice_part = choice_part
         self.numerator = numerator
         self.denominator = denominator
@@ -5062,6 +5056,19 @@ class Vendor_Part:
         for price_break in price_breaks:
             assert isinstance(price_break, Price_Break)
 
+        # Clean up *vendor_name*:
+        assert not '\n' in vendor_name, "vendor_name='{0}'".format(vendor_name)
+        original_vendor_name = vendor_name
+        if vendor_name.endswith(" •"):
+            vendor_name = vendor_name[:-2]
+        if vendor_name.endswith(" ECIA (NEDA) Member"):
+            vendor_name = vendor_name[:-19]
+        if vendor_name.endswith(" CEDA member"):
+            vendor_name = vendor_name[:-12]
+        vendor_name = vendor_name.strip(" \t")
+        #print("vendor_name='{0}'\t\toriginal_vendor_name='{1}'".format(
+        #  vendor_name, original_vendor_name))
+
         # Load up *self*:
         self.actual_part_key = actual_part.key
         self.vendor_key = (vendor_name, vendor_part_name)
@@ -5091,7 +5098,7 @@ class Vendor_Part:
         """
 
         # Verify argument types:
-        assert isinstance(out_stream, file)
+        assert isinstance(out_stream, io.IOBase)
         assert isinstance(indent, int)
 
         # Dump out *self*:
