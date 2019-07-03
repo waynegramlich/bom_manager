@@ -2682,6 +2682,7 @@ class Order:
 	assert isinstance(positions_file_name, str) or positions_file_name == None
 
 	# Create the *Board*:
+        #print("net_file_name='{0}'".format(net_file_name))
 	order = self
 	board = Board(name, revision, net_file_name, count, order, positions_file_name)
 	order.boards.append(board)
@@ -3241,7 +3242,7 @@ class Order:
 
 	# Check for missing footprints:
 	order.footprints_check(final_choice_parts)
-	order.positions_process()
+	#order.positions_process()
 
 	# Print out the final selected vendor summary:
 	order.summary_print(final_choice_parts, excluded_vendor_names)
@@ -3990,13 +3991,13 @@ class Board:
 
 	errors = 0
 
-	# Read the contents *net_file_name* into *net_text*:
+	# Process *net_file_name* adding footprints as needed:
 	net_file_name = self.net_file_name
-	if net_file_name.endswith(".net"):
-	    # Read contents of *net_file_name* in as a string *net_text*:
-	    net_stream = open(net_file_name, "ra")
-	    net_text = net_stream.read()
-	    net_stream.close()
+        #print("Read '{0}'".format(net_file_name))
+        if net_file_name.endswith(".net"):
+            with open(net_file_name, "ra") as net_stream:
+	        # Read contents of *net_file_name* in as a string *net_text*:
+	        net_text = net_stream.read()
 
 	    # Parse *net_text* into *net_se* (i.e. net S-expression):
 	    net_se = sexpdata.loads(net_text)
@@ -4009,8 +4010,17 @@ class Board:
 	    net_file_changed = False
 	    database = self.order.database
 	    components_se = se_find(net_se, "export", "components")
-	    #print("components=", components_se)
-	    for component_se in components_se[1:]:
+            
+            # Each component has the following form:
+            #
+            #        (comp
+            #          (ref SW123)
+            #          (footprint nickname:NAME)              # May not be present
+            #          (libsource ....)
+            #          (sheetpath ....)
+            #          (tstamp xxxxxxxx))
+            #print("components=", components_se)
+            for component_index, component_se in enumerate(components_se[1:]):
 		#print("component_se=", component_se)
 		#print("")
 
@@ -4065,13 +4075,14 @@ class Board:
 		    # Grab *footprint_se* from *component_se* (if it exists):
 		    footprint_se = se_find(component_se, "comp", "footprint")
 		    #print("footprint_se=", footprint_se)
-		    #print("")
+		    #print("Part[{0}]:'{1}' '{2}' changed={3}".format(
+                    #    component_index, part_name, kicad_footprint, net_file_changed))
 
 		    # Either add or update the footprint:
 		    if footprint_se == None:
 			# No footprint in the .net file; just add one:
 			component_se.append(
-			  [Symbol("footprint"), Symbol(kicad_footprint)])
+			  [Symbol("footprint"), Symbol("common:" + kicad_footprint)])
 			print("Part {0}: Adding binding to footprint '{1}'".
 			  format(part_name, kicad_footprint))
 			net_file_changed = True
@@ -4079,16 +4090,15 @@ class Board:
 			# We have a footprint in .net file:
 			previous_footprint = footprint_se[1].value()
 			previous_split = previous_footprint.split(':')
-			kicad_split = kicad_footprint.split(':')
+			current_split = kicad_footprint.split(':')
 			assert len(previous_split) > 0
-			assert len(kicad_split) > 0
-			new_footprint = previous_footprint
-			if len(kicad_split) == 2:
+			assert len(current_split) > 0
+			if len(current_split) == 2:
 			    # *kicad_footprint* has an explicit library,
 			    # so we can just use it and ignore
 			    # *previous_footprint*:
 			    new_footprint = kicad_footprint
-			elif len(kicad_split) == 1 and \
+			elif len(current_split) == 1 and \
 			  len(previous_split) == 2:
 			    # *kicad_footprint* does not specify a library,
 			    # but the *previous_footprint* does.  We build
@@ -4096,6 +4106,12 @@ class Board:
 			    # library and the rest from *kicad_footprint*:
 			    new_footprint = \
 			      previous_split[0] + ":" + kicad_footprint
+                            #print("new_footprint='{0}'".format(new_footprint))
+                        elif len(current_split) == 1:
+                            new_footprint = "common:" + kicad_footprint
+                        else:
+                            assert False, "previous_slit={0} current_split={1}".format(
+                              previous_split, current_split)
 
 			# Only do something if it changed:
 			if previous_footprint != new_footprint:
@@ -4163,6 +4179,8 @@ class Board:
 
 		net_file.write(net_se_string)
 		net_file.close()
+            #else:
+	    #	print("File '{0}' not changed".format(net_file_name))
 
         elif file_name.ends_with(".cmp"):
 	    # Read in {cmp_file_name}:
