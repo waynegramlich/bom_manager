@@ -39,17 +39,17 @@ Immediately below are some of the more concise part names:
   Vendor typically has their own part name that is different from the manufacturer
   part name.
 
-* CAD Part: A CAD part is the name of a part within the CAD system.  Ultimately,
-  BOM manager provides tools to map the CAD part into a list of manufacturer parts.
-  A CAD part can be "generic" in that is does not map to a single part, but instead
+* Project Part: A project part is the name of a part within the CAD system.  Ultimately,
+  BOM manager provides tools to map the project part into a list of manufacturer parts.
+  A project part can be "generic" in that is does not map to a single part, but instead
   a collection of interchangeable parts that can be substituted in depending upon
   pricing and availability.
 
 What BOM manager does is:
 
-1. It starts with a list of CAD parts.
+1. It starts with a list of project parts.
 
-2. The CAD part list is expended into a list of acceptable manufacturer parts.
+2. The project part list is expended into a list of acceptable manufacturer parts.
 
 3. The BOM manager queries to find which vendors sell each manufacturer part
    an generates a list of vendor parts, where each vendor part has pricing
@@ -62,7 +62,7 @@ What BOM manager does is:
 
 For now, BOM manager is summarized as:
 
-        CAD Parts => Manufacturer Parts => Vendor Parts => Vendor Orders
+        Project Parts => Manufacturer Parts => Vendor Parts => Vendor Orders
 
 There are some further nuances in parts:
 
@@ -114,17 +114,17 @@ the over all architecture of BOM manager:
   
 * Search: A search has a name that is unique across the entire collection and
   winnows rows of a specific down to ones that meet project requirements.  Each
-  CAD part name in a project must match at least one search name in one of the
+  project part name in a project must match at least one search name in one of the
   collections.
 
 With these new concepts the over all BOM manager process is:
 
 1. Each order specifies one or more projects.
 
-2. Each project generates a list named CAD parts.
+2. Each project generates a list named project parts.
 
 3. BOM manager searches all of the selected collections to find searches
-   that match CAD part names.
+   that match project part names.
 
 4. Each search generates a list available manufacturer parts. (As before)
 
@@ -134,7 +134,7 @@ With these new concepts the over all BOM manager process is:
 
 With these new concepts, the BOM manager algorithm is summarized as:
 
-        Order => Projects => CAD Parts =>
+        Order => Projects => Project Parts =>
             Collections => Tables => Searches =>
                 Manufacturer Parts => Vendor Parts => Vendor Orders
 
@@ -143,11 +143,12 @@ There are a number of different roles involved with BOM Manager:
 * Order Agent: This person actually runs BOM manager to get a particular
   set of vendor orders out the door.
 
-* Project Designer: This person interacts with the CAD system to
-  design a project.  They are responsible for binding CAD names.
+* Project Designer: This person interacts with the CAD system to design a project.
+  This person is responsible for ensuring that project part names match up with
+  search names.
 
 * Search Librarian: This person is responsible for constructing the searches
-  associated with each collection.  This person basically need to ensure that each CAD
+  associated with each collection.  This person basically needs to ensure that each project
   part has an associated search with at least one collection.  This person is
   responsible for coming up with naming conventions.
 

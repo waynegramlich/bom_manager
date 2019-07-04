@@ -54,7 +54,7 @@
 # schematic with actual parts that can be ordered from one or more
 # vendors (i.e. distributors, sellers, etc.)  It also deals with binding
 # the schematic parts with footprints that can be used with the final PCB
-# (i.e. Printed Circuit Board.)
+# (i.e. Printed Circuit Project.)
 #
 # In short we have:
 #
@@ -188,7 +188,6 @@
 # software community.
 
 # Import some libraries (alphabetical order):
-import currency_converter         # Currency converter
 from bs4 import BeautifulSoup     # HTML/XML data structucure searching
 import copy                       # Is this used any more?
 import csv
@@ -201,10 +200,8 @@ import pickle                     # Python data structure pickle/unpickle
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtWidgets import (QApplication, QComboBox, QLineEdit, QMainWindow,
                                QPlainTextEdit, QPushButton,
-                               QTableWidget, QTableWidgetItem,
-                               QTreeView, QFileSystemModel,
-                               QWidget)
-from PySide2.QtCore import (QAbstractItemModel, QDir, QFile, QItemSelectionModel, QModelIndex, Qt)
+                               QTableWidget, QTableWidgetItem, QWidget)  # QTreeView
+from PySide2.QtCore import (QAbstractItemModel, QFile, QItemSelectionModel, QModelIndex, Qt)
 import pyperclip
 import os
 import re                         # Regular expressions
@@ -227,7 +224,7 @@ import webbrowser
 # *Vendor*: A vendor corresponds to a distributor such as DigiKey, Mouser,
 # Newark, etc.
 #
-# *Board*: A board corresponds to a single PCB (e.g. a .kicad_pcb file.)
+# *Project*: A project corresponds to a single PCB (e.g. a .kicad_pcb file.)
 # A single order may order specify multiple PCB's and different quantities
 # for each PCB.
 #
@@ -251,7 +248,7 @@ import webbrowser
 # There is a fairly complex set of data structures that link the above
 # data structures together.  They are listed below:
 #
-# *Board_Part*: A *Board_Part* is essentially one-to-one with a Schematic
+# *Project_Part*: A *Project_Part* is essentially one-to-one with a Schematic
 # symbol in KiCad.  In particular, it specifies both the annotation
 # reference (e.g. SW12, U7, R213, etc.) and a *Schematic_Symbol_Name*
 # (e.g. ATMEGA328-PU;QFP32, 74HC08;SOIC14, etc.)
@@ -302,15 +299,15 @@ import webbrowser
 #
 # There are a few more classes to worry about:
 #
-# *Order*: An *Order* specifies a list of *Board*'s and a quantity
-# for each *Board*.  Also, an order can specify a list of vendors
+# *Order*: An *Order* specifies a list of *Project*'s and a quantity
+# for each *Project*.  Also, an order can specify a list of vendors
 # to exclude from the order.
 #
-# *Board*: A *Board* is one-to-one with KiCad PCB.  It is basicaly
-# consists of a list of *Board_Part*'s.
+# *Project*: A *Project* is one-to-one with KiCad PCB.  It is basicaly
+# consists of a list of *Project_Part*'s.
 #
-# *Board_Part*: A *Board_Part* is basically a *Schematic_Symbol_Name*
-# along with a board annotation reference (e.g. R123, U7, etc.)
+# *Project_Part*: A *Project_Part* is basically a *Schematic_Symbol_Name*
+# along with a project annotation reference (e.g. R123, U7, etc.)
 #
 
 # **:
@@ -353,8 +350,9 @@ import webbrowser
 # unavailable stock.
 #
 # Now various reports are generated based on sorting by vendor,
-# sorting by cost, etc.  The final BOM's for each board is generated
+# sorting by cost, etc.  The final BOM's for each project is generated
 # as a .csv file.
+
 
 def main():
     # table_file_name = "drills_table.xml"
@@ -588,477 +586,6 @@ class Actual_Part:
             vendor_name = vendor_part.vendor_name
             if vendor_name not in excluded_vendor_names:
                 vendor_names_table[vendor_name] = None
-
-
-class Board:
-    def __init__(self, name, revision, net_file_name, count, order, positions_file_name=None):
-        """ *Board*: Create a new board containing *name*, *revision*,
-            *net_file_name*, *count*. """
-
-        # Verify argument types:
-        assert isinstance(name, str)
-        assert isinstance(revision, str)
-        assert isinstance(net_file_name, str)
-        assert isinstance(count, int)
-        assert isinstance(order, Order)
-        assert isinstance(positions_file_name, str) or positions_file_name is None
-
-        # Load up *self*:
-        self.name = name
-        self.revision = revision
-        self.net_file_name = net_file_name
-        self.count = count
-        self.positions_file_name = positions_file_name
-        self.order = order
-        self.all_board_parts = []            # List[Board_Part] of all board parts
-        self.installed_board_parts = []            # List[Board_Part] board parts to be installed
-        self.uninstalled_board_parts = []   # List[Board_Part] board parts not to be installed
-
-        self.net_file_read()
-
-    def board_part_append(self, board_part):
-        """ *Board*: Append *board_part* onto the *Board* object (i.e. *self*). """
-
-        # Verify argument types:
-        assert isinstance(board_part, Board_Part)
-
-        self.all_board_parts.append(board_part)
-        if board_part.install:
-            self.installed_board_parts.append(board_part)
-        else:
-            self.uninstalled_board_parts.append(board_part)
-
-    def net_file_read(self):
-        """ *Board*: Read in net file for {self}. """
-
-        # Prevent accidental double read:
-        board_parts = self.all_board_parts
-        assert len(board_parts) == 0
-
-        errors = 0
-
-        # Process *net_file_name* adding footprints as needed:
-        net_file_name = self.net_file_name
-        # print("Read '{0}'".format(net_file_name))
-        if net_file_name.endswith(".net"):
-            with open(net_file_name, "r") as net_stream:
-                # Read contents of *net_file_name* in as a string *net_text*:
-                net_text = net_stream.read()
-
-            # Parse *net_text* into *net_se* (i.e. net S-expression):
-            net_se = sexpdata.loads(net_text)
-            # print("\nsexpedata.dumps=", sexpdata.dumps(net_se))
-            # print("")
-            # print("net_se=", net_se)
-            # print("")
-
-            # Visit each *component_se* in *net_se*:
-            net_file_changed = False
-            database = self.order.database
-            components_se = se_find(net_se, "export", "components")
-
-            # Each component has the following form:
-            #
-            #        (comp
-            #          (ref SW123)
-            #          (footprint nickname:NAME)              # May not be present
-            #          (libsource ....)
-            #          (sheetpath ....)
-            #          (tstamp xxxxxxxx))
-            # print("components=", components_se)
-            for component_index, component_se in enumerate(components_se[1:]):
-                # print("component_se=", component_se)
-                # print("")
-
-                # Grab the *reference* from *component_se*:
-                reference_se = se_find(component_se, "comp", "ref")
-                reference = reference_se[1].value()
-                # print("reference_se=", reference_se)
-                # print("")
-
-                # Find *part_name_se* from *component_se*:
-                part_name_se = se_find(component_se, "comp", "value")
-
-                # Suprisingly tedious, extract *part_name* as a string:
-                if isinstance(part_name_se[1], Symbol):
-                    part_name = part_name_se[1].value()
-                elif isinstance(part_name_se[1], int):
-                    part_name = str(part_name_se[1])
-                elif isinstance(part_name_se[1], float):
-                    part_name = str(part_name_se[1])
-                elif isinstance(part_name_se[1], str):
-                    part_name = part_name_se[1]
-                else:
-                    assert False, "strange part_name: {0}". \
-                      format(part_name_se[1])
-
-                # print(reference, part_name, footprint)
-
-                # Strip *comment* out of *part_name* if it exists:
-                comment = ""
-                colon_index = part_name.find(':')
-                if colon_index >= 0:
-                    comment = part_name[colon_index + 1:]
-                    part_name = part_name[0:colon_index]
-
-                # Now see if we have a match for *part_name* in *database*:
-                schematic_part = database.lookup(part_name)
-                if schematic_part is None:
-                    # {part_name} is not in {database}; output error message:
-                    print("File '{0}: Part Name '{2}' {3} not in database".format(
-                          net_file_name, 0, part_name, reference))
-                    errors += 1
-                else:
-                    # We have a match; create the *board_part*:
-                    board_part = Board_Part(self, schematic_part, reference, comment)
-                    self.board_part_append(board_part)
-
-                    # Grab *kicad_footprint* from *schematic_part*:
-                    kicad_footprint = schematic_part.kicad_footprint
-                    assert isinstance(kicad_footprint, str)
-
-                    # Grab *footprint_se* from *component_se* (if it exists):
-                    footprint_se = se_find(component_se, "comp", "footprint")
-                    # print("footprint_se=", footprint_se)
-                    # print("Part[{0}]:'{1}' '{2}' changed={3}".format(
-                    #    component_index, part_name, kicad_footprint, net_file_changed))
-
-                    # Either add or update the footprint:
-                    if footprint_se is None:
-                        # No footprint in the .net file; just add one:
-                        component_se.append(
-                          [Symbol("footprint"), Symbol("common:" + kicad_footprint)])
-                        print("Part {0}: Adding binding to footprint '{1}'".
-                              format(part_name, kicad_footprint))
-                        net_file_changed = True
-                    else:
-                        # We have a footprint in .net file:
-                        previous_footprint = footprint_se[1].value()
-                        previous_split = previous_footprint.split(':')
-                        current_split = kicad_footprint.split(':')
-                        assert len(previous_split) > 0
-                        assert len(current_split) > 0
-                        if len(current_split) == 2:
-                            # *kicad_footprint* has an explicit library,
-                            # so we can just use it and ignore
-                            # *previous_footprint*:
-                            new_footprint = kicad_footprint
-                        elif len(current_split) == 1 and len(previous_split) == 2:
-                            # *kicad_footprint* does not specify a library,
-                            # but the *previous_footprint* does.  We build
-                            # *new_foot_print* using the *previous_footprint*
-                            # library and the rest from *kicad_footprint*:
-                            new_footprint = \
-                              previous_split[0] + ":" + kicad_footprint
-                            # print("new_footprint='{0}'".format(new_footprint))
-                        elif len(current_split) == 1:
-                            new_footprint = "common:" + kicad_footprint
-                        else:
-                            assert False, ("previous_slit={0} current_split={1}".
-                                           format(previous_split, current_split))
-
-                        # Only do something if it changed:
-                        if previous_footprint != new_footprint:
-                            # Since they changed, update in place:
-                            # if isinstance(schematic_part, Alias_Part):
-                            #        print("**Alias_Part.footprint={0}".
-                            #          format(schematic_part.kicad_footprint))
-                            print("Part '{0}': Footprint changed from '{1}' to '{2}'".
-                                  format(part_name, previous_footprint, new_footprint))
-                            footprint_se[1] = Symbol(new_footprint)
-                            net_file_changed = True
-
-            # Write out updated *net_file_name* if *net_file_changed*:
-            if net_file_changed:
-                print("Updating '{0}' with new footprints".
-                      format(net_file_name))
-                net_file = open(net_file_name, "wa")
-                # sexpdata.dump(net_se, net_file)
-                net_se_string = sexpdata.dumps(net_se)
-                # sexpdata.dump(net_se, net_file)
-
-                # Now use some regular expressions to improve formatting to be more like
-                # what KiCad outputs:
-                net_se_string = re.sub(" \\(design ", "\n  (design ", net_se_string)
-
-                # Sheet part of file:
-                net_se_string = re.sub(" \\(sheet ",       "\n    (sheet ",         net_se_string)
-                net_se_string = re.sub(" \\(title_block ", "\n      (title_block ", net_se_string)
-                net_se_string = re.sub(" \\(title ",       "\n        (title ",     net_se_string)
-                net_se_string = re.sub(" \\(company ",     "\n        (company ",   net_se_string)
-                net_se_string = re.sub(" \\(rev ",         "\n        (rev ",       net_se_string)
-                net_se_string = re.sub(" \\(date ",        "\n        (date ",      net_se_string)
-                net_se_string = re.sub(" \\(source ",      "\n        (source ",    net_se_string)
-                net_se_string = re.sub(" \\(comment ",     "\n        (comment ",   net_se_string)
-
-                # Components part of file:
-                net_se_string = re.sub(" \\(components ", "\n  (components ",    net_se_string)
-                net_se_string = re.sub(" \\(comp ",       "\n    (comp ",        net_se_string)
-                net_se_string = re.sub(" \\(value ",      "\n      (value ",     net_se_string)
-                net_se_string = re.sub(" \\(footprint ",  "\n      (footprint ", net_se_string)
-                net_se_string = re.sub(" \\(libsource ",  "\n      (libsource ", net_se_string)
-                net_se_string = re.sub(" \\(sheetpath ",  "\n      (sheetpath ", net_se_string)
-                net_se_string = re.sub(" \\(path ",       "\n      (path ",      net_se_string)
-                net_se_string = re.sub(" \\(tstamp ",     "\n      (tstamp ",    net_se_string)
-
-                # Library parts part of file
-                net_se_string = re.sub(" \\(libparts ",    "\n  (libparts ",    net_se_string)
-                net_se_string = re.sub(" \\(libpart ",     "\n    (libpart ",   net_se_string)
-                net_se_string = re.sub(" \\(description ", "\n      (description ",  net_se_string)
-                net_se_string = re.sub(" \\(fields ",      "\n      (fields ",  net_se_string)
-                net_se_string = re.sub(" \\(field ",       "\n        (field ", net_se_string)
-                net_se_string = re.sub(" \\(pins ",        "\n      (pins ",    net_se_string)
-                # net_se_string = re.sub(" \\(pin ",         "\n        (pin ",   net_se_string)
-
-                # Network portion of file:
-                net_se_string = re.sub(" \\(nets ", "\n  (nets ", net_se_string)
-                net_se_string = re.sub(" \\(net ",  "\n    (net ", net_se_string)
-                net_se_string = re.sub(" \\(node ", "\n      (node ", net_se_string)
-
-                # General substitutions:
-                # net_se_string = re.sub(" \\;", ";", net_se_string)
-                # net_se_string = re.sub(" \\.", ".", net_se_string)
-
-                net_file.write(net_se_string)
-                net_file.close()
-            # else:
-            #        print("File '{0}' not changed".format(net_file_name))
-
-        elif net_file_name.ends_with(".cmp"):
-            # Read in {cmp_file_name}:
-            cmp_file_name = net_file_name
-            cmp_stream = open(cmp_file_name, "r")
-            cmp_lines = cmp_stream.readlines()
-            cmp_stream.close()
-
-            # Process each {line} in {cmp_lines}:
-            database = self.database
-            errors = 0
-            line_number = 0
-            for line in cmp_lines:
-                # Keep track of {line} number for error messages:
-                line_number = line_number + 1
-
-                # There are three values we care about:
-                if line.startswith("BeginCmp"):
-                    # Clear out the values:
-                    reference = None
-                    part_name = None
-                    footprint = None
-                elif line.startswith("Reference = "):
-                    reference = line[12:-2]
-                elif line.startswith("ValeurCmp = "):
-                    part_name = line[12:-2]
-                    # print("part_name:{0}".format(part_name))
-                    double_underscore_index = part_name.find("__")
-                    if double_underscore_index >= 0:
-                        shortened_part_name = \
-                          part_name[:double_underscore_index]
-                        # print("Shorten part name '{0}' => '{1}'".
-                        #  format(part_name, shortened_part_name))
-                        part_name = shortened_part_name
-                elif line.startswith("IdModule  "):
-                    footprint = line[12:-2].split(':')[1]
-                    # print("footprint='{0}'".format(footprint))
-                elif line.startswith("EndCmp"):
-                    part = database.part_lookup(part_name)
-                    if part is None:
-                        # {part_name} not in {database}; output error message:
-                        print("File '{0}', line {1}: Part Name {2} ({3} {4}) not in database".
-                              format(cmp_file_name, line_number, part_name, reference, footprint))
-                        errors = errors + 1
-                    else:
-                        footprint_pattern = part.footprint_pattern
-                        if fnmatch.fnmatch(footprint, footprint_pattern):
-                            # The footprints match:
-                            board_part = \
-                              Board_Part(self, part, reference, footprint)
-                            self.board_parts_append(board_part)
-                            part.board_parts.append(board_part)
-                        else:
-                            print(("File '{0}',  line {1}: {2}:{3} Footprint" +
-                                   "'{4}' does not match database '{5}'").format(
-                                   cmp_file_name, line_number,
-                                   reference, part_name, footprint,
-                                   footprint_pattern))
-                            errors = errors + 1
-                elif (line == "\n" or line.startswith("TimeStamp") or
-                      line.startswith("EndListe") or line.startswith("Cmp-Mod V01")):
-                    # Ignore these lines:
-                    line = line
-                else:
-                    # Unrecognized {line}:
-                    print("'{0}', line {1}: Unrecognized line '{2}'".
-                          format(cmp_file_name, line_number, line))
-                    errors = errors + 1
-        else:
-            print("Net file '{0}' name does not have a recognized suffix".format(net_file_name))
-
-        return errors
-
-    def assembly_summary_write(self, final_choice_parts):
-        """ *Board*: Write out an assembly summary .csv file for the *Board* object (i.e. *self*)
-            using *final_choice_parts*.
-        """
-
-        # Verify argument types:
-        assert isinstance(final_choice_parts, list)
-
-        # Open *board_file*:
-        board_file_name = "/tmp/{0}.csv".format(self.name)
-        board_file = open(board_file_name, "w")
-
-        # Write out the column headings:
-        board_file.write(
-          '"Quan.","Reference","Schematic Name","Description","Fractional",' +
-          '"Manufacturer","Manufacture PN","Vendor","Vendor PN"\n\n')
-
-        # Output the installed parts:
-        has_fractional_parts1 = self.assembly_summary_write_helper(True,
-                                                                   final_choice_parts, board_file)
-
-        # Output the uninstalled parts:
-        board_file.write("\nDo Not Install\n")
-
-        # Output the installed parts:
-        has_fractional_parts2 = self.assembly_summary_write_helper(False,
-                                                                   final_choice_parts, board_file)
-
-        # Explain what a fractional part is:
-        if has_fractional_parts1 or has_fractional_parts2:
-            board_file.write(
-              '"","\nFractional parts are snipped off of 1xN or 2xN break-way headers"\n')
-
-        # Close *board_file* and print out a summary announcement:
-        board_file.close()
-        print("Wrote out assembly file '{0}'".format(board_file_name))
-
-    def assembly_summary_write_helper(self, install, final_choice_parts, board_file):
-        """ *Board*: Write out an assembly summary .csv file for *Board* object (i.e. *self*)
-            out to *board_file*.  *install* is set *True* to list the installable parts from
-            *final_choice_parts* and *False* for an uninstallable parts listing.
-            This routine returns *True* if there are any fractional parts output to *board_file*.
-        """
-
-        # Verify argument types:
-        assert isinstance(install, bool)
-        assert isinstance(final_choice_parts, list)
-        assert isinstance(board_file, io.IOBase)
-
-        # Each *final_choice_part* that is part of the board (i.e. *self*) will wind up
-        # in a list in *board_parts_table*.  The key is the *schematic_part_key*:
-        board_parts_table = {}
-        for final_choice_part in final_choice_parts:
-            # Now figure out if final choice part is part of *board_parts*:
-            board_parts = final_choice_part.board_parts
-            for board_part in board_parts:
-                # We only care care about *final_choice_part* if is used on *board* and
-                # it matches the *install* selector:
-                if board_part.board == self and board_part.install == install:
-                    # We are on the board; create *schemati_part_key*:
-                    schematic_part = board_part.schematic_part
-                    schematic_part_key = "{0};{1}".format(
-                      schematic_part.base_name, schematic_part.short_footprint)
-
-                    # Create/append a list to *board_parts_table*, keyed on *schematic_part_key*:
-                    if schematic_part_key not in board_parts_table:
-                        board_parts_table[schematic_part_key] = []
-                    pairs_list = board_parts_table[schematic_part_key]
-
-                    # Append a pair of *board_part* and *final_choice_part* onto *pairs_list*:
-                    board_final_pair = (board_part, final_choice_part)
-                    pairs_list.append(board_final_pair)
-
-        # Now organize everything around the *reference_list*:
-        reference_board_parts = {}
-        for pairs_list in board_parts_table.values():
-            # We want to sort base on *reference_value* which is converted into *reference_text*:
-            reference_list = \
-              [board_final_pair[0].reference.upper() for board_final_pair in pairs_list]
-            reference_text = ", ".join(reference_list)
-            # print("reference_text='{0}'".format(reference_text))
-            board_part = pairs_list[0]
-            reference_board_parts[reference_text] = board_part
-
-        # Sort the *reference_parts_keys*:
-        reference_board_parts_keys = list(reference_board_parts.keys())
-        reference_board_parts_keys.sort()
-
-        # Now dig down until we have all the information we need for output the next
-        # `.csv` file line:
-        has_fractional_parts = False
-        for reference_board_parts_key in reference_board_parts_keys:
-            # Extract the *board_part* and *final_choice_part*:
-            board_final_pair = reference_board_parts[reference_board_parts_key]
-            board_part = board_final_pair[0]
-            final_choice_part = board_final_pair[1]
-            assert isinstance(final_choice_part, Choice_Part)
-
-            # Now get the corresponding *schematic_part*:
-            schematic_part = board_part.schematic_part
-            schematic_part_key = "{0};{1}".format(
-              schematic_part.base_name, schematic_part.short_footprint)
-            assert isinstance(schematic_part, Schematic_Part)
-
-            # Now get the *actual_part*:
-            actual_part = final_choice_part.selected_actual_part
-            if isinstance(actual_part, Actual_Part):
-
-                # Now get the Vendor_Part:
-                manufacturer_name = actual_part.manufacturer_name
-                manufacturer_part_name = actual_part.manufacturer_part_name
-                vendor_part = final_choice_part.selected_vendor_part
-                assert isinstance(vendor_part, Vendor_Part)
-
-                # Output the line for the .csv file:
-                vendor_name = vendor_part.vendor_name
-                vendor_part_name = vendor_part.vendor_part_name
-                quantity = final_choice_part.count_get()
-                fractional = "No"
-                if len(final_choice_part.fractional_parts) > 0:
-                    fractional = "Yes"
-                    has_fractional_parts = True
-                board_file.write('"{0} x","{1}","{2}","{3}","{4}","{5}","{6}","{7}","{8}"\n'.
-                                 format(quantity, reference_board_parts_key,
-                                        schematic_part_key, final_choice_part.description,
-                                        fractional, manufacturer_name, manufacturer_part_name,
-                                        vendor_name, vendor_part_name))
-            else:
-                print("Problems with actual_part", actual_part)
-
-        return has_fractional_parts
-
-    def positions_process(self, database):
-        """ *Board*: """
-
-        board = self
-        positions_file_name = board.positions_file_name
-        positions_table = PositionsTable(positions_file_name, database)
-        positions_table.reorigin("FD1")
-        positions_table.footprints_rotate(database)
-
-
-class Board_Part:
-    # A Board_Part basically specifies the binding of a Schematic_Part
-    # and is associated schemtatic reference.  Reference strings must
-    # be unique for a given board.
-
-    def __init__(self, board, schematic_part, reference, comment):
-        """ *Board_Part*: Initialize *self* to contain *board*,
-            *schematic_part*, *reference*, and *comment*. """
-
-        # Verify argument types:
-        assert isinstance(board, Board)
-        assert isinstance(schematic_part, Schematic_Part)
-        assert isinstance(reference, str)
-        assert isinstance(comment, str)
-
-        # Load up *self*:
-        self.board = board
-        self.schematic_part = schematic_part
-        self.reference = reference
-        self.comment = comment
-        self.install = (comment != "DNI")
 
 
 class ComboEdit:
@@ -2818,7 +2345,7 @@ class Database:
           "Amphenol", "71991-320LF").actual_part(
           "Omron", "XG4H-4031-1")
         self.choice_part("RASPI3;RASPI3", "-", "",
-                         "SINGLE BOARD COMPUTER 1.2GHZ 1GB").actual_part(
+                         "SINGLE PROJECT COMPUTER 1.2GHZ 1GB").actual_part(
           "Raspbeerry Pi", "RASPBERRY PI 3")
         self.alias_part("RASPI3;RASPI", ["F2X20;F2X20", "RASPI3;RASPI3"], "RASPI")
 
@@ -2860,13 +2387,13 @@ class Database:
           "3M", "929852-01-19-RA")
         # Kludge: Use M2X40 instead of F2X35.  This works around a bug in vendor exclude:
         self.choice_part("NUCELO_F303RE;NUCLEO_F303RE", "-", "",
-                         "BOARD NUCLEO FOR STM32F303RE").actual_part(
+                         "PROJECT NUCLEO FOR STM32F303RE").actual_part(
           "STM", "NUCLEO-F303RE")
         self.alias_part("F303RE;NUCLEO64",
                         ["NUCELO_F303RE;NUCLEO_F303RE", (2, "F2X19;F2X19")], "NUCLEO64")
 
         self.choice_part("NUCLEO_F767ZI;NUCLEO_F767ZI", "-", "",
-                         "BOARD NUCLEO FOR STM32F767ZI").actual_part(
+                         "PROJECT NUCLEO FOR STM32F767ZI").actual_part(
           "STM", "NUCLEO-F767ZI")
         self.choice_part("F2X35;F2X35", "Pin_Header_Straight_2x35", "",
                          "CONN HEADER .100in DBL STR 70POS").actual_part(
@@ -3615,7 +3142,7 @@ class Database:
           "CW Industries", "GF-426-0020")
 
         # Test Points:
-        # (These need to be moved to `prices.py` on a per board basis):
+        # (These need to be moved to `prices.py` on a per project basis):
 
         self.alias_part("0.5V;M1X1",
                         ["M1X1;M1X1"], "Pin_Header_Straight_1x01")
@@ -4767,7 +4294,7 @@ class Directory(Node):
 
 class Collection(Directory):
 
-    #FIXME: Why do we have both *path* and *directory*!!!
+    # FIXME: Why do we have both *path* and *directory*!!!
 
     # Collection.__init__():
     def __init__(self, name, path, title, directory):
@@ -5820,7 +5347,7 @@ class Table(Node):
 
 
 class Order:
-    # An Order consists of a list of boards to orders parts for.
+    # An Order consists of a list of projects to orders parts for.
     # In addition, the list of vendors to exclude from the ordering
     # process is provided as well.  Vendors are excluded because the
     # shipping costs exceed the part cost savings.  Finally, sometimes
@@ -5833,15 +5360,15 @@ class Order:
 
         assert isinstance(database, Database)
 
-        self.boards = []                 # List[Board]: Boards
+        self.projects = []                 # List[Project]: Projects
         self.excluded_vendor_names = {}  # Dict[String]: Excluded vendors
         self.selected_vendor_names = None
         self.requests = []               # List[Request]: Additional requested parts
         self.inventories = []            # List[Inventory]: Existing inventoried parts
         self.database = database
 
-    def board(self, name, revision, net_file_name, count, positions_file_name=None):
-        """ *Order*: Create a *Board* containing *name*, *revision*,
+    def project(self, name, revision, net_file_name, count, positions_file_name=None):
+        """ *Order*: Create a *Project* containing *name*, *revision*,
             *net_file_name* and *count*. """
 
         # Verify argument types:
@@ -5851,12 +5378,12 @@ class Order:
         assert isinstance(count, int)
         assert isinstance(positions_file_name, str) or positions_file_name is None
 
-        # Create the *Board*:
+        # Create the *Project*:
         # print("net_file_name='{0}'".format(net_file_name))
         order = self
-        board = Board(name, revision, net_file_name, count, order, positions_file_name)
-        order.boards.append(board)
-        return board
+        project = Project(name, revision, net_file_name, count, order, positions_file_name)
+        order.projects.append(project)
+        return project
 
     def bom_write(self, bom_file_name, key_function):
         """ *Order*: Write out the BOM (Bill Of Materials) for the
@@ -5887,11 +5414,11 @@ class Order:
             # Make sure that nonething nasty got into *final_choice_parts*:
             assert isinstance(choice_part, Choice_Part)
 
-            # Sort the *board_parts* by *board* followed by reference:
-            board_parts = choice_part.board_parts
-            board_parts.sort(key=lambda board_part:
-                             (board_part.board.name, board_part.reference.upper(),
-                              int(text_filter(board_part.reference, str.isdigit))))
+            # Sort the *project_parts* by *project* followed by reference:
+            project_parts = choice_part.project_parts
+            project_parts.sort(key=lambda project_part:
+                               (project_part.project.name, project_part.reference.upper(),
+                                int(text_filter(project_part.reference, str.isdigit))))
 
             # Write the first line out to *bom_file*:
             bom_file.write("  {0}:{1};{2} {3}:{4}\n".format(
@@ -5971,11 +5498,11 @@ class Order:
         for choice_part in final_choice_parts:
             assert isinstance(choice_part, Choice_Part)
 
-            # Sort the *board_parts* by *board* followed by reference:
-            board_parts = choice_part.board_parts
-            board_parts.sort(key=lambda board_part:
-                             (board_part.board.name, board_part.reference.upper(),
-                              int(text_filter(board_part.reference, str.isdigit))))
+            # Sort the *project_parts* by *project* followed by reference:
+            project_parts = choice_part.project_parts
+            project_parts.sort(key=lambda project_part:
+                               (project_part.project.name, project_part.reference.upper(),
+                                int(text_filter(project_part.reference, str.isdigit))))
 
             # Select the vendor_part and associated quantity/cost
             choice_part.select(excluded_vendor_names, True)
@@ -6193,36 +5720,36 @@ class Order:
             each selected *Choice_Part* object.
         """
 
-        # Grab the *boards* and *database*:
-        boards = self.boards
+        # Grab the *projects* and *database*:
+        projects = self.projects
         database = self.database
 
-        # Sort *boards* by name (not really needed, but why not?):
-        boards.sort(key=lambda board: board.name)
+        # Sort *projects* by name (not really needed, but why not?):
+        projects.sort(key=lambda project: project.name)
 
-        # Visit each *board* in *boards* to locate the associated
+        # Visit each *project* in *projects* to locate the associated
         # *Choice_Part* objects.  We want to eliminate duplicate
         # *Choice_Part* objects, so we use *choice_parts_table* to
         # eliminate duplicates.
         choice_parts_table = {}
-        for board in boards:
-            # print("Order.final_choice_parts_compute(): board:{0}".format(board.name))
+        for project in projects:
+            # print("Order.final_choice_parts_compute(): project:{0}".format(project.name))
 
-            # Sort *board_parts* by reference.  A reference is a sequence
+            # Sort *project_parts* by reference.  A reference is a sequence
             # letters followed by an integer (e.g. SW1, U12, D123...)
             # Sort alphabetically followed by numerically.  The lambda
             # expression converts "SW123" into ("SW", 123).
-            board_parts = board.all_board_parts
-            board_parts.sort(key=lambda board_part: (
-                             text_filter(board_part.reference, str.isalpha).upper(),
-                             int(text_filter(board_part.reference, str.isdigit))))
+            project_parts = project.all_project_parts
+            project_parts.sort(key=lambda project_part: (
+                             text_filter(project_part.reference, str.isalpha).upper(),
+                             int(text_filter(project_part.reference, str.isdigit))))
 
-            # Visit each *board_part* in *board_parts*:
-            for board_part in board_parts:
-                schematic_part = board_part.schematic_part
+            # Visit each *project_part* in *project_parts*:
+            for project_part in project_parts:
+                schematic_part = project_part.schematic_part
                 # schematic_part_name = schematic_part.schematic_part_name
                 # print("Order.final_choice_parts_compute():  {0}: {1}".
-                #  format(board_part.reference, schematic_part_name))
+                #  format(project_part.reference, schematic_part_name))
 
                 # Only *choice_parts* can be ordered from a vendor:
                 # Visit each *choice_part* in *choice_parts* and
@@ -6245,8 +5772,8 @@ class Order:
                     #    print("Order.final_choice_parts_compute(): Key {0} in table".format(
                     #          choice_part_name))
 
-                    # Remember *board_part* in *choice_part*:
-                    choice_part.board_part_append(board_part)
+                    # Remember *project_part* in *choice_part*:
+                    choice_part.project_part_append(project_part)
 
                     # Refresh the vendor part cache for each *actual_part*:
                     vendor_parts_cache = database.vendor_parts_cache
@@ -6281,14 +5808,14 @@ class Order:
         self.final_choice_parts = final_choice_parts
 
         # Sweep through *final_choice_parts* and force the associated
-        # *Board_Part*'s to be in a reasonable order:
+        # *Project_Part*'s to be in a reasonable order:
         for choice_part in final_choice_parts:
             # Make sure that we only have *Choice_Part* objects:
             assert isinstance(choice_part, Choice_Part)
-            choice_part.board_parts_sort()
+            choice_part.project_parts_sort()
 
         # for choice_part in final_choice_parts:
-        #    print("End_Order.final_choice_parts_compute(): board:{0}".format(choice_part))
+        #    print("End_Order.final_choice_parts_compute(): project:{0}".format(choice_part))
 
         return final_choice_parts
 
@@ -6298,12 +5825,12 @@ class Order:
         # Verify argument types:
         assert isinstance(final_choice_parts, list)
 
-        # Visit each *schematic_part* in all of the *boards*:
+        # Visit each *schematic_part* in all of the *projects*:
         kicad_footprints = {}
-        for board in self.boards:
-            for board_part in board.all_board_parts:
-                assert isinstance(board_part, Board_Part)
-                schematic_part = board_part.schematic_part
+        for project in self.projects:
+            for project_part in project.all_project_parts:
+                assert isinstance(project_part, Project_Part)
+                schematic_part = project_part.schematic_part
                 assert isinstance(schematic_part, Schematic_Part)
 
                 schematic_part.footprints_check(kicad_footprints)
@@ -6351,9 +5878,9 @@ class Order:
 
         order = self
         database = order.database
-        boards = order.boards
-        for board in boards:
-            board.positions_process(database)
+        projects = order.projects
+        for project in projects:
+            project.positions_process(database)
 
     def process(self):
         """ *Order*: Process the *Order* object (i.e. *self*.) """
@@ -6427,9 +5954,9 @@ class Order:
                          choice_part.selected_total_cost))
         order.csv_write()
 
-        # Write a part summary file for each board:
-        for board in order.boards:
-            board.assembly_summary_write(final_choice_parts)
+        # Write a part summary file for each project:
+        for project in order.projects:
+            project.assembly_summary_write(final_choice_parts)
 
         # Now generate a BOM summary:
         if False:
@@ -7291,6 +6818,477 @@ class Price_Break:
         self.order_price = order_quantity * self.price
 
 
+class Project:
+    def __init__(self, name, revision, net_file_name, count, order, positions_file_name=None):
+        """ *Project*: Create a new project containing *name*, *revision*,
+            *net_file_name*, *count*. """
+
+        # Verify argument types:
+        assert isinstance(name, str)
+        assert isinstance(revision, str)
+        assert isinstance(net_file_name, str)
+        assert isinstance(count, int)
+        assert isinstance(order, Order)
+        assert isinstance(positions_file_name, str) or positions_file_name is None
+
+        # Load up *self*:
+        self.name = name
+        self.revision = revision
+        self.net_file_name = net_file_name
+        self.count = count
+        self.positions_file_name = positions_file_name
+        self.order = order
+        self.all_project_parts = []           # List[Project_Part] of all project parts
+        self.installed_project_parts = []     # List[Project_Part] project parts to be installed
+        self.uninstalled_project_parts = []   # List[Project_Part] project parts not to be installed
+
+        self.net_file_read()
+
+    def project_part_append(self, project_part):
+        """ *Project*: Append *project_part* onto the *Project* object (i.e. *self*). """
+
+        # Verify argument types:
+        assert isinstance(project_part, Project_Part)
+
+        self.all_project_parts.append(project_part)
+        if project_part.install:
+            self.installed_project_parts.append(project_part)
+        else:
+            self.uninstalled_project_parts.append(project_part)
+
+    def net_file_read(self):
+        """ *Project*: Read in net file for {self}. """
+
+        # Prevent accidental double read:
+        project_parts = self.all_project_parts
+        assert len(project_parts) == 0
+
+        errors = 0
+
+        # Process *net_file_name* adding footprints as needed:
+        net_file_name = self.net_file_name
+        # print("Read '{0}'".format(net_file_name))
+        if net_file_name.endswith(".net"):
+            with open(net_file_name, "r") as net_stream:
+                # Read contents of *net_file_name* in as a string *net_text*:
+                net_text = net_stream.read()
+
+            # Parse *net_text* into *net_se* (i.e. net S-expression):
+            net_se = sexpdata.loads(net_text)
+            # print("\nsexpedata.dumps=", sexpdata.dumps(net_se))
+            # print("")
+            # print("net_se=", net_se)
+            # print("")
+
+            # Visit each *component_se* in *net_se*:
+            net_file_changed = False
+            database = self.order.database
+            components_se = se_find(net_se, "export", "components")
+
+            # Each component has the following form:
+            #
+            #        (comp
+            #          (ref SW123)
+            #          (footprint nickname:NAME)              # May not be present
+            #          (libsource ....)
+            #          (sheetpath ....)
+            #          (tstamp xxxxxxxx))
+            # print("components=", components_se)
+            for component_index, component_se in enumerate(components_se[1:]):
+                # print("component_se=", component_se)
+                # print("")
+
+                # Grab the *reference* from *component_se*:
+                reference_se = se_find(component_se, "comp", "ref")
+                reference = reference_se[1].value()
+                # print("reference_se=", reference_se)
+                # print("")
+
+                # Find *part_name_se* from *component_se*:
+                part_name_se = se_find(component_se, "comp", "value")
+
+                # Suprisingly tedious, extract *part_name* as a string:
+                if isinstance(part_name_se[1], Symbol):
+                    part_name = part_name_se[1].value()
+                elif isinstance(part_name_se[1], int):
+                    part_name = str(part_name_se[1])
+                elif isinstance(part_name_se[1], float):
+                    part_name = str(part_name_se[1])
+                elif isinstance(part_name_se[1], str):
+                    part_name = part_name_se[1]
+                else:
+                    assert False, "strange part_name: {0}". \
+                      format(part_name_se[1])
+
+                # print(reference, part_name, footprint)
+
+                # Strip *comment* out of *part_name* if it exists:
+                comment = ""
+                colon_index = part_name.find(':')
+                if colon_index >= 0:
+                    comment = part_name[colon_index + 1:]
+                    part_name = part_name[0:colon_index]
+
+                # Now see if we have a match for *part_name* in *database*:
+                schematic_part = database.lookup(part_name)
+                if schematic_part is None:
+                    # {part_name} is not in {database}; output error message:
+                    print("File '{0}: Part Name '{2}' {3} not in database".format(
+                          net_file_name, 0, part_name, reference))
+                    errors += 1
+                else:
+                    # We have a match; create the *project_part*:
+                    project_part = Project_Part(self, schematic_part, reference, comment)
+                    self.project_part_append(project_part)
+
+                    # Grab *kicad_footprint* from *schematic_part*:
+                    kicad_footprint = schematic_part.kicad_footprint
+                    assert isinstance(kicad_footprint, str)
+
+                    # Grab *footprint_se* from *component_se* (if it exists):
+                    footprint_se = se_find(component_se, "comp", "footprint")
+                    # print("footprint_se=", footprint_se)
+                    # print("Part[{0}]:'{1}' '{2}' changed={3}".format(
+                    #    component_index, part_name, kicad_footprint, net_file_changed))
+
+                    # Either add or update the footprint:
+                    if footprint_se is None:
+                        # No footprint in the .net file; just add one:
+                        component_se.append(
+                          [Symbol("footprint"), Symbol("common:" + kicad_footprint)])
+                        print("Part {0}: Adding binding to footprint '{1}'".
+                              format(part_name, kicad_footprint))
+                        net_file_changed = True
+                    else:
+                        # We have a footprint in .net file:
+                        previous_footprint = footprint_se[1].value()
+                        previous_split = previous_footprint.split(':')
+                        current_split = kicad_footprint.split(':')
+                        assert len(previous_split) > 0
+                        assert len(current_split) > 0
+                        if len(current_split) == 2:
+                            # *kicad_footprint* has an explicit library,
+                            # so we can just use it and ignore
+                            # *previous_footprint*:
+                            new_footprint = kicad_footprint
+                        elif len(current_split) == 1 and len(previous_split) == 2:
+                            # *kicad_footprint* does not specify a library,
+                            # but the *previous_footprint* does.  We build
+                            # *new_foot_print* using the *previous_footprint*
+                            # library and the rest from *kicad_footprint*:
+                            new_footprint = \
+                              previous_split[0] + ":" + kicad_footprint
+                            # print("new_footprint='{0}'".format(new_footprint))
+                        elif len(current_split) == 1:
+                            new_footprint = "common:" + kicad_footprint
+                        else:
+                            assert False, ("previous_slit={0} current_split={1}".
+                                           format(previous_split, current_split))
+
+                        # Only do something if it changed:
+                        if previous_footprint != new_footprint:
+                            # Since they changed, update in place:
+                            # if isinstance(schematic_part, Alias_Part):
+                            #        print("**Alias_Part.footprint={0}".
+                            #          format(schematic_part.kicad_footprint))
+                            print("Part '{0}': Footprint changed from '{1}' to '{2}'".
+                                  format(part_name, previous_footprint, new_footprint))
+                            footprint_se[1] = Symbol(new_footprint)
+                            net_file_changed = True
+
+            # Write out updated *net_file_name* if *net_file_changed*:
+            if net_file_changed:
+                print("Updating '{0}' with new footprints".
+                      format(net_file_name))
+                net_file = open(net_file_name, "wa")
+                # sexpdata.dump(net_se, net_file)
+                net_se_string = sexpdata.dumps(net_se)
+                # sexpdata.dump(net_se, net_file)
+
+                # Now use some regular expressions to improve formatting to be more like
+                # what KiCad outputs:
+                net_se_string = re.sub(" \\(design ", "\n  (design ", net_se_string)
+
+                # Sheet part of file:
+                net_se_string = re.sub(" \\(sheet ",       "\n    (sheet ",         net_se_string)
+                net_se_string = re.sub(" \\(title_block ", "\n      (title_block ", net_se_string)
+                net_se_string = re.sub(" \\(title ",       "\n        (title ",     net_se_string)
+                net_se_string = re.sub(" \\(company ",     "\n        (company ",   net_se_string)
+                net_se_string = re.sub(" \\(rev ",         "\n        (rev ",       net_se_string)
+                net_se_string = re.sub(" \\(date ",        "\n        (date ",      net_se_string)
+                net_se_string = re.sub(" \\(source ",      "\n        (source ",    net_se_string)
+                net_se_string = re.sub(" \\(comment ",     "\n        (comment ",   net_se_string)
+
+                # Components part of file:
+                net_se_string = re.sub(" \\(components ", "\n  (components ",    net_se_string)
+                net_se_string = re.sub(" \\(comp ",       "\n    (comp ",        net_se_string)
+                net_se_string = re.sub(" \\(value ",      "\n      (value ",     net_se_string)
+                net_se_string = re.sub(" \\(footprint ",  "\n      (footprint ", net_se_string)
+                net_se_string = re.sub(" \\(libsource ",  "\n      (libsource ", net_se_string)
+                net_se_string = re.sub(" \\(sheetpath ",  "\n      (sheetpath ", net_se_string)
+                net_se_string = re.sub(" \\(path ",       "\n      (path ",      net_se_string)
+                net_se_string = re.sub(" \\(tstamp ",     "\n      (tstamp ",    net_se_string)
+
+                # Library parts part of file
+                net_se_string = re.sub(" \\(libparts ",    "\n  (libparts ",    net_se_string)
+                net_se_string = re.sub(" \\(libpart ",     "\n    (libpart ",   net_se_string)
+                net_se_string = re.sub(" \\(description ", "\n      (description ",  net_se_string)
+                net_se_string = re.sub(" \\(fields ",      "\n      (fields ",  net_se_string)
+                net_se_string = re.sub(" \\(field ",       "\n        (field ", net_se_string)
+                net_se_string = re.sub(" \\(pins ",        "\n      (pins ",    net_se_string)
+                # net_se_string = re.sub(" \\(pin ",         "\n        (pin ",   net_se_string)
+
+                # Network portion of file:
+                net_se_string = re.sub(" \\(nets ", "\n  (nets ", net_se_string)
+                net_se_string = re.sub(" \\(net ",  "\n    (net ", net_se_string)
+                net_se_string = re.sub(" \\(node ", "\n      (node ", net_se_string)
+
+                # General substitutions:
+                # net_se_string = re.sub(" \\;", ";", net_se_string)
+                # net_se_string = re.sub(" \\.", ".", net_se_string)
+
+                net_file.write(net_se_string)
+                net_file.close()
+            # else:
+            #        print("File '{0}' not changed".format(net_file_name))
+
+        elif net_file_name.ends_with(".cmp"):
+            # Read in {cmp_file_name}:
+            cmp_file_name = net_file_name
+            cmp_stream = open(cmp_file_name, "r")
+            cmp_lines = cmp_stream.readlines()
+            cmp_stream.close()
+
+            # Process each {line} in {cmp_lines}:
+            database = self.database
+            errors = 0
+            line_number = 0
+            for line in cmp_lines:
+                # Keep track of {line} number for error messages:
+                line_number = line_number + 1
+
+                # There are three values we care about:
+                if line.startswith("BeginCmp"):
+                    # Clear out the values:
+                    reference = None
+                    part_name = None
+                    footprint = None
+                elif line.startswith("Reference = "):
+                    reference = line[12:-2]
+                elif line.startswith("ValeurCmp = "):
+                    part_name = line[12:-2]
+                    # print("part_name:{0}".format(part_name))
+                    double_underscore_index = part_name.find("__")
+                    if double_underscore_index >= 0:
+                        shortened_part_name = \
+                          part_name[:double_underscore_index]
+                        # print("Shorten part name '{0}' => '{1}'".
+                        #  format(part_name, shortened_part_name))
+                        part_name = shortened_part_name
+                elif line.startswith("IdModule  "):
+                    footprint = line[12:-2].split(':')[1]
+                    # print("footprint='{0}'".format(footprint))
+                elif line.startswith("EndCmp"):
+                    part = database.part_lookup(part_name)
+                    if part is None:
+                        # {part_name} not in {database}; output error message:
+                        print("File '{0}', line {1}: Part Name {2} ({3} {4}) not in database".
+                              format(cmp_file_name, line_number, part_name, reference, footprint))
+                        errors = errors + 1
+                    else:
+                        footprint_pattern = part.footprint_pattern
+                        if fnmatch.fnmatch(footprint, footprint_pattern):
+                            # The footprints match:
+                            project_part = \
+                              Project_Part(self, part, reference, footprint)
+                            self.project_parts_append(project_part)
+                            part.project_parts.append(project_part)
+                        else:
+                            print(("File '{0}',  line {1}: {2}:{3} Footprint" +
+                                   "'{4}' does not match database '{5}'").format(
+                                   cmp_file_name, line_number,
+                                   reference, part_name, footprint,
+                                   footprint_pattern))
+                            errors = errors + 1
+                elif (line == "\n" or line.startswith("TimeStamp") or
+                      line.startswith("EndListe") or line.startswith("Cmp-Mod V01")):
+                    # Ignore these lines:
+                    line = line
+                else:
+                    # Unrecognized {line}:
+                    print("'{0}', line {1}: Unrecognized line '{2}'".
+                          format(cmp_file_name, line_number, line))
+                    errors = errors + 1
+        else:
+            print("Net file '{0}' name does not have a recognized suffix".format(net_file_name))
+
+        return errors
+
+    def assembly_summary_write(self, final_choice_parts):
+        """ *Project*: Write out an assembly summary .csv file for the *Project* object (i.e. *self*)
+            using *final_choice_parts*.
+        """
+
+        # Verify argument types:
+        assert isinstance(final_choice_parts, list)
+
+        # Open *project_file*:
+        project_file_name = "/tmp/{0}.csv".format(self.name)
+        project_file = open(project_file_name, "w")
+
+        # Write out the column headings:
+        project_file.write(
+          '"Quan.","Reference","Schematic Name","Description","Fractional",' +
+          '"Manufacturer","Manufacture PN","Vendor","Vendor PN"\n\n')
+
+        # Output the installed parts:
+        has_fractional_parts1 = self.assembly_summary_write_helper(True,
+                                                                   final_choice_parts, project_file)
+
+        # Output the uninstalled parts:
+        project_file.write("\nDo Not Install\n")
+
+        # Output the installed parts:
+        has_fractional_parts2 = self.assembly_summary_write_helper(False,
+                                                                   final_choice_parts, project_file)
+
+        # Explain what a fractional part is:
+        if has_fractional_parts1 or has_fractional_parts2:
+            project_file.write(
+              '"","\nFractional parts are snipped off of 1xN or 2xN break-way headers"\n')
+
+        # Close *project_file* and print out a summary announcement:
+        project_file.close()
+        print("Wrote out assembly file '{0}'".format(project_file_name))
+
+    def assembly_summary_write_helper(self, install, final_choice_parts, project_file):
+        """ *Project*: Write out an assembly summary .csv file for *Project* object (i.e. *self*)
+            out to *project_file*.  *install* is set *True* to list the installable parts from
+            *final_choice_parts* and *False* for an uninstallable parts listing.
+            This routine returns *True* if there are any fractional parts output to *project_file*.
+        """
+
+        # Verify argument types:
+        assert isinstance(install, bool)
+        assert isinstance(final_choice_parts, list)
+        assert isinstance(project_file, io.IOBase)
+
+        # Each *final_choice_part* that is part of the project (i.e. *self*) will wind up
+        # in a list in *project_parts_table*.  The key is the *schematic_part_key*:
+        project_parts_table = {}
+        for final_choice_part in final_choice_parts:
+            # Now figure out if final choice part is part of *project_parts*:
+            project_parts = final_choice_part.project_parts
+            for project_part in project_parts:
+                # We only care care about *final_choice_part* if is used on *project* and
+                # it matches the *install* selector:
+                if project_part.project == self and project_part.install == install:
+                    # We are on the project; create *schemati_part_key*:
+                    schematic_part = project_part.schematic_part
+                    schematic_part_key = "{0};{1}".format(
+                      schematic_part.base_name, schematic_part.short_footprint)
+
+                    # Create/append a list to *project_parts_table*, keyed on *schematic_part_key*:
+                    if schematic_part_key not in project_parts_table:
+                        project_parts_table[schematic_part_key] = []
+                    pairs_list = project_parts_table[schematic_part_key]
+
+                    # Append a pair of *project_part* and *final_choice_part* onto *pairs_list*:
+                    project_final_pair = (project_part, final_choice_part)
+                    pairs_list.append(project_final_pair)
+
+        # Now organize everything around the *reference_list*:
+        reference_project_parts = {}
+        for pairs_list in project_parts_table.values():
+            # We want to sort base on *reference_value* which is converted into *reference_text*:
+            reference_list = \
+              [project_final_pair[0].reference.upper() for project_final_pair in pairs_list]
+            reference_text = ", ".join(reference_list)
+            # print("reference_text='{0}'".format(reference_text))
+            project_part = pairs_list[0]
+            reference_project_parts[reference_text] = project_part
+
+        # Sort the *reference_parts_keys*:
+        reference_project_parts_keys = list(reference_project_parts.keys())
+        reference_project_parts_keys.sort()
+
+        # Now dig down until we have all the information we need for output the next
+        # `.csv` file line:
+        has_fractional_parts = False
+        for reference_project_parts_key in reference_project_parts_keys:
+            # Extract the *project_part* and *final_choice_part*:
+            project_final_pair = reference_project_parts[reference_project_parts_key]
+            project_part = project_final_pair[0]
+            final_choice_part = project_final_pair[1]
+            assert isinstance(final_choice_part, Choice_Part)
+
+            # Now get the corresponding *schematic_part*:
+            schematic_part = project_part.schematic_part
+            schematic_part_key = "{0};{1}".format(
+              schematic_part.base_name, schematic_part.short_footprint)
+            assert isinstance(schematic_part, Schematic_Part)
+
+            # Now get the *actual_part*:
+            actual_part = final_choice_part.selected_actual_part
+            if isinstance(actual_part, Actual_Part):
+
+                # Now get the Vendor_Part:
+                manufacturer_name = actual_part.manufacturer_name
+                manufacturer_part_name = actual_part.manufacturer_part_name
+                vendor_part = final_choice_part.selected_vendor_part
+                assert isinstance(vendor_part, Vendor_Part)
+
+                # Output the line for the .csv file:
+                vendor_name = vendor_part.vendor_name
+                vendor_part_name = vendor_part.vendor_part_name
+                quantity = final_choice_part.count_get()
+                fractional = "No"
+                if len(final_choice_part.fractional_parts) > 0:
+                    fractional = "Yes"
+                    has_fractional_parts = True
+                project_file.write('"{0} x","{1}","{2}","{3}","{4}","{5}","{6}","{7}","{8}"\n'.
+                                   format(quantity, reference_project_parts_key,
+                                          schematic_part_key, final_choice_part.description,
+                                          fractional, manufacturer_name, manufacturer_part_name,
+                                          vendor_name, vendor_part_name))
+            else:
+                print("Problems with actual_part", actual_part)
+
+        return has_fractional_parts
+
+    def positions_process(self, database):
+        """ *Project*: """
+
+        project = self
+        positions_file_name = project.positions_file_name
+        positions_table = PositionsTable(positions_file_name, database)
+        positions_table.reorigin("FD1")
+        positions_table.footprints_rotate(database)
+
+
+class Project_Part:
+    # A Project_Part basically specifies the binding of a Schematic_Part
+    # and is associated schemtatic reference.  Reference strings must
+    # be unique for a given project.
+
+    def __init__(self, project, schematic_part, reference, comment):
+        """ *Project_Part*: Initialize *self* to contain *project*,
+            *schematic_part*, *reference*, and *comment*. """
+
+        # Verify argument types:
+        assert isinstance(project, Project)
+        assert isinstance(schematic_part, Schematic_Part)
+        assert isinstance(reference, str)
+        assert isinstance(comment, str)
+
+        # Load up *self*:
+        self.project = project
+        self.schematic_part = schematic_part
+        self.reference = reference
+        self.comment = comment
+        self.install = (comment != "DNI")
+
+
 class Request:
     def __init__(self, schematic_part, amount):
         """ *Request*: Create *Request* containing *schematic_part*
@@ -7329,7 +7327,7 @@ class Schematic_Part:
             self.base_name = base_name
             self.short_footprint = short_footprint
             self.kicad_footprint = kicad_footprint
-            self.board_parts = []
+            self.project_parts = []
         else:
             self.schematic_part_name = schematic_part_name
             print("Schematic Part Name '{0}' has no ';' separator!".
@@ -7540,30 +7538,30 @@ class Choice_Part(Schematic_Part):
 
         return self
 
-    def board_part_append(self, board_part):
-        """ *Choice_Part*: Store *board_part* into the *Choice_Part* object
+    def project_part_append(self, project_part):
+        """ *Choice_Part*: Store *project_part* into the *Choice_Part* object
             (i.e. *self*.)
         """
 
         # Verify argument types:
-        assert isinstance(board_part, Board_Part)
+        assert isinstance(project_part, Project_Part)
 
-        # Append *board_part* to *board_parts*:
-        self.board_parts.append(board_part)
+        # Append *project_part* to *project_parts*:
+        self.project_parts.append(project_part)
 
-    def board_parts_sort(self):
-        """ *Choice_Part*: Sort the *board_parts* of the *Choice_Part* object
+    def project_parts_sort(self):
+        """ *Choice_Part*: Sort the *project_parts* of the *Choice_Part* object
             (i.e. *self*.)
         """
 
-        # Sort the *board_parts* using a key of
-        # (board_name, reference, reference_number).  A reference of
+        # Sort the *project_parts* using a key of
+        # (project_name, reference, reference_number).  A reference of
         # "SW123" gets conferted to (..., "SW123", 123):
-        board_parts = self.board_parts
-        board_parts.sort(key=lambda board_part:
-                         (board_part.board.name,
-                          text_filter(board_part.reference, str.isalpha).upper(),
-                          int(text_filter(board_part.reference, str.isdigit))))
+        project_parts = self.project_parts
+        project_parts.sort(key=lambda project_part:
+                           (project_part.project.name,
+                            text_filter(project_part.reference, str.isalpha).upper(),
+                            int(text_filter(project_part.reference, str.isdigit))))
 
         # print("  {0}:{1};{2} {3}:{4}".\
         #  format(choice_part.schematic_part_name,
@@ -7577,8 +7575,8 @@ class Choice_Part(Schematic_Part):
 
         fractional_parts = self.fractional_parts
         if len(fractional_parts) == 0:
-            for board_part in self.board_parts:
-                count += board_part.board.count
+            for project_part in self.project_parts:
+                count += project_part.project.count
         else:
             # for fractional_part in fractional_parts:
             #        print("{0}".format(fractional_part.schematic_part_name))
@@ -7596,8 +7594,8 @@ class Choice_Part(Schematic_Part):
 
             # Compute the *count*:
             numerator = 0
-            for board_part in self.board_parts:
-                schematic_part = board_part.schematic_part
+            for project_part in self.project_parts:
+                schematic_part = project_part.schematic_part
                 # print("'{0}'".format(schematic_part.schematic_part_name))
                 if isinstance(schematic_part, Alias_Part):
                     alias_parts = schematic_part
@@ -7610,7 +7608,7 @@ class Choice_Part(Schematic_Part):
                     assert False, "Missing code"
 
                 fractional_numerator = fractional_part.numerator
-                for index in range(board_part.board.count):
+                for index in range(project_part.project.count):
                     if numerator + fractional_numerator > denominator:
                         count += 1
                         numerator = 0
@@ -7648,19 +7646,19 @@ class Choice_Part(Schematic_Part):
         """ *Choice_Part*: Return a string of references for *self*. """
 
         references_text = ""
-        previous_board = None
+        previous_project = None
         is_first = True
-        for board_part in self.board_parts:
-            board = board_part.board
-            if board != previous_board:
+        for project_part in self.project_parts:
+            project = project_part.project
+            if project != previous_project:
                 if not is_first:
                     references_text += "]"
-                references_text += "[{0}:".format(board.name)
-            previous_board = board
+                references_text += "[{0}:".format(project.name)
+            previous_project = project
             is_first = False
 
             # Now tack the reference to the end:
-            references_text += " {0}".format(board_part.reference)
+            references_text += " {0}".format(project_part.reference)
         references_text += "]"
         return references_text
 
