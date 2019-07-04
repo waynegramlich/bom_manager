@@ -135,7 +135,7 @@ With these new concepts the over all BOM manager process is:
 With these new concepts, the BOM manager algorithm is summarized as:
 
         Order => Projects => CAD Parts =>
-	    Collections => Tables => Searches =>
+            Collections => Tables => Searches =>
                 Manufacturer Parts => Vendor Parts => Vendor Orders
 
 There are a number of different roles involved with BOM Manager:
