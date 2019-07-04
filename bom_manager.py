@@ -616,9 +616,9 @@ class Database:
 
         # Connectors:
 
-        ## Male Connectors:
+        # Male Connectors:
 
-        ### Create the fractional parts for 1XN male headers:
+        # Create the fractional parts for 1XN male headers:
         self.choice_part("M1X40;M1X40", "Pin_Header_Straight_1x40", "",
                          "CONN HEADER .100in SNGL STR 40POS").actual_part(
           "Sullins", "PREC040SAAN-RC", [
@@ -708,7 +708,7 @@ class Database:
         # self.alias_part("MTR_TRN_CON;M1X7",
         #  ["M1X7;M1X7"], "Pin_Header_Straight_1x07")
 
-        ### Create the fractional parts for the 2XN male headers:
+        # Create the fractional parts for the 2XN male headers:
         self.choice_part("M2X40;M2X40", "Pin_Header_Straight_2x40",
                          "Pin_Header_Straight_2x40",
                          "CONN HEADER .100in DUAL STR 80POS").actual_part(
@@ -1002,7 +1002,7 @@ class Database:
                         ["JSTPH10;JSTPH10", "FJSTPH10;FJSTPH10",
                          (10, "JSTPH_PIN;JSTPH_PIN")], "JSTPH10")
 
-        ## Female connectors:
+        # Female connectors:
 
         self.choice_part("F1X3;F1X3", "Pin_Header_Straight_1x03", "",
                          "CONN HEADER FEMALE 3POS .1inch").actual_part(
@@ -1353,18 +1353,14 @@ class Database:
         # Holes:
 
         self.choice_part("HOLE;2.5MM", "2_5MM_HOLE", "",
-                         "2.5MM HOLE").actual_part(
-          "Digi-Key", "RM2X8MM 2701") # Kludge
+                         "2.5MM HOLE").actual_part("Digi-Key", "RM2X8MM 2701")  # Kludge
         self.choice_part("HOLE;3MM_SLOT", "CASTER_SLOT", "",
-                         "3MM SLOT HOLE").actual_part(
-          "Digi-Key", "RM3X10MM 2701") # Kludge
+                         "3MM SLOT HOLE").actual_part("Digi-Key", "RM3X10MM 2701")  # Kludge
         self.alias_part("HOLE;3MM", [".25IN_SCREW;#4-40"], "3MM_HOLE")
         self.choice_part("HOLE;2MM", "2MM_HOLE", "",
-                         "2MM HOLE").actual_part(
-          "Digi-Key", "PMS 632 0031 SL") # Kludge
+                         "2MM HOLE").actual_part("Digi-Key", "PMS 632 0031 SL")  # Kludge
         self.choice_part("SLOT_HOLE;10X20MM", "10X20MM_HOLE", "",
-                         "10X20MM HOLE").actual_part( # Kludge
-          "Digi-Key", "PMS 632 0063 SL")
+                         "10X20MM HOLE").actual_part("Digi-Key", "PMS 632 0063 SL")  # Kludge
 
         # Fiducials:
         self.alias_part("FID;FID", ["M1X40;M1X40"], "Fiducial",
@@ -1433,7 +1429,6 @@ class Database:
           "Microchip", "MCP1804T-3302I/MB").actual_part(     # Vout/Gnd/Vin OGI  1.7V@100mA
           "STM", "L78L33ABUTR").actual_part(                 # Vout/Gnd/Vin OGI  -
           "STM", "LD2981CU33TR")                             # Vout/Gnd/Vin OGI 375@100mA
-
 
         self.choice_part("15V_REG;SOT89", "SOT-89-3", "",
                          "IC REG LINEAR 15V 100MA SOT89-3", rotation=270.0).actual_part(
@@ -1663,7 +1658,7 @@ class Database:
                          "IC 8BIT SHIFT REGISTER 16TSSOP").actual_part(
           "Nexperia", "74HC595PW,112").actual_part(
           "Nexperia", "74HC595PW-Q100,118").actual_part(
-          "Nexperia", "74HC595PW,118").actual_part(                         
+          "Nexperia", "74HC595PW,118").actual_part(
           "On", "MC74HC595ADTG").actual_part(
           "Fairchild", "MM74HC595MTC").actual_part(
           "Diodes", "74HC595T16-13").actual_part(
@@ -2147,9 +2142,9 @@ class Database:
         # Verify argument types:
         assert isinstance(schematic_part_name, str)
         assert isinstance(alias_part_names, list)
-        assert isinstance(feeder_name, str) or feeder_name == None
-        assert isinstance(part_height, float) or part_height == None
-        assert isinstance(rotation, float) or rotation == None
+        assert isinstance(feeder_name, str) or feeder_name is None
+        assert isinstance(part_height, float) or part_height is None
+        assert isinstance(rotation, float) or rotation is None
         for alias_part_name in alias_part_names:
             assert isinstance(alias_part_name, str) or isinstance(alias_part_name, tuple)
 
@@ -2202,11 +2197,11 @@ class Database:
         assert isinstance(kicad_footprint, str)
         assert isinstance(location, str)
         assert isinstance(description, str)
-        assert (isinstance(rotation, float) and 0.0 <= rotation <= 360.0) or rotation == None
+        assert (isinstance(rotation, float) and 0.0 <= rotation <= 360.0) or rotation is None
         assert isinstance(pick_dx, float)
         assert isinstance(pick_dy, float)
-        assert isinstance(feeder_name, str) or feeder_name == None
-        assert isinstance(part_height, float) or part_height == None
+        assert isinstance(feeder_name, str) or feeder_name is None
+        assert isinstance(part_height, float) or part_height is None
 
         # Make sure we do not have a duplicate:
         schematic_parts = self.schematic_parts
@@ -2261,7 +2256,6 @@ class Database:
 
         # Verify argument types:
         assert isinstance(actual_part, Actual_Part)
-
 
         # Grab some values from *actual_part*:
         manufacturer_name =      actual_part.manufacturer_name
@@ -2325,10 +2319,9 @@ class Database:
                 for a_tree in h3_tree.find_all("a"):
                     vendor_name = a_tree.get_text()
 
-
             # If we can not extact a valid *vendor_name* there is no
             # point in continuing to work on this *distributor_tree*:
-            if vendor_name == None:
+            if vendor_name is None:
                 continue
 
             # This code is in the *Vendor_Part* initialize now:
@@ -2382,7 +2375,7 @@ class Database:
                     #    <td class="td-stock">stock</td>
                     stock = 0
                     stock_tree = row_tree.find("td", class_="td-stock")
-                    if stock_tree != None:
+                    if stock_tree is not None:
                         # Strip out commas, space, etc.:
                         stock_text = \
                           digits_only_re.sub("", stock_tree.get_text())
@@ -2421,11 +2414,11 @@ class Database:
                     #    </td>
                     price_breaks = []
                     price_list_tree = row_tree.find("td", class_="td-price")
-                    if price_list_tree != None:
+                    if price_list_tree is not None:
                         for li_tree in price_list_tree.find_all("li"):
                             quantity_tree = li_tree.find("span", class_="label")
                             price_tree = li_tree.find("span", class_="value")
-                            if quantity_tree != None and price_tree != None:
+                            if quantity_tree is not None and price_tree is not None:
                                 # We extract *quantity*:
                                 quantity_text = digits_only_re.sub("", quantity_tree.get_text())
                                 quantity = 1
@@ -2508,7 +2501,7 @@ class Database:
         # Verify argument types:
         assert isinstance(feeder_name, str)
         assert not ';' in feeder_name
-        assert (isinstance(rotation, float) and 0.0 <= rotation <= 360.0) or rotation == None
+        assert (isinstance(rotation, float) and 0.0 <= rotation <= 360.0) or rotation is None
 
         database = self
         footprints = database.footprints
@@ -2642,6 +2635,7 @@ class Database:
                 print("Actual Part: '{0} {1}' is not in database". \
                       format(manufacturer_name, manufacturer_part_name))
 
+
 class Order:
     # An Order consists of a list of boards to orders parts for.
     # In addition, the list of vendors to exclude from the ordering
@@ -2656,7 +2650,7 @@ class Order:
 
         assert isinstance(database, Database)
 
-        self.boards = []          # List[Board]: Boards        
+        self.boards = []          # List[Board]: Boards
         self.excluded_vendor_names = {} # Dict[String]: Excluded vendors
         self.selected_vendor_names = None
         self.requests = []          # List[Request]: Additional requested parts
@@ -2672,7 +2666,7 @@ class Order:
         assert isinstance(revision, str)
         assert isinstance(net_file_name, str)
         assert isinstance(count, int)
-        assert isinstance(positions_file_name, str) or positions_file_name == None
+        assert isinstance(positions_file_name, str) or positions_file_name is None
 
         # Create the *Board*:
         # print("net_file_name='{0}'".format(net_file_name))
@@ -2702,7 +2696,7 @@ class Order:
 
         # Sort *final_choice_parts* using *key_function*.
         final_choice_parts = self.final_choice_parts
-        final_choice_parts.sort(key= key_function)
+        final_choice_parts.sort(key=key_function)
 
         # Now generate a BOM summary:
         total_cost = 0.0
@@ -2712,7 +2706,7 @@ class Order:
 
             # Sort the *board_parts* by *board* followed by reference:
             board_parts = choice_part.board_parts
-            board_parts.sort(key = lambda board_part:
+            board_parts.sort(key=lambda board_part:
                              (board_part.board.name, board_part.reference.upper(),
                               int(text_filter(board_part.reference, str.isdigit))) )
 
@@ -2760,7 +2754,7 @@ class Order:
                                selected_vendor_part.vendor_name,
                                selected_vendor_part.vendor_part_name,
                                selected_manufacturer_name,
-                               selected_manufacturer_part_name,                
+                               selected_manufacturer_part_name,
                                price_breaks_text))
 
                 # Print out the result:
@@ -2786,7 +2780,7 @@ class Order:
 
         # Sort *final_choice_parts* using *key_function*.
         final_choice_parts = self.final_choice_parts
-        final_choice_parts.sort(key = lambda choice_part:
+        final_choice_parts.sort(key=lambda choice_part:
                                 (choice_part.selected_vendor_name,
                                  choice_part.selected_total_cost,
                                  choice_part.schematic_part_name) )
@@ -2797,7 +2791,7 @@ class Order:
 
             # Sort the *board_parts* by *board* followed by reference:
             board_parts = choice_part.board_parts
-            board_parts.sort(key = lambda board_part:
+            board_parts.sort(key=lambda board_part:
                              (board_part.board.name, board_part.reference.upper(),
                               int(text_filter(board_part.reference, str.isdigit))))
 
@@ -3023,7 +3017,7 @@ class Order:
         database = self.database
 
         # Sort *boards* by name (not really needed, but why not?):
-        boards.sort(key = lambda board:board.name)
+        boards.sort(key=lambda board:board.name)
 
         # Visit each *board* in *boards* to locate the associated
         # *Choice_Part* objects.  We want to eliminate duplicate
@@ -3036,9 +3030,9 @@ class Order:
             # Sort *board_parts* by reference.  A reference is a sequence
             # letters followed by an integer (e.g. SW1, U12, D123...)
             # Sort alphabetically followed by numerically.  The lambda
-            # expression converts "SW123" into ("SW", 123).  
+            # expression converts "SW123" into ("SW", 123).
             board_parts = board.all_board_parts
-            board_parts.sort(key = lambda board_part: (
+            board_parts.sort(key=lambda board_part: (
                              text_filter(board_part.reference, str.isalpha).upper(),
                              int(text_filter(board_part.reference, str.isdigit))))
 
@@ -3102,7 +3096,7 @@ class Order:
         # Sort by *final_choice_parts* by schematic part name:
         final_choice_parts = list(choice_parts_table.values())
         final_choice_parts.sort(
-          key = lambda choice_part: choice_part.schematic_part_name)
+          key=lambda choice_part: choice_part.schematic_part_name)
         self.final_choice_parts = final_choice_parts
 
         # Sweep through *final_choice_parts* and force the associated
@@ -3184,11 +3178,9 @@ class Order:
         """ *Order*: Process the *Order* object (i.e. *self*.) """
 
         # Use *order instead of *self*:
-        order = self        
+        order = self
 
         # print("=>Order.process()")
-
-
 
         # Collect the messages from each vendor reduction operation into *reduced_vendor_messages*:
         reduced_vendor_messages = []
@@ -3203,10 +3195,9 @@ class Order:
         # (by vendor, by cost, by part_name, etc.)
         final_choice_parts = order.final_choice_parts_compute()
 
-        # 
         excluded_vendor_names = order.excluded_vendor_names
         selected_vendor_names = order.selected_vendor_names
-        if selected_vendor_names != None:
+        if selected_vendor_names is not None:
             all_vendor_names = order.vendor_names_get(final_choice_parts, excluded_vendor_names)
             for vendor_name in all_vendor_names:
                 if not vendor_name in selected_vendor_names:
@@ -3328,7 +3319,6 @@ class Order:
                 csv_file.close()
 
         # print("<=Order.process()")
-
 
     def quad_compute(self, choice_parts, excluded_vendor_names,
                      excluded_vendor_name, trace=False):
@@ -3452,7 +3442,6 @@ class Order:
                     vendor_cost += choice_part.selected_total_cost
             print("    {0}: ${1:.2f}".format(vendor_name, vendor_cost))
 
-
     def vendor_exclude(self, vendor_name):
         """ *Order*: Exclude *vendor_name* from the *Order* object (i.e. *self*)
         """
@@ -3494,6 +3483,7 @@ class Order:
         # Stuff *selected_vendors* into *order*:
         order.selected_vendor_names = selected_vendor_names
 
+
 class PositionsTable:
     """ PositionsTable: Represents a part positining table for a Pick and Place machine. """
 
@@ -3501,7 +3491,7 @@ class PositionsTable:
         """ *PositionsTable*: Initialize the *PositionsTable* object read in from *file_name*:
 
         The arguments are:
-        * *file_name*: The file name to read positions table from.  *file_name* must 
+        * *file_name*: The file name to read positions table from.  *file_name* must
           have one of the following suffixes:
           * `.csv`: A comma separated value format.
           * `.pos`: A text file with the columns separated by one or more spaces.
@@ -3521,7 +3511,7 @@ class PositionsTable:
         rows = list()
         row_table = dict()
         mapping = list()
-        trailers = list()        
+        trailers = list()
         headings_line = None
         headings = list()
         headings_size = 0
@@ -3592,7 +3582,7 @@ class PositionsTable:
                                 pick_dy = alias_part.pick_dy
                                 if isinstance(feeder_name, str) and isinstance(part_height, float):
                                     # print("'{0}'=>'{1}''".format(value, feeder_name))
-                                    value = feeder_name                
+                                    value = feeder_name
                                     part_heights[value] = part_height
                                 # print("part_heights['{0}'] = {1}".format(value, part_height))
                             package = columns[heading_indices["Package"]]
@@ -3717,7 +3707,7 @@ class PositionsTable:
                 else:
                     print("Footprint '{0}' does not have a feeder rotation.".format(feeder_name))
             else:
-                # No match:            
+                # No match:
                 print("Could not find footprint '{0}' from file '{1}'".
                       format(feeder_name, file_name))
         positions_table.write("/tmp/" + file_name)
@@ -3831,6 +3821,7 @@ class PositionsTable:
         with open(file_name, "w") as output_file:
             output_file.write("\r\n".join(final_lines))
 
+
 class PositionRow:
     """ PositionRow: Represents one row of data for a *PositionsTable*: """
 
@@ -3916,6 +3907,7 @@ class PositionRow:
         row.x += dx
         row.y += dy
 
+
 class Request:
     def __init__(self, schematic_part, amount):
         """ *Request*: Create *Request* containing *schematic_part*
@@ -3924,6 +3916,7 @@ class Request:
         assert isinstance(amount, int)
         self.schematic_part = schematic_part
         self.amount = amount
+
 
 class Inventory:
     def __init__(self, schematic_part, amount):
@@ -3938,6 +3931,7 @@ class Inventory:
         self.schematic_part = schematic_part
         self.amount = amount
 
+
 class Board:
     def __init__(self, name, revision, net_file_name, count, order, positions_file_name=None):
         """ *Board*: Create a new board containing *name*, *revision*,
@@ -3949,8 +3943,7 @@ class Board:
         assert isinstance(net_file_name, str)
         assert isinstance(count, int)
         assert isinstance(order, Order)
-        assert isinstance(positions_file_name, str) or positions_file_name == None
-
+        assert isinstance(positions_file_name, str) or positions_file_name is None
 
         # Load up *self*:
         self.name = name
@@ -4052,7 +4045,7 @@ class Board:
 
                 # Now see if we have a match for *part_name* in *database*:
                 schematic_part = database.lookup(part_name)
-                if schematic_part == None:
+                if schematic_part is None:
                     # {part_name} is not in {database}; output error message:
                     print("File '{0}: Part Name '{2}' {3} not in database".format(
                           net_file_name, 0, part_name, reference))
@@ -4073,7 +4066,7 @@ class Board:
                     #    component_index, part_name, kicad_footprint, net_file_changed))
 
                     # Either add or update the footprint:
-                    if footprint_se == None:
+                    if footprint_se is None:
                         # No footprint in the .net file; just add one:
                         component_se.append(
                           [Symbol("footprint"), Symbol("common:" + kicad_footprint)])
@@ -4113,10 +4106,8 @@ class Board:
                             # if isinstance(schematic_part, Alias_Part):
                             #        print("**Alias_Part.footprint={0}".
                             #          format(schematic_part.kicad_footprint))
-                            print(("Part '{0}': " + 
-                                  "Footprint changed from '{1}' to '{2}'").
-                                  format(part_name,
-                                  previous_footprint, new_footprint))
+                            print("Part '{0}': Footprint changed from '{1}' to '{2}'".
+                                  format(part_name, previous_footprint, new_footprint))
                             footprint_se[1] = Symbol(new_footprint)
                             net_file_changed = True
 
@@ -4193,7 +4184,7 @@ class Board:
 
                 # There are three values we care about:
                 if line.startswith("BeginCmp"):
-                    # Clear out the values:        
+                    # Clear out the values:
                     reference = None
                     part_name = None
                     footprint = None
@@ -4214,7 +4205,7 @@ class Board:
                     # print("footprint='{0}'".format(footprint))
                 elif line.startswith("EndCmp"):
                     part = database.part_lookup(part_name)
-                    if part == None:
+                    if part is None:
                         # {part_name} not in {database}; output error message:
                         print("File '{0}', line {1}: Part Name {2} ({3} {4}) not in database".
                               format(cmp_file_name, line_number, part_name, reference, footprint))
@@ -4389,6 +4380,7 @@ class Board:
         positions_table.reorigin("FD1")
         positions_table.footprints_rotate(database)
 
+
 class Board_Part:
     # A Board_Part basically specifies the binding of a Schematic_Part
     # and is associated schemtatic reference.  Reference strings must
@@ -4410,6 +4402,7 @@ class Board_Part:
         self.reference = reference
         self.comment = comment
         self.install = (comment != "DNI")
+
 
 class Schematic_Part:
     # A *Schematic_Part* represents part with a footprint.  The schematic
@@ -4462,6 +4455,7 @@ class Schematic_Part:
 
         assert False, "No footprints_check method for this Schematic Part"
 
+
 class Choice_Part(Schematic_Part):
     # A *Choice_Part* specifies a list of *Actual_Part*'s to choose from.
 
@@ -4478,11 +4472,11 @@ class Choice_Part(Schematic_Part):
         assert isinstance(kicad_footprint, str)
         assert isinstance(location, str)
         assert isinstance(description, str)
-        assert isinstance(rotation, float) or rotation == None
+        assert isinstance(rotation, float) or rotation is None
         assert isinstance(pick_dx, float)
         assert isinstance(pick_dy, float)
-        assert isinstance(feeder_name, str) or feeder_name == None
-        assert isinstance(part_height, float) or part_height == None
+        assert isinstance(feeder_name, str) or feeder_name is None
+        assert isinstance(part_height, float) or part_height is None
 
         # Load up *choice_part* (i.e. *self*):
         super().__init__(schematic_part_name, kicad_footprint)
@@ -4516,8 +4510,7 @@ class Choice_Part(Schematic_Part):
             result = "{0};{1}".format(self.base_name, self.short_footprint)
         return result
 
-
-    def actual_part(self, manufacturer_name, manufacturer_part_name, vendor_triples = []):
+    def actual_part(self, manufacturer_name, manufacturer_part_name, vendor_triples=[]):
         """ *Choice_Part*: Create an *Actual_Part* that contains *manufacturer_name* and
             *manufacturer_part_name* and append it to the *Choice_Part* object (i.e. *self*.)
             For parts whose prices are not available via screen scraping, it is possible to specify
@@ -4611,7 +4604,7 @@ class Choice_Part(Schematic_Part):
         # (board_name, reference, reference_number).  A reference of
         # "SW123" gets conferted to (..., "SW123", 123):
         board_parts = self.board_parts
-        board_parts.sort(key = lambda board_part:
+        board_parts.sort(key=lambda board_part:
                          (board_part.board.name,
                           text_filter(board_part.reference, str.isalpha).upper(),
                           int(text_filter(board_part.reference, str.isdigit))))
@@ -4853,6 +4846,7 @@ class Choice_Part(Schematic_Part):
             actual_part.vendor_names_load(
               vendor_names_table, excluded_vendor_names)
 
+
 class Alias_Part(Schematic_Part):
     # An *Alias_Part* specifies one or more *Schematic_Parts* to use.
 
@@ -4864,8 +4858,8 @@ class Alias_Part(Schematic_Part):
         # Verify argument types:
         assert isinstance(schematic_part_name, str)
         assert isinstance(schematic_parts, list)
-        assert isinstance(feeder_name, str) or feeder_name == None
-        assert isinstance(part_height, float) or part_height == None
+        assert isinstance(feeder_name, str) or feeder_name is None
+        assert isinstance(part_height, float) or part_height is None
         assert isinstance(pick_dx, float)
         assert isinstance(pick_dy, float)
         for schematic_part in schematic_parts:
@@ -4911,6 +4905,7 @@ class Alias_Part(Schematic_Part):
         for schematic_part in schematic_parts:
             schematic_part.footprints_check(kicad_footprints)
 
+
 class Footprint:
     """ *Footprint*: Represents a PCB footprint. """
 
@@ -4925,12 +4920,13 @@ class Footprint:
 
         # Verify argument types:
         assert isinstance(name, str)
-        assert isinstance(rotation, float) and 0.0 <= rotation <= 360.0 or rotation == None
+        assert isinstance(rotation, float) and 0.0 <= rotation <= 360.0 or rotation is None
 
         # Stuff values into *footprint* (i.e. *self*):
         footprint = self
         footprint.name = name
         footprint.rotation = rotation
+
 
 class Fractional_Part(Schematic_Part):
     # A *Fractional_Part* specifies a part that is constructed by
@@ -4978,6 +4974,7 @@ class Fractional_Part(Schematic_Part):
         kicad_footprint = fractional_part.kicad_footprint
         if kicad_footprint != "-":
             kicad_footprints[kicad_footprint] = fractional_part.schematic_part_name
+
 
 class Actual_Part:
      # An *Actual_Part* represents a single manufacturer part.
@@ -5031,6 +5028,7 @@ class Actual_Part:
             vendor_name = vendor_part.vendor_name
             if not vendor_name in excluded_vendor_names:
                 vendor_names_table[vendor_name] = None
+
 
 class Vendor_Part:
     # A vendor part represents a part that can be ordered from a vendor.
@@ -5087,7 +5085,6 @@ class Vendor_Part:
         # price_breaks = vendor_part.price_breaks
         return "'{0}':'{1}'".format(vendor_name, vendor_part_name)
 
-
     def dump(self, out_stream, indent):
         """ *Vendor_Part*: Dump the *Vendor_Part* (i.e. *self*) out to
             *out_stream* in human readable form indented by *indent* spaces.
@@ -5121,6 +5118,7 @@ class Vendor_Part:
             price_breaks_text += "{0}/${1:.3f} ".format(
               price_break.quantity, price_break.price)
         return price_breaks_text
+
 
 class Price_Break:
     # A price break is where a the pricing changes:
@@ -5158,6 +5156,7 @@ class Price_Break:
         self.order_quantity = order_quantity = max(needed, self.quantity)
         self.order_price = order_quantity * self.price
 
+
 # "se" stands for "S Expression":
 def se_find(se, base_name, key_name):
     """ {}: Find *key_name* in *se* and return its value. """
@@ -5188,6 +5187,7 @@ def se_find(se, base_name, key_name):
             break
     return result
 
+
 def main():
     database = Database()
     euros = database.exchange_rate("USD", "EUR")
@@ -5195,6 +5195,7 @@ def main():
     order = Order(database)
     order.board("bus_loki", "F.1", "bus_loki.net", 1)
     order.process()
+
 
 if __name__ == "__main__":
     main()
