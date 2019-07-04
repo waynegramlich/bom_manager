@@ -1,7 +1,48 @@
 #!/usr/bin/env python3
 
-#<----------------------------------- 100 characters --------------------------------------------->|
+# <------------------------------------------- 100 characters ------------------------------------>|
 
+# Coding standards:
+# * In general, the coding guidelines for PEP 8 are used.
+# * All code and docmenation lines must be on lines of 100 characters or less.  No exceptions!
+# * Comments:
+#   * All code comments are written in [Markdown](https://en.wikipedia.org/wiki/Markdown).
+#   * Code is organized into blocks are preceeded by comment that explains the code block.
+#   * For classes, a comment of the form # CLASS_NAME: is before each class definition as an
+#     aid for editor searching.
+#   * For methods, a comment of the form `# CLASS_NAME.METHOD_NAME():` is before each method
+#     definition as an aid for editor searching.
+# * Class/Function standards:
+#   * Indentation levels are multiples of 4 spaces.
+#   * Continuation lines adhere to PEP 8 standards.
+#   * In general, classes are listed alphabetically.  The exception is base clases will
+#     preceed sub-classes (since Python does not support forward class declarations.)
+#   * All methods within a class are listed alphabetically.
+#   * No duck typing!  All function/method arguments are checked for compatibale types.
+#   * Inside a method, *self* is usually replaced with more descriptive variable name.
+#   * Generally, single character strings are in single quotes (`'`) and multi characters in double
+#     quotes (`"`).  Empty strings are represented as `""`.  Strings with multiple double quotes
+#     can be enclosed in single quotes.
+#   * Lint with:
+#
+#       flake8 --max-line-length=100 bom_manager.py
+#
+# Install Notes:
+#
+#       sudo apt-get install xclip xsel
+#
+# Tasks:
+# * Decode Digi-Key parametric search URL's.
+# * Start integration with bom_manager.py
+#   * Record Digi-Key URL's via clip-board
+#   * Capture Digi-Key CSV table via F12 & clip-board
+# * Start providing ordering operations.
+# * Reorder tables/parameters/enumerations/searches.
+# * Sort search results
+# * Table search templates
+# * Footprint hooks
+# * Better parametric search
+#
 # # bom_manager
 #
 # ## Overview:
@@ -144,19 +185,34 @@
 # scrapers will continue to be developed and supported by the free
 # software community.
 
-# Import some libraries:
+# Import some libraries (alphabetical order):
 import currency_converter         # Currency converter
 from bs4 import BeautifulSoup     # HTML/XML data structucure searching
+import copy                       # Is this used any more?
+import csv
+import currency_converter         # Currency converter
+from functools import partial
 import fnmatch                    # File Name Matching
 import io                         # I/O stuff
-import os.path                    # File names/paths
+import lxml.etree as etree
 import pickle                     # Python data structure pickle/unpickle
+from PySide2.QtUiTools import QUiLoader
+from PySide2.QtWidgets import (QApplication, QComboBox, QLineEdit, QMainWindow,
+                               QPlainTextEdit, QPushButton,
+                               QTableWidget, QTableWidgetItem,
+                               QTreeView, QFileSystemModel,
+                               QWidget)
+from PySide2.QtCore import (QAbstractItemModel, QDir, QFile, QItemSelectionModel, QModelIndex, Qt)
+import pyperclip
+import os
 import re                         # Regular expressions
 import requests                   # HTML Requests
 import sexpdata                   # (LISP) S_EXpresson Data
 from sexpdata import Symbol       # (LISP) S-EXpression Symbol
-import sys                        # Miscellanesous SYStem stuff
+import sys
 import time                       # Time package
+import webbrowser
+# import xmlschema
 
 # Data Structure and Algorithm Overview:
 #
@@ -5174,69 +5230,6 @@ def se_find(se, base_name, key_name):
             result = sub_se
             break
     return result
-
-
-#!/usr/bin/env python3
-
-#<-------------------------------------------- 100 characters ------------------------------------>|
-
-# Coding standards:
-# * In general, the coding guidelines for PEP 8 are used.
-# * All code and docmenation lines must be on lines of 100 characters or less.
-# * Comments:
-#   * All code comments are written in [Markdown](https://en.wikipedia.org/wiki/Markdown).
-#   * Code is organized into blocks are preceeded by comment that explains the code block.
-#   * For methods, a comment of the form `# CLASS_NAME.METHOD_NAME():` is before each method
-#     definition as an aid for editor searching.
-# * Class/Function standards:
-#   * Indentation levels are multiples of 4 spaces and continuation lines have 2 more spaces.
-#   * All classes are listed alphabetically.
-#   * All methods within a class are listed alphabetically.
-#   * No duck typing!  All function/method arguments are checked for compatibale types.
-#   * Inside a method, *self* is usually replaced with more descriptive variable name.
-#   * Generally, single character strings are in single quotes (`'`) and multi characters in double
-#     quotes (`"`).  Empty strings are represented as `""`.  Strings with multiple double quotes
-#     can be enclosed in single quotes.
-#   * Lint with:
-#
-#       flake8 --max-line-length=100 tables_editor.py | fgrep -v :3:1:
-#
-# Install Notes:
-#
-#       sudo apt-get install xclip xsel
-#
-# Tasks:
-# * Decode Digi-Key parametric search URL's.
-# * Start integration with bom_manager.py
-#   * Record Digi-Key URL's via clip-board
-#   * Capture Digi-Key CSV table via F12 & clip-board
-# * Start providing ordering operations.
-# * Reorder tables/parameters/enumerations/searches.
-# * Sort search results
-# * Table search templates
-# * Footprint hooks
-# * Better parametric search
-
-# Import some libraries:
-import re
-import csv
-import os
-import sys
-import pyperclip
-import webbrowser
-# import xmlschema
-import lxml.etree as etree
-import copy  # Is this used any more?
-from functools import partial
-from PySide2.QtUiTools import QUiLoader
-from PySide2.QtWidgets import (QApplication, QComboBox, QLineEdit, QMainWindow,
-                               QPlainTextEdit, QPushButton,
-                               QTableWidget, QTableWidgetItem,
-                               QTreeView, QFileSystemModel,
-                               # QTreeWidget, QTreeWidgetItem,
-                               QWidget)
-# from PySide2.QtCore import (SelectionFlag, )
-from PySide2.QtCore import (QAbstractItemModel, QDir, QFile, QItemSelectionModel, QModelIndex, Qt)
 
 
 def text2safe_attribute(text):
