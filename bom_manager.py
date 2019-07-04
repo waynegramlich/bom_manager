@@ -340,9 +340,9 @@ class Database:
         # not explicitly prioritiezed below.
 
         # Priorities 1000+ are for explicitly preferred vendors:
-        #vendor_priorities["Arrow"] = 1000
-        #vendor_priorities["Avnet Express"] = 1001
-        #vendor_priorities["Newark"] = 1002
+        # vendor_priorities["Arrow"] = 1000
+        # vendor_priorities["Avnet Express"] = 1001
+        # vendor_priorities["Newark"] = 1002
         vendor_priorities["Mouser"] = 1003
         vendor_priorities["Digi-Key"] = 1004
 
@@ -360,7 +360,7 @@ class Database:
         vendor_parts_cache = database.vendor_parts_cache
         # Read in any previously created *vendor_parts*:
         if os.path.isfile(bom_parts_file_name):
-            #print("Start reading BOM parts file: '{0}'".
+            # print("Start reading BOM parts file: '{0}'".
             #  format(bom_parts_file_name))
 
             # Read in picked *vendor_parts* from *bom_file_name*:
@@ -701,7 +701,7 @@ class Database:
           ["M1X6;M1X6"], "Pin_Header_Straight_1x06")
 
         # M1X7:
-        #self.alias_part("MTR_TRN_CON;M1X7",
+        # self.alias_part("MTR_TRN_CON;M1X7",
         #  ["M1X7;M1X7"], "Pin_Header_Straight_1x07")
 
         ### Create the fractional parts for the 2XN male headers:
@@ -981,7 +981,7 @@ class Database:
           ["JSTPH7;JSTPH7", "FJSTPH7;FJSTPH7", (7, "JSTPH_PIN;JSTPH_PIN")], "JSTPH7")
 
         # 10-pin JST PH
-        #self.choice_part("JSTPH10;JSTPH10", "JSTPH10", "",
+        # self.choice_part("JSTPH10;JSTPH10", "JSTPH10", "",
         #  "CONN HEADER VERT 10POS 2MM").actual_part(
         #  "JST", "10B-PH-K-S(LF)(SN)")
         self.choice_part("JSTPH10;JSTPH10", "JSTPH10", "",
@@ -1042,19 +1042,19 @@ class Database:
           "6V STEP-UP/DOWN VOLT REG.").actual_part(
           "Pololu", "S18V20F6", [
             ("Pololu", "S18V20F6", "1/14.95 5/13.45 25/12.33 100/11.21")])
-        #self.choice_part("V18V20F5;V18V20F5", "-", "",
+        # self.choice_part("V18V20F5;V18V20F5", "-", "",
         #  "5V STEP-UP/DOWN VOLT REG.").actual_part(
         #  "Pololu", "V18V20F5", [
         #    ("Pololu", "V18V20F5", "1/14.95 5/13.45 25/12.33 100/11.21")])
-        #self.choice_part("V18V20F6;V18V20F6", "-", "",
+        # self.choice_part("V18V20F6;V18V20F6", "-", "",
         #  "6V STEP-UP/DOWN VOLT REG.").actual_part(
         #  "Pololu", "V18V20F6", [
         #    ("Pololu", "V18V20F6", "1/14.95 5/13.45 25/12.33 100/11.21")])
-        #self.alias_part("V18V20Fx;S18V20Fx",
+        # self.alias_part("V18V20Fx;S18V20Fx",
         #  ["F1X5;F1X5", "F1X4;F1X4"], "S18V20Fx")
-        #self.alias_part("V18V20F5;S18V20Fx",
+        # self.alias_part("V18V20F5;S18V20Fx",
         #  ["F1X5;F1X5", "F1X4;F1X4", "V18V20F5;V18V20F5"], "S18V20Fx")
-        #self.alias_part("V18V20F6;S18V20Fx",
+        # self.alias_part("V18V20F6;S18V20Fx",
         #  ["F1X5;F1X5", "F1X4;F1X4", "V18V20F6;V18V20F6"], "S18V20Fx")
 
         self.choice_part("F1X6;F1X6", "Pin_Header_Straight_1x06", "",
@@ -1200,7 +1200,7 @@ class Database:
         # Kludge: 2X35 Female connectors are custom made.  Instead fake it with 3 F2x10's and
         # 1 F2X5 that are at the same height (8.51MM).  Note that we need to buy and solder in
         # *BOTH* the male and female connectors:
-        #self.alias_part("F767ZI;NUCLEO144",
+        # self.alias_part("F767ZI;NUCLEO144",
         #  ["NUCLEO_F767ZI;NUCLEO_F767ZI",
         #  (6, "F2X10;F2X10"), (2, "F2X5;F2X5"), (2, "M2X35;M2X35")],
         #  "NUCLEO144")
@@ -1448,7 +1448,7 @@ class Database:
           "On Semiconductor", "MC78L05ACHX").actual_part(
           "Diodes Incorporated", "ZXTR2005Z-13").actual_part(
           "Diodes Incorporated", "ZXTR2005Z-7").actual_part(
-          #"NJR", "NJM78L05UA-TE1").actual_part(
+          # "NJR", "NJM78L05UA-TE1").actual_part(
           "Richtek", "RT9058-50GX").actual_part(
           "ON Semiconductor", "NCP785AH50T1G").actual_part(
           "Diodes Incorporated", "AS78L05RTR-E1").actual_part(
@@ -1460,32 +1460,32 @@ class Database:
         self.choice_part("5V_LDO;SOT89", "SOT-89-3", "",
           "IC REG LDO 5V SOT89",
           rotation=90.0, feeder_name="5V_REG/LDO", part_height=1.60).actual_part(
-          #"Diodes", "AP2204R-5.0TRG1").actual_part(           # Vin/Gnd/Vout  IGO
-          #"Richtek", "RT9064-50GX").actual_part(              # Vin/Gnd/Vout  IGO
+          # "Diodes", "AP2204R-5.0TRG1").actual_part(           # Vin/Gnd/Vout  IGO
+          # "Richtek", "RT9064-50GX").actual_part(              # Vin/Gnd/Vout  IGO
 
-          #"IC REG LDO 5V SOT89").actual_part(
-          #"Microchip", "MCP1700T-5002E/MB").actual_part(      # Gnd/Vin/Vout  GIO
-          #"Diodes", "AP2204RA-5.0TRG1").actual_part(          # Gnd/Vin/Vout  GIO
-          #"Microchip", "MCP1702T-5002E/MB").actual_part(      # Gnd/Vin/Vout  GIO
-          #"Microchip", "MCP1703AT-5002E/MB").actual_part(     # Gnd/Vin/Vout  GIO
-          #"Diodes", "ZXTR2005Z-13").actual_part(              # Gnd/Vin/Vout  GIO
-          #"Diodes", "ZXTR2005Z-7").actual_part(               # Gnd/Vin/Vout  GIO
-          #"On", "MC78LC50HT1G").actual_part(                  # Gnd/Vin/Vout  GIO
+          # "IC REG LDO 5V SOT89").actual_part(
+          # "Microchip", "MCP1700T-5002E/MB").actual_part(      # Gnd/Vin/Vout  GIO
+          # "Diodes", "AP2204RA-5.0TRG1").actual_part(          # Gnd/Vin/Vout  GIO
+          # "Microchip", "MCP1702T-5002E/MB").actual_part(      # Gnd/Vin/Vout  GIO
+          # "Microchip", "MCP1703AT-5002E/MB").actual_part(     # Gnd/Vin/Vout  GIO
+          # "Diodes", "ZXTR2005Z-13").actual_part(              # Gnd/Vin/Vout  GIO
+          # "Diodes", "ZXTR2005Z-7").actual_part(               # Gnd/Vin/Vout  GIO
+          # "On", "MC78LC50HT1G").actual_part(                  # Gnd/Vin/Vout  GIO
 
-          #"TI", "UA78L05AIPK").actual_part(                   # Vout/Gnd/Vin  OGI  1.7V@40mA
-          #"Micro Commercial", "MC78L05F-TP").actual_part(     # Vout/Gnd/Vin  OGI  1.7V@40mA
-          #"TI", "UA78L05CPK").actual_part(                    # Vout/Gnd/Vin  OGI  1.7V@40mA
-          #"Fairchild", "MC78L05ACHX").actual_part(            # Vout/Gnd/Vin  OGI  -
-          #"NJR", "NJM78L05UA-TE1").actual_part(               # Vout/Gnd/Vin  OGI  -
-          #"Fairchild", "KA78L05AMTF").actual_part(            # Vout/Gnd/Vin  OGI  -
-          #"Fairchild", "KA78L05AIMTF").actual_part(           # Vout/Gnd/Vin  OGI  -
-          #"STM", "L78L05ABUTR").actual_part(                  # Vout/Gnd/Vin  OGI  -
-          #"STM", "L78L05ACUTR").actual_part(                  # Vout/Gnd/Vin  OGI  -
-          #"Torex", "XC6201P502PR-G")                          # Vout/Gnd/Vin  OGI  .6V@200mA *
+          # "TI", "UA78L05AIPK").actual_part(                   # Vout/Gnd/Vin  OGI  1.7V@40mA
+          # "Micro Commercial", "MC78L05F-TP").actual_part(     # Vout/Gnd/Vin  OGI  1.7V@40mA
+          # "TI", "UA78L05CPK").actual_part(                    # Vout/Gnd/Vin  OGI  1.7V@40mA
+          # "Fairchild", "MC78L05ACHX").actual_part(            # Vout/Gnd/Vin  OGI  -
+          # "NJR", "NJM78L05UA-TE1").actual_part(               # Vout/Gnd/Vin  OGI  -
+          # "Fairchild", "KA78L05AMTF").actual_part(            # Vout/Gnd/Vin  OGI  -
+          # "Fairchild", "KA78L05AIMTF").actual_part(           # Vout/Gnd/Vin  OGI  -
+          # "STM", "L78L05ABUTR").actual_part(                  # Vout/Gnd/Vin  OGI  -
+          # "STM", "L78L05ACUTR").actual_part(                  # Vout/Gnd/Vin  OGI  -
+          # "Torex", "XC6201P502PR-G")                          # Vout/Gnd/Vin  OGI  .6V@200mA *
 
           "Taiwan Semi", "TS78L05ACY RMG").actual_part(        # OGI
-          #"Diodes Inc", "ZXTR2005Z-13").actual_part(          # GIO
-          #"Diodes Inc", "ZXTR2005Z-7").actual_part(           # GIO
+          # "Diodes Inc", "ZXTR2005Z-13").actual_part(          # GIO
+          # "Diodes Inc", "ZXTR2005Z-7").actual_part(           # GIO
           "Micro Commercial", "MC78L05F-TP").actual_part(      # OGI
           "NJR", "NJM78L05UA-TE1")                             # OGI
 
@@ -1519,7 +1519,7 @@ class Database:
           "COMPARATOR R-R SOT-23-5").actual_part(
           "Microchip", "MIC7221YM5-TR")
 
-        #self.choice_part("74xHC08;SOIC8", "SOIC127P600X175-14N", "",
+        # self.choice_part("74xHC08;SOIC8", "SOIC127P600X175-14N", "",
         #  "IC GATE AND 4CH 2-INP 14-SOIC").actual_part(
         #  "Fairchild", "MM74HCT08MX").actual_part(
         #  "Fairchild", "74VHCT08AMX").actual_part(
@@ -2068,11 +2068,11 @@ class Database:
           "STM", "STD17NF03LT4")
 
         # Now extract all of the actual parts:
-        #print("-------------------------")
+        # print("-------------------------")
         actual_parts = self.actual_parts
-        #vendor_parts = self.vendor_parts
+        # vendor_parts = self.vendor_parts
         for schematic_part in self.schematic_parts.values():
-            #print("schematic_part: {0}".
+            # print("schematic_part: {0}".
             #  format(schematic_part.schematic_part_name))
             if isinstance(schematic_part, Choice_Part):
                 choice_part = schematic_part
@@ -2082,49 +2082,49 @@ class Database:
                         print("'{0}' is a duplicate".format(actual_part_key))
                     else:
                         actual_parts[actual_part_key] = actual_part
-                        #print("Insert Actual_Part '{0} {1}'".format(
+                        # print("Insert Actual_Part '{0} {1}'".format(
                         # actual_part.manufacturer_name,
                         # actual_part.manufacturer_part_name))
 
-                #print("schematic_part=", schematic_part)
-                #assert False, "Deal with Fractional and Alias parts"
+                # print("schematic_part=", schematic_part)
+                # assert False, "Deal with Fractional and Alias parts"
                 pass
-        #print("-------------------------")
+        # print("-------------------------")
 
         # Now we kludge in vendor part pricing:
 
         # Connectors:
-        #self.vendor_part("Phoenix Contact", "1935161",
+        # self.vendor_part("Phoenix Contact", "1935161",
         #  "Digi-Key", "277-1667-ND",
         #  ".37/1 .352/10 .3366/50 .3274/100 .306/250 .28152/500 .255/1000")
 
         # Diodes:
-        #self.vendor_part("Fairchild", "S320",
+        # self.vendor_part("Fairchild", "S320",
         #  "Digi-Key", "S320FSCT-ND",
         #  ".70/1 .614/10 .5424/25 .4726/100 .4114/250 .3502/500 .2805/1000")
-        #self.vendor_part("Diodes Inc", "BAT54-7-F",
+        # self.vendor_part("Diodes Inc", "BAT54-7-F",
         #  "Digi-Key", "BAT54-FDICT-ND",
         #  ".15/1 .142/10 .128/25 .0927/100 .0546/250 .0453/500 .0309/1000")
 
         # Holes:
-        #self.vendor_part("McMaster-Carr", "3MM_Hole",
+        # self.vendor_part("McMaster-Carr", "3MM_Hole",
         #  "MMC", "123", "0./1")
 
         # Integrated Circuits:
-        #self.vendor_part("TI", "SN74LVC1G175DBVR",
+        # self.vendor_part("TI", "SN74LVC1G175DBVR",
         #  "Digi-Key", "296-17617-1-ND",
         #  ".40/1 .315/10 .266/25 .2166/100 .1794/250 .1482/500 .1236/750")
-        #self.vendor_part("Fairchild", "MM74HCT08MX",
+        # self.vendor_part("Fairchild", "MM74HCT08MX",
         #  "Digi-Key", "MM74HCT08MXCT-ND",
         #  ".49/1 .412/10 .3612/25 .309/100 .268/250 .227/500 .175/1000")
 
         # LED's:
-        #self.vendor_part("Cree", "CXA3050-0000-000N0HW440F",
+        # self.vendor_part("Cree", "CXA3050-0000-000N0HW440F",
         #  "Digi-Key", "CXA3050-0000-000N0HW440F-ND",
         #  "36./1 34.2/10 33.23/50 30.6/100 27.83/200 26.06/500 24/1000")
 
         # Resistors:
-        #self.vendor_part("Vishay Dale", "CRCW060322K0JNEA",
+        # self.vendor_part("Vishay Dale", "CRCW060322K0JNEA",
         #  "Digi-Key", "541-22KGCT-ND",
         #  ".074/10 .04/50 .02295/200 .01566/1000")
 
@@ -2161,7 +2161,7 @@ class Database:
                 alias_part_name = alias_part_tuple[1]
                 for index in range(count):
                     expanded_alias_part_names.append(alias_part_name)
-        #if len(expanded_alias_part_names) > len(alias_part_names):
+        # if len(expanded_alias_part_names) > len(alias_part_names):
         #    print("alias_part_names={0}", alias_part_names)
         #    print("expanded_alias_part_names={0}", expanded_alias_part_names)
 
@@ -2179,7 +2179,7 @@ class Database:
                   format(alias_part_name, schematic_part_name))
 
         # Create and return the new *alias_part*:
-        #assert len(alias_parts) == 1, "alias_parts={0}".format(alias_parts)
+        # assert len(alias_parts) == 1, "alias_parts={0}".format(alias_parts)
         if isinstance(feeder_name, str):
             footprint = database.footprint(feeder_name, rotation)
         alias_part = Alias_Part(schematic_part_name,
@@ -2206,7 +2206,7 @@ class Database:
         if schematic_part_name in schematic_parts:
             print("'{0}' is duplicated".format(schematic_part_name))
 
-        #if kicad_footprint.find(':') < 0:
+        # if kicad_footprint.find(':') < 0:
         #    print("part '{0}' has no associated library in footprint '{1}'".
         #      format(schematic_part_name, kicad_footprint))
 
@@ -2291,7 +2291,7 @@ class Database:
         # Parse the *findchips_text* into *find_chips_tree*:
         findchips_tree = BeautifulSoup(findchips_text, "html.parser")
 
-        #if trace:
+        # if trace:
         #    print(findchips_tree.prettify())
 
         # We use regular expressions to strip out unnecessary characters
@@ -2305,7 +2305,7 @@ class Database:
         # each distributor:
         for distributor_tree in findchips_tree.find_all("div",
           class_="distributor-results"):
-            #if trace:
+            # if trace:
             #        print("**************************************************")
             #        print(distributor_tree.prettify())
 
@@ -2314,8 +2314,8 @@ class Database:
             vendor_name = None
             for h3_tree in distributor_tree.find_all(
               "h3", class_="distributor-title"):
-                #print("&&&&&&&&&&&&&&&&&&&&&&&")
-                #print(h3_tree.prettify())
+                # print("&&&&&&&&&&&&&&&&&&&&&&&")
+                # print(h3_tree.prettify())
                 for a_tree in h3_tree.find_all("a"):
                     vendor_name = a_tree.get_text()
 
@@ -2327,8 +2327,8 @@ class Database:
 
             # This code is in the *Vendor_Part* initialize now:
             # Strip some boring stuff off the end of *vendor_name*:
-            #vendor_name = text_filter(vendor_name, str.isprintable)
-            #if vendor_name.endswith("Authorized Distributor"):
+            # vendor_name = text_filter(vendor_name, str.isprintable)
+            # if vendor_name.endswith("Authorized Distributor"):
             #    # Remove "Authorized Distributor" from end
             #    # of *vendor_name*:
             #    if vendor_name.endswith("Authorized Distributor"):
@@ -2349,7 +2349,7 @@ class Database:
 
             # All of the remaining information is found in <table>...</table>:
             for table_tree in distributor_tree.find_all("table"):
-                #print(table_tree.prettify())
+                # print(table_tree.prettify())
 
                 # There two rows per table.  The first row has the headings
                 # and the second row has the data.  The one with the data
@@ -2357,7 +2357,7 @@ class Database:
                 for row_tree in table_tree.find_all("tr", class_="row"):
                     if trace:
                         print("==============================================")
-                        #print(row_tree.prettify())
+                        # print(row_tree.prettify())
 
                     # Now we grab the *vendor_part_name*.  Some vendors
                     # (like Arrow) use the *manufacturer_part_name* as their
@@ -2366,7 +2366,7 @@ class Database:
                     vendor_part_name = manufacturer_part_name
                     for span1_tree in row_tree.find_all(
                       "span", class_="td-desc-distributor"):
-                        #print(span1_tree.prettify())
+                        # print(span1_tree.prettify())
                         for span2_tree in span1_tree.find_all(
                           "span", class_="additional-value"):
                             # Found it; grab it, encode it, and strip it:
@@ -2444,7 +2444,7 @@ class Database:
                                 elif currency == "GBP":
                                     exchange_rate = \
                                       self.pound_to_dollar_exchange_rate
-                                #else:
+                                # else:
                                 #    assert False, \
                                 #      "Unrecognized currency '{0}'". \
                                 #      format(currency)
@@ -2528,7 +2528,7 @@ class Database:
             footprint = Footprint(feeder_name, rotation)
             footprints[feeder_name] = footprint
             assert feeder_name in footprints
-            #print("footprints['{0}'].rotation={1}".format(feeder_name, rotation))
+            # print("footprints['{0}'].rotation={1}".format(feeder_name, rotation))
         return footprint
 
     def fractional_part(self, schematic_part_name, kicad_footprint,
@@ -2590,7 +2590,7 @@ class Database:
             object (i.e. *self*).
         """
 
-        #print("=>Database.save")
+        # print("=>Database.save")
 
         vendor_parts_cache = self.vendor_parts_cache
         for vendor_parts in vendor_parts_cache.values():
@@ -2602,7 +2602,7 @@ class Database:
         pickle.dump(self.vendor_parts_cache, bom_pickle_file)
         bom_pickle_file.close()
 
-        #print("<=Database.save")
+        # print("<=Database.save")
 
     def vendor_part(self, manufacturer_name, manufacturer_part_name,
       vendor_name, vendor_part_name, price_break_text):
@@ -2674,7 +2674,7 @@ class Order:
         assert isinstance(positions_file_name, str) or positions_file_name == None
 
         # Create the *Board*:
-        #print("net_file_name='{0}'".format(net_file_name))
+        # print("net_file_name='{0}'".format(net_file_name))
         order = self
         board = Board(name, revision, net_file_name, count, order, positions_file_name)
         order.boards.append(board)
@@ -2737,7 +2737,7 @@ class Order:
                 # Show the *price breaks* on each side of the
                 # *selected_price_breaks_index*:
                 price_breaks = selected_vendor_part.price_breaks
-                #print("len(price_breaks)={0} selected_price_break_index={1}".
+                # print("len(price_breaks)={0} selected_price_break_index={1}".
                 #  format(len(price_breaks), selected_price_break_index))
                 selected_price_break = price_breaks[selected_price_break_index]
                 minimum_index = max(selected_price_break_index - 1, 0)
@@ -2850,7 +2850,7 @@ class Order:
         """
 
         tracing = False
-        #tracing = True
+        # tracing = True
         if tracing:
             print("=>exclude_vendors_to_reduce_shipping_costs")
 
@@ -2871,7 +2871,7 @@ class Order:
             # Get the base cost for the current *excluded_vendor_names*:
             base_quad = \
               self.quad_compute(choice_parts, excluded_vendor_names, "")
-            #print(">>>>base_quad={0}".format(base_quad))
+            # print(">>>>base_quad={0}".format(base_quad))
 
             # If the *base_missing_parts* increases, we need to stop because
             # excluding additional vendors will cause the order to become
@@ -2889,7 +2889,7 @@ class Order:
             base_vendor_names = \
               self.vendor_names_get(choice_parts, excluded_vendor_names)
             assert isinstance(base_vendor_names, tuple)
-            #print("base: {0} {1}".format(base_cost, base_vendor_names))
+            # print("base: {0} {1}".format(base_cost, base_vendor_names))
 
             # For small designs, sometimes the algorithm will attempt to
             # throw everything out.  The test below makes sure we always
@@ -2913,16 +2913,16 @@ class Order:
                 trial_quads.append(trial_quad)
 
                 # For debugging only:
-                #trial_cost = trial_quad[0]
-                #trial_vendor_name = trial_quad[1]
-                #print("    {0:.2f} with {1} excluded".
+                # trial_cost = trial_quad[0]
+                # trial_vendor_name = trial_quad[1]
+                # print("    {0:.2f} with {1} excluded".
                 #  format(trial_cost, trial_vendor_name))
 
             # Sort the *trial_quads* to bring the most interesting one to the
             # front:
             trial_quads.sort(key=lambda quad: (quad[0], quad[1]) )
             # For debugging:
-            #for trial_quad in trial_quads:
+            # for trial_quad in trial_quads:
             #        print("   {0}".format(trial_quad))
 
             # Quickly ignore all vendors that have zero cost savings:
@@ -2936,7 +2936,7 @@ class Order:
                 savings = lowest_cost - base_cost
                 if savings == 0.0:
                     # This vendor offers no savings; get rid of the vendor:
-                    #print("trail_quads[0]={0}".format(trial_quads))
+                    # print("trail_quads[0]={0}".format(trial_quads))
                     reduced_vendor_messages.append("Excluding '{0}': saves nothing\n".
                       format(lowest_vendor_name, savings))
                     excluded_vendor_names[lowest_vendor_name] = None
@@ -2950,7 +2950,7 @@ class Order:
             lowest_quad = trial_quads[0]
             lowest_cost = lowest_quad[1]
             lowest_vendor_name = lowest_quad[3]
-            #lowest_vendor_name = text_filter(lowest_vendor_name, str.isprintable)
+            # lowest_vendor_name = text_filter(lowest_vendor_name, str.isprintable)
             savings = lowest_cost - base_cost
             print("      Price is ${0:.2f} when '{1}' is excluded".
               format(lowest_cost, lowest_vendor_name))
@@ -2969,7 +2969,7 @@ class Order:
                 excluded_vendor_names[lowest_vendor_name] = None
             else:
                 # We are done when *lowest_quad* is worth shipping:
-                #print("lowest_cost={0:.2f}".format(lowest_cost))
+                # print("lowest_cost={0:.2f}".format(lowest_cost))
                 done = True
 
         if tracing:
@@ -3032,7 +3032,7 @@ class Order:
         # eliminate duplicates.
         choice_parts_table = {}
         for board in boards:
-            #print("Order.final_choice_parts_compute(): board:{0}".format(board.name))
+            # print("Order.final_choice_parts_compute(): board:{0}".format(board.name))
 
             # Sort *board_parts* by reference.  A reference is a sequence
             # letters followed by an integer (e.g. SW1, U12, D123...)
@@ -3047,7 +3047,7 @@ class Order:
             for board_part in board_parts:
                 schematic_part = board_part.schematic_part
                 schematic_part_name = schematic_part.schematic_part_name
-                #print("Order.final_choice_parts_compute():  {0}: {1}".
+                # print("Order.final_choice_parts_compute():  {0}: {1}".
                 #  format(board_part.reference, schematic_part_name))
 
                 # Only *choice_parts* can be ordered from a vendor:
@@ -3067,7 +3067,7 @@ class Order:
                     #        print(("Order.final_choice_parts_compute():" +
                     #          " Insert {0:s} into table under key {1} (size={2})").format(
                     #          choice_part, choice_part_name, len(choice_parts_table)))
-                    #else:
+                    # else:
                     #    print("Order.final_choice_parts_compute(): Key {0} in table".format(
                     #          choice_part_name))
 
@@ -3113,7 +3113,7 @@ class Order:
             assert isinstance(choice_part, Choice_Part)
             choice_part.board_parts_sort()
 
-        #for choice_part in final_choice_parts:
+        # for choice_part in final_choice_parts:
         #    print("End_Order.final_choice_parts_compute(): board:{0}".format(choice_part))
 
         return final_choice_parts
@@ -3135,7 +3135,7 @@ class Order:
                 schematic_part.footprints_check(kicad_footprints)
 
                 # Sweep through aliases:
-                #while isinstance(schematic_part, Alias_Part):
+                # while isinstance(schematic_part, Alias_Part):
                 #    alias_part = schematic_part
                 #    schematic_parts = alias_part.schematic_parts
                 #    # Conceptually, alias parts can reference one or more parts.
@@ -3143,23 +3143,23 @@ class Order:
                 #    assert len(schematic_parts) == 1, \
                 #      "Multiple Schematic Parts for {0}".format(alias_part.base_name)
                 #    schematic_part = schematic_parts[0]
-                #assert isinstance(schematic_part, Schematic_Part)
-                #assert not isinstance(schematic_part, Alias_Part)
+                # assert isinstance(schematic_part, Schematic_Part)
+                # assert not isinstance(schematic_part, Alias_Part)
 
                 # Dispatch on type of *schematic_part*.  This really should be done with
                 # with a method:
-                #if isinstance(schematic_part, Fractional_Part):
+                # if isinstance(schematic_part, Fractional_Part):
                 #    fractional_part = schematic_part
-                #    #print("{0} is fractional {1}".
+                #    # print("{0} is fractional {1}".
                 #    #  format(fractional_part.base_name, fractional_part.kicad_footprint))
                 #    kicad_footprints[fractional_part.kicad_footprint] = \
                 #      schematic_part.schematic_part_name
-                #elif isinstance(schematic_part, Choice_Part):
+                # elif isinstance(schematic_part, Choice_Part):
                 #    choice_part = schematic_part
-                #    #print("{0} is choice".format(choice_part.base_name))
+                #    # print("{0} is choice".format(choice_part.base_name))
                 #    kicad_footprint = choice_part.kicad_footprint
                 #    kicad_footprints[kicad_footprint] = schematic_part.schematic_part_name
-                #else:
+                # else:
                 #    print("{0} is ??".format(schematic_part.base_name))
                 #    assert False
 
@@ -3187,7 +3187,7 @@ class Order:
         # Use *order instead of *self*:
         order = self        
 
-        #print("=>Order.process()")
+        # print("=>Order.process()")
 
 
 
@@ -3236,7 +3236,7 @@ class Order:
 
         # Check for missing footprints:
         order.footprints_check(final_choice_parts)
-        #order.positions_process()
+        # order.positions_process()
 
         # Print out the final selected vendor summary:
         order.summary_print(final_choice_parts, excluded_vendor_names)
@@ -3291,7 +3291,7 @@ class Order:
                 # Print out the *price breaks* on each side of the
                 # *selected_price_breaks_index*:
                 price_breaks = selected_vendor_part.price_breaks
-                #print("len(price_breaks)={0} selected_price_break_index={1}".
+                # print("len(price_breaks)={0} selected_price_break_index={1}".
                 #  format(len(price_breaks), selected_price_break_index))
                 selected_price_break = price_breaks[selected_price_break_index]
                 minimum_index = max(selected_price_break_index - 1, 0)
@@ -3306,12 +3306,12 @@ class Order:
                       price_break.quantity, price_break.price)
 
                 # Print out the line:
-                #print("    {0}:{1} {2}".format(
+                # print("    {0}:{1} {2}".format(
                 #  selected_vendor_part.vendor_name,
                 #  selected_vendor_part.vendor_part_name, price_breaks_text))
 
                 # Print out the result:
-                #print("        {0}@({1}/${2:.3f})={3:.2f}".format(
+                # print("        {0}@({1}/${2:.3f})={3:.2f}".format(
                 #  selected_order_quantity,
                 #  selected_price_break.quantity, selected_price_break.price,
                 #  selected_total_cost))
@@ -3328,7 +3328,7 @@ class Order:
             for csv_file in vendor_files.values():
                 csv_file.close()
 
-        #print("<=Order.process()")
+        # print("<=Order.process()")
 
 
     def quad_compute(self,
@@ -3546,7 +3546,7 @@ class PositionsTable:
                             comments.append(line)
                         else:
                             trailers.append(line)
-                        #print("comment='{0}'".format(line))
+                        # print("comment='{0}'".format(line))
                     elif line.startswith("# "):
                         # Lines that start with "# " are the column headings:
                         assert headings_size <= 0
@@ -3556,20 +3556,20 @@ class PositionsTable:
                         assert headings_size > 0
                         for heading_index, heading in enumerate(headings):
                             heading_indices[heading] = heading_index
-                            #print("key='{0}' index={1}".format(key, heading_index))
+                            # print("key='{0}' index={1}".format(key, heading_index))
 
                         # Create the *mapping* used for formatting the output table:
                         heading_keys = ("Ref", "Val", "Package", "PosX", "PosY", "Rot", "Side")
                         for heading in heading_keys:
                             heading_index = heading_indices[heading]
                             mapping.append(heading_index)
-                        #print("mapping={0}".format(mapping))
+                        # print("mapping={0}".format(mapping))
                     else:
                         # Assume that everything else is a row of data:
                         columns = line.split()
                         columns_size = len(columns)
                         if columns_size == headings_size:
-                            #print("row={0}".format(row))
+                            # print("row={0}".format(row))
                             reference = columns[heading_indices["Ref"]]
                             value = columns[heading_indices["Val"]]
                             value = value.replace('\\', "")
@@ -3581,10 +3581,10 @@ class PositionsTable:
                                 pick_dx     = choice_part.pick_dx
                                 pick_dy     = choice_part.pick_dy
                                 if isinstance(feeder_name, str) and isinstance(part_height, float):
-                                    #print("'{0}'=>'{1}''".format(value, feeder_name))
+                                    # print("'{0}'=>'{1}''".format(value, feeder_name))
                                     value = feeder_name
                                     part_heights[value] = part_height
-                                #print("part_heights['{0}'] = {1}".format(value, part_height))
+                                # print("part_heights['{0}'] = {1}".format(value, part_height))
                             elif isinstance(part, Alias_Part):
                                 alias_part = part
                                 feeder_name = alias_part.feeder_name
@@ -3592,10 +3592,10 @@ class PositionsTable:
                                 pick_dx     = alias_part.pick_dx
                                 pick_dy     = alias_part.pick_dy
                                 if isinstance(feeder_name, str) and isinstance(part_height, float):
-                                    #print("'{0}'=>'{1}''".format(value, feeder_name))
+                                    # print("'{0}'=>'{1}''".format(value, feeder_name))
                                     value = feeder_name                
                                     part_heights[value] = part_height
-                                #print("part_heights['{0}'] = {1}".format(value, part_height))
+                                # print("part_heights['{0}'] = {1}".format(value, part_height))
                             package = columns[heading_indices["Package"]]
                             x = float(columns[heading_indices["PosX"]])
                             y = float(columns[heading_indices["PosY"]])
@@ -3704,8 +3704,8 @@ class PositionsTable:
         for row_index, row in enumerate(rows):
             feeder_name = row.feeder_name
             debugging = False
-            #debugging = package == "DPAK"
-            #print("Row[{0}]: '{1}'".format(row_index, package))
+            # debugging = package == "DPAK"
+            # print("Row[{0}]: '{1}'".format(row_index, package))
             if feeder_name in footprints:
                 # We have a match:
                 footprint = footprints[feeder_name]
@@ -3807,10 +3807,10 @@ class PositionsTable:
             format_columns = list()
             for size_index, size in enumerate(sizes):
                 format_columns.append("{{{0}:{1}{2}}}".format(size_index, aligns[size_index], size))
-                #format_columns.append("{" + str(size_index) +
+                # format_columns.append("{" + str(size_index) +
                 #  ":" + aligns[size_index] + str(size) + "}")
             format_string = "  ".join(format_columns)
-            #print("format_string='{0}'".format(format_string))
+            # print("format_string='{0}'".format(format_string))
 
             # Now format each *string_row* and append the result to *final_lines*:
             for string_row in string_rows:
@@ -3852,7 +3852,7 @@ class PositionRow:
         assert isinstance(side, str)
         assert isinstance(part_height, float)
 
-        #if package.startswith("DPAK"):
+        # if package.startswith("DPAK"):
         #    print("Rotation={0}".format(rotation))
 
         # Load up *position_row* (i.e. *self*):
@@ -3988,7 +3988,7 @@ class Board:
 
         # Process *net_file_name* adding footprints as needed:
         net_file_name = self.net_file_name
-        #print("Read '{0}'".format(net_file_name))
+        # print("Read '{0}'".format(net_file_name))
         if net_file_name.endswith(".net"):
             with open(net_file_name, "r") as net_stream:
                 # Read contents of *net_file_name* in as a string *net_text*:
@@ -3996,10 +3996,10 @@ class Board:
 
             # Parse *net_text* into *net_se* (i.e. net S-expression):
             net_se = sexpdata.loads(net_text)
-            #print("\nsexpedata.dumps=", sexpdata.dumps(net_se))
-            #print("")
-            #print("net_se=", net_se)
-            #print("")
+            # print("\nsexpedata.dumps=", sexpdata.dumps(net_se))
+            # print("")
+            # print("net_se=", net_se)
+            # print("")
 
             # Visit each *component_se* in *net_se*:
             net_file_changed = False
@@ -4014,16 +4014,16 @@ class Board:
             #          (libsource ....)
             #          (sheetpath ....)
             #          (tstamp xxxxxxxx))
-            #print("components=", components_se)
+            # print("components=", components_se)
             for component_index, component_se in enumerate(components_se[1:]):
-                #print("component_se=", component_se)
-                #print("")
+                # print("component_se=", component_se)
+                # print("")
 
                 # Grab the *reference* from *component_se*:
                 reference_se = se_find(component_se, "comp", "ref")
                 reference = reference_se[1].value()
-                #print("reference_se=", reference_se)
-                #print("")
+                # print("reference_se=", reference_se)
+                # print("")
 
                 # Find *part_name_se* from *component_se*:
                 part_name_se = se_find(component_se, "comp", "value")
@@ -4041,7 +4041,7 @@ class Board:
                     assert False, "strange part_name: {0}". \
                       format(part_name_se[1])
 
-                #print(reference, part_name, footprint)
+                # print(reference, part_name, footprint)
 
                 # Strip *comment* out of *part_name* if it exists:
                 comment = ""
@@ -4069,8 +4069,8 @@ class Board:
 
                     # Grab *footprint_se* from *component_se* (if it exists):
                     footprint_se = se_find(component_se, "comp", "footprint")
-                    #print("footprint_se=", footprint_se)
-                    #print("Part[{0}]:'{1}' '{2}' changed={3}".format(
+                    # print("footprint_se=", footprint_se)
+                    # print("Part[{0}]:'{1}' '{2}' changed={3}".format(
                     #    component_index, part_name, kicad_footprint, net_file_changed))
 
                     # Either add or update the footprint:
@@ -4101,7 +4101,7 @@ class Board:
                             # library and the rest from *kicad_footprint*:
                             new_footprint = \
                               previous_split[0] + ":" + kicad_footprint
-                            #print("new_footprint='{0}'".format(new_footprint))
+                            # print("new_footprint='{0}'".format(new_footprint))
                         elif len(current_split) == 1:
                             new_footprint = "common:" + kicad_footprint
                         else:
@@ -4111,7 +4111,7 @@ class Board:
                         # Only do something if it changed:
                         if previous_footprint != new_footprint:
                             # Since they changed, update in place:
-                            #if isinstance(schematic_part, Alias_Part):
+                            # if isinstance(schematic_part, Alias_Part):
                             #        print("**Alias_Part.footprint={0}".
                             #          format(schematic_part.kicad_footprint))
                             print(("Part '{0}': " + 
@@ -4126,9 +4126,9 @@ class Board:
                 print("Updating '{0}' with new footprints".
                   format(net_file_name))
                 net_file = open(net_file_name, "wa")
-                #sexpdata.dump(net_se, net_file)
+                # sexpdata.dump(net_se, net_file)
                 net_se_string = sexpdata.dumps(net_se)
-                #sexpdata.dump(net_se, net_file)
+                # sexpdata.dump(net_se, net_file)
 
                 # Now use some regular expressions to improve formatting to be more like
                 # what KiCad outputs:
@@ -4161,7 +4161,7 @@ class Board:
                 net_se_string = re.sub(" \(fields ",      "\n      (fields ",  net_se_string)
                 net_se_string = re.sub(" \(field ",       "\n        (field ", net_se_string)
                 net_se_string = re.sub(" \(pins ",        "\n      (pins ",    net_se_string)
-                #net_se_string = re.sub(" \(pin ",         "\n        (pin ",   net_se_string)
+                # net_se_string = re.sub(" \(pin ",         "\n        (pin ",   net_se_string)
 
                 # Network portion of file:
                 net_se_string = re.sub(" \(nets ", "\n  (nets ", net_se_string)
@@ -4169,12 +4169,12 @@ class Board:
                 net_se_string = re.sub(" \(node ", "\n      (node ", net_se_string)
 
                 # General substitutions:
-                #net_se_string = re.sub(" \\;", ";", net_se_string)
-                #net_se_string = re.sub(" \\.", ".", net_se_string)
+                # net_se_string = re.sub(" \\;", ";", net_se_string)
+                # net_se_string = re.sub(" \\.", ".", net_se_string)
 
                 net_file.write(net_se_string)
                 net_file.close()
-            #else:
+            # else:
             #        print("File '{0}' not changed".format(net_file_name))
 
         elif file_name.ends_with(".cmp"):
@@ -4202,17 +4202,17 @@ class Board:
                     reference = line[12:-2]
                 elif line.startswith("ValeurCmp = "):
                     part_name = line[12:-2]
-                    #print("part_name:{0}".format(part_name))
+                    # print("part_name:{0}".format(part_name))
                     double_underscore_index = part_name.find("__")
                     if double_underscore_index >= 0:
                         shortened_part_name = \
                           part_name[:double_underscore_index]
-                        #print("Shorten part name '{0}' => '{1}'".
+                        # print("Shorten part name '{0}' => '{1}'".
                         #  format(part_name, shortened_part_name))
                         part_name = shortened_part_name
                 elif line.startswith("IdModule  "):
                     footprint = line[12:-2].split(':')[1]
-                    #print("footprint='{0}'".format(footprint))
+                    # print("footprint='{0}'".format(footprint))
                 elif line.startswith("EndCmp"):
                     part = database.part_lookup(part_name)
                     if part == None:
@@ -4331,7 +4331,7 @@ class Board:
             reference_list = \
               [board_final_pair[0].reference.upper() for board_final_pair in pairs_list]
             reference_text = ", ".join(reference_list)
-            #print("reference_text='{0}'".format(reference_text))
+            # print("reference_text='{0}'".format(reference_text))
             board_part = pairs_list[0]
             reference_board_parts[reference_text] = board_part
 
@@ -4544,7 +4544,7 @@ class Choice_Part(Schematic_Part):
             assert isinstance(vendor_triple[2], str)
 
         tracing = False
-        #tracing = manufacturer_name == "Pololu"
+        # tracing = manufacturer_name == "Pololu"
 
         actual_part = Actual_Part(manufacturer_name, manufacturer_part_name)
         self.actual_parts.append(actual_part)
@@ -4587,10 +4587,10 @@ class Choice_Part(Schematic_Part):
                 vendor_part = Vendor_Part(actual_part,
                   vendor_name, vendor_part_name, 1000000, price_breaks)
                 actual_part.vendor_part_append(vendor_part)
-                #if tracing:
+                # if tracing:
                 #    print("vendor_part_append called")
 
-                #print("Choice_Part.actual_part(): Explicit vendor_part specified={0}".
+                # print("Choice_Part.actual_part(): Explicit vendor_part specified={0}".
                 #  format(vendor_part))
 
         return self
@@ -4620,9 +4620,9 @@ class Choice_Part(Schematic_Part):
            text_filter(board_part.reference, str.isalpha).upper(),
            int(text_filter(board_part.reference, str.isdigit))))
 
-        #print("  {0}:{1};{2} {3}:{4}".\
+        # print("  {0}:{1};{2} {3}:{4}".\
         #  format(choice_part.schematic_part_name,
-        #choice_part.kicad_footprint, choice_part.description,
+        # choice_part.kicad_footprint, choice_part.description,
         #  choice_part.count_get(), choice_part.references_text_get()))
 
     def count_get(self):
@@ -4635,7 +4635,7 @@ class Choice_Part(Schematic_Part):
             for board_part in self.board_parts:
                 count += board_part.board.count
         else:
-            #for fractional_part in fractional_parts:
+            # for fractional_part in fractional_parts:
             #        print("{0}".format(fractional_part.schematic_part_name))
 
             # This code is not quite right:
@@ -4653,7 +4653,7 @@ class Choice_Part(Schematic_Part):
             numerator = 0
             for board_part in self.board_parts:
                 schematic_part = board_part.schematic_part
-                #print("'{0}'".format(schematic_part.schematic_part_name))
+                # print("'{0}'".format(schematic_part.schematic_part_name))
                 if isinstance(schematic_part, Alias_Part):
                     alias_parts = schematic_part
                     for schematic_part in alias_parts.schematic_parts:
@@ -4735,7 +4735,7 @@ class Choice_Part(Schematic_Part):
         # off the head of the list.
 
         tracing = False
-        #tracing = self.schematic_part_name == "S18V20F6;S18V20Fx"
+        # tracing = self.schematic_part_name == "S18V20F6;S18V20Fx"
         if tracing:
             print("=>Choice_Part.select()")
             print(" Choice_part:{0}".format(self.schematic_part_name))
@@ -4755,7 +4755,7 @@ class Choice_Part(Schematic_Part):
                       format(vendor_part.vendor_name, vendor_part.vendor_part_name))
                 price_breaks = vendor_part.price_breaks
                 for price_break_index, price_break in enumerate(price_breaks):
-                    #if tracing:
+                    # if tracing:
                     #        print("  B")
 
                     # We not have an *actual_part*, *vendor_part* and
@@ -4812,27 +4812,27 @@ class Choice_Part(Schematic_Part):
             assert selected_price_break_index < \
               len(selected_vendor_part.price_breaks)
 
-            #print("selected_vendor_name='{0}'".format(selected_vendor_name))
+            # print("selected_vendor_name='{0}'".format(selected_vendor_name))
 
-        #actual_parts = self.actual_parts
-        #for actual_part in actual_parts:
+        # actual_parts = self.actual_parts
+        # for actual_part in actual_parts:
         #    print("       {0}:{1}".format(actual_part.manufacturer_name,
         #      actual_part.manufacturer_part_name))
 
-        #actual_parts = self.actual_parts
-        #selected_actual_part = actual_parts[0]
-        #assert isinstance(selected_actual_part, Actual_Part)
-        #self.selected_actual_part = selected_actual_part
+        # actual_parts = self.actual_parts
+        # selected_actual_part = actual_parts[0]
+        # assert isinstance(selected_actual_part, Actual_Part)
+        # self.selected_actual_part = selected_actual_part
 
-        #vendor_parts = selected_actual_part.vendor_parts
-        #if len(vendor_parts) == 0:
+        # vendor_parts = selected_actual_part.vendor_parts
+        # if len(vendor_parts) == 0:
         #    key = selected_actual_part.key
         #    print("No vendor part for Actual Part '{0} {1}'". \
         #      format(key[0], key[1]))
-        #else:
+        # else:
         #    selected_actual_part.selected_vendor_part = vendor_parts[0]
 
-        #assert isinstance(selected_actual_part, Actual_Part)
+        # assert isinstance(selected_actual_part, Actual_Part)
 
         missing_part = 0
         if len(quints) == 0:
@@ -4876,7 +4876,7 @@ class Alias_Part(Schematic_Part):
         for schematic_part in schematic_parts:
             assert isinstance(schematic_part, Schematic_Part)
 
-        #assert len(schematic_parts) == 1, "schematic_parts={0}".format(schematic_parts)
+        # assert len(schematic_parts) == 1, "schematic_parts={0}".format(schematic_parts)
 
         # Load up *alias_part* (i.e *self*):
         alias_part = self
@@ -4896,7 +4896,7 @@ class Alias_Part(Schematic_Part):
         for schematic_part in self.schematic_parts:
             choice_parts += schematic_part.choice_parts()
 
-        #assert False, \
+        # assert False, \
         #  "No choice parts for '{0}'".format(self.schematic_part_name)
         return choice_parts
 
@@ -5044,7 +5044,7 @@ class Vendor_Part:
       quantity_available, price_breaks, timestamp=0.0):
         """ *Vendor_Part*: Initialize *self* to contain *actual_part"""
 
-        #print("vendor_part_name=", vendor_part_name)
+        # print("vendor_part_name=", vendor_part_name)
 
         # Check argument types:
         assert isinstance(actual_part, Actual_Part)
@@ -5067,7 +5067,7 @@ class Vendor_Part:
         if vendor_name.endswith(" CEDA member"):
             vendor_name = vendor_name[:-12]
         vendor_name = vendor_name.strip(" \t")
-        #print("vendor_name='{0}'\t\toriginal_vendor_name='{1}'".format(
+        # print("vendor_name='{0}'\t\toriginal_vendor_name='{1}'".format(
         #  vendor_name, original_vendor_name))
 
         # Load up *self*:
@@ -5089,7 +5089,7 @@ class Vendor_Part:
         vendor_part = self
         vendor_name = vendor_part.vendor_name
         vendor_part_name = vendor_part.vendor_part_name
-        #price_breaks = vendor_part.price_breaks
+        # price_breaks = vendor_part.price_breaks
         return "'{0}':'{1}'".format(vendor_name, vendor_part_name)
 
 
