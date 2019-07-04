@@ -15,8 +15,10 @@
 # * Class/Function standards:
 #   * Indentation levels are multiples of 4 spaces.
 #   * Continuation lines adhere to PEP 8 standards.
-#   * In general, classes are listed alphabetically.  The exception is base clases will
-#     preceed sub-classes (since Python does not support forward class declarations.)
+#   * The top-level main() function occurs first.
+#   * All other top-level functions are listed alphabetically next.
+#   * In general, classes are listed alphabetically.  Sub-classes are listed alphabetically
+#     immediately after their base class definition.
 #   * All methods within a class are listed alphabetically.
 #   * No duck typing!  All function/method arguments are checked for compatibale types.
 #   * Inside a method, *self* is usually replaced with more descriptive variable name.
@@ -29,7 +31,7 @@
 #
 # Install Notes:
 #
-#       sudo apt-get install xclip xsel
+#       sudo apt-get install xclip xsel # More here ...
 #
 # Tasks:
 # * Decode Digi-Key parametric search URL's.
@@ -354,6 +356,177 @@ import webbrowser
 # sorting by cost, etc.  The final BOM's for each board is generated
 # as a .csv file.
 
+def main():
+    # table_file_name = "drills_table.xml"
+    # assert os.path.isfile(table_file_name)
+    # with open(table_file_name) as table_read_file:
+    #    table_input_text = table_read_file.read()
+    # table_tree = etree.fromstring(table_input_text)
+    # table = Table(file_name=table_file_name, table_tree=table_tree)
+    # table_write_text = table.to_xml_string()
+    # with open("/tmp/" + table_file_name, "w") as table_write_file:
+    #    table_write_file.write(table_write_text)
+
+    # Partition the command line *arguments* into *xml_file_names* and *xsd_file_names*:
+    # arguments = sys.argv[1:]
+    # xml_file_names = list()
+    # xsd_file_names = list()
+    # for argument in arguments:
+    #    if argument.endswith(".xml"):
+    #        xml_file_names.append(argument)
+    #    elif argument.endswith(".xsd"):
+    #        xsd_file_names.append(argument)
+    #    else:
+    #        assert "File name '{0}' does not have a suffix of '.xml' or '.xsd'"
+    #
+    # # Verify that we have one '.xsd' file and and one or more '.xml' files:
+    # assert len(xsd_file_names) < 2, "Too many '.xsd` files specified"
+    # assert len(xsd_file_names) > 0, "No '.xsd' file specified"
+    # assert len(xml_file_names) > 0, "No '.xml' file specified"
+
+    # Deal with command line *arguments*:
+    arguments = sys.argv[1:]
+    # print("arguments=", arguments)
+    if True:
+        # Read in each *table_file_name* in *arguments* and append result to *tables*:
+        tables = list()
+        for table_file_name in arguments:
+            # Verify that *table_file_name* exists and has a `.xml` suffix:
+            assert os.path.isfile(table_file_name), "'{0}' does not exist".format(table_file_name)
+            assert table_file_name.endswith(".xml"), (
+              "'{0}' does not have a .xml suffix".format(table_file_name))
+
+            # Read in *table_file_name* as a *table* and append to *tables* list:
+            with open(table_file_name) as table_read_file:
+                table_input_text = table_read_file.read()
+            table_tree = etree.fromstring(table_input_text)
+            table = Table(file_name=table_file_name, table_tree=table_tree, csv_file_name="")
+            tables.append(table)
+
+            # ui_text = table.to_ui_string()
+            # with open("/tmp/test.ui", "w") as ui_file:
+            #    ui_file.write(ui_text)
+
+            # For debugging only, write *table* out to the `/tmp` directory:
+            debug = False
+            debug = True
+            if debug:
+                table_write_text = table.to_xml_string()
+                with open("/tmp/" + table_file_name, "w") as table_write_file:
+                    table_write_file.write(table_write_text)
+
+        # Now create the *tables_editor* graphical user interface (GUI) and run it:
+        tables_editor = TablesEditor(tables, tracing="")
+
+        # Start up the GUI:
+        tables_editor.run()
+
+    # When we get here, *tables_editor* has stopped running and we can return.
+    return 0
+
+
+def file_name2name(file_name):
+    # Verify argument types:
+    assert isinstance(file_name, str)
+
+    return file_name
+
+
+def name2file_name(name):
+    # Verify argument types:
+    assert isinstance(name, str)
+
+    return name
+
+
+def safe_attribute2text(safe_attribute):
+    # Verify argument types:
+    assert isinstance(safe_attribute, str)
+
+    # Sweep across *safe_attribute* one *character* at a time performing any neccesary conversions:
+    # print("safe_attribute='{0}'".format(safe_attribute))
+    new_characters = list()
+    safe_attribute_size = len(safe_attribute)
+    character_index = 0
+    while character_index < safe_attribute_size:
+        character = safe_attribute[character_index]
+        # print("character[{0}]='{1}'".format(character_index, character))
+        new_character = character
+        if character == '&':
+            remainder = safe_attribute[character_index:]
+            # print("remainder='{0}'".format(remainder))
+            if remainder.startswith("&amp;"):
+                new_character = '&'
+                character_index += 5
+            elif remainder.startswith("&lt;"):
+                new_character = '<'
+                character_index += 4
+            elif remainder.startswith("&gt;"):
+                new_character = '>'
+                character_index += 4
+            elif remainder.startswith("&semi;"):
+                new_character = ';'
+                character_index += 6
+            else:
+                assert False, "remainder='{0}'".format(remainder)
+        else:
+            character_index += 1
+        new_characters.append(new_character)
+    text = "".join(new_characters)
+    return text
+
+
+# "se" stands for "S Expression":
+def se_find(se, base_name, key_name):
+    """ {}: Find *key_name* in *se* and return its value. """
+
+    # *se* is a list of the form:
+    #
+    #        [base_name, [key1, value1], [key2, value2], ..., [keyN, valueN]]
+    #
+    # This routine searches through the *[keyI, valueI]* pairs
+    # and returnts the *valueI* that corresponds to *key_name*.
+
+    # Check argument types:
+    assert isinstance(se, list)
+    assert isinstance(base_name, str)
+    assert isinstance(key_name, str)
+
+    # Do some sanity checking:
+    size = len(se)
+    assert size > 0
+    assert se[0] == Symbol(base_name)
+
+    result = None
+    key_symbol = Symbol(key_name)
+    for index in range(1, size):
+        sub_se = se[index]
+        if len(sub_se) > 0 and sub_se[0] == key_symbol:
+            result = sub_se
+            break
+    return result
+
+
+def text2safe_attribute(text):
+    # Verify argument types:
+    assert isinstance(text, str)
+
+    # Sweep across *text* one *character* at a time performing any neccesary conversions:
+    new_characters = list()
+    for character in text:
+        new_character = character
+        if character == '&':
+            new_character = "&amp;"
+        elif character == '<':
+            new_character = "&lt;"
+        elif character == '>':
+            new_character = "&gt;"
+        elif character == ';':
+            new_character = "&semi"
+        new_characters.append(new_character)
+    safe_attribute = "".join(new_characters)
+    return safe_attribute
+
 
 def text_filter(text, function):
     # Verify argument types:
@@ -361,6 +534,1453 @@ def text_filter(text, function):
     assert callable(function)
 
     return "".join([character for character in text if function(character)])
+
+
+class Actual_Part:
+    # An *Actual_Part* represents a single manufacturer part.
+    # A list of vendor parts specifies where the part can be ordered from.
+
+    def __init__(self, manufacturer_name, manufacturer_part_name):
+        """ *Actual_Part*: Initialize *self* to contain *manufacturer* and
+            *manufacturer_part_name*. """
+
+        # Verify argument_types:
+        assert isinstance(manufacturer_name, str)
+        assert isinstance(manufacturer_part_name, str)
+
+        key = (manufacturer_name, manufacturer_part_name)
+
+        # Load up *self*:
+        self.manufacturer_name = manufacturer_name
+        self.manufacturer_part_name = manufacturer_part_name
+        self.key = key
+        # Fields used by algorithm:
+        self.quantity_needed = 0
+        self.vendor_parts = []
+        self.selected_vendor_part = None
+
+    def vendor_part_append(self, vendor_part):
+        """ *Actual_Part: Append *vendor_part* to the vendor parts
+            of *self*. """
+
+        actual_part = self
+        tracing = False
+        tracing = (actual_part.manufacturer_name == "Pololu" and
+                   actual_part.manufacturer_part_name == "S18V20F6)")
+        if tracing:
+            print("appending part")
+            assert False
+        assert isinstance(vendor_part, Vendor_Part)
+        self.vendor_parts.append(vendor_part)
+
+    def vendor_names_load(self, vendor_names_table, excluded_vendor_names):
+        """ *Actual_Part*:*: Add each possible to vendor name for the
+            *Actual_Part* object (i.e. *self*) to *vendor_names_table*:
+        """
+
+        # Verify argument types:
+        assert isinstance(vendor_names_table, dict)
+        assert isinstance(excluded_vendor_names, dict)
+
+        # Add the possible vendor names for *vendor_part* to
+        # *vendor_names_table*:
+        for vendor_part in self.vendor_parts:
+            vendor_name = vendor_part.vendor_name
+            if vendor_name not in excluded_vendor_names:
+                vendor_names_table[vendor_name] = None
+
+
+class Board:
+    def __init__(self, name, revision, net_file_name, count, order, positions_file_name=None):
+        """ *Board*: Create a new board containing *name*, *revision*,
+            *net_file_name*, *count*. """
+
+        # Verify argument types:
+        assert isinstance(name, str)
+        assert isinstance(revision, str)
+        assert isinstance(net_file_name, str)
+        assert isinstance(count, int)
+        assert isinstance(order, Order)
+        assert isinstance(positions_file_name, str) or positions_file_name is None
+
+        # Load up *self*:
+        self.name = name
+        self.revision = revision
+        self.net_file_name = net_file_name
+        self.count = count
+        self.positions_file_name = positions_file_name
+        self.order = order
+        self.all_board_parts = []            # List[Board_Part] of all board parts
+        self.installed_board_parts = []            # List[Board_Part] board parts to be installed
+        self.uninstalled_board_parts = []   # List[Board_Part] board parts not to be installed
+
+        self.net_file_read()
+
+    def board_part_append(self, board_part):
+        """ *Board*: Append *board_part* onto the *Board* object (i.e. *self*). """
+
+        # Verify argument types:
+        assert isinstance(board_part, Board_Part)
+
+        self.all_board_parts.append(board_part)
+        if board_part.install:
+            self.installed_board_parts.append(board_part)
+        else:
+            self.uninstalled_board_parts.append(board_part)
+
+    def net_file_read(self):
+        """ *Board*: Read in net file for {self}. """
+
+        # Prevent accidental double read:
+        board_parts = self.all_board_parts
+        assert len(board_parts) == 0
+
+        errors = 0
+
+        # Process *net_file_name* adding footprints as needed:
+        net_file_name = self.net_file_name
+        # print("Read '{0}'".format(net_file_name))
+        if net_file_name.endswith(".net"):
+            with open(net_file_name, "r") as net_stream:
+                # Read contents of *net_file_name* in as a string *net_text*:
+                net_text = net_stream.read()
+
+            # Parse *net_text* into *net_se* (i.e. net S-expression):
+            net_se = sexpdata.loads(net_text)
+            # print("\nsexpedata.dumps=", sexpdata.dumps(net_se))
+            # print("")
+            # print("net_se=", net_se)
+            # print("")
+
+            # Visit each *component_se* in *net_se*:
+            net_file_changed = False
+            database = self.order.database
+            components_se = se_find(net_se, "export", "components")
+
+            # Each component has the following form:
+            #
+            #        (comp
+            #          (ref SW123)
+            #          (footprint nickname:NAME)              # May not be present
+            #          (libsource ....)
+            #          (sheetpath ....)
+            #          (tstamp xxxxxxxx))
+            # print("components=", components_se)
+            for component_index, component_se in enumerate(components_se[1:]):
+                # print("component_se=", component_se)
+                # print("")
+
+                # Grab the *reference* from *component_se*:
+                reference_se = se_find(component_se, "comp", "ref")
+                reference = reference_se[1].value()
+                # print("reference_se=", reference_se)
+                # print("")
+
+                # Find *part_name_se* from *component_se*:
+                part_name_se = se_find(component_se, "comp", "value")
+
+                # Suprisingly tedious, extract *part_name* as a string:
+                if isinstance(part_name_se[1], Symbol):
+                    part_name = part_name_se[1].value()
+                elif isinstance(part_name_se[1], int):
+                    part_name = str(part_name_se[1])
+                elif isinstance(part_name_se[1], float):
+                    part_name = str(part_name_se[1])
+                elif isinstance(part_name_se[1], str):
+                    part_name = part_name_se[1]
+                else:
+                    assert False, "strange part_name: {0}". \
+                      format(part_name_se[1])
+
+                # print(reference, part_name, footprint)
+
+                # Strip *comment* out of *part_name* if it exists:
+                comment = ""
+                colon_index = part_name.find(':')
+                if colon_index >= 0:
+                    comment = part_name[colon_index + 1:]
+                    part_name = part_name[0:colon_index]
+
+                # Now see if we have a match for *part_name* in *database*:
+                schematic_part = database.lookup(part_name)
+                if schematic_part is None:
+                    # {part_name} is not in {database}; output error message:
+                    print("File '{0}: Part Name '{2}' {3} not in database".format(
+                          net_file_name, 0, part_name, reference))
+                    errors += 1
+                else:
+                    # We have a match; create the *board_part*:
+                    board_part = Board_Part(self, schematic_part, reference, comment)
+                    self.board_part_append(board_part)
+
+                    # Grab *kicad_footprint* from *schematic_part*:
+                    kicad_footprint = schematic_part.kicad_footprint
+                    assert isinstance(kicad_footprint, str)
+
+                    # Grab *footprint_se* from *component_se* (if it exists):
+                    footprint_se = se_find(component_se, "comp", "footprint")
+                    # print("footprint_se=", footprint_se)
+                    # print("Part[{0}]:'{1}' '{2}' changed={3}".format(
+                    #    component_index, part_name, kicad_footprint, net_file_changed))
+
+                    # Either add or update the footprint:
+                    if footprint_se is None:
+                        # No footprint in the .net file; just add one:
+                        component_se.append(
+                          [Symbol("footprint"), Symbol("common:" + kicad_footprint)])
+                        print("Part {0}: Adding binding to footprint '{1}'".
+                              format(part_name, kicad_footprint))
+                        net_file_changed = True
+                    else:
+                        # We have a footprint in .net file:
+                        previous_footprint = footprint_se[1].value()
+                        previous_split = previous_footprint.split(':')
+                        current_split = kicad_footprint.split(':')
+                        assert len(previous_split) > 0
+                        assert len(current_split) > 0
+                        if len(current_split) == 2:
+                            # *kicad_footprint* has an explicit library,
+                            # so we can just use it and ignore
+                            # *previous_footprint*:
+                            new_footprint = kicad_footprint
+                        elif len(current_split) == 1 and len(previous_split) == 2:
+                            # *kicad_footprint* does not specify a library,
+                            # but the *previous_footprint* does.  We build
+                            # *new_foot_print* using the *previous_footprint*
+                            # library and the rest from *kicad_footprint*:
+                            new_footprint = \
+                              previous_split[0] + ":" + kicad_footprint
+                            # print("new_footprint='{0}'".format(new_footprint))
+                        elif len(current_split) == 1:
+                            new_footprint = "common:" + kicad_footprint
+                        else:
+                            assert False, ("previous_slit={0} current_split={1}".
+                                           format(previous_split, current_split))
+
+                        # Only do something if it changed:
+                        if previous_footprint != new_footprint:
+                            # Since they changed, update in place:
+                            # if isinstance(schematic_part, Alias_Part):
+                            #        print("**Alias_Part.footprint={0}".
+                            #          format(schematic_part.kicad_footprint))
+                            print("Part '{0}': Footprint changed from '{1}' to '{2}'".
+                                  format(part_name, previous_footprint, new_footprint))
+                            footprint_se[1] = Symbol(new_footprint)
+                            net_file_changed = True
+
+            # Write out updated *net_file_name* if *net_file_changed*:
+            if net_file_changed:
+                print("Updating '{0}' with new footprints".
+                      format(net_file_name))
+                net_file = open(net_file_name, "wa")
+                # sexpdata.dump(net_se, net_file)
+                net_se_string = sexpdata.dumps(net_se)
+                # sexpdata.dump(net_se, net_file)
+
+                # Now use some regular expressions to improve formatting to be more like
+                # what KiCad outputs:
+                net_se_string = re.sub(" \\(design ", "\n  (design ", net_se_string)
+
+                # Sheet part of file:
+                net_se_string = re.sub(" \\(sheet ",       "\n    (sheet ",         net_se_string)
+                net_se_string = re.sub(" \\(title_block ", "\n      (title_block ", net_se_string)
+                net_se_string = re.sub(" \\(title ",       "\n        (title ",     net_se_string)
+                net_se_string = re.sub(" \\(company ",     "\n        (company ",   net_se_string)
+                net_se_string = re.sub(" \\(rev ",         "\n        (rev ",       net_se_string)
+                net_se_string = re.sub(" \\(date ",        "\n        (date ",      net_se_string)
+                net_se_string = re.sub(" \\(source ",      "\n        (source ",    net_se_string)
+                net_se_string = re.sub(" \\(comment ",     "\n        (comment ",   net_se_string)
+
+                # Components part of file:
+                net_se_string = re.sub(" \\(components ", "\n  (components ",    net_se_string)
+                net_se_string = re.sub(" \\(comp ",       "\n    (comp ",        net_se_string)
+                net_se_string = re.sub(" \\(value ",      "\n      (value ",     net_se_string)
+                net_se_string = re.sub(" \\(footprint ",  "\n      (footprint ", net_se_string)
+                net_se_string = re.sub(" \\(libsource ",  "\n      (libsource ", net_se_string)
+                net_se_string = re.sub(" \\(sheetpath ",  "\n      (sheetpath ", net_se_string)
+                net_se_string = re.sub(" \\(path ",       "\n      (path ",      net_se_string)
+                net_se_string = re.sub(" \\(tstamp ",     "\n      (tstamp ",    net_se_string)
+
+                # Library parts part of file
+                net_se_string = re.sub(" \\(libparts ",    "\n  (libparts ",    net_se_string)
+                net_se_string = re.sub(" \\(libpart ",     "\n    (libpart ",   net_se_string)
+                net_se_string = re.sub(" \\(description ", "\n      (description ",  net_se_string)
+                net_se_string = re.sub(" \\(fields ",      "\n      (fields ",  net_se_string)
+                net_se_string = re.sub(" \\(field ",       "\n        (field ", net_se_string)
+                net_se_string = re.sub(" \\(pins ",        "\n      (pins ",    net_se_string)
+                # net_se_string = re.sub(" \\(pin ",         "\n        (pin ",   net_se_string)
+
+                # Network portion of file:
+                net_se_string = re.sub(" \\(nets ", "\n  (nets ", net_se_string)
+                net_se_string = re.sub(" \\(net ",  "\n    (net ", net_se_string)
+                net_se_string = re.sub(" \\(node ", "\n      (node ", net_se_string)
+
+                # General substitutions:
+                # net_se_string = re.sub(" \\;", ";", net_se_string)
+                # net_se_string = re.sub(" \\.", ".", net_se_string)
+
+                net_file.write(net_se_string)
+                net_file.close()
+            # else:
+            #        print("File '{0}' not changed".format(net_file_name))
+
+        elif net_file_name.ends_with(".cmp"):
+            # Read in {cmp_file_name}:
+            cmp_file_name = net_file_name
+            cmp_stream = open(cmp_file_name, "r")
+            cmp_lines = cmp_stream.readlines()
+            cmp_stream.close()
+
+            # Process each {line} in {cmp_lines}:
+            database = self.database
+            errors = 0
+            line_number = 0
+            for line in cmp_lines:
+                # Keep track of {line} number for error messages:
+                line_number = line_number + 1
+
+                # There are three values we care about:
+                if line.startswith("BeginCmp"):
+                    # Clear out the values:
+                    reference = None
+                    part_name = None
+                    footprint = None
+                elif line.startswith("Reference = "):
+                    reference = line[12:-2]
+                elif line.startswith("ValeurCmp = "):
+                    part_name = line[12:-2]
+                    # print("part_name:{0}".format(part_name))
+                    double_underscore_index = part_name.find("__")
+                    if double_underscore_index >= 0:
+                        shortened_part_name = \
+                          part_name[:double_underscore_index]
+                        # print("Shorten part name '{0}' => '{1}'".
+                        #  format(part_name, shortened_part_name))
+                        part_name = shortened_part_name
+                elif line.startswith("IdModule  "):
+                    footprint = line[12:-2].split(':')[1]
+                    # print("footprint='{0}'".format(footprint))
+                elif line.startswith("EndCmp"):
+                    part = database.part_lookup(part_name)
+                    if part is None:
+                        # {part_name} not in {database}; output error message:
+                        print("File '{0}', line {1}: Part Name {2} ({3} {4}) not in database".
+                              format(cmp_file_name, line_number, part_name, reference, footprint))
+                        errors = errors + 1
+                    else:
+                        footprint_pattern = part.footprint_pattern
+                        if fnmatch.fnmatch(footprint, footprint_pattern):
+                            # The footprints match:
+                            board_part = \
+                              Board_Part(self, part, reference, footprint)
+                            self.board_parts_append(board_part)
+                            part.board_parts.append(board_part)
+                        else:
+                            print(("File '{0}',  line {1}: {2}:{3} Footprint" +
+                                   "'{4}' does not match database '{5}'").format(
+                                   cmp_file_name, line_number,
+                                   reference, part_name, footprint,
+                                   footprint_pattern))
+                            errors = errors + 1
+                elif (line == "\n" or line.startswith("TimeStamp") or
+                      line.startswith("EndListe") or line.startswith("Cmp-Mod V01")):
+                    # Ignore these lines:
+                    line = line
+                else:
+                    # Unrecognized {line}:
+                    print("'{0}', line {1}: Unrecognized line '{2}'".
+                          format(cmp_file_name, line_number, line))
+                    errors = errors + 1
+        else:
+            print("Net file '{0}' name does not have a recognized suffix".format(net_file_name))
+
+        return errors
+
+    def assembly_summary_write(self, final_choice_parts):
+        """ *Board*: Write out an assembly summary .csv file for the *Board* object (i.e. *self*)
+            using *final_choice_parts*.
+        """
+
+        # Verify argument types:
+        assert isinstance(final_choice_parts, list)
+
+        # Open *board_file*:
+        board_file_name = "/tmp/{0}.csv".format(self.name)
+        board_file = open(board_file_name, "w")
+
+        # Write out the column headings:
+        board_file.write(
+          '"Quan.","Reference","Schematic Name","Description","Fractional",' +
+          '"Manufacturer","Manufacture PN","Vendor","Vendor PN"\n\n')
+
+        # Output the installed parts:
+        has_fractional_parts1 = self.assembly_summary_write_helper(True,
+                                                                   final_choice_parts, board_file)
+
+        # Output the uninstalled parts:
+        board_file.write("\nDo Not Install\n")
+
+        # Output the installed parts:
+        has_fractional_parts2 = self.assembly_summary_write_helper(False,
+                                                                   final_choice_parts, board_file)
+
+        # Explain what a fractional part is:
+        if has_fractional_parts1 or has_fractional_parts2:
+            board_file.write(
+              '"","\nFractional parts are snipped off of 1xN or 2xN break-way headers"\n')
+
+        # Close *board_file* and print out a summary announcement:
+        board_file.close()
+        print("Wrote out assembly file '{0}'".format(board_file_name))
+
+    def assembly_summary_write_helper(self, install, final_choice_parts, board_file):
+        """ *Board*: Write out an assembly summary .csv file for *Board* object (i.e. *self*)
+            out to *board_file*.  *install* is set *True* to list the installable parts from
+            *final_choice_parts* and *False* for an uninstallable parts listing.
+            This routine returns *True* if there are any fractional parts output to *board_file*.
+        """
+
+        # Verify argument types:
+        assert isinstance(install, bool)
+        assert isinstance(final_choice_parts, list)
+        assert isinstance(board_file, io.IOBase)
+
+        # Each *final_choice_part* that is part of the board (i.e. *self*) will wind up
+        # in a list in *board_parts_table*.  The key is the *schematic_part_key*:
+        board_parts_table = {}
+        for final_choice_part in final_choice_parts:
+            # Now figure out if final choice part is part of *board_parts*:
+            board_parts = final_choice_part.board_parts
+            for board_part in board_parts:
+                # We only care care about *final_choice_part* if is used on *board* and
+                # it matches the *install* selector:
+                if board_part.board == self and board_part.install == install:
+                    # We are on the board; create *schemati_part_key*:
+                    schematic_part = board_part.schematic_part
+                    schematic_part_key = "{0};{1}".format(
+                      schematic_part.base_name, schematic_part.short_footprint)
+
+                    # Create/append a list to *board_parts_table*, keyed on *schematic_part_key*:
+                    if schematic_part_key not in board_parts_table:
+                        board_parts_table[schematic_part_key] = []
+                    pairs_list = board_parts_table[schematic_part_key]
+
+                    # Append a pair of *board_part* and *final_choice_part* onto *pairs_list*:
+                    board_final_pair = (board_part, final_choice_part)
+                    pairs_list.append(board_final_pair)
+
+        # Now organize everything around the *reference_list*:
+        reference_board_parts = {}
+        for pairs_list in board_parts_table.values():
+            # We want to sort base on *reference_value* which is converted into *reference_text*:
+            reference_list = \
+              [board_final_pair[0].reference.upper() for board_final_pair in pairs_list]
+            reference_text = ", ".join(reference_list)
+            # print("reference_text='{0}'".format(reference_text))
+            board_part = pairs_list[0]
+            reference_board_parts[reference_text] = board_part
+
+        # Sort the *reference_parts_keys*:
+        reference_board_parts_keys = list(reference_board_parts.keys())
+        reference_board_parts_keys.sort()
+
+        # Now dig down until we have all the information we need for output the next
+        # `.csv` file line:
+        has_fractional_parts = False
+        for reference_board_parts_key in reference_board_parts_keys:
+            # Extract the *board_part* and *final_choice_part*:
+            board_final_pair = reference_board_parts[reference_board_parts_key]
+            board_part = board_final_pair[0]
+            final_choice_part = board_final_pair[1]
+            assert isinstance(final_choice_part, Choice_Part)
+
+            # Now get the corresponding *schematic_part*:
+            schematic_part = board_part.schematic_part
+            schematic_part_key = "{0};{1}".format(
+              schematic_part.base_name, schematic_part.short_footprint)
+            assert isinstance(schematic_part, Schematic_Part)
+
+            # Now get the *actual_part*:
+            actual_part = final_choice_part.selected_actual_part
+            if isinstance(actual_part, Actual_Part):
+
+                # Now get the Vendor_Part:
+                manufacturer_name = actual_part.manufacturer_name
+                manufacturer_part_name = actual_part.manufacturer_part_name
+                vendor_part = final_choice_part.selected_vendor_part
+                assert isinstance(vendor_part, Vendor_Part)
+
+                # Output the line for the .csv file:
+                vendor_name = vendor_part.vendor_name
+                vendor_part_name = vendor_part.vendor_part_name
+                quantity = final_choice_part.count_get()
+                fractional = "No"
+                if len(final_choice_part.fractional_parts) > 0:
+                    fractional = "Yes"
+                    has_fractional_parts = True
+                board_file.write('"{0} x","{1}","{2}","{3}","{4}","{5}","{6}","{7}","{8}"\n'.
+                                 format(quantity, reference_board_parts_key,
+                                        schematic_part_key, final_choice_part.description,
+                                        fractional, manufacturer_name, manufacturer_part_name,
+                                        vendor_name, vendor_part_name))
+            else:
+                print("Problems with actual_part", actual_part)
+
+        return has_fractional_parts
+
+    def positions_process(self, database):
+        """ *Board*: """
+
+        board = self
+        positions_file_name = board.positions_file_name
+        positions_table = PositionsTable(positions_file_name, database)
+        positions_table.reorigin("FD1")
+        positions_table.footprints_rotate(database)
+
+
+class Board_Part:
+    # A Board_Part basically specifies the binding of a Schematic_Part
+    # and is associated schemtatic reference.  Reference strings must
+    # be unique for a given board.
+
+    def __init__(self, board, schematic_part, reference, comment):
+        """ *Board_Part*: Initialize *self* to contain *board*,
+            *schematic_part*, *reference*, and *comment*. """
+
+        # Verify argument types:
+        assert isinstance(board, Board)
+        assert isinstance(schematic_part, Schematic_Part)
+        assert isinstance(reference, str)
+        assert isinstance(comment, str)
+
+        # Load up *self*:
+        self.board = board
+        self.schematic_part = schematic_part
+        self.reference = reference
+        self.comment = comment
+        self.install = (comment != "DNI")
+
+
+class ComboEdit:
+    """ A *ComboEdit* object repesents the GUI controls for manuipulating a combo box widget.
+    """
+
+    # *WIDGET_CALLBACKS* is defined at the end of this class after all of the callback routines
+    # are defined.
+    WIDGET_CALLBACKS = dict()
+
+    # ComboEdit.__init__():
+    def __init__(self, name, tables_editor, items,
+                 new_item_function, current_item_set_function, comment_get_function,
+                 comment_set_function, is_active_function, tracing=None, **widgets):
+        """ Initialize the *ComboEdit* object (i.e. *self*.)
+
+        The arguments are:
+        * *name*: A name for the *ComboEdit* object (i.e. *self*) for debugging.
+        * *tables_editor*: The root *TablesEditor* object.
+        * *items*: A list of item objects to manage.
+        * *new_item_function*: A function that is called to create a new item.
+        * *is_active_function*: A function that returns *True* if combo box should be active.
+        * *current_item_set_function*: A function that is called each time the current item is set.
+        * *comment_get_function*: A function that is called to get the comment text.
+        * *comment_set_function*: A function that is called to set the comment new comment text.
+        * *tracing* (optional): The amount to indent when tracing otherwise *None* for no tracing:
+        * *widgets*: A dictionary of widget names to widgets.  The following widget names
+          are required:
+          * "combo_box":    The *QComboBox* widget to be edited.
+          * "comment_text": The *QComboPlainText* widget for comments.
+          * "delete_button: The *QPushButton* widget that deletes the current entry.
+          * "first_button": The *QPushButton* widget that moves to the first entry.
+          * "last_button":  The *QPushButton* widget that moves to the last entry.
+          * "line_edit":    The *QLineEdit* widget that supports new entry names and entry renames.
+          * "next_button":  The *QPushButton* widget that moves to the next entry.
+          * "new_button":   The *QPushButton* widget that create a new entry.
+          * "previous_button": The *QPushButton* widget that moves tot the pervious entry.
+          * "rename_button": The *QPushButton* widget that   rename_button_clicked,
+        """
+
+        # Verify argument types:
+        assert isinstance(name, str)
+        assert isinstance(items, list)
+        assert callable(new_item_function)
+        assert callable(current_item_set_function)
+        assert callable(comment_get_function)
+        assert callable(comment_set_function)
+        assert callable(is_active_function)
+        assert isinstance(tracing, str) or tracing is None
+        widget_callbacks = ComboEdit.WIDGET_CALLBACKS
+        widget_names = list(widget_callbacks)
+        for widget_name, widget in widgets.items():
+            assert widget_name in widget_names, (
+              "Invalid widget name '{0}'".format(widget_name))
+            assert isinstance(widget, QWidget), (
+              "'{0}' is not a QWidget {1}".format(widget_name, widget))
+
+        # Perform any requested *tracing*:
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print("{0}=>ComboEdit.__init__(*, {1}, ...)".format(tracing, name))
+
+        # Load some values into *combo_edit* (i.e. *self*):
+        combo_edit = self
+        combo_edit.comment_get_function = comment_get_function
+        combo_edit.comment_set_function = comment_set_function
+        combo_edit.comment_position = 0
+        combo_edit.current_item_set_function = current_item_set_function
+        combo_edit.is_active_function = is_active_function
+        combo_edit.items = items
+        combo_edit.name = name
+        combo_edit.new_item_function = new_item_function
+        combo_edit.tables_editor = tables_editor
+
+        # Set the current item after *current_item_set_function* has been set.
+        combo_edit.current_item_set(items[0] if len(items) > 0 else None, tracing=next_tracing)
+
+        # Stuff each *widget* into *combo_edit* and connect the *widget* to the associated
+        # callback routine from *widget_callbacks*:
+        for widget_name, widget in widgets.items():
+            # Store *widget* into *combo_edit* with an attribute name of *widget_name*:
+            setattr(combo_edit, widget_name, widget)
+
+            # Lookup the *callback* routine from *widget_callbacks*:
+            callback = widget_callbacks[widget_name]
+
+            # Using *widget* widget type, perform appropraite signal connection to *widget*:
+            if isinstance(widget, QComboBox):
+                # *widget* is a *QcomboBox* and generate a callback each time it changes:
+                assert widget_name == "combo_box"
+                widget.currentTextChanged.connect(partial(callback, combo_edit))
+            elif isinstance(widget, QLineEdit):
+                # *widget* is a *QLineEdit* and generate a callback for each character changed:
+                assert widget_name == "line_edit"
+                widget.textEdited.connect(partial(callback, combo_edit))
+            elif isinstance(widget, QPushButton):
+                # *widget* is a *QPushButton* and generat a callback for each click:
+                widget.clicked.connect(partial(callback, combo_edit))
+            elif isinstance(widget, QPlainTextEdit):
+                # *widget* is a *QPushButton* and generate a callback for each click:
+                widget.textChanged.connect(partial(callback, combo_edit))
+                widget.cursorPositionChanged.connect(
+                                                    partial(ComboEdit.position_changed, combo_edit))
+            else:
+                assert False, "'{0}' is not a valid widget".format(widget_name)
+
+        # Wrap-up any requested *tracing*:
+        if tracing is not None:
+            print("{0}<=ComboEdit.__init__(*, {1}, ...)".format(tracing, name))
+
+    # ComboEdit.combo_box_changed():
+    def combo_box_changed(self, new_name):
+        """ Callback method invoked when the *QComboBox* widget changes:
+
+        The arguments are:
+        * *new_name*: The *str* that specifies the new *QComboBox* widget value selected.
+        """
+
+        # Verify argument types:
+        assert isinstance(new_name, str)
+
+        # Only do something if we are not already *in_signal*:
+        combo_edit = self
+        tables_editor = combo_edit.tables_editor
+        if not tables_editor.in_signal:
+            tables_editor.in_signal = True
+
+            # Perform any requested signal tracing:
+            trace_signals = tables_editor.trace_signals
+            next_tracing = " " if trace_signals else None
+            if trace_signals:
+                print("=>ComboEdit.combo_box_changed('{0}', '{1}')".
+                      format(combo_edit.name, new_name))
+
+                # Grab *attributes* (and compute *attributes_size*) from *combo_edit* (i.e. *self*):
+                items = combo_edit.items
+                for index, item in enumerate(items):
+                    if item.name == new_name:
+                        # We have found the new *current_item*:
+                        print("  items[{0}] '{1}'".format(index, item.name))
+                        combo_edit.current_item_set(item, tracing=next_tracing)
+                        break
+
+            # Update the the GUI:
+            tables_editor.update(tracing=next_tracing)
+
+            # Wrap up any signal tracing:
+            if trace_signals:
+                print("<=ComboEdit.combo_box_changed('{0}', '{1}')\n".
+                      format(combo_edit.name, new_name))
+            tables_editor.in_signal = False
+
+    # ComboEdit.comment_text_changed():
+    def comment_text_changed(self):
+        # Do nothing if we are in a signal:
+        combo_edit = self
+        tables_editor = combo_edit.tables_editor
+        in_signal = tables_editor.in_signal
+        if not in_signal:
+            tables_editor.in_signal = True
+
+            # Perform any requested signal tracing:
+            trace_signals = tables_editor.trace_signals
+            next_tracing = " " if trace_signals else None
+            if trace_signals:
+                print("=>ComboEdit.comment_text_changed()")
+
+            # Extract *actual_text* from the *comment_plain_text* widget:
+            comment_text = combo_edit.comment_text
+            actual_text = comment_text.toPlainText()
+            cursor = comment_text.textCursor()
+            position = cursor.position()
+
+            # Store *actual_text* into *current_comment* associated with *current_parameter*:
+            item = combo_edit.current_item_get()
+            if item is not None:
+                combo_edit.comment_set_function(item, actual_text, position, tracing=next_tracing)
+
+            # Force the GUI to be updated:
+            tables_editor.update(tracing=next_tracing)
+
+            # Wrap up any signal tracing:
+            if trace_signals:
+                print(" <=ComboEditor.comment_text_changed():{0}\n".format(cursor.position()))
+            tables_editor.in_signal = False
+
+    # ComboEdit.current_item_get():
+    def current_item_get(self, tracing=None):
+        # Verify argument types:
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested tracing:
+        combo_edit = self
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print("{0}=>ComboEdit.current_item_get".format(tracing, combo_edit.name))
+
+        current_item = combo_edit.current_item
+        items = combo_edit.items
+
+        # In general, we just want to return *current_item*. However, things can get
+        # messed up by accident.  So we want to be darn sure that *current_item* is
+        # either *None* or a valid item from *items*.
+
+        # Step 1: Search for *current_item* in *tems:
+        new_current_item = None
+        for item in items:
+            if item is current_item:
+                # Found it:
+                new_current_item = current_item
+
+        # Just in case we did not find it, we attempt to grab the first item in *items* instead:
+        if new_current_item is None and len(items) >= 1:
+            new_current_item = items[0]
+
+        # If the *current_item* has changed, we let the parent know:
+        if new_current_item is not current_item:
+            combo_edit.current_item_set(new_current_item, tracing=next_tracing)
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print("{0}=>ComboEdit.current_item_get".format(tracing, combo_edit.name))
+        return new_current_item
+
+    # ComboEdit.current_item_set():
+    def current_item_set(self, current_item, tracing=None):
+        # Verify argument types:
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested *tracing*:
+        combo_edit = self
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print("{0}=>ComboEdit.current_item_set('{1}', *)".format(tracing, combo_edit.name))
+
+        combo_edit.current_item = current_item
+        combo_edit.current_item_set_function(current_item, tracing=next_tracing)
+
+        # Wrap up any requested tracing:
+        if tracing is not None:
+            print("{0}<=ComboEdit.current_item_set('{1}', *)".format(tracing, combo_edit.name))
+
+    # ComboEdit.delete_button_clicked():
+    def delete_button_clicked(self):
+        # Perform any requested tracing from *combo_edit* (i.e. *self*):
+        combo_edit = self
+        tables_editor = combo_edit.tables_editor
+        trace_signals = tables_editor.trace_signals
+        next_tracing = " " if trace_signals else None
+        if trace_signals:
+            print("=>ComboEdit.delete_button_clicked('{0}')".format(combo_edit.name))
+
+        # Find the matching *item* in *items* and delete it:
+        tables_editor.in_signal = True
+        items = combo_edit.items
+        items_size = len(items)
+        current_item = combo_edit.current_item_get()
+        for index, item in enumerate(items):
+            if item == current_item:
+                # Delete the *current_item* from *items*:
+                del items[index]
+                items_size = len(items)
+
+                # Update *current_item* in *combo_edit*:
+                if 0 <= index < items_size:
+                    current_item = items[index]
+                elif 0 <= index - 1 < items_size:
+                    current_item = items[index - 1]
+                else:
+                    current_item = None
+                combo_edit.current_item_set(current_item, tracing=next_tracing)
+                break
+
+        # Update the GUI:
+        tables_editor.update(tracing=next_tracing)
+
+        # Wrap up any requested tracing;
+        if trace_signals:
+            print("<=ComboEdit.delete_button_clicked('{0}')\n".format(combo_edit.name))
+        tables_editor.in_signal = False
+
+    # ComboEdit.first_button_clicked():
+    def first_button_clicked(self):
+        # Perform any tracing requested by *combo_edit* (i.e. *self*):
+        combo_edit = self
+        tables_editor = combo_edit.tables_editor
+        trace_signals = tables_editor.trace_signals
+        next_tracing = " " if trace_signals else None
+        if trace_signals:
+            print("=>ComboEdit.first_button_clicked('{0}')".format(combo_edit.name))
+
+        # If possible, select the *first_item*:
+        tables_editor.in_signal = True
+        items = combo_edit.items
+        items_size = len(items)
+        if items_size > 0:
+            first_item = items[0]
+            combo_edit.current_item_set(first_item, tracing=next_tracing)
+
+        # Update the user interface:
+        tables_editor.update(tracing=next_tracing)
+
+        # Wrap up any requested tracing:
+        if trace_signals:
+            print("<=ComboEdit.first_button_clicked('{0})\n".format(combo_edit.name))
+        tables_editor.in_signal = False
+
+    # ComboEdit.gui_update():
+    def gui_update(self, tracing=None):
+        # Verify argument types:
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested *tracing* of *combo_edit* (i.e. *self*):
+        combo_edit = self
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print("{0}=>ComboEdit.gui_update('{1}')".format(tracing, combo_edit.name))
+
+        # Grab the widgets from *combo_edit* (i.e. *self*):
+        combo_box = combo_edit.combo_box
+        delete_button = combo_edit.delete_button
+        first_button = combo_edit.first_button
+        last_button = combo_edit.last_button
+        line_edit = combo_edit.line_edit
+        new_button = combo_edit.new_button
+        next_button = combo_edit.next_button
+        previous_button = combo_edit.previous_button
+        rename_button = combo_edit.rename_button
+
+        # If *current_item* *is_a_valid_item* we can enable most of the item widgets:
+        current_item = combo_edit.current_item_get()
+        items = combo_edit.items
+        items_size = len(items)
+        is_a_valid_item = current_item is not None
+        combo_box.setEnabled(is_a_valid_item)
+        # if tracing is not None:
+        #    print("{0}current_item='{1}'".
+        #      format(tracing, "None" if current_item is None else current_item.name))
+
+        # Changing the *combo_box* generates a bunch of spurious callbacks to
+        # *ComboEdit.combo_box_changed()* callbacks.  The *combo_box_being_updated* attribute
+        # is set to *True* in *combo_edit* so that these spurious callbacks can be ignored.
+        combo_edit.combo_box_being_updated = True
+        # print("combo_edit.combo_box_being_updated={0}".
+        #  format(combo_edit.combo_box_being_updated))
+
+        # Empty out *combo_box* and then refill it from *items*:
+        combo_box.clear()
+        current_item_index = -1
+        for index, item in enumerate(items):
+            combo_box.addItem(item.name)
+            # if tracing is not None:
+            #    print("{0}[{1}]: '{2}".format(tracing, index,
+            #      "--" if item is None else item.name))
+            if item is current_item:
+                combo_box.setCurrentIndex(index)
+                current_item_index = index
+                if tracing is not None:
+                    print("{0}match".format(tracing))
+                break
+        assert not is_a_valid_item or current_item_index >= 0
+        # print("current_item_index={0}".format(current_item_index))
+        # print("items_size={0}".format(items_size))
+
+        # Read the comment *current_text* out:
+        if current_item is None:
+            current_text = ""
+            position = 0
+        else:
+            current_text, position = combo_edit.comment_get_function(
+              current_item, tracing=next_tracing)
+
+        # Make sure that *current_text* is being displayed by the *comment_text* widget:
+        comment_text = combo_edit.comment_text
+        previous_text = comment_text.toPlainText()
+        if previous_text != current_text:
+            comment_text.setPlainText(current_text)
+
+        # Set the cursor to be at *position* in the *comment_text* widget.  *cursor* is a
+        # copy of the cursor from *comment_text*.  *position* is loaded into *cursor* which
+        # is then loaded back into *comment_text* to actually move the cursor position:
+        cursor = comment_text.textCursor()
+        cursor.setPosition(position)
+        comment_text.setTextCursor(cursor)
+
+        # Figure out if *_new_button_is_visible*:
+        line_edit_text = line_edit.text()
+        # print("line_edit_text='{0}'".format(line_edit_text))
+        no_name_conflict = line_edit_text != ""
+        for index, item in enumerate(items):
+            item_name = item.name
+            # print("[{0}] attribute_name='{1}'".format(index, item_name))
+            if item_name == line_edit_text:
+                no_name_conflict = False
+                # print("new is not allowed")
+        # print("no_name_conflict={0}".format(no_name_conflict))
+
+        # If *current_attribute* *is_a_valid_attribute* we can enable most of the attribute
+        # widgets.  The first, next, previous, and last buttons depend upon the
+        # *current_attribute_index*:
+        combo_box.setEnabled(is_a_valid_item)
+        delete_button.setEnabled(is_a_valid_item)
+        first_button.setEnabled(is_a_valid_item and current_item_index > 0)
+        last_button.setEnabled(is_a_valid_item and current_item_index + 1 < items_size)
+        new_button.setEnabled(no_name_conflict)
+        next_button.setEnabled(is_a_valid_item and current_item_index + 1 < items_size)
+        previous_button.setEnabled(is_a_valid_item and current_item_index > 0)
+        next_button.setEnabled(is_a_valid_item and current_item_index + 1 < items_size)
+        rename_button.setEnabled(no_name_conflict)
+
+        # Wrap up any requeted *tracing*:
+        if tracing is not None:
+            print("{0}<=ComboEdit.gui_update('{1}')".format(tracing, combo_edit.name))
+
+    # ComboEdit.items_replace():
+    def items_replace(self, new_items):
+        # Verify argument types:
+        assert isinstance(new_items, list)
+
+        # Stuff *new_items* into *combo_item*:
+        combo_item = self
+        combo_item.items = new_items
+
+    # ComboEdit.items_set():
+    def items_set(self, new_items, update_function, new_item_function, current_item_set_function):
+        # Verify argument types:
+        assert isinstance(new_items, list)
+        assert callable(update_function)
+        assert callable(new_item_function)
+        assert callable(current_item_set_function)
+
+        # Load values into *items*:
+        combo_edit = self
+        combo_edit.current_item_set_function = current_item_set_function
+        combo_edit.items = new_items
+        combo_edit.new_item_function = new_item_function
+        combo_edit.update_function = update_function
+
+        # Set the *current_item* last to be sure that the call back occurs:
+        combo_edit.current_item_set(new_items[0] if len(new_items) > 0 else None, "items_set")
+
+    # ComboEdit.last_button_clicked():
+    def last_button_clicked(self):
+        # Perform any tracing requested by *combo_edit* (i.e. *self*):
+        combo_edit = self
+        tables_editor = combo_edit.tables_editor
+        trace_signals = tables_editor.trace_signals
+        next_tracing = " " if trace_signals else None
+        if trace_signals:
+            print("=>ComboEdit.last_button_clicked('{0}')".format(combo_edit.name))
+
+        # If possible select the *last_item*:
+        tables_editor.in_signal = True
+        items = combo_edit.items
+        items_size = len(items)
+        if items_size > 0:
+            last_item = items[-1]
+            combo_edit.current_item_set(last_item, tracing=next_tracing)
+
+        # Update the user interface:
+        tables_editor.update(tracing=next_tracing)
+
+        # Wrap up any requested tracing:
+        if trace_signals:
+            print("<=ComboEdit.last_button_clicked('{0}')\n".format(combo_edit.name))
+        tables_editor.in_signal = False
+
+    # ComboEdit.line_edit_changed():
+    def line_edit_changed(self, text):
+        # Verify argument types:
+        assert isinstance(text, str)
+
+        # Make sure that we are not already in a signal before doing anything:
+        combo_edit = self
+        tables_editor = combo_edit.tables_editor
+        if not tables_editor.in_signal:
+            tables_editor.in_signal = True
+
+            # Perform any requested siginal tracing:
+            trace_signals = tables_editor.trace_signals
+            next_tracing = " " if trace_signals else None
+            if trace_signals:
+                print("=>ComboEditor.line_edit_changed('{0}')".format(text))
+
+            # Make sure that the *combo_edit* *is_active*:
+            is_active = combo_edit.is_active_function()
+            if not is_active:
+                # We are not active, so do not let the user type anything in:
+                line_edit = combo_edit.line_edit
+                line_edit.setText("")  # Erase whatever was just typed in!
+
+            # Now just update *combo_edit*:
+            combo_edit.gui_update(tracing=next_tracing)
+
+            # Wrap up any requested signal tracing:
+            if trace_signals:
+                print("<=ComboEditor.line_edit_changed('{0}')\n".format(text))
+            tables_editor.in_signal = False
+
+    # ComboEdit.item_append():
+    def item_append(self, new_item, tracing=None):
+        # Verify argument types:
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested *tracing*:
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print("{0}=>ComboEdit.item_append(*)".format(tracing))
+
+        # Append *item* to *items* and make it current for *combo_edit* (i.e. *self*):
+        combo_edit = self
+        items = combo_edit.items
+        items.append(new_item)
+        combo_edit.current_item_set(new_item, tracing=next_tracing)
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print("{0}<=ComboEdit.item_append(*)".format(tracing))
+
+    # ComboEdit.new_button_clicked():
+    def new_button_clicked(self):
+        # Perform any tracing requested by *combo_edit* (i.e. *self*):
+        combo_edit = self
+        tables_editor = combo_edit.tables_editor
+        trace_signals = tables_editor.trace_signals
+        next_tracing = " " if trace_signals else None
+        if trace_signals:
+            print("=>ComboEdit.new_button_clicked('{0}')".format(combo_edit.name))
+
+        # Grab some values from *combo_edit*:
+        tables_editor.in_signal = True
+        items = combo_edit.items
+        line_edit = combo_edit.line_edit
+        new_item_function = combo_edit.new_item_function
+        print("items.id=0x{0:x}".format(id(items)))
+
+        # Create a *new_item* and append it to *items*:
+        new_item_name = line_edit.text()
+        # print("new_item_name='{0}'".format(new_item_name))
+        new_item = new_item_function(new_item_name, tracing=next_tracing)
+        combo_edit.item_append(new_item)
+
+        # Update the GUI:
+        tables_editor.update(tracing=next_tracing)
+
+        # Wrap up any requested signal tracing:
+        if trace_signals:
+            print("<=ComboEdit.new_button_clicked('{0}')\n".format(combo_edit.name))
+        tables_editor.in_signal = False
+
+    # ComboEdit.next_button_clicked():
+    def next_button_clicked(self):
+        # Perform any tracing requested by *combo_edit* (i.e. *self*):
+        combo_edit = self
+        tables_editor = combo_edit.tables_editor
+        trace_signals = tables_editor.trace_signals
+        next_tracing = " " if trace_signals else None
+        if trace_signals:
+            print("=>ComboEdit.next_button_clicked('{0}')".format(combo_edit.name))
+
+        # ...
+        tables_editor.in_signal = True
+        items = combo_edit.items
+        items_size = len(items)
+        current_item = combo_edit.current_item_get()
+        for index, item in enumerate(items):
+            if item == current_item:
+                if index + 1 < items_size:
+                    current_item = items[index + 1]
+                break
+        combo_edit.current_item_set(current_item, tracing=next_tracing)
+
+        # Update the GUI:
+        tables_editor.update(tracing=next_tracing)
+
+        # Wrap up any requested tracing:
+        if trace_signals:
+            print("<=ComboEdit.next_button_clicked('{0}')\n".format(combo_edit.name))
+        tables_editor.in_signal = False
+
+    # ComboEdit.position_changed():
+    def position_changed(self):
+        # Do nothing if we already in a signal:
+        combo_edit = self
+        tables_editor = combo_edit.tables_editor
+        if not tables_editor.in_signal:
+            tables_editor.in_signal = True
+
+            # Perform any requested signal tracing:
+            trace_signals = tables_editor.trace_signals
+            next_tracing = " " if trace_signals else None
+            if trace_signals:
+                print("=>ComboEdit.position_changed('{0}')".format(combo_edit.name))
+
+            # Grab the *actual_text* and *position* from the *comment_text* widget and stuff
+            # both into the comment field of *item*:
+            item = combo_edit.current_item_get()
+            comment_text = combo_edit.comment_text
+            cursor = comment_text.textCursor()
+            position = cursor.position()
+            actual_text = comment_text.toPlainText()
+            combo_edit.comment_set_function(item, actual_text, position, tracing=next_tracing)
+
+            # Wrap up any signal tracing:
+            if trace_signals:
+                # print("position={0}".format(position))
+                print("<=ComboEdit.position_changed('{0}')\n".format(combo_edit.name))
+            tables_editor.in_signal = False
+
+    # ComboEdit.previous_button_clicked():
+    def previous_button_clicked(self):
+        # Perform any tracing requested by *combo_edit* (i.e. *self*):
+        combo_edit = self
+        tables_editor = combo_edit.tables_editor
+        trace_signals = tables_editor.trace_signals
+        next_tracing = " " if trace_signals else None
+        if trace_signals:
+            print("=>ComboEdit.previous_button_clicked('{0}')".format(combo_edit.name))
+
+        # ...
+        tables_editor.in_signal = True
+        items = combo_edit.items
+        current_item = combo_edit.current_item_get()
+        for index, item in enumerate(items):
+            if item == current_item:
+                if index > 0:
+                    current_item = items[index - 1]
+                break
+        combo_edit.current_item_set(current_item, tracing=next_tracing)
+
+        # Update the GUI:
+        tables_editor.update(tracing=next_tracing)
+
+        # Wrap up any requested tracing:
+        if trace_signals:
+            print("<=ComboEdit.previous_button_clicked('{0}')\n".format(combo_edit.name))
+        tables_editor.in_signal = False
+
+    # ComboEdit.rename_button_clicked():
+    def rename_button_clicked(self):
+        # Perform any tracing requested by *combo_edit* (i.e. *self*):
+        combo_edit = self
+        tables_editor = combo_edit.tables_editor
+        trace_signals = tables_editor.trace_signals
+        next_tracing = " " if trace_signals else None
+        if trace_signals:
+            print("=>ComboEdit.rename_button_clicked('{0}')".format(combo_edit.name))
+
+        tables_editor.in_signal = True
+        combo_edit = self
+        line_edit = combo_edit.line_edit
+        new_item_name = line_edit.text()
+
+        current_item = combo_edit.current_item_get()
+        if current_item is not None:
+            current_item.name = new_item_name
+
+        # Update the GUI:
+        tables_editor.update(tracing=next_tracing)
+
+        # Wrap up any requested tracing:
+        if trace_signals:
+            print("=>ComboEdit.rename_button_clicked('{0}')\n".format(combo_edit.name))
+        tables_editor.in_signal = False
+
+    # ComboEdit.WIDGET_CALLBACKS:
+    # *WIDGET_CALLBACKS* is defined here **after** the actual callback routines are defined:
+    WIDGET_CALLBACKS = {
+      "combo_box":       combo_box_changed,
+      "comment_text":    comment_text_changed,
+      "delete_button":   delete_button_clicked,
+      "first_button":    first_button_clicked,
+      "last_button":     last_button_clicked,
+      "line_edit":       line_edit_changed,
+      "next_button":     next_button_clicked,
+      "new_button":      new_button_clicked,
+      "previous_button": previous_button_clicked,
+      "rename_button":   rename_button_clicked,
+    }
+
+
+class Comment:
+
+    # Comment.__init__():
+    def __init__(self, tag_name, **arguments_table):
+        # Verify argument types:
+        assert isinstance(tag_name, str) and tag_name in \
+         ("EnumerationComment", "ParameterComment", "TableComment", "SearchComment")
+        is_comment_tree = "comment_tree" in arguments_table
+        if is_comment_tree:
+            assert len(arguments_table) == 1
+            assert isinstance(arguments_table["comment_tree"], etree._Element)
+        else:
+            assert len(arguments_table) >= 2
+            assert "language" in arguments_table and isinstance(arguments_table["language"], str)
+            assert "lines" in arguments_table
+            lines = arguments_table["lines"]
+            for line in lines:
+                assert isinstance(line, str)
+
+        if is_comment_tree:
+            comment_tree = arguments_table["comment_tree"]
+            assert comment_tree.tag == tag_name, (
+              "tag_name='{0}' tree_tag='{1}'".format(tag_name, comment_tree.tag))
+            attributes_table = comment_tree.attrib
+            assert "language" in attributes_table
+            language = attributes_table["language"]
+            text = comment_tree.text.strip()
+            lines = text.split('\n')
+            for index, line in enumerate(lines):
+                lines[index] = line.strip().replace("<", "&lt;").replace(">", "&gt;")
+        else:
+            language = arguments_table["language"]
+            lines = arguments_table["lines"]
+
+        # Load up *table_comment* (i.e. *self*):
+        comment = self
+        comment.position = 0
+        comment.language = language
+        comment.lines = lines
+        # print("Comment(): comment.lines=", tag_name, lines)
+
+    # Comment.__eq__():
+    def __eq__(self, comment2):
+        # Verify argument types:
+        assert isinstance(comment2, Comment)
+
+        # Compare each field in *comment1* (i.e. *self*) with the corresponding field in *comment2*:
+        comment1 = self
+        language_equal = (comment1.language == comment2.language)
+        lines_equal = (comment1.lines == comment2.lines)
+        all_equal = (language_equal and lines_equal)
+        # print("language_equal={0}".format(language_equal))
+        # print("lines_equal={0}".format(lines_equal))
+        return all_equal
+
+
+class EnumerationComment(Comment):
+
+    # EnumerationComment.__init__():
+    def __init__(self, **arguments_table):
+        # print("=>EnumerationComment.__init__()")
+        enumeration_comment = self
+        super().__init__("EnumerationComment", **arguments_table)
+        assert isinstance(enumeration_comment.language, str)
+        assert isinstance(enumeration_comment.lines, list)
+
+    # EnumerationComment.__equ__():
+    def __equ__(self, enumeration_comment2):
+        assert isinstance(enumeration_comment2, EnumerationComment)
+        return super.__eq__(enumeration_comment2)
+
+    # EnumerationComment.xml_lines_append():
+    def xml_lines_append(self, xml_lines, indent):
+        # Verify argument types:
+        assert isinstance(xml_lines, list)
+        assert isinstance(indent, str)
+
+        # Append and `<EnumerationComment>` an element to *xml_lines*:
+        enumeration_comment = self
+        xml_lines.append(
+          '{0}<EnumerationComment language="{1}">'.format(indent, enumeration_comment.language))
+        for line in enumeration_comment.lines:
+            xml_lines.append('{0}  {1}'.format(indent, line))
+        xml_lines.append('{0}</EnumerationComment>'.format(indent))
+
+
+class ParameterComment(Comment):
+
+    # ParameterComment.__init__():
+    def __init__(self, **arguments_table):
+        # Verify argument types:
+        is_comment_tree = "comment_tree" in arguments_table
+        if is_comment_tree:
+            assert isinstance(arguments_table["comment_tree"], etree._Element)
+        else:
+            assert "language" in arguments_table and isinstance(arguments_table["language"], str)
+            assert ("long_heading" in arguments_table
+                    and isinstance(arguments_table["long_heading"], str))
+            assert "lines" in arguments_table
+            lines = arguments_table["lines"]
+            for line in lines:
+                assert isinstance(line, str)
+            arguments_count = 3
+            has_short_heading = "short_heading" in arguments_table
+            if has_short_heading:
+                arguments_count += 1
+                assert isinstance(arguments_table["short_heading"], str)
+            assert len(arguments_table) == arguments_count
+
+        if is_comment_tree:
+            comment_tree = arguments_table["comment_tree"]
+            attributes_table = comment_tree.attrib
+            attributes_count = 2
+            long_heading = attributes_table["longHeading"]
+            if "shortHeading" in attributes_table:
+                attributes_count += 1
+                short_heading = attributes_table["shortHeading"]
+            else:
+                short_heading = None
+            assert len(attributes_table) == attributes_count
+        else:
+            long_heading = arguments_table["long_heading"]
+            lines = arguments_table["lines"]
+            short_heading = arguments_table["short_heading"] if has_short_heading else None
+
+        # Initailize the parent of *parameter_comment* (i.e. *self*).  The parent initializer
+        # will fill in the *language* and *lines* fields:
+        parameter_comment = self
+        super().__init__("ParameterComment", **arguments_table)
+        assert isinstance(parameter_comment.language, str)
+        assert isinstance(parameter_comment.lines, list)
+
+        # Initialize the remaining two fields that are specific to a *parameter_comment*:
+        parameter_comment.long_heading = long_heading
+        parameter_comment.short_heading = short_heading
+
+    # ParameterComment.__equ__():
+    def __eq__(self, parameter_comment2):
+        # Verify argument types:
+        assert isinstance(parameter_comment2, ParameterComment)
+
+        parameter_comment1 = self
+        language_equal = parameter_comment1.language == parameter_comment2.language
+        lines_equal = parameter_comment1.lines == parameter_comment2.lines
+        long_equal = parameter_comment1.long_heading == parameter_comment2.long_heading
+        short_equal = parameter_comment1.short_heading == parameter_comment2.short_heading
+        all_equal = language_equal and lines_equal and long_equal and short_equal
+        return all_equal
+
+    # ParameterComment.xml_lines_append():
+    def xml_lines_append(self, xml_lines):
+        parameter_comment = self
+        xml_line = '        <ParameterComment language="{0}" longHeading="{1}"'.format(
+          parameter_comment.language, parameter_comment.long_heading)
+        short_heading = parameter_comment.short_heading
+        if short_heading is not None:
+            xml_line += ' shortHeading="{0}"'.format(short_heading)
+        xml_line += '>'
+        xml_lines.append(xml_line)
+        for line in parameter_comment.lines:
+            xml_lines.append('          {0}'.format(line))
+        xml_lines.append('        </ParameterComment>')
+
+
+class SearchComment(Comment):
+    # SearchComment.__init()
+    def __init__(self, **arguments_table):
+        # Verify argument types:
+        is_comment_tree = "comment_tree" in arguments_table
+        if is_comment_tree:
+            assert len(arguments_table) == 1
+            assert isinstance(arguments_table["comment_tree"], etree._Element)
+        else:
+            assert len(arguments_table) == 2
+            assert "language" in arguments_table and isinstance(arguments_table["language"], str)
+            assert "lines" in arguments_table
+            lines = arguments_table["lines"]
+            assert isinstance(lines, list)
+            for line in lines:
+                assert isinstance(line, str)
+
+        # There are no extra attributes above a *Comment* object, so we can just use the
+        # intializer for the *Coment* class:
+        super().__init__("SearchComment", **arguments_table)
+
+    # SearchComment.xml_lines_append():
+    def xml_lines_append(self, xml_lines, indent):
+        # Verify argument types:
+        assert isinstance(xml_lines, list)
+        assert isinstance(indent, str)
+
+        # Append the <SearchComment> element:
+        search_comment = self
+        lines = search_comment.lines
+        xml_lines.append('{0}<SearchComment language="{1}">'.
+                         format(indent, search_comment.language))
+        for line in lines:
+            xml_lines.append("{0}  {1}".format(indent, line))
+        xml_lines.append('{0}</SearchComment>'.format(indent))
+
+
+class TableComment(Comment):
+
+    # TableComment.__init__():
+    def __init__(self, **arguments_table):
+        # Verify argument types:
+        is_comment_tree = "comment_tree" in arguments_table
+        if is_comment_tree:
+            assert len(arguments_table) == 1
+            assert isinstance(arguments_table["comment_tree"], etree._Element)
+        else:
+            assert len(arguments_table) == 2
+            assert "language" in arguments_table and isinstance(arguments_table["language"], str)
+            assert "lines" in arguments_table
+            lines = arguments_table["lines"]
+            assert isinstance(lines, list)
+            for line in lines:
+                assert isinstance(line, str)
+
+        # There are no extra attributes above a *Comment* object, so we can just use the
+        # intializer for the *Coment* class:
+        super().__init__("TableComment", **arguments_table)
+
+    # TableComment.__equ__():
+    def __equ__(self, table_comment2):
+        # Verify argument types:
+        assert isinstance(table_comment2, TableComment)
+        return super().__eq__(table_comment2)
+
+    # TableComment.xml_lines_append():
+    def xml_lines_append(self, xml_lines, indent):
+        # Verify argument types:
+        assert isinstance(xml_lines, list)
+        assert isinstance(indent, str)
+
+        # Append the <TableComment...> element:
+        table_comment = self
+        xml_lines.append('{0}<TableComment language="{1}">'.format(indent, table_comment.language))
+        for line in table_comment.lines:
+            xml_lines.append('{0}  {1}'.format(indent, line))
+        xml_lines.append('{0}</TableComment>'.format(indent))
 
 
 class Database:
@@ -2683,6 +4303,1522 @@ class Database:
                   manufacturer_name, manufacturer_part_name))
 
 
+class Enumeration:
+
+    # Enumeration.__init__():
+    def __init__(self, **arguments_table):
+        is_enumeration_tree = "enumeration_tree" in arguments_table
+        if is_enumeration_tree:
+            assert isinstance(arguments_table["enumeration_tree"], etree._Element)
+        else:
+            assert len(arguments_table) == 2
+            assert "name" in arguments_table
+            assert "comments" in arguments_table
+            comments = arguments_table["comments"]
+            for comment in comments:
+                assert isinstance(comment, EnumerationComment)
+
+        if is_enumeration_tree:
+            enumeration_tree = arguments_table["enumeration_tree"]
+            assert enumeration_tree.tag == "Enumeration"
+            attributes_table = enumeration_tree.attrib
+            assert len(attributes_table) == 1
+            assert "name" in attributes_table
+            name = attributes_table["name"]
+            comments_tree = list(enumeration_tree)
+            comments = list()
+            for comment_tree in comments_tree:
+                comment = EnumerationComment(comment_tree=comment_tree)
+                comments.append(comment)
+            assert len(comments) >= 1
+        else:
+            name = arguments_table["name"]
+            comments = arguments_table["comments"]
+
+        # Load value into *enumeration* (i.e. *self*):
+        enumeration = self
+        enumeration.name = name
+        enumeration.comments = comments
+
+    # Enumeration.__eq__():
+    def __eq__(self, enumeration2):
+        # Verify argument types:
+        assert isinstance(enumeration2, Enumeration)
+
+        enumeration1 = self
+        name_equal = (enumeration1.name == enumeration2.name)
+        comments_equal = (enumeration1.comments == enumeration2.comments)
+        return name_equal and comments_equal
+
+    # Enumeration.xml_lines_append():
+    def xml_lines_append(self, xml_lines, indent):
+        # Verify argument types:
+        assert isinstance(xml_lines, list)
+        assert isinstance(indent, str)
+
+        # Append an `<Enumeration>` element to *xml_lines*:
+        enumeration = self
+        xml_lines.append('{0}<Enumeration name="{1}">'.format(indent, enumeration.name))
+        for comment in enumeration.comments:
+            comment.xml_lines_append(xml_lines, indent + "  ")
+        xml_lines.append('{0}</Enumeration>'.format(indent))
+
+
+class Filter:
+
+    # Filter.__init__():
+    def __init__(self, **arguments_table):
+        # Verify argument types:
+        is_filter_tree = "tree" in arguments_table
+        arguments_table_size = len(arguments_table)
+        if is_filter_tree:
+            assert arguments_table_size == 2
+            assert "table" in arguments_table
+        else:
+            assert arguments_table_size == 4
+            assert "parameter" in arguments_table
+            assert "table" in arguments_table
+            assert "use" in arguments_table
+            assert "select" in arguments_table
+
+        # Dispatch on *is_filter_tree*:
+        if is_filter_tree:
+            # Grab *tree* and *table* out of *arguments_table*:
+            tree = arguments_table["tree"]
+            assert isinstance(tree, etree._Element)
+            table = arguments_table["table"]
+            assert isinstance(table, Table)
+
+            # Grab the *parameter_name* and *use* from *filter_tree*:
+            attributes_table = tree.attrib
+            assert len(attributes_table) == 3
+
+            # Extrace *use* from *attributes_table*:
+            assert "use" in attributes_table
+            use_text = attributes_table["use"].lower()
+            if use_text == "true":
+                use = True
+            elif use_text == "false":
+                use = False
+            else:
+                assert False
+
+            # Extract the *match* from *attributes_table*:
+            assert "select" in attributes_table
+            select = attributes_table["select"]
+
+            # Extract *parameter* from *attributes_table* and *table*:
+            assert "name" in attributes_table
+            parameter_name = attributes_table["name"]
+            parameters = table.parameters
+            match_parameter = None
+            for parameter in parameters:
+                if parameter.name == parameter_name:
+                    match_parameter = parameter
+                    break
+            else:
+                assert False
+            parameter = match_parameter
+        else:
+            # Just grab *table*, *parameter*, *use*, and *select* directly from *arguments_table*:
+            table = arguments_table["table"]
+            assert isinstance(table, Table)
+            parameter = arguments_table["parameter"]
+            assert isinstance(parameter, Parameter)
+            use = arguments_table["use"]
+            assert isinstance(use, bool)
+            select = arguments_table["select"]
+            assert isinstance(select, str)
+
+            # Make sure that *parameter* is in *parameters*:
+            parameter_name = parameter.name
+            parameters = table.parameters
+            for parameter in parameters:
+                if parameter.name == parameter_name:
+                    break
+            else:
+                assert False
+
+        # Load up *filter* (i.e. *self*):
+        filter = self
+        filter.parameter = parameter
+        filter.reg_ex = None
+        filter.select = select
+        filter.select_item = None
+        filter.use = use
+        filter.use_item = None
+
+    # Filter.xml_lines_append():
+    def xml_lines_append(self, xml_lines, indent, tracing=None):
+        # Verify argument types:
+        assert isinstance(xml_lines, list)
+        assert isinstance(indent, str)
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested *tracing*:
+        # next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print("{0}=>Filter.xml_lines_append()".format(tracing))
+
+        # Start appending the `<Filter...>` element to *xml_lines*:
+        filter = self
+        parameter = filter.parameter
+        use = filter.use
+        select = filter.select
+        xml_lines.append(
+          '{0}<Filter name="{1}" use="{2}" select="{3}">'.
+          format(indent, parameter.name, use, select))
+        if tracing is not None:
+            print("{0}Name='{1}' Use='{2}' Select='{3}'".
+                  format(tracing, parameter.name, filter.use, select))
+
+        # Append any *enumerations*:
+        enumerations = parameter.enumerations
+        if len(enumerations) >= 1:
+            xml_lines.append('{0}  <FilterEnumerations>'.format(indent))
+            for enumeration in enumerations:
+                xml_lines.append('{0}    <FilterEnumeration name="{1}" match="{2}"/>'.
+                                 format(indent, enumeration.name, False))
+            xml_lines.append('{0}  </FilterEnumerations>'.format(indent))
+
+        # Wrap up `<Filter...>` element:
+        xml_lines.append('{0}</Filter>'.format(indent))
+
+        # Wrap up any requested *Tracing*:
+        if tracing is not None:
+            print("{0}<=Filter.xml_lines_append()".format(tracing))
+
+
+class Footprint:
+    """ *Footprint*: Represents a PCB footprint. """
+
+    def __init__(self, name, rotation):
+        """ *Footprint*: Initialize a new *FootPrint* object.
+
+        The arguments are:
+        * *name* (str): The unique footprint name.
+        * *rotation* (degrees): The amount to rotate the footprint to match the feeder tape with
+          holes on top.
+        """
+
+        # Verify argument types:
+        assert isinstance(name, str)
+        assert isinstance(rotation, float) and 0.0 <= rotation <= 360.0 or rotation is None
+
+        # Stuff values into *footprint* (i.e. *self*):
+        footprint = self
+        footprint.name = name
+        footprint.rotation = rotation
+
+
+class Inventory:
+    def __init__(self, schematic_part, amount):
+        """ *Inventory*: Initialize *self* to contain *scheamtic_part* and
+            *amount*. """
+
+        # Verify argument types:
+        assert isinstance(schematic_part, Schematic_Part)
+        assert isinstance(amount, int)
+
+        # Load up *self*:
+        self.schematic_part = schematic_part
+        self.amount = amount
+
+
+class Node:
+    """ Represents a single *Node* in a *QTreeView* tree. """
+
+    # Node.__init__():
+    def __init__(self, name, path, parent=None):
+        # Verify argument types:
+        assert isinstance(name, str)
+        assert isinstance(path, str)
+        assert isinstance(parent, Node) or parent is None
+
+        # print("=>Node.__init__(*, '{0}', '...', '{2}')".
+        #  format(name, path, "None" if parent is None else parent.name))
+        # Initilize the super class:
+        super().__init__()
+
+        node = self
+        if isinstance(node, Table):
+            is_dir = True
+            is_traversed = False
+        else:
+            is_dir = os.path.isdir(path)
+            is_traversed = not is_dir or is_dir and len(list(os.listdir(path))) == 0
+
+        # Load up *node* (i.e. *self*):
+        node.children = []
+        node.name = name
+        node.is_dir = is_dir
+        node.is_traversed = is_traversed
+        node.parent = parent
+        node.path = path
+
+        # Force *node* to be in *parent*:
+        if parent is not None:
+            parent.add_child(node)
+
+        # print("<=Node.__init__(*, '{0}', '...', '{2}')".
+        #  format(name, path, "None" if parent is None else parent.name))
+
+    # Node.add_child():
+    def add_child(self, child):
+        # Verify argument types:
+        assert isinstance(child, Node)
+
+        # Append *child* to the *node* (i.e. *self*) children list:
+        node = self
+        # print("=>Node.add_child('{0}', '{1}') =>{2}".
+        #  format(node.name, child.name, len(node.children)))
+        node.children.append(child)
+        child.parent = node
+        # print("<=Node.add_child('{0}', '{1}') =>{2}".
+        #  format(node.name, child.name, len(node.children)))
+
+    # Node.child():
+    def child(self, row):
+        # Verify argument types:
+        assert isinstance(row, int)
+
+        node = self
+        children = node.children
+        result = children[row] if 0 <= row < len(children) else None
+        return result
+
+    # Node.child_count():
+    def child_count(self):
+        node = self
+        return len(node.children)
+
+    # Node.clicked():
+    def clicked(self, tables_editor, tracing=None):
+        # Verify argument types:
+        assert isinstance(tables_editor, TablesEditor)
+        assert isinstance(tracing, str) or tracing is None
+
+        node = self
+        assert False, "Node.clicked() needs to be overridden for type ('{0}')".format(type(node))
+
+    # Node.csv_read_and_process():
+    def csv_read_and_process(self, csv_directory, bind=False, tracing=None):
+        # Verify argument types:
+        assert isinstance(csv_directory, str)
+        assert False, ("Node sub-class '{0}' does not implement csv_read_and_process".
+                       format(type(self)))
+
+    # Node.flle_name2title():
+    def file_name2title(self, file_name):
+        # Verify argument types:
+        assert isinstance(file_name, str)
+
+        # Decode *file_name* into a list of *characters*:
+        characters = list()
+        index = 0
+        file_name_size = len(file_name)
+        while index < file_name_size:
+            character = file_name[index]
+            if character == '_':
+                # Underscores are always translated to spaces:
+                character = ' '
+                index += 1
+            elif character == '%':
+                # `%XX` is converted into a single *character*:
+                character = chr(int(file_name[index+1:index+3], 16))
+                index += 3
+            else:
+                # Everything else just taken as is:
+                index += 1
+            characters.append(character)
+
+        # Join *characters* back into a single *title* string:
+        title = "".join(characters)
+        return title
+
+    # Node.insert_child():
+    def insert_child(self, position, child):
+        # Verify argument types:
+        assert isinstance(position, int)
+        assert isinstance(child, Node)
+
+        node = self
+        children = node.children
+        inserted = 0 <= position <= len(children)
+        if inserted:
+            children.insert(position, child)
+            child.parent = node
+        return inserted
+
+    # Node.remove():
+    def remove(self, remove_node):
+        # Verify argument types:
+        assert isinstance(remove_node, Node)
+
+        node = self
+        children = node.children
+        for child_index, child_node in enumerate(children):
+            if child_node is remove_node:
+                del children[child_index]
+                remove_node.parent = None
+                break
+        else:
+            assert False, ("Node '{0}' not in '{1}' remove failed".
+                           format(remove_node.name, node.name))
+
+    # Node.title_get():
+    def title_get(self):
+        table = self
+        title = table.name
+        print("Node.title='{0}'".format(title))
+        return title
+
+    # Node.title2file_name():
+    def title2file_name(self, title):
+        # Verify argument types:
+        assert isinstance(title, str)
+
+        node = self
+        characters = list()
+        # ok_characters = "-,:.%+"
+        translate_characters = "!\"#$&'()*/;<=>?[]\\_`{|}~"
+        for character in title:
+            if character in translate_characters:
+                character = "%{0:02x}".format(ord(character))
+            elif character == ' ':
+                character = '_'
+            characters.append(character)
+        file_name = "".join(characters)
+
+        # Set to *True* to a little debugging:
+        if False:
+            converted_title = node.file_name2title(file_name)
+            assert title == converted_title, ("'{0}' '{1}' '{2}'".
+                                              format(title, file_name, converted_title))
+        return file_name
+
+    # Node.row():
+    def row(self):
+        node = self
+        parent = node.parent
+        result = 0 if parent is None else parent.children.index(node)
+        return result
+
+
+class Directory(Node):
+    # Directory.__init__():
+    def __init__(self, name, path, title, parent=None):
+        # Verify argument types:
+        assert isinstance(name, str)
+        assert isinstance(path, str)
+        assert isinstance(title, str)
+        assert isinstance(parent, Node) or parent is None
+
+        # print("=>Directory.__init__(*, '{0}', '...', '{2}')".
+        #  format(name, path, "None" if parent is None else parent.name))
+
+        # Verify that *path* is not Unix `.` or `..`, or `.ANYTHING`:
+        base_name = os.path.basename(path)
+        assert not base_name.startswith('.'), "Directory '{0}' starts with '.'".format(path)
+
+        # Initlialize the *Node* super class:
+        super().__init__(name, path, parent)
+        directory = self
+        directory.title = title
+
+        # print("<=Directory.__init__(*, '{0}', '...', '{2}')".
+        #  format(name, path, "None" if parent is None else parent.name))
+
+    # Directory.append():
+    def append(self, node):
+        assert isinstance(node, Node)
+        directory = self
+        directory.children.append(node)
+
+    # Directory.clicked():
+    def clicked(self, tables_editor, tracing=None):
+        # Verify argument types:
+        assert isinstance(tables_editor, TablesEditor)
+        assert isinstance(tracing, str) or tracing is None
+
+        # Preform any requested *tracing*:
+        if tracing is not None:
+            print("{0}=>Directory.clicked()".format(tracing))
+
+        tables_editor.current_search = None
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print("{0}<=Directory.clicked()".format(tracing))
+
+    # Directory.title_get():
+    def title_get(self):
+        directory = self
+        title = directory.title
+        # print("Directory.title='{0}'".format(title))
+        return title
+
+    # Directory.type_letter_get():
+    def type_letter_get(self):
+        assert not isinstance(self, Collection)
+        # print("Directory.type_letter_get():name='{}'".format(self.name))
+        return 'D'
+
+
+class Collection(Directory):
+
+    #FIXME: Why do we have both *path* and *directory*!!!
+
+    # Collection.__init__():
+    def __init__(self, name, path, title, directory):
+        # Verify argument types:
+        assert isinstance(name, str)
+        assert isinstance(path, str)
+        assert isinstance(title, str)
+        assert isinstance(directory, str) and os.path.isdir(directory)
+
+        # Intialize the collection:
+        collection = self
+        super().__init__(name, path, title)
+        collection.directory = directory
+        assert collection.type_letter_get() == 'C'
+
+    # Collection.type_leter_get()
+    def type_letter_get(self):
+        # print("Collection.type_letter_get(): name='{0}'".format(self.name))
+        return 'C'
+
+
+# Search:
+class Search(Node):
+
+    # FIXME: This tale belongs in *Units*:
+    ISO_MULTIPLIER_TABLE = {
+      "M": 1.0e6,
+      "K": 1.0e3,
+      "m": 1.0e-3,
+      "u": 1.0e-6,
+      "n": 1.0e-9,
+      "p": 1.0e-12,
+    }
+
+    # Search.__init__():
+    def __init__(self, **arguments_table):
+        # Verify argument types:
+        is_search_tree = "search_tree" in arguments_table
+        required_arguments_size = 1 if "tracing" in arguments_table else 0
+        if is_search_tree:
+            assert "table" in arguments_table
+            table = arguments_table["table"]
+            assert isinstance(table, Table)
+            required_arguments_size += 2
+        else:
+            required_arguments_size += 5
+            assert "name" in arguments_table
+            assert "comments" in arguments_table
+            assert "table" in arguments_table
+            assert "parent_name" in arguments_table
+            assert "url" in arguments_table
+        assert len(arguments_table) == required_arguments_size
+
+        # Perform any requested *tracing*:
+        tracing = arguments_table["tracing"] if "tracing" in arguments_table else None
+        assert isinstance(tracing, str) or tracing is None
+        # next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print("{0}=>Search(*)".format(tracing))
+
+        # Dispatch on is *is_search_tree*:
+        if is_search_tree:
+            search_tree = arguments_table["search_tree"]
+            # searches = arguments_table["searches"]
+            # assert isinstance(searches, list)
+            # for search in searches:
+            #    assert isinstance(search, Search)
+
+            # Get the search *name*:
+            attributes_table = search_tree.attrib
+            assert "name" in attributes_table
+            name = attributes_table["name"]
+            parent_name = (attributes_table["parent"] if "parent" in attributes_table else "")
+            if tracing is not None:
+                print("name='{0}' parent_name='{1}'".format(name, parent_name))
+            assert "url" in attributes_table, "attributes_table={0}".format(attributes_table)
+            url = attributes_table["url"]
+
+            comments = list()
+            filters = list()
+            sub_trees = list(search_tree)
+            assert len(sub_trees) == 2
+            for sub_tree in sub_trees:
+                sub_tree_tag = sub_tree.tag
+                if sub_tree_tag == "SearchComments":
+                    search_comment_trees = list(sub_tree)
+                    for search_comment_tree in search_comment_trees:
+                        assert search_comment_tree.tag == "SearchComment"
+                        comment = SearchComment(comment_tree=search_comment_tree)
+                        comments.append(comment)
+                elif sub_tree_tag == "Filters":
+                    filter_trees = list(sub_tree)
+                    for filter_tree in filter_trees:
+                        assert filter_tree.tag == "Filter"
+                        filter = Filter(tree=filter_tree, table=table)
+                        filters.append(filter)
+                else:
+                    assert False
+
+        else:
+            # Grab *name*, *comments* and *table* from *arguments_table*:
+            name = arguments_table["name"]
+            assert isinstance(name, str)
+            comments = arguments_table["comments"]
+            assert isinstance(comments, list)
+            table = arguments_table["table"]
+            assert isinstance(table, Table)
+            url = arguments_table["url"]
+            assert isinstance(url, str)
+            parent_name = arguments_table["parent_name"]
+            assert isinstance(parent_name, str)
+            for comment in comments:
+                assert isinstance(comment, SearchComment)
+            filters = list()
+
+        # Make sure *search* is on the *table.children* list:
+        # for prior_search in table.children:
+        #    assert prior_search.name != name
+
+        # This code does not work since the order that *Search*'s are created is in the
+        # *os.listdir()* returns file names which is kind of random.  See can not force
+        # the binding of *search_parent* here.  It needs to be done sometime after the
+        # call to the *Search* initializer:
+        # if parent_name == "":
+        #    search_parent = None
+        # else:
+        #    for sibling_search in table.children:
+        #        if sibling_search.name == parent_name:
+        #            search_parent = sibling_search
+        #            break
+        #    else:
+        #        assert False, "parent_name '{0}' does not match a search".format(parent_name)
+
+        # Load arguments into *search* (i.e. *self*):
+        search = self
+        path = ""
+        super().__init__(name, path, parent=table)
+        search.comments = comments
+        search.filters = filters
+        assert isinstance(parent_name, str)
+        search.search_parent = None
+        search.search_parent_name = parent_name
+        search.name = name
+        search.table = table
+        search.url = url
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print("{0}<=Search(*):name={1}".format(tracing, name))
+
+    # Search.clicked()
+    def clicked(self, tables_editor, tracing=None):
+        # Verify argument types:
+        assert isinstance(tables_editor, TablesEditor)
+        assert isinstance(tracing, str) or tracing is None
+
+        # Preform any requested *tracing*:
+        if tracing is not None:
+            print("{0}=>Search.clicked()".format(tracing))
+
+        search = self
+        table = search.parent
+        assert isinstance(table, Table)
+        url = search.url
+        assert isinstance(url, str)
+        if tracing is not None:
+            print("{0}url='{1}' table.name='{2}'".format(tracing, url, table.name))
+        webbrowser.open(url, new=0, autoraise=True)
+
+        tables_editor.current_search = search
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print("{0}<=Search.clicked()".format(tracing))
+
+    # Search.filters_refresh()
+    def filters_refresh(self, tracing=None):
+        # Verify argument types:
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested *tracing*:
+        # next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print("{0}=>Search.filters_update()".format(tracing))
+
+        # Before we do anything we have to make sure that *search* has an associated *table*.
+        # Frankly, it is should be impossible not to have an associated table, but we must
+        # be careful:
+        search = self
+        table = search.table
+        assert isinstance(table, Table) or table is None
+        if table is not None:
+            # Now we have to make sure that there is a *filter* for each *parameter* in
+            # *parameters*.  We want to preserve the order of *filters*, so this is pretty
+            # tedious:
+
+            # Step 1: Start by deleting any *filter* from *filters* that does not have a
+            # matching *parameter* in parameters.  This algorithme is O(n^2), so it could
+            # be improved:
+            filters = search.filters
+            parameters = table.parameters
+            new_filters = list()
+            for filter in filters:
+                for parameter in parameters:
+                    if filter.parameter is parameter:
+                        new_filters.append(filter)
+                        break
+
+            # Carefully replace the entire contents of *filters* with the contents of *new_filters*:
+            filters[:] = new_filters[:]
+
+            # Step 2: Sweep through *parameters* and create a new *filter* for each *parameter*
+            # that does not already have a matching *filter* in *filters*.  Again, O(n^2):
+            for pararmeter_index, parameter in enumerate(parameters):
+                for filter in filters:
+                    if filter.parameter is parameter:
+                        break
+                else:
+                    filter = Filter(parameter=parameter, table=table, use=False, select="")
+                    filters.append(filter)
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print("{0}<=Search.filters_refresh()".format(tracing))
+
+    # Search.is_deletable():
+    def is_deletable(self, tracing=None):
+        # Verify argument types:
+        assert isinstance(tracing, str) or tracing is None
+
+        # Grab *search_name* from *search* (i.e. *self*):
+        search = self
+        search_name = search.name
+
+        # Perform any requested *tracing*:
+        if tracing is not None:
+            print("{0}=>is_deletable('{1}')".format(tracing, search_name))
+
+        # Search through *sibling_searches* of *table* to ensure that *search* is not
+        # a parent of any *sibling_search* object:
+        table = search.parent
+        assert isinstance(table, Table)
+        sibling_searches = table.children
+        deletable = True
+        for index, sibling_search in enumerate(sibling_searches):
+            # parent = sibling_search.search_parent
+            # if not tracing is None:
+            #    parent_name = "None" if parent is None else "'{0}'".format(parent.name)
+            #    print("{0}Sibling[{1}]'{2}'.parent='{3}".format(
+            #          tracing, index, sibling_search.name, parent_name))
+            if sibling_search.search_parent is search:
+                deletable = False
+                break
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print("{0}<=is_deletable('{1}')=>{2}".format(tracing, search_name, deletable))
+        return deletable
+
+    # Search.key():
+    def key(self):
+        """ Return a sorting key for the *Search* object (i.e. *self*):
+
+            The sorting key is a three tuple consisting of (*Depth*, *UnitsNumber*, *Text*), where:
+            * *Depth*: This is the number of templates between "@ALL" and the search.
+            * *UnitsNumber*: This is the number that matches a number followed by ISO units
+              (e.g. "1KOhm", ".01uF", etc.)
+            * *Text*: This is the remaining text after *UnitsNumber* (if it is present.)
+        """
+        #
+
+        # In the Tree view, we want searches to order templates (which by convention
+        #    start with an '@' character) before the other searches.  In addition, we would
+        #    like to order searches based on a number followed by an ISO type (e.g. "4.7KOhm",
+        #    ".1pF", etc.) to be sorted in numberical order from smallest to largest (e.g.
+        #    ".01pF", ".1pf", "10nF", ".1uF", "10uF", etc.)  Furthermore, the template searches
+        #    are organized as a heirachical set of templates and we want the ones closest to
+        #    to top
+
+        # Grab *table* and *searches_table* from *search* (i.e. *self*):
+        search = self
+        table = search.parent
+        assert isinstance(table, Table)
+        searches_table = table.searches_table
+        assert isinstance(searches_table, dict)
+
+        # Figure out template *depth*:
+        depth = 0
+        nested_search = search
+        while nested_search.search_parent is not None:
+            depth += 1
+            nested_search = nested_search.search_parent
+
+        # Sweep through the *search_name* looking for a number, optionally followed by an
+        # ISO unit mulitplier.:
+        number_end_index = -1
+        search_name = search.name
+        for character_index, character in enumerate(search_name):
+            if character in ".0123456789":
+                # We a *character* that "could" be part of a number:
+                number_end_index = character_index + 1
+            else:
+                break
+
+        # Extract *number* from *search_name* if possible:
+        number = 0.0
+        if number_end_index >= 0:
+            try:
+                number = float(search_name[0:number_end_index])
+            except ValueError:
+                pass
+
+        # Figure out the ISO *multiplier* and adjust *number* appropriately:
+        multiplier = 1.0
+        if number_end_index >= 0 and number_end_index < len(search_name):
+
+            multiplier_character = search_name[number_end_index]
+            iso_multiplier_table = Search.ISO_MULTIPLIER_TABLE
+            if character in iso_multiplier_table:
+                multiplier = iso_multiplier_table[multiplier_character]
+        number *= multiplier
+
+        # Return a tuple used for sorting:
+        rest = search_name if number_end_index < 0 else search_name[number_end_index:]
+        return (depth, number, rest)
+
+    # Search.save():
+    def save(self, tracing=None):
+        # Perform any requested *tracing*:
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print("{0}=>Search.save()".format(tracing))
+
+        # Grab the *search_directory* associated with *table*:
+        search = self
+        table = search.parent
+        assert isinstance(table, Table)
+        search_directory = table.search_directory_get(tracing=next_tracing)
+
+        # Ensure that the *directory_path* exists:
+        if not os.path.isdir(search_directory):
+            os.makedirs(search_directory)
+
+        # Compute *search_xml_file_name*:
+        search_xml_base_name = search.title2file_name(search.name) + ".xml"
+        search_xml_file_name = os.path.join(search_directory, search_xml_base_name)
+
+        # Create the *search_xml_content* from *search*:
+        search_xml_lines = list()
+        search.xml_lines_append(search_xml_lines, "", tracing=next_tracing)
+        search_xml_lines.append("")
+        search_xml_content = "\n".join(search_xml_lines)
+
+        # Write *search_xml_content* out to *search_xml_file_name*:
+        with open(search_xml_file_name, "w") as search_file:
+            search_file.write(search_xml_content)
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print("{0}<=Search.save()".format(tracing))
+
+    # Search.search_parent_set():
+    def search_parent_set(self, search_parent):
+        # Verify argument types:
+        assert isinstance(search_parent, Search) or search_parent is None
+
+        # Stuff *search_parent* into *search* (i.e. *self*):
+        search = self
+        print("Search.search_parent_set('{0}', {1})".format(search.name,
+              "None" if search_parent is None else "'{0}'".format(search_parent.name)))
+        search.search_parent = search_parent
+
+    # Search.table_set():
+    def table_set(self, new_table, tracing=None):
+        # Verify argument types:
+        assert isinstance(new_table, Table) or new_table is None
+
+        # Perform any requested *tracing*:
+        # next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print("{0}=>Search.table_set('{1})".
+                  format(tracing, "None" if new_table is None else new_table.name))
+
+        search = self
+        search.table = new_table
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print("{0}<=Search.table_set('{1}')".
+                  format(tracing, "None" if new_table is None else new_table.name))
+
+    # Search.title_get():
+    def title_get(self):
+        search = self
+        title = search.name
+        search_parent = search.search_parent
+        if search_parent is not None:
+            title = "{0} ({1})".format(title, search_parent.name)
+        # print("Search.title_get()=>'{0}'".format(title))
+        return title
+
+    # Search.type_letter_get():
+    def type_letter_get(self):
+        return 'S'
+
+    # Search.xml_lines_append()
+    def xml_lines_append(self, xml_lines, indent, tracing=None):
+        # Verify argument types:
+        assert isinstance(xml_lines, list)
+        assert isinstance(indent, str)
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested *tracing*:
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print("{0}=>Search.xml_lines_append()".format(tracing))
+
+        # Start the `<Search...>` element:
+        search = self
+        table = search.table
+        search_parent = search.search_parent
+        assert search.name == "@ALL" or isinstance(search_parent, Search)
+        search_parent_name = "" if search_parent is None else search_parent.name
+        xml_lines.append('{0}<Search name="{1}" parent="{2}" table="{3}" url="{4}">'.format(
+                         indent, search.name, search_parent_name, table.name,
+                         text2safe_attribute(search.url)))
+
+        # Append the `<SearchComments>` element:
+        xml_lines.append('{0}  <SearchComments>'.format(indent))
+        search_comments = search.comments
+        search_comment_indent = indent + "    "
+        for search_comment in search_comments:
+            search_comment.xml_lines_append(xml_lines, search_comment_indent)
+        xml_lines.append('{0}  </SearchComments>'.format(indent))
+
+        # Append the `<Filters>` element:
+        filters = search.filters
+        xml_lines.append('{0}  <Filters>'.format(indent))
+        filter_indent = indent + "    "
+        for filter in filters:
+            filter.xml_lines_append(xml_lines, filter_indent, tracing=next_tracing)
+        xml_lines.append('{0}  </Filters>'.format(indent))
+
+        # Wrap up the `<Search>` element:
+        xml_lines.append('{0}</Search>'.format(indent))
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print("{0}<=Search.xml_lines_append()".format(tracing))
+
+
+class Table(Node):
+
+    # Table.__init__()
+    def __init__(self, **arguments_table):
+        # Verify argument types:
+        assert "file_name" in arguments_table
+        file_name = arguments_table["file_name"]
+        assert isinstance(file_name, str)
+        is_table_tree = "table_tree" in arguments_table
+        if is_table_tree:
+            # assert len(arguments_table) == 3, arguments_table
+            assert ("table_tree" in arguments_table and
+                    isinstance(arguments_table["table_tree"], etree._Element))
+        else:
+            # This code also winds up pulling out *name*
+            # print("len(arguments_table)={0}".format(len(arguments_table)))
+            assert len(arguments_table) == 8, \
+              "arguments_table_size={0}".format(arguments_table)
+            # 1: Verify that *comments* is present and has correct type: !
+            assert "comments" in arguments_table
+            comments = arguments_table["comments"]
+            assert isinstance(comments, list)
+            assert len(comments) >= 1, "We must have at least one comment"
+            english_comment_found = False
+            for comment in comments:
+                assert isinstance(comment, TableComment)
+                if comment.language == "EN":
+                    english_comment_found = True
+            assert english_comment_found, "We must have an english comment."
+
+            # 2: Verify that *csv_file_name* is present and has correct type:
+            assert "csv_file_name" in arguments_table
+            csv_file_name = arguments_table["csv_file_name"]
+            assert isinstance(csv_file_name, str)
+            # 3: Verify that *name* is present and has correct type:
+            assert "name" in arguments_table
+            name = arguments_table["name"]
+            assert isinstance(name, str)
+            # 4: Verify that *parameters* is present and has correct type:
+            assert "parameters" in arguments_table
+            parameters = arguments_table["parameters"]
+            # 5: Verify that *path* present and has the correct type:
+            assert "path" in arguments_table
+            path = arguments_table["path"]
+            assert isinstance(parameters, list)
+            for parameter in parameters:
+                assert isinstance(parameter, Parameter)
+            # 6: Verify that the parent is specified:
+            assert "parent" in arguments_table
+            parent = arguments_table["parent"]
+            # 7: Verify that the *full_ref* is specified:
+            assert "url" in arguments_table
+            url = arguments_table["url"]
+            assert url is not None
+
+        # Perform any requested *tracing*:
+        tracing = arguments_table["tracing"] if "tracing" in arguments_table else None
+        if tracing:
+            print("{0}=>Table.__init__(*)".format(tracing))
+
+        base = None
+        id = -1
+        title = None
+        items = -1
+
+        # Dispatch on *is_table_tree*:
+        if is_table_tree:
+            # Make sure that *table_tree* is actually a Table tag:
+            table_tree = arguments_table["table_tree"]
+            assert table_tree.tag == "Table"
+            attributes_table = table_tree.attrib
+
+            # Extract *name*:
+            assert "name" in attributes_table
+            name = attributes_table["name"]
+
+            # Grab *csv_file_name* and *title* from *attributes_table*:
+            csv_file_name = attributes_table["csv_file_name"]
+            title = attributes_table["title"]
+
+            # Extract *url*:
+            url = attributes_table["url"]
+
+            # Ensure that we have exactly two elements:
+            table_tree_elements = list(table_tree)
+            assert len(table_tree_elements) == 2
+
+            # Extract the *comments* from *comments_tree_element*:
+            comments = list()
+            comments_tree = table_tree_elements[0]
+            assert comments_tree.tag == "TableComments"
+            for comment_tree in comments_tree:
+                comment = TableComment(comment_tree=comment_tree)
+                comments.append(comment)
+
+            # Extract the *parameters* from *parameters_tree_element*:
+            parameters = list()
+            parameters_tree = table_tree_elements[1]
+            assert parameters_tree.tag == "Parameters"
+            for parameter_tree in parameters_tree:
+                parameter = Parameter(parameter_tree=parameter_tree)
+                parameters.append(parameter)
+            path = ""
+            parent = None
+        else:
+            # Otherwise just dircectly grab *name*, *comments*, and *parameters*
+            # from *arguments_table*:
+            comments = arguments_table["comments"]
+            csv_file_name = arguments_table["csv_file_name"]
+            name = arguments_table["name"]
+            parameters = arguments_table["parameters"]
+            if "base" in arguments_table:
+                base = arguments_table["base"]
+            if "id" in arguments_table:
+                id = arguments_table["id"]
+            if "title" in arguments_table:
+                title = arguments_table["title"]
+                print("TITLE='{0}'".format(title))
+            if "items" in arguments_table:
+                items = arguments_table["items"]
+            url = None
+            if "url" in arguments_table:
+                url = arguments_table["url"]
+
+        xml_suffix_index = file_name.find(".xml")
+        assert xml_suffix_index + 4 >= len(file_name), "file_name='{0}'".format(file_name)
+
+        # print("=>Node.__init__(...)")
+        super().__init__(name, path, parent=parent)
+        assert url is not None
+
+        # Load up *table* (i.e. *self*):
+        table = self
+        table.base = base
+        table.comments = comments
+        table.csv_file_name = csv_file_name
+        table.file_name = file_name
+        table.id = id
+        table.items = items
+        table.import_column_triples = None
+        table.import_headers = None
+        table.import_rows = None
+        table.name = name
+        table.parameters = parameters
+        table.searches_table = dict()
+        table.title = title
+        table.url = url
+
+        # Wrap up any requested *tracing*:
+        if tracing:
+            print("{0}=>Table.__init__(*)".format(tracing))
+
+    # Table.__equ__():
+    def __eq__(self, table2):
+        # Verify argument types:
+        assert isinstance(table2, Table), "{0}".format(type(table2))
+
+        # Compare each field in *table1* (i.e. *self*) with the corresponding field in *table2*:
+        table1 = self
+        file_name_equal = (table1.file_name == table2.file_name)
+        name_equal = (table1.name == table2.name)
+        comments_equal = (table1.comments == table2.comments)
+        parameters_equal = (table1.parameters == table2.parameters)
+        all_equal = (file_name_equal and name_equal and comments_equal and parameters_equal)
+
+        # Debugging code:
+        # print("file_name_equal={0}".format(file_name_equal))
+        # print("name_equal={0}".format(name_equal))
+        # print("comments_equal={0}".format(comments_equal))
+        # print("parameters_equal={0}".format(parameters_equal))
+        # print("all_equal={0}".format(all_equal))
+
+        return all_equal
+
+    def bind_parameters_from_imports(self, tracing=None):
+        # Verify argument types:
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested *tracing*:
+        # next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print("{0}=>Tables.bind_parameters_from_imports()".format(tracing))
+
+        # Update *current_table* an *parameters* from *tables_editor*:
+        table = self
+        parameters = table.parameters
+        headers = table.import_headers
+        column_triples = table.import_column_triples
+        for column_index, triples in enumerate(column_triples):
+            header = headers[column_index]
+            # Replace '&' with '+' so that we don't choke the evenutaly .xml file with
+            # an  XML entity (i.e. 'Rock & Roll' = > 'Rock + Roll'.  Entities are always
+            # "&name;".
+            header = header.replace('&', '+')
+            header = header.replace('<', '[')
+            header = header.replace('>', ']')
+
+            if len(triples) >= 1:
+                # We only care about the first *triple* in *triples*:
+                triple = triples[0]
+                count, name, value = triple
+
+                # See if an existing *parameter* matches *name* (not likely):
+                for parameter_index, parameter in enumerate(parameters):
+                    if parameter.csv == name:
+                        # This *parameter* already exists, so we done:
+                        break
+                else:
+                    # This is no preexisting *parameter* so we have to create one:
+
+                    # Create *scrunched_name* from *header*:
+                    scrunched_characters = list()
+                    in_word = False
+                    for character in header:
+                        if character.isalnum():
+                            if not in_word:
+                                character = character.upper()
+                            scrunched_characters.append(character)
+                            in_word = True
+                        else:
+                            in_word = False
+                    scrunched_name = "".join(scrunched_characters)
+
+                    # Create *parameter* and append to *parameters*:
+                    comments = [ParameterComment(language="EN",
+                                long_heading=scrunched_name, lines=list())]
+                    parameter = Parameter(name=scrunched_name, type=name, csv=header,
+                                          csv_index=column_index, comments=comments)
+                    parameters.append(parameter)
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print("{0}<=Tables.bind_parameters_from_imports()".format(tracing))
+
+    # Table.clicked():
+    def clicked(self, tables_editor, tracing=None):
+        # Verify argument types:
+        assert isinstance(tables_editor, TablesEditor)
+        assert isinstance(tracing, str) or tracing is None
+
+        # Preform any requested *tracing*:
+        if tracing is not None:
+            print("{0}=>Table.clicked()".format(tracing))
+
+        tables_editor.current_search = None
+
+        # Sweep through *tables* to see if *table* (i.e. *self*) is in it:
+        tables = tables_editor.tables
+        table = self
+        for sub_table in tables:
+            if table is sub_table:
+                # We found a match, so we are done searching:
+                break
+        else:
+            # Nope, *table* is not in *tables*, so let's stuff it in:
+            if tracing is not None:
+                print("{0}Before len(tables)={1}".format(tracing, len(tables)))
+            tables_editor.tables_combo_edit.item_append(table)
+            if tracing is not None:
+                print("{0}After len(tables)={1}".format(tracing, len(tables)))
+
+        # Force whatever is visible to be updated:
+        tables_editor.update(tracing=tracing)
+
+        # Make *table* the current one:
+        tables_editor.current_table = table
+        tables_editor.current_parameter = None
+        tables_editor.current_enumeration = None
+        tables_editor.current_comment = None
+        tables_editor.current_search = None
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print("{0}<=Table.clicked()".format(tracing))
+
+    # Table.csv_read_and_process():
+    def csv_read_and_process(self, csv_directory, bind=False, tracing=None):
+        # Verify argument types:
+        assert isinstance(csv_directory, str)
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested *tracing*:
+        table = self
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing:
+            print("{0}=>Table.csv_read_process('{1}', bind={2})".
+                  format(tracing, csv_directory, bind))
+
+        # Grab *parameters* from *table* (i.e. *self*):
+        parameters = table.parameters
+        assert parameters is not None
+
+        # Open *csv_file_name* read in both *rows* and *headers*:
+        csv_file_name = table.csv_file_name
+        assert isinstance(csv_file_name, str)
+        full_csv_file_name = os.path.join(csv_directory, csv_file_name)
+        if tracing is not None:
+            print("{0}csv_file_name='{1}', full_csv_file_name='{2}'".
+                  format(tracing, csv_file_name, full_csv_file_name))
+
+        rows = None
+        headers = None
+        if not os.path.isfile(full_csv_file_name):
+            print("csv_directory='{0}' csv_file_name='{1}'".
+                  format(csv_directory, csv_file_name))
+        with open(full_csv_file_name, newline="") as csv_file:
+            # Read in *csv_file* using *csv_reader*:
+            csv_reader = csv.reader(csv_file, delimiter=',', quotechar='"')
+            rows = list()
+            for row_index, row in enumerate(csv_reader):
+                if row_index == 0:
+                    headers = row
+                else:
+                    rows.append(row)
+
+        # Create *column_tables* which is used to process the following *row*'s:
+        column_tables = [dict() for header in headers]
+        for row in rows:
+            # Build up a count of each of the different data values in for a given column
+            # in *column_table*:
+            for column_index, value in enumerate(row):
+                column_table = column_tables[column_index]
+                if value in column_table:
+                    # We have seen *value* before, so increment its count:
+                    column_table[value] += 1
+                else:
+                    # This is the first time we seen *value*, so insert it into
+                    # *column_table* as the first one:
+                    column_table[value] = 1
+
+        # Now *column_tables* has a list of tables (i.e. *dict*'s) where it entry
+        # has a count of the number of times that value occured in the column.
+
+        # Now sweep through *column_tables* and build *column_triples*:
+        re_table = TablesEditor.re_table_get()
+        column_triples = list()
+        for column_index, column_table in enumerate(column_tables):
+            # FIXME: Does *column_list* really need to be sorted???!!!!
+            # Create *column_list* from *column_table* such that the most common value in the
+            # columns comes first and the least commone one comes last:
+            column_list = sorted(list(column_table.items()),
+                                 key=lambda pair: (pair[1], pair[0]), reverse=True)
+
+            # Build up *matches* which is the regular expressions that match best:
+            regex_table = dict()
+            regex_table["String"] = list()
+            total_count = 0
+            for value, count in column_list:
+                # print("Column[{0}]:'{1}': {2} ".format(column_index, value, count))
+                total_count += count
+                match_count = 0
+                for regex_name, regex in re_table.items():
+                    if not regex.match(value) is None:
+                        if regex_name in regex_table:
+                            regex_table[regex_name].append((value, count))
+                        else:
+                            regex_table[regex_name] = [(value, count)]
+
+                        match_count += 1
+                if match_count == 0:
+                    regex_table["String"].append((value, count))
+            # assert total_count == len(rows), \
+            #  "total_count={0} len_rows={1}".format(total_count, len(rows))
+
+            # if tracing is not None:
+            #    print("{0}Column[{1}]: regex_table={2}".
+            #      format(tracing, column_index, regex_table))
+
+            # Now construct the *triples* list such containing of tuples that have
+            # three values -- *total_count*, *regex_name*, and *value* where,
+            # * *total_count*: is the number column values that the regular expression matched,
+            # * *regex_name*: is the name of the regular expression, and
+            # * *value*: is an example value that matches the regular expression.
+            triples = list()
+            for regex_name, pair_list in regex_table.items():
+                total_count = 0
+                value = ""
+                for pair in pair_list:
+                    value, count = pair
+                    total_count += count
+                triple = (total_count, regex_name, value)
+                triples.append(triple)
+
+            # Sort *triples* such that the regular expression that maches the most entries comes
+            # first the least matches are at the end.  Tack *triples* onto *column_triples* list:
+            triples.sort(reverse=True)
+            column_triples.append(triples)
+
+        # Save some values into *tables_editor* for the update routine:
+        table.import_column_triples = column_triples
+        table.import_headers = headers
+        table.import_rows = rows
+        assert isinstance(column_triples, list)
+        assert isinstance(headers, list)
+        assert isinstance(rows, list)
+
+        if bind:
+            table.bind_parameters_from_imports(tracing=next_tracing)
+        table.save(tracing=None)
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print("{0}<=Table.csv_read_process('{1}', bind={2})".
+                  format(tracing, csv_directory, bind))
+
+    def fix_up(self, tracing=None):
+        # Verify argument types:
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested *tracing*:
+        if tracing is not None:
+            print("{0}=>Table.fix_up(*)".format(tracing))
+
+        # Grab *searches* list from *table* (i.e. *self*):
+        table = self
+        searches = table.children
+
+        # Grab *searches* list from *table* (i.e. *self*):
+        table = self
+        searches = table.children
+
+        # Create a new *searches_table* that contains every *search* keyed by *search_name*:
+        searches_table = dict()
+        for search in searches:
+            search_name = search.name
+            searches_table[search_name] = search
+        table.searches_Table = searches_table
+        assert len(searches) == len(searches_table), "{0} != {1}".format(
+                                                      len(searches), len(searches_table))
+
+        # Sweep through *searches* and ensure that the *search_parent* field is set:
+        for search in searches:
+            search_parent_name = search.search_parent_name
+            if len(search_parent_name) >= 1:
+                assert search_parent_name in searches_table, \
+                  ("'{0}' not in searches_table {1}".format(
+                   search_parent_name, list(searches_table.keys())))
+                search_parent = searches_table[search_parent_name]
+                search.search_parent = search_parent
+
+        # Now sort *searches*:
+        searches.sort(key=Search.key)
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print("{0}<=Table.fix_up(*)".format(tracing))
+
+    # Table.hasChildren():
+    def hasChildren(self, index):
+        # Override *Node.hasChildren*():
+        print("<=>Table.hasChildren()")
+        return True
+
+    # Table.header_labels_get():
+    def header_labels_get(self):
+        table = self
+        parameters = table.parameters
+        parameters_size = len(parameters)
+        assert parameters_size >= 1
+        header_labels = list()
+        for parameter in parameters:
+            parameter_comments = parameter.comments
+            header_label = "?"
+            if len(parameter_comments) >= 1:
+                parameter_comment = parameter_comments[0]
+                short_heading = parameter_comment.short_heading
+                long_heading = parameter_comment.long_heading
+                header_label = short_heading if short_heading is not None else long_heading
+            header_labels.append(header_label)
+        return header_labels
+
+    # Table.save():
+    def save(self, tracing=None):
+        # Verify argument types:
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested *tracing*:
+        table = self
+        # next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print("{0}=>Table.save('{1}')".format(tracing, table.name))
+
+        # Write out *table* (i.e. *self*) to *file_name*:
+        output_file_name = table.file_name
+        xml_text = table.to_xml_string()
+        with open(output_file_name, "w") as output_file:
+            output_file.write(xml_text)
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print("{0}=>Table.save('{1}')".format(tracing, table.name))
+
+    # Table.search_directory_get():
+    def search_directory_get(self, tracing=None):
+        # Verify argument types:
+        assert isinstance(tracing, str) or tracing is None
+
+        # Preform any requested *tracing*:
+        # next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print("{0}=>Table.search_directory_get()".format(tracing))
+
+        # Verify that *search_directory* exits:
+        search_root_directory = TablesEditor.search_root_directory_get()
+        if not os.path.isdir(search_root_directory):
+            os.mkdir(search_root_directory)
+        # if tracing is not None:
+        #    print("{0}search_directory='{1}".format(tracing, search_directory))
+
+        # Compute the *directories* list of directory names that while lead to *search*
+        # (i.e. *self*) XML file:
+        directories = list()
+        search = self
+        node = search
+        while node is not None:
+            node_name = node.name
+            base_name = node.title2file_name(node_name)
+            directories.append(base_name)
+            # if tracing is not None:
+            #    print("{0}directories={1}".format(tracing, directories))
+            node = node.parent
+        directories.reverse()
+        directories = directories[1:]
+
+        # Compute the *directory_path* to span from the *search_root_directory* down the
+        # place where the directory where the *search* XML file will be stored:
+        directory_path = os.path.join(search_root_directory, *directories)
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print("{0}<=Table.search_directory_get()=>'{1}'".format(tracing, directory_path))
+        return directory_path
+
+    # Table.searches_table_set():
+    def searches_table_set(self, searches_table):
+        # Verify argument types:
+        assert isinstance(searches_table, dict)
+
+        # Stuff *searches_table* into *table* (i.e. *self*):
+        table = self
+        table.searches_stable = searches_table
+
+    # Table.title_get():
+    def title_get(self):
+        table = self
+        title = table.title
+        if title is None:
+            title = table.name
+        # print("Table.title='{0}'".format(title))
+        return title
+
+    # Table.to_xml_string():
+    def to_xml_string(self):
+        table = self
+        xml_lines = list()
+        xml_lines.append('<?xml version="1.0"?>')
+        table.xml_lines_append(xml_lines, "")
+        xml_lines.append("")
+        text = '\n'.join(xml_lines)
+        return text
+
+    # Table.type_letter_get():
+    def type_letter_get(self):
+        return 'T'
+
+    # Table.xml_lines_append():
+    def xml_lines_append(self, xml_lines, indent):
+        # Verify argument types:
+        assert isinstance(xml_lines, list)
+        assert isinstance(indent, str)
+
+        # Start appending the `<Table...>` element:
+        table = self
+        title = table.title
+        title_text = "" if title is None else ' title="{0}"'.format(title)
+
+        # Do not let reserved XML characters get into *title_text*:
+        title_text = title_text.replace('&', '+')
+        title_text = title_text.replace('<', '[')
+        title_text = title_text.replace('>', ']')
+
+        xml_lines.append('{0}<Table name="{1}" csv_file_name="{2}" url="{3}" {4}>'.format(
+                         indent, table.name, table.csv_file_name, table.url, title_text))
+
+        # Append the `<TableComments>` element:
+        xml_lines.append('{0}  <TableComments>'.format(indent))
+        for comment in table.comments:
+            comment.xml_lines_append(xml_lines, indent + "    ")
+        xml_lines.append('{0}  </TableComments>'.format(indent))
+
+        # Append the `<Parameters>` element:
+        xml_lines.append('{0}  <Parameters>'.format(indent))
+        for parameter in table.parameters:
+            parameter.xml_lines_append(xml_lines, "    ")
+        xml_lines.append('{0}  </Parameters>'.format(indent))
+
+        # Close out the `<Table>` element:
+        xml_lines.append('{0}</Table>'.format(indent))
+
+
 class Order:
     # An Order consists of a list of boards to orders parts for.
     # In addition, the list of vendors to exclude from the ordering
@@ -3531,6 +6667,256 @@ class Order:
         order.selected_vendor_names = selected_vendor_names
 
 
+class Parameter:
+
+    # Parameter.__init__():
+    def __init__(self, **arguments_table):
+        is_parameter_tree = "parameter_tree" in arguments_table
+        if is_parameter_tree:
+            assert len(arguments_table) == 1
+            assert isinstance(arguments_table["parameter_tree"], etree._Element)
+        else:
+            assert "name" in arguments_table
+            assert "type" in arguments_table
+            assert "csv" in arguments_table
+            assert "csv_index" in arguments_table
+            assert "comments" in arguments_table
+            arguments_count = 5
+            if "default" in arguments_table:
+                arguments_count += 1
+                assert isinstance(arguments_table["default"], str)
+            if "optional" in arguments_table:
+                assert isinstance(arguments_table["optional"], bool)
+                arguments_count += 1
+            if "enumerations" in arguments_table:
+                arguments_count += 1
+                enumerations = arguments_table["enumerations"]
+                for enumeration in enumerations:
+                    assert isinstance(enumeration, Enumeration)
+            assert len(arguments_table) == arguments_count, arguments_table
+
+        if is_parameter_tree:
+            parameter_tree = arguments_table["parameter_tree"]
+            assert parameter_tree.tag == "Parameter"
+            attributes_table = parameter_tree.attrib
+            assert "name" in attributes_table
+            name = attributes_table["name"]
+            assert "type" in attributes_table
+            type = attributes_table["type"].lower()
+            if "optional" in attributes_table:
+                optional_text = attributes_table["optional"].lower()
+                assert optional_text in ("true", "false")
+                optional = (optional_text == "true")
+            else:
+                optional = False
+            csv = attributes_table["csv"] if "csv" in attributes_table else ""
+            csv_index = (
+              int(attributes_table["csv_index"]) if "csv_index" in attributes_table else -1)
+            default = attributes_table["default"] if "default" in attributes_table else None
+            parameter_tree_elements = list(parameter_tree)
+            assert len(parameter_tree_elements) >= 1
+            comments_tree = parameter_tree_elements[0]
+            assert comments_tree.tag == "ParameterComments"
+            assert len(comments_tree.attrib) == 0
+            comments = list()
+            for comment_tree in comments_tree:
+                comment = ParameterComment(comment_tree=comment_tree)
+                comments.append(comment)
+
+            enumerations = list()
+            if type == "enumeration":
+                assert len(parameter_tree_elements) == 2
+                enumerations_tree = parameter_tree_elements[1]
+                assert len(enumerations_tree.attrib) == 0
+                assert enumerations_tree.tag == "Enumerations"
+                assert len(enumerations_tree) >= 1
+                for enumeration_tree in enumerations_tree:
+                    enumeration = Enumeration(enumeration_tree=enumeration_tree)
+                    enumerations.append(enumeration)
+            else:
+                assert len(parameter_tree_elements) == 1
+        else:
+            name = arguments_table["name"]
+            type = arguments_table["type"]
+            csv = arguments_table["csv"]
+            csv_index = arguments_table["csv_index"]
+            default = arguments_table["defualt"] if "default" in arguments_table else None
+            optional = arguments_table["optional"] if "optional" in arguments_table else False
+            comments = arguments_table["comments"] if "comments" in arguments_table else list()
+            enumerations = (
+              arguments_table["enumerations"] if "enumerations" in arguments_table else list())
+
+        # Load values into *parameter* (i.e. *self*):
+        super().__init__()
+        parameter = self
+        parameter.comments = comments
+        parameter.csv = csv
+        parameter.csv_index = csv_index
+        parameter.default = default
+        parameter.enumerations = enumerations
+        parameter.name = name
+        parameter.optional = optional
+        parameter.type = type
+        parameter.use = False
+        # print("Parameter('{0}'): optional={1}".format(name, optional))
+        # print("Parameter(name='{0}', type='{1}', csv='{1}')".format(name, type, parameter.csv))
+
+    # Parameter.__equ__():
+    def __eq__(self, parameter2):
+        # print("=>Parameter.__eq__()")
+
+        # Verify argument types:
+        assert isinstance(parameter2, Parameter)
+
+        # Compare each field of *parameter1* (i.e. *self*) with the corresponding field
+        # of *parameter2*:
+        parameter1 = self
+        name_equal = (parameter1.name == parameter2.name)
+        default_equal = (parameter1.default == parameter2.default)
+        type_equal = (parameter1.type == parameter2.type)
+        optional_equal = (parameter1.optional == parameter2.optional)
+        comments_equal = (parameter1.comments == parameter2.comments)
+        enumerations_equal = (parameter1.enumerations == parameter2.enumerations)
+        all_equal = (
+          name_equal and default_equal and type_equal and
+          optional_equal and comments_equal and enumerations_equal)
+
+        # Debugging code:
+        # print("name_equal={0}".format(name_equal))
+        # print("default_equal={0}".format(default_equal))
+        # print("type_equal={0}".format(type_equal))
+        # print("optional_equal={0}".format(optional_equal))
+        # print("comments_equal={0}".format(comments_equal))
+        # print("enumerations_equal={0}".format(enumerations_equal))
+        # print("<=Parameter.__eq__()=>{0}".format(all_equal))
+
+        return all_equal
+
+    # Parameter.xml_lines_append():
+    def xml_lines_append(self, xml_lines, indent):
+        assert isinstance(xml_lines, list)
+        assert isinstance(indent, str)
+
+        # Grab some values from *parameter* (i.e. *self*):
+        parameter = self
+        default = parameter.default
+        optional = parameter.optional
+
+        # Start the *parameter* XML add in *optional* and *default* if needed:
+        xml_line = '{0}<Parameter name="{1}" type="{2}" csv="{3}" csv_index="{4}"'.format(
+          indent, parameter.name, parameter.type, parameter.csv, parameter.csv_index)
+        if optional:
+            xml_line += ' optional="true"'
+        if default is not None:
+            xml_line += ' default="{0}"'.format(default)
+        xml_line += '>'
+        xml_lines.append(xml_line)
+
+        # Append all of the comments*:
+        comments = parameter.comments
+        for comment in comments:
+            xml_lines.append('{0}  <ParameterComments>'.format(indent))
+            comment.xml_lines_append(xml_lines)
+            xml_lines.append('{0}  </ParameterComments>'.format(indent))
+
+        # Append all of the *enumerations*:
+        enumerations = parameter.enumerations
+        if len(enumerations) >= 1:
+            xml_lines.append('{0}  <Enumerations>'.format(indent))
+            for enumeration in enumerations:
+                enumeration.xml_lines_append(xml_lines, indent + "    ")
+            xml_lines.append('{0}  </Enumerations>'.format(indent))
+
+        # Close out the *parameter*:
+        xml_lines.append('{0}</Parameter>'.format(indent))
+
+
+class PositionRow:
+    """ PositionRow: Represents one row of data for a *PositionsTable*: """
+
+    def __init__(self, reference, value, package, x, y,
+                 rotation, feeder_name, pick_dx, pick_dy, side, part_height):
+        """ *PositionRow*: ...
+        """
+
+        # Verify argument types:
+        assert isinstance(reference, str)
+        assert isinstance(value, str)
+        assert isinstance(package, str)
+        assert isinstance(x, float)
+        assert isinstance(y, float)
+        assert isinstance(rotation, float) and 0.0 <= rotation <= 360.0
+        assert isinstance(feeder_name, str)
+        assert isinstance(pick_dx, float)
+        assert isinstance(pick_dy, float)
+        assert isinstance(side, str)
+        assert isinstance(part_height, float)
+
+        # if package.startswith("DPAK"):
+        #    print("Rotation={0}".format(rotation))
+
+        # Load up *position_row* (i.e. *self*):
+        position_row = self
+        position_row.package = package
+        position_row.part_height = part_height
+        position_row.feeder_name = feeder_name
+        position_row.rotation = rotation
+        position_row.reference = reference
+        position_row.side = side
+        position_row.value = value
+        position_row.x = x - pick_dx
+        position_row.y = y - pick_dy
+        position_row.pick_dx = pick_dx
+        position_row.pick_dy = pick_dx
+
+    def as_strings(self, mapping, feeders):
+        """ *PositionsRow*: Return a list of formatted strings.
+
+        The arguments are:
+        * *mapping*: The order to map the strings in.
+        """
+
+        # Verify argument types:
+        assert isinstance(mapping, list) and len(mapping) == 7, "mapping={0}".format(mapping)
+        assert isinstance(feeders, dict)
+
+        positions_row = self
+        value = positions_row.value
+        if value not in feeders:
+            print("There is no feeder for '{0}'".format(value))
+        row_strings = [""] * 7
+        row_strings[mapping[0]] = positions_row.reference
+        row_strings[mapping[1]] = positions_row.value
+        row_strings[mapping[2]] = positions_row.package
+        row_strings[mapping[3]] = "{0:.4f}".format(positions_row.x)
+        row_strings[mapping[4]] = "{0:.4f}".format(positions_row.y)
+        row_strings[mapping[5]] = "{0:.4f}".format(positions_row.rotation)
+        row_strings[mapping[6]] = positions_row.side
+        return row_strings
+
+    def part_rotate(self, rotation_adjust):
+        """ *PostitionRow*: """
+
+        assert isinstance(rotation_adjust, float)
+
+        row = self
+        rotation = row.rotation
+        rotation -= rotation_adjust
+        while rotation < 0.0:
+            rotation += 360.0
+        while rotation > 360.0:
+            rotation -= 360.0
+        row.rotation = rotation
+
+    def translate(self, dx, dy):
+        """
+        """
+
+        row = self
+        row.x += dx
+        row.y += dy
+
+
 class PositionsTable:
     """ PositionsTable: Represents a part positining table for a Pick and Place machine. """
 
@@ -3868,90 +7254,41 @@ class PositionsTable:
             output_file.write("\r\n".join(final_lines))
 
 
-class PositionRow:
-    """ PositionRow: Represents one row of data for a *PositionsTable*: """
+class Price_Break:
+    # A price break is where a the pricing changes:
 
-    def __init__(self, reference, value, package, x, y,
-                 rotation, feeder_name, pick_dx, pick_dy, side, part_height):
-        """ *PositionRow*: ...
-        """
-
-        # Verify argument types:
-        assert isinstance(reference, str)
-        assert isinstance(value, str)
-        assert isinstance(package, str)
-        assert isinstance(x, float)
-        assert isinstance(y, float)
-        assert isinstance(rotation, float) and 0.0 <= rotation <= 360.0
-        assert isinstance(feeder_name, str)
-        assert isinstance(pick_dx, float)
-        assert isinstance(pick_dy, float)
-        assert isinstance(side, str)
-        assert isinstance(part_height, float)
-
-        # if package.startswith("DPAK"):
-        #    print("Rotation={0}".format(rotation))
-
-        # Load up *position_row* (i.e. *self*):
-        position_row = self
-        position_row.package = package
-        position_row.part_height = part_height
-        position_row.feeder_name = feeder_name
-        position_row.rotation = rotation
-        position_row.reference = reference
-        position_row.side = side
-        position_row.value = value
-        position_row.x = x - pick_dx
-        position_row.y = y - pick_dy
-        position_row.pick_dx = pick_dx
-        position_row.pick_dy = pick_dx
-
-    def as_strings(self, mapping, feeders):
-        """ *PositionsRow*: Return a list of formatted strings.
-
-        The arguments are:
-        * *mapping*: The order to map the strings in.
-        """
+    def __init__(self, quantity, price):
+        """ *Price_Break*: Initialize *self* to contain *quantity*
+            and *price*.  """
 
         # Verify argument types:
-        assert isinstance(mapping, list) and len(mapping) == 7, "mapping={0}".format(mapping)
-        assert isinstance(feeders, dict)
+        assert isinstance(quantity, int)
+        assert isinstance(price, float)
 
-        positions_row = self
-        value = positions_row.value
-        if value not in feeders:
-            print("There is no feeder for '{0}'".format(value))
-        row_strings = [""] * 7
-        row_strings[mapping[0]] = positions_row.reference
-        row_strings[mapping[1]] = positions_row.value
-        row_strings[mapping[2]] = positions_row.package
-        row_strings[mapping[3]] = "{0:.4f}".format(positions_row.x)
-        row_strings[mapping[4]] = "{0:.4f}".format(positions_row.y)
-        row_strings[mapping[5]] = "{0:.4f}".format(positions_row.rotation)
-        row_strings[mapping[6]] = positions_row.side
-        return row_strings
+        # Load up *self*;
+        self.quantity = quantity
+        self.price = price
+        self.order_quantity = 0
+        self.order_price = 0.00
 
-    def part_rotate(self, rotation_adjust):
-        """ *PostitionRow*: """
-
-        assert isinstance(rotation_adjust, float)
-
-        row = self
-        rotation = row.rotation
-        rotation -= rotation_adjust
-        while rotation < 0.0:
-            rotation += 360.0
-        while rotation > 360.0:
-            rotation -= 360.0
-        row.rotation = rotation
-
-    def translate(self, dx, dy):
-        """
+    def __format__(self, format):
+        """ *Price_Break*: Return the *Price_Break* object as a human redable string.
         """
 
-        row = self
-        row.x += dx
-        row.y += dy
+        price_break = self
+        quantity = price_break.quantity
+        price = price_break
+        result = "{0}/{1}".format(quantity, price)
+        print("Result='{0}'".format(result))
+        return result
+
+    def compute(self, needed):
+        """ *Price_Break*: """
+
+        assert isinstance(needed, int)
+
+        self.order_quantity = order_quantity = max(needed, self.quantity)
+        self.order_price = order_quantity * self.price
 
 
 class Request:
@@ -3962,491 +7299,6 @@ class Request:
         assert isinstance(amount, int)
         self.schematic_part = schematic_part
         self.amount = amount
-
-
-class Inventory:
-    def __init__(self, schematic_part, amount):
-        """ *Inventory*: Initialize *self* to contain *scheamtic_part* and
-            *amount*. """
-
-        # Verify argument types:
-        assert isinstance(schematic_part, Schematic_Part)
-        assert isinstance(amount, int)
-
-        # Load up *self*:
-        self.schematic_part = schematic_part
-        self.amount = amount
-
-
-class Board:
-    def __init__(self, name, revision, net_file_name, count, order, positions_file_name=None):
-        """ *Board*: Create a new board containing *name*, *revision*,
-            *net_file_name*, *count*. """
-
-        # Verify argument types:
-        assert isinstance(name, str)
-        assert isinstance(revision, str)
-        assert isinstance(net_file_name, str)
-        assert isinstance(count, int)
-        assert isinstance(order, Order)
-        assert isinstance(positions_file_name, str) or positions_file_name is None
-
-        # Load up *self*:
-        self.name = name
-        self.revision = revision
-        self.net_file_name = net_file_name
-        self.count = count
-        self.positions_file_name = positions_file_name
-        self.order = order
-        self.all_board_parts = []            # List[Board_Part] of all board parts
-        self.installed_board_parts = []            # List[Board_Part] board parts to be installed
-        self.uninstalled_board_parts = []   # List[Board_Part] board parts not to be installed
-
-        self.net_file_read()
-
-    def board_part_append(self, board_part):
-        """ *Board*: Append *board_part* onto the *Board* object (i.e. *self*). """
-
-        # Verify argument types:
-        assert isinstance(board_part, Board_Part)
-
-        self.all_board_parts.append(board_part)
-        if board_part.install:
-            self.installed_board_parts.append(board_part)
-        else:
-            self.uninstalled_board_parts.append(board_part)
-
-    def net_file_read(self):
-        """ *Board*: Read in net file for {self}. """
-
-        # Prevent accidental double read:
-        board_parts = self.all_board_parts
-        assert len(board_parts) == 0
-
-        errors = 0
-
-        # Process *net_file_name* adding footprints as needed:
-        net_file_name = self.net_file_name
-        # print("Read '{0}'".format(net_file_name))
-        if net_file_name.endswith(".net"):
-            with open(net_file_name, "r") as net_stream:
-                # Read contents of *net_file_name* in as a string *net_text*:
-                net_text = net_stream.read()
-
-            # Parse *net_text* into *net_se* (i.e. net S-expression):
-            net_se = sexpdata.loads(net_text)
-            # print("\nsexpedata.dumps=", sexpdata.dumps(net_se))
-            # print("")
-            # print("net_se=", net_se)
-            # print("")
-
-            # Visit each *component_se* in *net_se*:
-            net_file_changed = False
-            database = self.order.database
-            components_se = se_find(net_se, "export", "components")
-
-            # Each component has the following form:
-            #
-            #        (comp
-            #          (ref SW123)
-            #          (footprint nickname:NAME)              # May not be present
-            #          (libsource ....)
-            #          (sheetpath ....)
-            #          (tstamp xxxxxxxx))
-            # print("components=", components_se)
-            for component_index, component_se in enumerate(components_se[1:]):
-                # print("component_se=", component_se)
-                # print("")
-
-                # Grab the *reference* from *component_se*:
-                reference_se = se_find(component_se, "comp", "ref")
-                reference = reference_se[1].value()
-                # print("reference_se=", reference_se)
-                # print("")
-
-                # Find *part_name_se* from *component_se*:
-                part_name_se = se_find(component_se, "comp", "value")
-
-                # Suprisingly tedious, extract *part_name* as a string:
-                if isinstance(part_name_se[1], Symbol):
-                    part_name = part_name_se[1].value()
-                elif isinstance(part_name_se[1], int):
-                    part_name = str(part_name_se[1])
-                elif isinstance(part_name_se[1], float):
-                    part_name = str(part_name_se[1])
-                elif isinstance(part_name_se[1], str):
-                    part_name = part_name_se[1]
-                else:
-                    assert False, "strange part_name: {0}". \
-                      format(part_name_se[1])
-
-                # print(reference, part_name, footprint)
-
-                # Strip *comment* out of *part_name* if it exists:
-                comment = ""
-                colon_index = part_name.find(':')
-                if colon_index >= 0:
-                    comment = part_name[colon_index + 1:]
-                    part_name = part_name[0:colon_index]
-
-                # Now see if we have a match for *part_name* in *database*:
-                schematic_part = database.lookup(part_name)
-                if schematic_part is None:
-                    # {part_name} is not in {database}; output error message:
-                    print("File '{0}: Part Name '{2}' {3} not in database".format(
-                          net_file_name, 0, part_name, reference))
-                    errors += 1
-                else:
-                    # We have a match; create the *board_part*:
-                    board_part = Board_Part(self, schematic_part, reference, comment)
-                    self.board_part_append(board_part)
-
-                    # Grab *kicad_footprint* from *schematic_part*:
-                    kicad_footprint = schematic_part.kicad_footprint
-                    assert isinstance(kicad_footprint, str)
-
-                    # Grab *footprint_se* from *component_se* (if it exists):
-                    footprint_se = se_find(component_se, "comp", "footprint")
-                    # print("footprint_se=", footprint_se)
-                    # print("Part[{0}]:'{1}' '{2}' changed={3}".format(
-                    #    component_index, part_name, kicad_footprint, net_file_changed))
-
-                    # Either add or update the footprint:
-                    if footprint_se is None:
-                        # No footprint in the .net file; just add one:
-                        component_se.append(
-                          [Symbol("footprint"), Symbol("common:" + kicad_footprint)])
-                        print("Part {0}: Adding binding to footprint '{1}'".
-                              format(part_name, kicad_footprint))
-                        net_file_changed = True
-                    else:
-                        # We have a footprint in .net file:
-                        previous_footprint = footprint_se[1].value()
-                        previous_split = previous_footprint.split(':')
-                        current_split = kicad_footprint.split(':')
-                        assert len(previous_split) > 0
-                        assert len(current_split) > 0
-                        if len(current_split) == 2:
-                            # *kicad_footprint* has an explicit library,
-                            # so we can just use it and ignore
-                            # *previous_footprint*:
-                            new_footprint = kicad_footprint
-                        elif len(current_split) == 1 and len(previous_split) == 2:
-                            # *kicad_footprint* does not specify a library,
-                            # but the *previous_footprint* does.  We build
-                            # *new_foot_print* using the *previous_footprint*
-                            # library and the rest from *kicad_footprint*:
-                            new_footprint = \
-                              previous_split[0] + ":" + kicad_footprint
-                            # print("new_footprint='{0}'".format(new_footprint))
-                        elif len(current_split) == 1:
-                            new_footprint = "common:" + kicad_footprint
-                        else:
-                            assert False, ("previous_slit={0} current_split={1}".
-                                           format(previous_split, current_split))
-
-                        # Only do something if it changed:
-                        if previous_footprint != new_footprint:
-                            # Since they changed, update in place:
-                            # if isinstance(schematic_part, Alias_Part):
-                            #        print("**Alias_Part.footprint={0}".
-                            #          format(schematic_part.kicad_footprint))
-                            print("Part '{0}': Footprint changed from '{1}' to '{2}'".
-                                  format(part_name, previous_footprint, new_footprint))
-                            footprint_se[1] = Symbol(new_footprint)
-                            net_file_changed = True
-
-            # Write out updated *net_file_name* if *net_file_changed*:
-            if net_file_changed:
-                print("Updating '{0}' with new footprints".
-                      format(net_file_name))
-                net_file = open(net_file_name, "wa")
-                # sexpdata.dump(net_se, net_file)
-                net_se_string = sexpdata.dumps(net_se)
-                # sexpdata.dump(net_se, net_file)
-
-                # Now use some regular expressions to improve formatting to be more like
-                # what KiCad outputs:
-                net_se_string = re.sub(" \\(design ", "\n  (design ", net_se_string)
-
-                # Sheet part of file:
-                net_se_string = re.sub(" \\(sheet ",       "\n    (sheet ",         net_se_string)
-                net_se_string = re.sub(" \\(title_block ", "\n      (title_block ", net_se_string)
-                net_se_string = re.sub(" \\(title ",       "\n        (title ",     net_se_string)
-                net_se_string = re.sub(" \\(company ",     "\n        (company ",   net_se_string)
-                net_se_string = re.sub(" \\(rev ",         "\n        (rev ",       net_se_string)
-                net_se_string = re.sub(" \\(date ",        "\n        (date ",      net_se_string)
-                net_se_string = re.sub(" \\(source ",      "\n        (source ",    net_se_string)
-                net_se_string = re.sub(" \\(comment ",     "\n        (comment ",   net_se_string)
-
-                # Components part of file:
-                net_se_string = re.sub(" \\(components ", "\n  (components ",    net_se_string)
-                net_se_string = re.sub(" \\(comp ",       "\n    (comp ",        net_se_string)
-                net_se_string = re.sub(" \\(value ",      "\n      (value ",     net_se_string)
-                net_se_string = re.sub(" \\(footprint ",  "\n      (footprint ", net_se_string)
-                net_se_string = re.sub(" \\(libsource ",  "\n      (libsource ", net_se_string)
-                net_se_string = re.sub(" \\(sheetpath ",  "\n      (sheetpath ", net_se_string)
-                net_se_string = re.sub(" \\(path ",       "\n      (path ",      net_se_string)
-                net_se_string = re.sub(" \\(tstamp ",     "\n      (tstamp ",    net_se_string)
-
-                # Library parts part of file
-                net_se_string = re.sub(" \\(libparts ",    "\n  (libparts ",    net_se_string)
-                net_se_string = re.sub(" \\(libpart ",     "\n    (libpart ",   net_se_string)
-                net_se_string = re.sub(" \\(description ", "\n      (description ",  net_se_string)
-                net_se_string = re.sub(" \\(fields ",      "\n      (fields ",  net_se_string)
-                net_se_string = re.sub(" \\(field ",       "\n        (field ", net_se_string)
-                net_se_string = re.sub(" \\(pins ",        "\n      (pins ",    net_se_string)
-                # net_se_string = re.sub(" \\(pin ",         "\n        (pin ",   net_se_string)
-
-                # Network portion of file:
-                net_se_string = re.sub(" \\(nets ", "\n  (nets ", net_se_string)
-                net_se_string = re.sub(" \\(net ",  "\n    (net ", net_se_string)
-                net_se_string = re.sub(" \\(node ", "\n      (node ", net_se_string)
-
-                # General substitutions:
-                # net_se_string = re.sub(" \\;", ";", net_se_string)
-                # net_se_string = re.sub(" \\.", ".", net_se_string)
-
-                net_file.write(net_se_string)
-                net_file.close()
-            # else:
-            #        print("File '{0}' not changed".format(net_file_name))
-
-        elif net_file_name.ends_with(".cmp"):
-            # Read in {cmp_file_name}:
-            cmp_file_name = net_file_name
-            cmp_stream = open(cmp_file_name, "r")
-            cmp_lines = cmp_stream.readlines()
-            cmp_stream.close()
-
-            # Process each {line} in {cmp_lines}:
-            database = self.database
-            errors = 0
-            line_number = 0
-            for line in cmp_lines:
-                # Keep track of {line} number for error messages:
-                line_number = line_number + 1
-
-                # There are three values we care about:
-                if line.startswith("BeginCmp"):
-                    # Clear out the values:
-                    reference = None
-                    part_name = None
-                    footprint = None
-                elif line.startswith("Reference = "):
-                    reference = line[12:-2]
-                elif line.startswith("ValeurCmp = "):
-                    part_name = line[12:-2]
-                    # print("part_name:{0}".format(part_name))
-                    double_underscore_index = part_name.find("__")
-                    if double_underscore_index >= 0:
-                        shortened_part_name = \
-                          part_name[:double_underscore_index]
-                        # print("Shorten part name '{0}' => '{1}'".
-                        #  format(part_name, shortened_part_name))
-                        part_name = shortened_part_name
-                elif line.startswith("IdModule  "):
-                    footprint = line[12:-2].split(':')[1]
-                    # print("footprint='{0}'".format(footprint))
-                elif line.startswith("EndCmp"):
-                    part = database.part_lookup(part_name)
-                    if part is None:
-                        # {part_name} not in {database}; output error message:
-                        print("File '{0}', line {1}: Part Name {2} ({3} {4}) not in database".
-                              format(cmp_file_name, line_number, part_name, reference, footprint))
-                        errors = errors + 1
-                    else:
-                        footprint_pattern = part.footprint_pattern
-                        if fnmatch.fnmatch(footprint, footprint_pattern):
-                            # The footprints match:
-                            board_part = \
-                              Board_Part(self, part, reference, footprint)
-                            self.board_parts_append(board_part)
-                            part.board_parts.append(board_part)
-                        else:
-                            print(("File '{0}',  line {1}: {2}:{3} Footprint" +
-                                   "'{4}' does not match database '{5}'").format(
-                                   cmp_file_name, line_number,
-                                   reference, part_name, footprint,
-                                   footprint_pattern))
-                            errors = errors + 1
-                elif (line == "\n" or line.startswith("TimeStamp") or
-                      line.startswith("EndListe") or line.startswith("Cmp-Mod V01")):
-                    # Ignore these lines:
-                    line = line
-                else:
-                    # Unrecognized {line}:
-                    print("'{0}', line {1}: Unrecognized line '{2}'".
-                          format(cmp_file_name, line_number, line))
-                    errors = errors + 1
-        else:
-            print("Net file '{0}' name does not have a recognized suffix".format(net_file_name))
-
-        return errors
-
-    def assembly_summary_write(self, final_choice_parts):
-        """ *Board*: Write out an assembly summary .csv file for the *Board* object (i.e. *self*)
-            using *final_choice_parts*.
-        """
-
-        # Verify argument types:
-        assert isinstance(final_choice_parts, list)
-
-        # Open *board_file*:
-        board_file_name = "/tmp/{0}.csv".format(self.name)
-        board_file = open(board_file_name, "w")
-
-        # Write out the column headings:
-        board_file.write(
-          '"Quan.","Reference","Schematic Name","Description","Fractional",' +
-          '"Manufacturer","Manufacture PN","Vendor","Vendor PN"\n\n')
-
-        # Output the installed parts:
-        has_fractional_parts1 = self.assembly_summary_write_helper(True,
-                                                                   final_choice_parts, board_file)
-
-        # Output the uninstalled parts:
-        board_file.write("\nDo Not Install\n")
-
-        # Output the installed parts:
-        has_fractional_parts2 = self.assembly_summary_write_helper(False,
-                                                                   final_choice_parts, board_file)
-
-        # Explain what a fractional part is:
-        if has_fractional_parts1 or has_fractional_parts2:
-            board_file.write(
-              '"","\nFractional parts are snipped off of 1xN or 2xN break-way headers"\n')
-
-        # Close *board_file* and print out a summary announcement:
-        board_file.close()
-        print("Wrote out assembly file '{0}'".format(board_file_name))
-
-    def assembly_summary_write_helper(self, install, final_choice_parts, board_file):
-        """ *Board*: Write out an assembly summary .csv file for *Board* object (i.e. *self*)
-            out to *board_file*.  *install* is set *True* to list the installable parts from
-            *final_choice_parts* and *False* for an uninstallable parts listing.
-            This routine returns *True* if there are any fractional parts output to *board_file*.
-        """
-
-        # Verify argument types:
-        assert isinstance(install, bool)
-        assert isinstance(final_choice_parts, list)
-        assert isinstance(board_file, io.IOBase)
-
-        # Each *final_choice_part* that is part of the board (i.e. *self*) will wind up
-        # in a list in *board_parts_table*.  The key is the *schematic_part_key*:
-        board_parts_table = {}
-        for final_choice_part in final_choice_parts:
-            # Now figure out if final choice part is part of *board_parts*:
-            board_parts = final_choice_part.board_parts
-            for board_part in board_parts:
-                # We only care care about *final_choice_part* if is used on *board* and
-                # it matches the *install* selector:
-                if board_part.board == self and board_part.install == install:
-                    # We are on the board; create *schemati_part_key*:
-                    schematic_part = board_part.schematic_part
-                    schematic_part_key = "{0};{1}".format(
-                      schematic_part.base_name, schematic_part.short_footprint)
-
-                    # Create/append a list to *board_parts_table*, keyed on *schematic_part_key*:
-                    if schematic_part_key not in board_parts_table:
-                        board_parts_table[schematic_part_key] = []
-                    pairs_list = board_parts_table[schematic_part_key]
-
-                    # Append a pair of *board_part* and *final_choice_part* onto *pairs_list*:
-                    board_final_pair = (board_part, final_choice_part)
-                    pairs_list.append(board_final_pair)
-
-        # Now organize everything around the *reference_list*:
-        reference_board_parts = {}
-        for pairs_list in board_parts_table.values():
-            # We want to sort base on *reference_value* which is converted into *reference_text*:
-            reference_list = \
-              [board_final_pair[0].reference.upper() for board_final_pair in pairs_list]
-            reference_text = ", ".join(reference_list)
-            # print("reference_text='{0}'".format(reference_text))
-            board_part = pairs_list[0]
-            reference_board_parts[reference_text] = board_part
-
-        # Sort the *reference_parts_keys*:
-        reference_board_parts_keys = list(reference_board_parts.keys())
-        reference_board_parts_keys.sort()
-
-        # Now dig down until we have all the information we need for output the next
-        # `.csv` file line:
-        has_fractional_parts = False
-        for reference_board_parts_key in reference_board_parts_keys:
-            # Extract the *board_part* and *final_choice_part*:
-            board_final_pair = reference_board_parts[reference_board_parts_key]
-            board_part = board_final_pair[0]
-            final_choice_part = board_final_pair[1]
-            assert isinstance(final_choice_part, Choice_Part)
-
-            # Now get the corresponding *schematic_part*:
-            schematic_part = board_part.schematic_part
-            schematic_part_key = "{0};{1}".format(
-              schematic_part.base_name, schematic_part.short_footprint)
-            assert isinstance(schematic_part, Schematic_Part)
-
-            # Now get the *actual_part*:
-            actual_part = final_choice_part.selected_actual_part
-            if isinstance(actual_part, Actual_Part):
-
-                # Now get the Vendor_Part:
-                manufacturer_name = actual_part.manufacturer_name
-                manufacturer_part_name = actual_part.manufacturer_part_name
-                vendor_part = final_choice_part.selected_vendor_part
-                assert isinstance(vendor_part, Vendor_Part)
-
-                # Output the line for the .csv file:
-                vendor_name = vendor_part.vendor_name
-                vendor_part_name = vendor_part.vendor_part_name
-                quantity = final_choice_part.count_get()
-                fractional = "No"
-                if len(final_choice_part.fractional_parts) > 0:
-                    fractional = "Yes"
-                    has_fractional_parts = True
-                board_file.write('"{0} x","{1}","{2}","{3}","{4}","{5}","{6}","{7}","{8}"\n'.
-                                 format(quantity, reference_board_parts_key,
-                                        schematic_part_key, final_choice_part.description,
-                                        fractional, manufacturer_name, manufacturer_part_name,
-                                        vendor_name, vendor_part_name))
-            else:
-                print("Problems with actual_part", actual_part)
-
-        return has_fractional_parts
-
-    def positions_process(self, database):
-        """ *Board*: """
-
-        board = self
-        positions_file_name = board.positions_file_name
-        positions_table = PositionsTable(positions_file_name, database)
-        positions_table.reorigin("FD1")
-        positions_table.footprints_rotate(database)
-
-
-class Board_Part:
-    # A Board_Part basically specifies the binding of a Schematic_Part
-    # and is associated schemtatic reference.  Reference strings must
-    # be unique for a given board.
-
-    def __init__(self, board, schematic_part, reference, comment):
-        """ *Board_Part*: Initialize *self* to contain *board*,
-            *schematic_part*, *reference*, and *comment*. """
-
-        # Verify argument types:
-        assert isinstance(board, Board)
-        assert isinstance(schematic_part, Schematic_Part)
-        assert isinstance(reference, str)
-        assert isinstance(comment, str)
-
-        # Load up *self*:
-        self.board = board
-        self.schematic_part = schematic_part
-        self.reference = reference
-        self.comment = comment
-        self.install = (comment != "DNI")
 
 
 class Schematic_Part:
@@ -4499,6 +7351,65 @@ class Schematic_Part:
         """
 
         assert False, "No footprints_check method for this Schematic Part"
+
+
+class Alias_Part(Schematic_Part):
+    # An *Alias_Part* specifies one or more *Schematic_Parts* to use.
+
+    def __init__(self, schematic_part_name, schematic_parts, kicad_footprint,
+                 feeder_name=None, part_height=None, pick_dx=0.0, pick_dy=0.0):
+        """ *Alias_Part*: Initialize *self* to contain *schematic_part_name*,
+            *kicad_footprint*, and *schematic_parts*. """
+
+        # Verify argument types:
+        assert isinstance(schematic_part_name, str)
+        assert isinstance(schematic_parts, list)
+        assert isinstance(feeder_name, str) or feeder_name is None
+        assert isinstance(part_height, float) or part_height is None
+        assert isinstance(pick_dx, float)
+        assert isinstance(pick_dy, float)
+        for schematic_part in schematic_parts:
+            assert isinstance(schematic_part, Schematic_Part)
+
+        # assert len(schematic_parts) == 1, "schematic_parts={0}".format(schematic_parts)
+
+        # Load up *alias_part* (i.e *self*):
+        alias_part = self
+        super().__init__(schematic_part_name, kicad_footprint)
+        alias_part.schematic_parts = schematic_parts
+        alias_part.feeder_name = feeder_name
+        alias_part.part_height = part_height
+        alias_part.pick_dx = pick_dx
+        alias_part.pick_dy = pick_dy
+
+    def choice_parts(self):
+        """ *Alias_Part*: Return a list of *Choice_Part*'s corresponding to *self*
+        """
+
+        assert isinstance(self, Alias_Part)
+        choice_parts = []
+        for schematic_part in self.schematic_parts:
+            choice_parts += schematic_part.choice_parts()
+
+        # assert False, \
+        #  "No choice parts for '{0}'".format(self.schematic_part_name)
+        return choice_parts
+
+    def footprints_check(self, kicad_footprints):
+        """ *Alias_Part*: Verify that all the footprints exist for the *Alias_Part* object
+            (i.e. *self*.)
+        """
+
+        # Use *alias_part* instead of *self*:
+        alias_part = self
+
+        # Verify argument types:
+        assert isinstance(kicad_footprints, dict)
+
+        # Visit all of the listed schematic parts:
+        schematic_parts = alias_part.schematic_parts
+        for schematic_part in schematic_parts:
+            schematic_part.footprints_check(kicad_footprints)
 
 
 class Choice_Part(Schematic_Part):
@@ -4891,87 +7802,6 @@ class Choice_Part(Schematic_Part):
               vendor_names_table, excluded_vendor_names)
 
 
-class Alias_Part(Schematic_Part):
-    # An *Alias_Part* specifies one or more *Schematic_Parts* to use.
-
-    def __init__(self, schematic_part_name, schematic_parts, kicad_footprint,
-                 feeder_name=None, part_height=None, pick_dx=0.0, pick_dy=0.0):
-        """ *Alias_Part*: Initialize *self* to contain *schematic_part_name*,
-            *kicad_footprint*, and *schematic_parts*. """
-
-        # Verify argument types:
-        assert isinstance(schematic_part_name, str)
-        assert isinstance(schematic_parts, list)
-        assert isinstance(feeder_name, str) or feeder_name is None
-        assert isinstance(part_height, float) or part_height is None
-        assert isinstance(pick_dx, float)
-        assert isinstance(pick_dy, float)
-        for schematic_part in schematic_parts:
-            assert isinstance(schematic_part, Schematic_Part)
-
-        # assert len(schematic_parts) == 1, "schematic_parts={0}".format(schematic_parts)
-
-        # Load up *alias_part* (i.e *self*):
-        alias_part = self
-        super().__init__(schematic_part_name, kicad_footprint)
-        alias_part.schematic_parts = schematic_parts
-        alias_part.feeder_name = feeder_name
-        alias_part.part_height = part_height
-        alias_part.pick_dx = pick_dx
-        alias_part.pick_dy = pick_dy
-
-    def choice_parts(self):
-        """ *Alias_Part*: Return a list of *Choice_Part*'s corresponding to *self*
-        """
-
-        assert isinstance(self, Alias_Part)
-        choice_parts = []
-        for schematic_part in self.schematic_parts:
-            choice_parts += schematic_part.choice_parts()
-
-        # assert False, \
-        #  "No choice parts for '{0}'".format(self.schematic_part_name)
-        return choice_parts
-
-    def footprints_check(self, kicad_footprints):
-        """ *Alias_Part*: Verify that all the footprints exist for the *Alias_Part* object
-            (i.e. *self*.)
-        """
-
-        # Use *alias_part* instead of *self*:
-        alias_part = self
-
-        # Verify argument types:
-        assert isinstance(kicad_footprints, dict)
-
-        # Visit all of the listed schematic parts:
-        schematic_parts = alias_part.schematic_parts
-        for schematic_part in schematic_parts:
-            schematic_part.footprints_check(kicad_footprints)
-
-
-class Footprint:
-    """ *Footprint*: Represents a PCB footprint. """
-
-    def __init__(self, name, rotation):
-        """ *Footprint*: Initialize a new *FootPrint* object.
-
-        The arguments are:
-        * *name* (str): The unique footprint name.
-        * *rotation* (degrees): The amount to rotate the footprint to match the feeder tape with
-          holes on top.
-        """
-
-        # Verify argument types:
-        assert isinstance(name, str)
-        assert isinstance(rotation, float) and 0.0 <= rotation <= 360.0 or rotation is None
-
-        # Stuff values into *footprint* (i.e. *self*):
-        footprint = self
-        footprint.name = name
-        footprint.rotation = rotation
-
-
 class Fractional_Part(Schematic_Part):
     # A *Fractional_Part* specifies a part that is constructed by
     # using a portion of another *Schematic_Part*.
@@ -5018,2856 +7848,6 @@ class Fractional_Part(Schematic_Part):
         kicad_footprint = fractional_part.kicad_footprint
         if kicad_footprint != "-":
             kicad_footprints[kicad_footprint] = fractional_part.schematic_part_name
-
-
-class Actual_Part:
-    # An *Actual_Part* represents a single manufacturer part.
-    # A list of vendor parts specifies where the part can be ordered from.
-
-    def __init__(self, manufacturer_name, manufacturer_part_name):
-        """ *Actual_Part*: Initialize *self* to contain *manufacturer* and
-            *manufacturer_part_name*. """
-
-        # Verify argument_types:
-        assert isinstance(manufacturer_name, str)
-        assert isinstance(manufacturer_part_name, str)
-
-        key = (manufacturer_name, manufacturer_part_name)
-
-        # Load up *self*:
-        self.manufacturer_name = manufacturer_name
-        self.manufacturer_part_name = manufacturer_part_name
-        self.key = key
-        # Fields used by algorithm:
-        self.quantity_needed = 0
-        self.vendor_parts = []
-        self.selected_vendor_part = None
-
-    def vendor_part_append(self, vendor_part):
-        """ *Actual_Part: Append *vendor_part* to the vendor parts
-            of *self*. """
-
-        actual_part = self
-        tracing = False
-        tracing = (actual_part.manufacturer_name == "Pololu" and
-                   actual_part.manufacturer_part_name == "S18V20F6)")
-        if tracing:
-            print("appending part")
-            assert False
-        assert isinstance(vendor_part, Vendor_Part)
-        self.vendor_parts.append(vendor_part)
-
-    def vendor_names_load(self, vendor_names_table, excluded_vendor_names):
-        """ *Actual_Part*:*: Add each possible to vendor name for the
-            *Actual_Part* object (i.e. *self*) to *vendor_names_table*:
-        """
-
-        # Verify argument types:
-        assert isinstance(vendor_names_table, dict)
-        assert isinstance(excluded_vendor_names, dict)
-
-        # Add the possible vendor names for *vendor_part* to
-        # *vendor_names_table*:
-        for vendor_part in self.vendor_parts:
-            vendor_name = vendor_part.vendor_name
-            if vendor_name not in excluded_vendor_names:
-                vendor_names_table[vendor_name] = None
-
-
-class Vendor_Part:
-    # A vendor part represents a part that can be ordered from a vendor.
-
-    def __init__(self, actual_part, vendor_name, vendor_part_name,
-                 quantity_available, price_breaks, timestamp=0.0):
-        """ *Vendor_Part*: Initialize *self* to contain *actual_part"""
-
-        # print("vendor_part_name=", vendor_part_name)
-
-        # Check argument types:
-        assert isinstance(actual_part, Actual_Part)
-        assert isinstance(vendor_name, str)
-        assert isinstance(vendor_part_name, str)
-        assert isinstance(quantity_available, int), ("quantity_available={0}".format(
-                                                     quantity_available))
-        assert isinstance(price_breaks, list)
-        assert isinstance(timestamp, float)
-        for price_break in price_breaks:
-            assert isinstance(price_break, Price_Break)
-
-        # Clean up *vendor_name*:
-        # original_vendor_name = vendor_name
-        vendor_name = vendor_name.replace('\n', "")
-        if vendor_name.endswith(" •"):
-            vendor_name = vendor_name[:-2]
-        if vendor_name.endswith(" ECIA (NEDA) Member"):
-            vendor_name = vendor_name[:-19]
-        if vendor_name.endswith(" CEDA member"):
-            vendor_name = vendor_name[:-12]
-        vendor_name = vendor_name.strip(" \t")
-        # print("vendor_name='{0}'\t\toriginal_vendor_name='{1}'".format(
-        #  vendor_name, original_vendor_name))
-
-        # Load up *self*:
-        self.actual_part_key = actual_part.key
-        self.vendor_key = (vendor_name, vendor_part_name)
-        self.vendor_name = vendor_name
-        self.vendor_part_name = vendor_part_name
-        self.quantity_available = quantity_available
-        self.price_breaks = price_breaks
-        self.timestamp = timestamp
-
-        # Append *self* to the vendor parts of *actual_part*:
-        actual_part.vendor_part_append(self)
-
-    def __format__(self, format):
-        """ *Vendor_Part*: Print out the information of the *Vendor_Part* (i.e. *self*):
-        """
-
-        vendor_part = self
-        vendor_name = vendor_part.vendor_name
-        vendor_part_name = vendor_part.vendor_part_name
-        # price_breaks = vendor_part.price_breaks
-        return "'{0}':'{1}'".format(vendor_name, vendor_part_name)
-
-    def dump(self, out_stream, indent):
-        """ *Vendor_Part*: Dump the *Vendor_Part* (i.e. *self*) out to
-            *out_stream* in human readable form indented by *indent* spaces.
-        """
-
-        # Verify argument types:
-        assert isinstance(out_stream, io.IOBase)
-        assert isinstance(indent, int)
-
-        # Dump out *self*:
-        out_stream.write("{0}Actual_Part_Key:{1}\n".
-                         format(" " * indent, self.actual_part_key))
-        out_stream.write("{0}Vendor_Key:{1}\n".
-                         format(" " * indent, self.vendor_key))
-        out_stream.write("{0}Vendor_Name:{1}\n".
-                         format(" " * indent, self.vendor_name))
-        out_stream.write("{0}Vendor_Part_Name:{1}\n".
-                         format(" " * indent, self.vendor_part_name))
-        out_stream.write("{0}Quantity_Available:{1}\n".
-                         format(" " * indent, self.quantity_available))
-        out_stream.write("{0}Price_Breaks: (skip)\n".
-                         format(" " * indent))
-
-    def price_breaks_text_get(self):
-        """ *Vendor_Part*: Return the prices breaks for the *Vendor_Part*
-            object (i.e. *self*) as a text string:
-        """
-
-        price_breaks_text = ""
-        for price_break in self.price_breaks:
-            price_breaks_text += "{0}/${1:.3f} ".format(
-              price_break.quantity, price_break.price)
-        return price_breaks_text
-
-
-class Price_Break:
-    # A price break is where a the pricing changes:
-
-    def __init__(self, quantity, price):
-        """ *Price_Break*: Initialize *self* to contain *quantity*
-            and *price*.  """
-
-        # Verify argument types:
-        assert isinstance(quantity, int)
-        assert isinstance(price, float)
-
-        # Load up *self*;
-        self.quantity = quantity
-        self.price = price
-        self.order_quantity = 0
-        self.order_price = 0.00
-
-    def __format__(self, format):
-        """ *Price_Break*: Return the *Price_Break* object as a human redable string.
-        """
-
-        price_break = self
-        quantity = price_break.quantity
-        price = price_break
-        result = "{0}/{1}".format(quantity, price)
-        print("Result='{0}'".format(result))
-        return result
-
-    def compute(self, needed):
-        """ *Price_Break*: """
-
-        assert isinstance(needed, int)
-
-        self.order_quantity = order_quantity = max(needed, self.quantity)
-        self.order_price = order_quantity * self.price
-
-
-# "se" stands for "S Expression":
-def se_find(se, base_name, key_name):
-    """ {}: Find *key_name* in *se* and return its value. """
-
-    # *se* is a list of the form:
-    #
-    #        [base_name, [key1, value1], [key2, value2], ..., [keyN, valueN]]
-    #
-    # This routine searches through the *[keyI, valueI]* pairs
-    # and returnts the *valueI* that corresponds to *key_name*.
-
-    # Check argument types:
-    assert isinstance(se, list)
-    assert isinstance(base_name, str)
-    assert isinstance(key_name, str)
-
-    # Do some sanity checking:
-    size = len(se)
-    assert size > 0
-    assert se[0] == Symbol(base_name)
-
-    result = None
-    key_symbol = Symbol(key_name)
-    for index in range(1, size):
-        sub_se = se[index]
-        if len(sub_se) > 0 and sub_se[0] == key_symbol:
-            result = sub_se
-            break
-    return result
-
-
-def text2safe_attribute(text):
-    # Verify argument types:
-    assert isinstance(text, str)
-
-    # Sweep across *text* one *character* at a time performing any neccesary conversions:
-    new_characters = list()
-    for character in text:
-        new_character = character
-        if character == '&':
-            new_character = "&amp;"
-        elif character == '<':
-            new_character = "&lt;"
-        elif character == '>':
-            new_character = "&gt;"
-        elif character == ';':
-            new_character = "&semi"
-        new_characters.append(new_character)
-    safe_attribute = "".join(new_characters)
-    return safe_attribute
-
-
-def safe_attribute2text(safe_attribute):
-    # Verify argument types:
-    assert isinstance(safe_attribute, str)
-
-    # Sweep across *safe_attribute* one *character* at a time performing any neccesary conversions:
-    # print("safe_attribute='{0}'".format(safe_attribute))
-    new_characters = list()
-    safe_attribute_size = len(safe_attribute)
-    character_index = 0
-    while character_index < safe_attribute_size:
-        character = safe_attribute[character_index]
-        # print("character[{0}]='{1}'".format(character_index, character))
-        new_character = character
-        if character == '&':
-            remainder = safe_attribute[character_index:]
-            # print("remainder='{0}'".format(remainder))
-            if remainder.startswith("&amp;"):
-                new_character = '&'
-                character_index += 5
-            elif remainder.startswith("&lt;"):
-                new_character = '<'
-                character_index += 4
-            elif remainder.startswith("&gt;"):
-                new_character = '>'
-                character_index += 4
-            elif remainder.startswith("&semi;"):
-                new_character = ';'
-                character_index += 6
-            else:
-                assert False, "remainder='{0}'".format(remainder)
-        else:
-            character_index += 1
-        new_characters.append(new_character)
-    text = "".join(new_characters)
-    return text
-
-
-def name2file_name(name):
-    # Verify argument types:
-    assert isinstance(name, str)
-
-    return name
-
-
-def file_name2name(file_name):
-    # Verify argument types:
-    assert isinstance(file_name, str)
-
-    return file_name
-
-
-class ComboEdit:
-    """ A *ComboEdit* object repesents the GUI controls for manuipulating a combo box widget.
-    """
-
-    # *WIDGET_CALLBACKS* is defined at the end of this class after all of the callback routines
-    # are defined.
-    WIDGET_CALLBACKS = dict()
-
-    # ComboEdit.__init__():
-    def __init__(self, name, tables_editor, items,
-                 new_item_function, current_item_set_function, comment_get_function,
-                 comment_set_function, is_active_function, tracing=None, **widgets):
-        """ Initialize the *ComboEdit* object (i.e. *self*.)
-
-        The arguments are:
-        * *name*: A name for the *ComboEdit* object (i.e. *self*) for debugging.
-        * *tables_editor*: The root *TablesEditor* object.
-        * *items*: A list of item objects to manage.
-        * *new_item_function*: A function that is called to create a new item.
-        * *is_active_function*: A function that returns *True* if combo box should be active.
-        * *current_item_set_function*: A function that is called each time the current item is set.
-        * *comment_get_function*: A function that is called to get the comment text.
-        * *comment_set_function*: A function that is called to set the comment new comment text.
-        * *tracing* (optional): The amount to indent when tracing otherwise *None* for no tracing:
-        * *widgets*: A dictionary of widget names to widgets.  The following widget names
-          are required:
-          * "combo_box":    The *QComboBox* widget to be edited.
-          * "comment_text": The *QComboPlainText* widget for comments.
-          * "delete_button: The *QPushButton* widget that deletes the current entry.
-          * "first_button": The *QPushButton* widget that moves to the first entry.
-          * "last_button":  The *QPushButton* widget that moves to the last entry.
-          * "line_edit":    The *QLineEdit* widget that supports new entry names and entry renames.
-          * "next_button":  The *QPushButton* widget that moves to the next entry.
-          * "new_button":   The *QPushButton* widget that create a new entry.
-          * "previous_button": The *QPushButton* widget that moves tot the pervious entry.
-          * "rename_button": The *QPushButton* widget that   rename_button_clicked,
-        """
-
-        # Verify argument types:
-        assert isinstance(name, str)
-        assert isinstance(items, list)
-        assert callable(new_item_function)
-        assert callable(current_item_set_function)
-        assert callable(comment_get_function)
-        assert callable(comment_set_function)
-        assert callable(is_active_function)
-        assert isinstance(tracing, str) or tracing is None
-        widget_callbacks = ComboEdit.WIDGET_CALLBACKS
-        widget_names = list(widget_callbacks)
-        for widget_name, widget in widgets.items():
-            assert widget_name in widget_names, (
-              "Invalid widget name '{0}'".format(widget_name))
-            assert isinstance(widget, QWidget), (
-              "'{0}' is not a QWidget {1}".format(widget_name, widget))
-
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>ComboEdit.__init__(*, {1}, ...)".format(tracing, name))
-
-        # Load some values into *combo_edit* (i.e. *self*):
-        combo_edit = self
-        combo_edit.comment_get_function = comment_get_function
-        combo_edit.comment_set_function = comment_set_function
-        combo_edit.comment_position = 0
-        combo_edit.current_item_set_function = current_item_set_function
-        combo_edit.is_active_function = is_active_function
-        combo_edit.items = items
-        combo_edit.name = name
-        combo_edit.new_item_function = new_item_function
-        combo_edit.tables_editor = tables_editor
-
-        # Set the current item after *current_item_set_function* has been set.
-        combo_edit.current_item_set(items[0] if len(items) > 0 else None, tracing=next_tracing)
-
-        # Stuff each *widget* into *combo_edit* and connect the *widget* to the associated
-        # callback routine from *widget_callbacks*:
-        for widget_name, widget in widgets.items():
-            # Store *widget* into *combo_edit* with an attribute name of *widget_name*:
-            setattr(combo_edit, widget_name, widget)
-
-            # Lookup the *callback* routine from *widget_callbacks*:
-            callback = widget_callbacks[widget_name]
-
-            # Using *widget* widget type, perform appropraite signal connection to *widget*:
-            if isinstance(widget, QComboBox):
-                # *widget* is a *QcomboBox* and generate a callback each time it changes:
-                assert widget_name == "combo_box"
-                widget.currentTextChanged.connect(partial(callback, combo_edit))
-            elif isinstance(widget, QLineEdit):
-                # *widget* is a *QLineEdit* and generate a callback for each character changed:
-                assert widget_name == "line_edit"
-                widget.textEdited.connect(partial(callback, combo_edit))
-            elif isinstance(widget, QPushButton):
-                # *widget* is a *QPushButton* and generat a callback for each click:
-                widget.clicked.connect(partial(callback, combo_edit))
-            elif isinstance(widget, QPlainTextEdit):
-                # *widget* is a *QPushButton* and generate a callback for each click:
-                widget.textChanged.connect(partial(callback, combo_edit))
-                widget.cursorPositionChanged.connect(
-                                                    partial(ComboEdit.position_changed, combo_edit))
-            else:
-                assert False, "'{0}' is not a valid widget".format(widget_name)
-
-        # Wrap-up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=ComboEdit.__init__(*, {1}, ...)".format(tracing, name))
-
-    # ComboEdit.combo_box_changed():
-    def combo_box_changed(self, new_name):
-        """ Callback method invoked when the *QComboBox* widget changes:
-
-        The arguments are:
-        * *new_name*: The *str* that specifies the new *QComboBox* widget value selected.
-        """
-
-        # Verify argument types:
-        assert isinstance(new_name, str)
-
-        # Only do something if we are not already *in_signal*:
-        combo_edit = self
-        tables_editor = combo_edit.tables_editor
-        if not tables_editor.in_signal:
-            tables_editor.in_signal = True
-
-            # Perform any requested signal tracing:
-            trace_signals = tables_editor.trace_signals
-            next_tracing = " " if trace_signals else None
-            if trace_signals:
-                print("=>ComboEdit.combo_box_changed('{0}', '{1}')".
-                      format(combo_edit.name, new_name))
-
-                # Grab *attributes* (and compute *attributes_size*) from *combo_edit* (i.e. *self*):
-                items = combo_edit.items
-                for index, item in enumerate(items):
-                    if item.name == new_name:
-                        # We have found the new *current_item*:
-                        print("  items[{0}] '{1}'".format(index, item.name))
-                        combo_edit.current_item_set(item, tracing=next_tracing)
-                        break
-
-            # Update the the GUI:
-            tables_editor.update(tracing=next_tracing)
-
-            # Wrap up any signal tracing:
-            if trace_signals:
-                print("<=ComboEdit.combo_box_changed('{0}', '{1}')\n".
-                      format(combo_edit.name, new_name))
-            tables_editor.in_signal = False
-
-    # ComboEdit.comment_text_changed():
-    def comment_text_changed(self):
-        # Do nothing if we are in a signal:
-        combo_edit = self
-        tables_editor = combo_edit.tables_editor
-        in_signal = tables_editor.in_signal
-        if not in_signal:
-            tables_editor.in_signal = True
-
-            # Perform any requested signal tracing:
-            trace_signals = tables_editor.trace_signals
-            next_tracing = " " if trace_signals else None
-            if trace_signals:
-                print("=>ComboEdit.comment_text_changed()")
-
-            # Extract *actual_text* from the *comment_plain_text* widget:
-            comment_text = combo_edit.comment_text
-            actual_text = comment_text.toPlainText()
-            cursor = comment_text.textCursor()
-            position = cursor.position()
-
-            # Store *actual_text* into *current_comment* associated with *current_parameter*:
-            item = combo_edit.current_item_get()
-            if item is not None:
-                combo_edit.comment_set_function(item, actual_text, position, tracing=next_tracing)
-
-            # Force the GUI to be updated:
-            tables_editor.update(tracing=next_tracing)
-
-            # Wrap up any signal tracing:
-            if trace_signals:
-                print(" <=ComboEditor.comment_text_changed():{0}\n".format(cursor.position()))
-            tables_editor.in_signal = False
-
-    # ComboEdit.current_item_get():
-    def current_item_get(self, tracing=None):
-        # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested tracing:
-        combo_edit = self
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>ComboEdit.current_item_get".format(tracing, combo_edit.name))
-
-        current_item = combo_edit.current_item
-        items = combo_edit.items
-
-        # In general, we just want to return *current_item*. However, things can get
-        # messed up by accident.  So we want to be darn sure that *current_item* is
-        # either *None* or a valid item from *items*.
-
-        # Step 1: Search for *current_item* in *tems:
-        new_current_item = None
-        for item in items:
-            if item is current_item:
-                # Found it:
-                new_current_item = current_item
-
-        # Just in case we did not find it, we attempt to grab the first item in *items* instead:
-        if new_current_item is None and len(items) >= 1:
-            new_current_item = items[0]
-
-        # If the *current_item* has changed, we let the parent know:
-        if new_current_item is not current_item:
-            combo_edit.current_item_set(new_current_item, tracing=next_tracing)
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}=>ComboEdit.current_item_get".format(tracing, combo_edit.name))
-        return new_current_item
-
-    # ComboEdit.current_item_set():
-    def current_item_set(self, current_item, tracing=None):
-        # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        combo_edit = self
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>ComboEdit.current_item_set('{1}', *)".format(tracing, combo_edit.name))
-
-        combo_edit.current_item = current_item
-        combo_edit.current_item_set_function(current_item, tracing=next_tracing)
-
-        # Wrap up any requested tracing:
-        if tracing is not None:
-            print("{0}<=ComboEdit.current_item_set('{1}', *)".format(tracing, combo_edit.name))
-
-    # ComboEdit.delete_button_clicked():
-    def delete_button_clicked(self):
-        # Perform any requested tracing from *combo_edit* (i.e. *self*):
-        combo_edit = self
-        tables_editor = combo_edit.tables_editor
-        trace_signals = tables_editor.trace_signals
-        next_tracing = " " if trace_signals else None
-        if trace_signals:
-            print("=>ComboEdit.delete_button_clicked('{0}')".format(combo_edit.name))
-
-        # Find the matching *item* in *items* and delete it:
-        tables_editor.in_signal = True
-        items = combo_edit.items
-        items_size = len(items)
-        current_item = combo_edit.current_item_get()
-        for index, item in enumerate(items):
-            if item == current_item:
-                # Delete the *current_item* from *items*:
-                del items[index]
-                items_size = len(items)
-
-                # Update *current_item* in *combo_edit*:
-                if 0 <= index < items_size:
-                    current_item = items[index]
-                elif 0 <= index - 1 < items_size:
-                    current_item = items[index - 1]
-                else:
-                    current_item = None
-                combo_edit.current_item_set(current_item, tracing=next_tracing)
-                break
-
-        # Update the GUI:
-        tables_editor.update(tracing=next_tracing)
-
-        # Wrap up any requested tracing;
-        if trace_signals:
-            print("<=ComboEdit.delete_button_clicked('{0}')\n".format(combo_edit.name))
-        tables_editor.in_signal = False
-
-    # ComboEdit.first_button_clicked():
-    def first_button_clicked(self):
-        # Perform any tracing requested by *combo_edit* (i.e. *self*):
-        combo_edit = self
-        tables_editor = combo_edit.tables_editor
-        trace_signals = tables_editor.trace_signals
-        next_tracing = " " if trace_signals else None
-        if trace_signals:
-            print("=>ComboEdit.first_button_clicked('{0}')".format(combo_edit.name))
-
-        # If possible, select the *first_item*:
-        tables_editor.in_signal = True
-        items = combo_edit.items
-        items_size = len(items)
-        if items_size > 0:
-            first_item = items[0]
-            combo_edit.current_item_set(first_item, tracing=next_tracing)
-
-        # Update the user interface:
-        tables_editor.update(tracing=next_tracing)
-
-        # Wrap up any requested tracing:
-        if trace_signals:
-            print("<=ComboEdit.first_button_clicked('{0})\n".format(combo_edit.name))
-        tables_editor.in_signal = False
-
-    # ComboEdit.gui_update():
-    def gui_update(self, tracing=None):
-        # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing* of *combo_edit* (i.e. *self*):
-        combo_edit = self
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>ComboEdit.gui_update('{1}')".format(tracing, combo_edit.name))
-
-        # Grab the widgets from *combo_edit* (i.e. *self*):
-        combo_box = combo_edit.combo_box
-        delete_button = combo_edit.delete_button
-        first_button = combo_edit.first_button
-        last_button = combo_edit.last_button
-        line_edit = combo_edit.line_edit
-        new_button = combo_edit.new_button
-        next_button = combo_edit.next_button
-        previous_button = combo_edit.previous_button
-        rename_button = combo_edit.rename_button
-
-        # If *current_item* *is_a_valid_item* we can enable most of the item widgets:
-        current_item = combo_edit.current_item_get()
-        items = combo_edit.items
-        items_size = len(items)
-        is_a_valid_item = current_item is not None
-        combo_box.setEnabled(is_a_valid_item)
-        # if tracing is not None:
-        #    print("{0}current_item='{1}'".
-        #      format(tracing, "None" if current_item is None else current_item.name))
-
-        # Changing the *combo_box* generates a bunch of spurious callbacks to
-        # *ComboEdit.combo_box_changed()* callbacks.  The *combo_box_being_updated* attribute
-        # is set to *True* in *combo_edit* so that these spurious callbacks can be ignored.
-        combo_edit.combo_box_being_updated = True
-        # print("combo_edit.combo_box_being_updated={0}".
-        #  format(combo_edit.combo_box_being_updated))
-
-        # Empty out *combo_box* and then refill it from *items*:
-        combo_box.clear()
-        current_item_index = -1
-        for index, item in enumerate(items):
-            combo_box.addItem(item.name)
-            # if tracing is not None:
-            #    print("{0}[{1}]: '{2}".format(tracing, index,
-            #      "--" if item is None else item.name))
-            if item is current_item:
-                combo_box.setCurrentIndex(index)
-                current_item_index = index
-                if tracing is not None:
-                    print("{0}match".format(tracing))
-                break
-        assert not is_a_valid_item or current_item_index >= 0
-        # print("current_item_index={0}".format(current_item_index))
-        # print("items_size={0}".format(items_size))
-
-        # Read the comment *current_text* out:
-        if current_item is None:
-            current_text = ""
-            position = 0
-        else:
-            current_text, position = combo_edit.comment_get_function(
-              current_item, tracing=next_tracing)
-
-        # Make sure that *current_text* is being displayed by the *comment_text* widget:
-        comment_text = combo_edit.comment_text
-        previous_text = comment_text.toPlainText()
-        if previous_text != current_text:
-            comment_text.setPlainText(current_text)
-
-        # Set the cursor to be at *position* in the *comment_text* widget.  *cursor* is a
-        # copy of the cursor from *comment_text*.  *position* is loaded into *cursor* which
-        # is then loaded back into *comment_text* to actually move the cursor position:
-        cursor = comment_text.textCursor()
-        cursor.setPosition(position)
-        comment_text.setTextCursor(cursor)
-
-        # Figure out if *_new_button_is_visible*:
-        line_edit_text = line_edit.text()
-        # print("line_edit_text='{0}'".format(line_edit_text))
-        no_name_conflict = line_edit_text != ""
-        for index, item in enumerate(items):
-            item_name = item.name
-            # print("[{0}] attribute_name='{1}'".format(index, item_name))
-            if item_name == line_edit_text:
-                no_name_conflict = False
-                # print("new is not allowed")
-        # print("no_name_conflict={0}".format(no_name_conflict))
-
-        # If *current_attribute* *is_a_valid_attribute* we can enable most of the attribute
-        # widgets.  The first, next, previous, and last buttons depend upon the
-        # *current_attribute_index*:
-        combo_box.setEnabled(is_a_valid_item)
-        delete_button.setEnabled(is_a_valid_item)
-        first_button.setEnabled(is_a_valid_item and current_item_index > 0)
-        last_button.setEnabled(is_a_valid_item and current_item_index + 1 < items_size)
-        new_button.setEnabled(no_name_conflict)
-        next_button.setEnabled(is_a_valid_item and current_item_index + 1 < items_size)
-        previous_button.setEnabled(is_a_valid_item and current_item_index > 0)
-        next_button.setEnabled(is_a_valid_item and current_item_index + 1 < items_size)
-        rename_button.setEnabled(no_name_conflict)
-
-        # Wrap up any requeted *tracing*:
-        if tracing is not None:
-            print("{0}<=ComboEdit.gui_update('{1}')".format(tracing, combo_edit.name))
-
-    # ComboEdit.items_replace():
-    def items_replace(self, new_items):
-        # Verify argument types:
-        assert isinstance(new_items, list)
-
-        # Stuff *new_items* into *combo_item*:
-        combo_item = self
-        combo_item.items = new_items
-
-    # ComboEdit.items_set():
-    def items_set(self, new_items, update_function, new_item_function, current_item_set_function):
-        # Verify argument types:
-        assert isinstance(new_items, list)
-        assert callable(update_function)
-        assert callable(new_item_function)
-        assert callable(current_item_set_function)
-
-        # Load values into *items*:
-        combo_edit = self
-        combo_edit.current_item_set_function = current_item_set_function
-        combo_edit.items = new_items
-        combo_edit.new_item_function = new_item_function
-        combo_edit.update_function = update_function
-
-        # Set the *current_item* last to be sure that the call back occurs:
-        combo_edit.current_item_set(new_items[0] if len(new_items) > 0 else None, "items_set")
-
-    # ComboEdit.last_button_clicked():
-    def last_button_clicked(self):
-        # Perform any tracing requested by *combo_edit* (i.e. *self*):
-        combo_edit = self
-        tables_editor = combo_edit.tables_editor
-        trace_signals = tables_editor.trace_signals
-        next_tracing = " " if trace_signals else None
-        if trace_signals:
-            print("=>ComboEdit.last_button_clicked('{0}')".format(combo_edit.name))
-
-        # If possible select the *last_item*:
-        tables_editor.in_signal = True
-        items = combo_edit.items
-        items_size = len(items)
-        if items_size > 0:
-            last_item = items[-1]
-            combo_edit.current_item_set(last_item, tracing=next_tracing)
-
-        # Update the user interface:
-        tables_editor.update(tracing=next_tracing)
-
-        # Wrap up any requested tracing:
-        if trace_signals:
-            print("<=ComboEdit.last_button_clicked('{0}')\n".format(combo_edit.name))
-        tables_editor.in_signal = False
-
-    # ComboEdit.line_edit_changed():
-    def line_edit_changed(self, text):
-        # Verify argument types:
-        assert isinstance(text, str)
-
-        # Make sure that we are not already in a signal before doing anything:
-        combo_edit = self
-        tables_editor = combo_edit.tables_editor
-        if not tables_editor.in_signal:
-            tables_editor.in_signal = True
-
-            # Perform any requested siginal tracing:
-            trace_signals = tables_editor.trace_signals
-            next_tracing = " " if trace_signals else None
-            if trace_signals:
-                print("=>ComboEditor.line_edit_changed('{0}')".format(text))
-
-            # Make sure that the *combo_edit* *is_active*:
-            is_active = combo_edit.is_active_function()
-            if not is_active:
-                # We are not active, so do not let the user type anything in:
-                line_edit = combo_edit.line_edit
-                line_edit.setText("")  # Erase whatever was just typed in!
-
-            # Now just update *combo_edit*:
-            combo_edit.gui_update(tracing=next_tracing)
-
-            # Wrap up any requested signal tracing:
-            if trace_signals:
-                print("<=ComboEditor.line_edit_changed('{0}')\n".format(text))
-            tables_editor.in_signal = False
-
-    # ComboEdit.item_append():
-    def item_append(self, new_item, tracing=None):
-        # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>ComboEdit.item_append(*)".format(tracing))
-
-        # Append *item* to *items* and make it current for *combo_edit* (i.e. *self*):
-        combo_edit = self
-        items = combo_edit.items
-        items.append(new_item)
-        combo_edit.current_item_set(new_item, tracing=next_tracing)
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=ComboEdit.item_append(*)".format(tracing))
-
-    # ComboEdit.new_button_clicked():
-    def new_button_clicked(self):
-        # Perform any tracing requested by *combo_edit* (i.e. *self*):
-        combo_edit = self
-        tables_editor = combo_edit.tables_editor
-        trace_signals = tables_editor.trace_signals
-        next_tracing = " " if trace_signals else None
-        if trace_signals:
-            print("=>ComboEdit.new_button_clicked('{0}')".format(combo_edit.name))
-
-        # Grab some values from *combo_edit*:
-        tables_editor.in_signal = True
-        items = combo_edit.items
-        line_edit = combo_edit.line_edit
-        new_item_function = combo_edit.new_item_function
-        print("items.id=0x{0:x}".format(id(items)))
-
-        # Create a *new_item* and append it to *items*:
-        new_item_name = line_edit.text()
-        # print("new_item_name='{0}'".format(new_item_name))
-        new_item = new_item_function(new_item_name, tracing=next_tracing)
-        combo_edit.item_append(new_item)
-
-        # Update the GUI:
-        tables_editor.update(tracing=next_tracing)
-
-        # Wrap up any requested signal tracing:
-        if trace_signals:
-            print("<=ComboEdit.new_button_clicked('{0}')\n".format(combo_edit.name))
-        tables_editor.in_signal = False
-
-    # ComboEdit.next_button_clicked():
-    def next_button_clicked(self):
-        # Perform any tracing requested by *combo_edit* (i.e. *self*):
-        combo_edit = self
-        tables_editor = combo_edit.tables_editor
-        trace_signals = tables_editor.trace_signals
-        next_tracing = " " if trace_signals else None
-        if trace_signals:
-            print("=>ComboEdit.next_button_clicked('{0}')".format(combo_edit.name))
-
-        # ...
-        tables_editor.in_signal = True
-        items = combo_edit.items
-        items_size = len(items)
-        current_item = combo_edit.current_item_get()
-        for index, item in enumerate(items):
-            if item == current_item:
-                if index + 1 < items_size:
-                    current_item = items[index + 1]
-                break
-        combo_edit.current_item_set(current_item, tracing=next_tracing)
-
-        # Update the GUI:
-        tables_editor.update(tracing=next_tracing)
-
-        # Wrap up any requested tracing:
-        if trace_signals:
-            print("<=ComboEdit.next_button_clicked('{0}')\n".format(combo_edit.name))
-        tables_editor.in_signal = False
-
-    # ComboEdit.position_changed():
-    def position_changed(self):
-        # Do nothing if we already in a signal:
-        combo_edit = self
-        tables_editor = combo_edit.tables_editor
-        if not tables_editor.in_signal:
-            tables_editor.in_signal = True
-
-            # Perform any requested signal tracing:
-            trace_signals = tables_editor.trace_signals
-            next_tracing = " " if trace_signals else None
-            if trace_signals:
-                print("=>ComboEdit.position_changed('{0}')".format(combo_edit.name))
-
-            # Grab the *actual_text* and *position* from the *comment_text* widget and stuff
-            # both into the comment field of *item*:
-            item = combo_edit.current_item_get()
-            comment_text = combo_edit.comment_text
-            cursor = comment_text.textCursor()
-            position = cursor.position()
-            actual_text = comment_text.toPlainText()
-            combo_edit.comment_set_function(item, actual_text, position, tracing=next_tracing)
-
-            # Wrap up any signal tracing:
-            if trace_signals:
-                # print("position={0}".format(position))
-                print("<=ComboEdit.position_changed('{0}')\n".format(combo_edit.name))
-            tables_editor.in_signal = False
-
-    # ComboEdit.previous_button_clicked():
-    def previous_button_clicked(self):
-        # Perform any tracing requested by *combo_edit* (i.e. *self*):
-        combo_edit = self
-        tables_editor = combo_edit.tables_editor
-        trace_signals = tables_editor.trace_signals
-        next_tracing = " " if trace_signals else None
-        if trace_signals:
-            print("=>ComboEdit.previous_button_clicked('{0}')".format(combo_edit.name))
-
-        # ...
-        tables_editor.in_signal = True
-        items = combo_edit.items
-        current_item = combo_edit.current_item_get()
-        for index, item in enumerate(items):
-            if item == current_item:
-                if index > 0:
-                    current_item = items[index - 1]
-                break
-        combo_edit.current_item_set(current_item, tracing=next_tracing)
-
-        # Update the GUI:
-        tables_editor.update(tracing=next_tracing)
-
-        # Wrap up any requested tracing:
-        if trace_signals:
-            print("<=ComboEdit.previous_button_clicked('{0}')\n".format(combo_edit.name))
-        tables_editor.in_signal = False
-
-    # ComboEdit.rename_button_clicked():
-    def rename_button_clicked(self):
-        # Perform any tracing requested by *combo_edit* (i.e. *self*):
-        combo_edit = self
-        tables_editor = combo_edit.tables_editor
-        trace_signals = tables_editor.trace_signals
-        next_tracing = " " if trace_signals else None
-        if trace_signals:
-            print("=>ComboEdit.rename_button_clicked('{0}')".format(combo_edit.name))
-
-        tables_editor.in_signal = True
-        combo_edit = self
-        line_edit = combo_edit.line_edit
-        new_item_name = line_edit.text()
-
-        current_item = combo_edit.current_item_get()
-        if current_item is not None:
-            current_item.name = new_item_name
-
-        # Update the GUI:
-        tables_editor.update(tracing=next_tracing)
-
-        # Wrap up any requested tracing:
-        if trace_signals:
-            print("=>ComboEdit.rename_button_clicked('{0}')\n".format(combo_edit.name))
-        tables_editor.in_signal = False
-
-    # ComboEdit.WIDGET_CALLBACKS:
-    # *WIDGET_CALLBACKS* is defined here **after** the actual callback routines are defined:
-    WIDGET_CALLBACKS = {
-      "combo_box":       combo_box_changed,
-      "comment_text":    comment_text_changed,
-      "delete_button":   delete_button_clicked,
-      "first_button":    first_button_clicked,
-      "last_button":     last_button_clicked,
-      "line_edit":       line_edit_changed,
-      "next_button":     next_button_clicked,
-      "new_button":      new_button_clicked,
-      "previous_button": previous_button_clicked,
-      "rename_button":   rename_button_clicked,
-    }
-
-
-class Comment:
-
-    # Comment.__init__():
-    def __init__(self, tag_name, **arguments_table):
-        # Verify argument types:
-        assert isinstance(tag_name, str) and tag_name in \
-         ("EnumerationComment", "ParameterComment", "TableComment", "SearchComment")
-        is_comment_tree = "comment_tree" in arguments_table
-        if is_comment_tree:
-            assert len(arguments_table) == 1
-            assert isinstance(arguments_table["comment_tree"], etree._Element)
-        else:
-            assert len(arguments_table) >= 2
-            assert "language" in arguments_table and isinstance(arguments_table["language"], str)
-            assert "lines" in arguments_table
-            lines = arguments_table["lines"]
-            for line in lines:
-                assert isinstance(line, str)
-
-        if is_comment_tree:
-            comment_tree = arguments_table["comment_tree"]
-            assert comment_tree.tag == tag_name, (
-              "tag_name='{0}' tree_tag='{1}'".format(tag_name, comment_tree.tag))
-            attributes_table = comment_tree.attrib
-            assert "language" in attributes_table
-            language = attributes_table["language"]
-            text = comment_tree.text.strip()
-            lines = text.split('\n')
-            for index, line in enumerate(lines):
-                lines[index] = line.strip().replace("<", "&lt;").replace(">", "&gt;")
-        else:
-            language = arguments_table["language"]
-            lines = arguments_table["lines"]
-
-        # Load up *table_comment* (i.e. *self*):
-        comment = self
-        comment.position = 0
-        comment.language = language
-        comment.lines = lines
-        # print("Comment(): comment.lines=", tag_name, lines)
-
-    # Comment.__eq__():
-    def __eq__(self, comment2):
-        # Verify argument types:
-        assert isinstance(comment2, Comment)
-
-        # Compare each field in *comment1* (i.e. *self*) with the corresponding field in *comment2*:
-        comment1 = self
-        language_equal = (comment1.language == comment2.language)
-        lines_equal = (comment1.lines == comment2.lines)
-        all_equal = (language_equal and lines_equal)
-        # print("language_equal={0}".format(language_equal))
-        # print("lines_equal={0}".format(lines_equal))
-        return all_equal
-
-
-class Enumeration:
-
-    # Enumeration.__init__():
-    def __init__(self, **arguments_table):
-        is_enumeration_tree = "enumeration_tree" in arguments_table
-        if is_enumeration_tree:
-            assert isinstance(arguments_table["enumeration_tree"], etree._Element)
-        else:
-            assert len(arguments_table) == 2
-            assert "name" in arguments_table
-            assert "comments" in arguments_table
-            comments = arguments_table["comments"]
-            for comment in comments:
-                assert isinstance(comment, EnumerationComment)
-
-        if is_enumeration_tree:
-            enumeration_tree = arguments_table["enumeration_tree"]
-            assert enumeration_tree.tag == "Enumeration"
-            attributes_table = enumeration_tree.attrib
-            assert len(attributes_table) == 1
-            assert "name" in attributes_table
-            name = attributes_table["name"]
-            comments_tree = list(enumeration_tree)
-            comments = list()
-            for comment_tree in comments_tree:
-                comment = EnumerationComment(comment_tree=comment_tree)
-                comments.append(comment)
-            assert len(comments) >= 1
-        else:
-            name = arguments_table["name"]
-            comments = arguments_table["comments"]
-
-        # Load value into *enumeration* (i.e. *self*):
-        enumeration = self
-        enumeration.name = name
-        enumeration.comments = comments
-
-    # Enumeration.__eq__():
-    def __eq__(self, enumeration2):
-        # Verify argument types:
-        assert isinstance(enumeration2, Enumeration)
-
-        enumeration1 = self
-        name_equal = (enumeration1.name == enumeration2.name)
-        comments_equal = (enumeration1.comments == enumeration2.comments)
-        return name_equal and comments_equal
-
-    # Enumeration.xml_lines_append():
-    def xml_lines_append(self, xml_lines, indent):
-        # Verify argument types:
-        assert isinstance(xml_lines, list)
-        assert isinstance(indent, str)
-
-        # Append an `<Enumeration>` element to *xml_lines*:
-        enumeration = self
-        xml_lines.append('{0}<Enumeration name="{1}">'.format(indent, enumeration.name))
-        for comment in enumeration.comments:
-            comment.xml_lines_append(xml_lines, indent + "  ")
-        xml_lines.append('{0}</Enumeration>'.format(indent))
-
-
-class EnumerationComment(Comment):
-
-    # EnumerationComment.__init__():
-    def __init__(self, **arguments_table):
-        # print("=>EnumerationComment.__init__()")
-        enumeration_comment = self
-        super().__init__("EnumerationComment", **arguments_table)
-        assert isinstance(enumeration_comment.language, str)
-        assert isinstance(enumeration_comment.lines, list)
-
-    # EnumerationComment.__equ__():
-    def __equ__(self, enumeration_comment2):
-        assert isinstance(enumeration_comment2, EnumerationComment)
-        return super.__eq__(enumeration_comment2)
-
-    # EnumerationComment.xml_lines_append():
-    def xml_lines_append(self, xml_lines, indent):
-        # Verify argument types:
-        assert isinstance(xml_lines, list)
-        assert isinstance(indent, str)
-
-        # Append and `<EnumerationComment>` an element to *xml_lines*:
-        enumeration_comment = self
-        xml_lines.append(
-          '{0}<EnumerationComment language="{1}">'.format(indent, enumeration_comment.language))
-        for line in enumeration_comment.lines:
-            xml_lines.append('{0}  {1}'.format(indent, line))
-        xml_lines.append('{0}</EnumerationComment>'.format(indent))
-
-
-class Filter:
-
-    # Filter.__init__():
-    def __init__(self, **arguments_table):
-        # Verify argument types:
-        is_filter_tree = "tree" in arguments_table
-        arguments_table_size = len(arguments_table)
-        if is_filter_tree:
-            assert arguments_table_size == 2
-            assert "table" in arguments_table
-        else:
-            assert arguments_table_size == 4
-            assert "parameter" in arguments_table
-            assert "table" in arguments_table
-            assert "use" in arguments_table
-            assert "select" in arguments_table
-
-        # Dispatch on *is_filter_tree*:
-        if is_filter_tree:
-            # Grab *tree* and *table* out of *arguments_table*:
-            tree = arguments_table["tree"]
-            assert isinstance(tree, etree._Element)
-            table = arguments_table["table"]
-            assert isinstance(table, Table)
-
-            # Grab the *parameter_name* and *use* from *filter_tree*:
-            attributes_table = tree.attrib
-            assert len(attributes_table) == 3
-
-            # Extrace *use* from *attributes_table*:
-            assert "use" in attributes_table
-            use_text = attributes_table["use"].lower()
-            if use_text == "true":
-                use = True
-            elif use_text == "false":
-                use = False
-            else:
-                assert False
-
-            # Extract the *match* from *attributes_table*:
-            assert "select" in attributes_table
-            select = attributes_table["select"]
-
-            # Extract *parameter* from *attributes_table* and *table*:
-            assert "name" in attributes_table
-            parameter_name = attributes_table["name"]
-            parameters = table.parameters
-            match_parameter = None
-            for parameter in parameters:
-                if parameter.name == parameter_name:
-                    match_parameter = parameter
-                    break
-            else:
-                assert False
-            parameter = match_parameter
-        else:
-            # Just grab *table*, *parameter*, *use*, and *select* directly from *arguments_table*:
-            table = arguments_table["table"]
-            assert isinstance(table, Table)
-            parameter = arguments_table["parameter"]
-            assert isinstance(parameter, Parameter)
-            use = arguments_table["use"]
-            assert isinstance(use, bool)
-            select = arguments_table["select"]
-            assert isinstance(select, str)
-
-            # Make sure that *parameter* is in *parameters*:
-            parameter_name = parameter.name
-            parameters = table.parameters
-            for parameter in parameters:
-                if parameter.name == parameter_name:
-                    break
-            else:
-                assert False
-
-        # Load up *filter* (i.e. *self*):
-        filter = self
-        filter.parameter = parameter
-        filter.reg_ex = None
-        filter.select = select
-        filter.select_item = None
-        filter.use = use
-        filter.use_item = None
-
-    # Filter.xml_lines_append():
-    def xml_lines_append(self, xml_lines, indent, tracing=None):
-        # Verify argument types:
-        assert isinstance(xml_lines, list)
-        assert isinstance(indent, str)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>Filter.xml_lines_append()".format(tracing))
-
-        # Start appending the `<Filter...>` element to *xml_lines*:
-        filter = self
-        parameter = filter.parameter
-        use = filter.use
-        select = filter.select
-        xml_lines.append(
-          '{0}<Filter name="{1}" use="{2}" select="{3}">'.
-          format(indent, parameter.name, use, select))
-        if tracing is not None:
-            print("{0}Name='{1}' Use='{2}' Select='{3}'".
-                  format(tracing, parameter.name, filter.use, select))
-
-        # Append any *enumerations*:
-        enumerations = parameter.enumerations
-        if len(enumerations) >= 1:
-            xml_lines.append('{0}  <FilterEnumerations>'.format(indent))
-            for enumeration in enumerations:
-                xml_lines.append('{0}    <FilterEnumeration name="{1}" match="{2}"/>'.
-                                 format(indent, enumeration.name, False))
-            xml_lines.append('{0}  </FilterEnumerations>'.format(indent))
-
-        # Wrap up `<Filter...>` element:
-        xml_lines.append('{0}</Filter>'.format(indent))
-
-        # Wrap up any requested *Tracing*:
-        if tracing is not None:
-            print("{0}<=Filter.xml_lines_append()".format(tracing))
-
-
-class Node:
-    """ Represents a single *Node* in a *QTreeView* tree. """
-
-    # Node.__init__():
-    def __init__(self, name, path, parent=None):
-        # Verify argument types:
-        assert isinstance(name, str)
-        assert isinstance(path, str)
-        assert isinstance(parent, Node) or parent is None
-
-        # print("=>Node.__init__(*, '{0}', '...', '{2}')".
-        #  format(name, path, "None" if parent is None else parent.name))
-        # Initilize the super class:
-        super().__init__()
-
-        node = self
-        if isinstance(node, Table):
-            is_dir = True
-            is_traversed = False
-        else:
-            is_dir = os.path.isdir(path)
-            is_traversed = not is_dir or is_dir and len(list(os.listdir(path))) == 0
-
-        # Load up *node* (i.e. *self*):
-        node.children = []
-        node.name = name
-        node.is_dir = is_dir
-        node.is_traversed = is_traversed
-        node.parent = parent
-        node.path = path
-
-        # Force *node* to be in *parent*:
-        if parent is not None:
-            parent.add_child(node)
-
-        # print("<=Node.__init__(*, '{0}', '...', '{2}')".
-        #  format(name, path, "None" if parent is None else parent.name))
-
-    # Node.add_child():
-    def add_child(self, child):
-        # Verify argument types:
-        assert isinstance(child, Node)
-
-        # Append *child* to the *node* (i.e. *self*) children list:
-        node = self
-        # print("=>Node.add_child('{0}', '{1}') =>{2}".
-        #  format(node.name, child.name, len(node.children)))
-        node.children.append(child)
-        child.parent = node
-        # print("<=Node.add_child('{0}', '{1}') =>{2}".
-        #  format(node.name, child.name, len(node.children)))
-
-    # Node.child():
-    def child(self, row):
-        # Verify argument types:
-        assert isinstance(row, int)
-
-        node = self
-        children = node.children
-        result = children[row] if 0 <= row < len(children) else None
-        return result
-
-    # Node.child_count():
-    def child_count(self):
-        node = self
-        return len(node.children)
-
-    # Node.clicked():
-    def clicked(self, tables_editor, tracing=None):
-        # Verify argument types:
-        assert isinstance(tables_editor, TablesEditor)
-        assert isinstance(tracing, str) or tracing is None
-
-        node = self
-        assert False, "Node.clicked() needs to be overridden for type ('{0}')".format(type(node))
-
-    # Node.csv_read_and_process():
-    def csv_read_and_process(self, csv_directory, bind=False, tracing=None):
-        # Verify argument types:
-        assert isinstance(csv_directory, str)
-        assert False, ("Node sub-class '{0}' does not implement csv_read_and_process".
-                       format(type(self)))
-
-    # Node.flle_name2title():
-    def file_name2title(self, file_name):
-        # Verify argument types:
-        assert isinstance(file_name, str)
-
-        # Decode *file_name* into a list of *characters*:
-        characters = list()
-        index = 0
-        file_name_size = len(file_name)
-        while index < file_name_size:
-            character = file_name[index]
-            if character == '_':
-                # Underscores are always translated to spaces:
-                character = ' '
-                index += 1
-            elif character == '%':
-                # `%XX` is converted into a single *character*:
-                character = chr(int(file_name[index+1:index+3], 16))
-                index += 3
-            else:
-                # Everything else just taken as is:
-                index += 1
-            characters.append(character)
-
-        # Join *characters* back into a single *title* string:
-        title = "".join(characters)
-        return title
-
-    # Node.insert_child():
-    def insert_child(self, position, child):
-        # Verify argument types:
-        assert isinstance(position, int)
-        assert isinstance(child, Node)
-
-        node = self
-        children = node.children
-        inserted = 0 <= position <= len(children)
-        if inserted:
-            children.insert(position, child)
-            child.parent = node
-        return inserted
-
-    # Node.remove():
-    def remove(self, remove_node):
-        # Verify argument types:
-        assert isinstance(remove_node, Node)
-
-        node = self
-        children = node.children
-        for child_index, child_node in enumerate(children):
-            if child_node is remove_node:
-                del children[child_index]
-                remove_node.parent = None
-                break
-        else:
-            assert False, ("Node '{0}' not in '{1}' remove failed".
-                           format(remove_node.name, node.name))
-
-    # Node.title_get():
-    def title_get(self):
-        table = self
-        title = table.name
-        print("Node.title='{0}'".format(title))
-        return title
-
-    # Node.title2file_name():
-    def title2file_name(self, title):
-        # Verify argument types:
-        assert isinstance(title, str)
-
-        node = self
-        characters = list()
-        # ok_characters = "-,:.%+"
-        translate_characters = "!\"#$&'()*/;<=>?[]\\_`{|}~"
-        for character in title:
-            if character in translate_characters:
-                character = "%{0:02x}".format(ord(character))
-            elif character == ' ':
-                character = '_'
-            characters.append(character)
-        file_name = "".join(characters)
-
-        # Set to *True* to a little debugging:
-        if False:
-            converted_title = node.file_name2title(file_name)
-            assert title == converted_title, ("'{0}' '{1}' '{2}'".
-                                              format(title, file_name, converted_title))
-        return file_name
-
-    # Node.row():
-    def row(self):
-        node = self
-        parent = node.parent
-        result = 0 if parent is None else parent.children.index(node)
-        return result
-
-
-class Directory(Node):
-    # Directory.__init__():
-    def __init__(self, name, path, title, parent=None):
-        # Verify argument types:
-        assert isinstance(name, str)
-        assert isinstance(path, str)
-        assert isinstance(title, str)
-        assert isinstance(parent, Node) or parent is None
-
-        # print("=>Directory.__init__(*, '{0}', '...', '{2}')".
-        #  format(name, path, "None" if parent is None else parent.name))
-
-        # Verify that *path* is not Unix `.` or `..`, or `.ANYTHING`:
-        base_name = os.path.basename(path)
-        assert not base_name.startswith('.'), "Directory '{0}' starts with '.'".format(path)
-
-        # Initlialize the *Node* super class:
-        super().__init__(name, path, parent)
-        directory = self
-        directory.title = title
-
-        # print("<=Directory.__init__(*, '{0}', '...', '{2}')".
-        #  format(name, path, "None" if parent is None else parent.name))
-
-    # Directory.append():
-    def append(self, node):
-        assert isinstance(node, Node)
-        directory = self
-        directory.children.append(node)
-
-    # Directory.clicked():
-    def clicked(self, tables_editor, tracing=None):
-        # Verify argument types:
-        assert isinstance(tables_editor, TablesEditor)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Preform any requested *tracing*:
-        if tracing is not None:
-            print("{0}=>Directory.clicked()".format(tracing))
-
-        tables_editor.current_search = None
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=Directory.clicked()".format(tracing))
-
-    # Directory.title_get():
-    def title_get(self):
-        directory = self
-        title = directory.title
-        # print("Directory.title='{0}'".format(title))
-        return title
-
-    # Directory.type_letter_get():
-    def type_letter_get(self):
-        assert not isinstance(self, Collection)
-        # print("Directory.type_letter_get():name='{}'".format(self.name))
-        return 'D'
-
-
-class Collection(Directory):
-
-    #FIXME: Why do we have both *path* and *directory*!!!
-
-    # Collection.__init__():
-    def __init__(self, name, path, title, directory):
-        # Verify argument types:
-        assert isinstance(name, str)
-        assert isinstance(path, str)
-        assert isinstance(title, str)
-        assert isinstance(directory, str) and os.path.isdir(directory)
-
-        # Intialize the collection:
-        collection = self
-        super().__init__(name, path, title)
-        collection.directory = directory
-        assert collection.type_letter_get() == 'C'
-
-    # Collection.type_leter_get()
-    def type_letter_get(self):
-        # print("Collection.type_letter_get(): name='{0}'".format(self.name))
-        return 'C'
-
-
-class Parameter:
-
-    # Parameter.__init__():
-    def __init__(self, **arguments_table):
-        is_parameter_tree = "parameter_tree" in arguments_table
-        if is_parameter_tree:
-            assert len(arguments_table) == 1
-            assert isinstance(arguments_table["parameter_tree"], etree._Element)
-        else:
-            assert "name" in arguments_table
-            assert "type" in arguments_table
-            assert "csv" in arguments_table
-            assert "csv_index" in arguments_table
-            assert "comments" in arguments_table
-            arguments_count = 5
-            if "default" in arguments_table:
-                arguments_count += 1
-                assert isinstance(arguments_table["default"], str)
-            if "optional" in arguments_table:
-                assert isinstance(arguments_table["optional"], bool)
-                arguments_count += 1
-            if "enumerations" in arguments_table:
-                arguments_count += 1
-                enumerations = arguments_table["enumerations"]
-                for enumeration in enumerations:
-                    assert isinstance(enumeration, Enumeration)
-            assert len(arguments_table) == arguments_count, arguments_table
-
-        if is_parameter_tree:
-            parameter_tree = arguments_table["parameter_tree"]
-            assert parameter_tree.tag == "Parameter"
-            attributes_table = parameter_tree.attrib
-            assert "name" in attributes_table
-            name = attributes_table["name"]
-            assert "type" in attributes_table
-            type = attributes_table["type"].lower()
-            if "optional" in attributes_table:
-                optional_text = attributes_table["optional"].lower()
-                assert optional_text in ("true", "false")
-                optional = (optional_text == "true")
-            else:
-                optional = False
-            csv = attributes_table["csv"] if "csv" in attributes_table else ""
-            csv_index = (
-              int(attributes_table["csv_index"]) if "csv_index" in attributes_table else -1)
-            default = attributes_table["default"] if "default" in attributes_table else None
-            parameter_tree_elements = list(parameter_tree)
-            assert len(parameter_tree_elements) >= 1
-            comments_tree = parameter_tree_elements[0]
-            assert comments_tree.tag == "ParameterComments"
-            assert len(comments_tree.attrib) == 0
-            comments = list()
-            for comment_tree in comments_tree:
-                comment = ParameterComment(comment_tree=comment_tree)
-                comments.append(comment)
-
-            enumerations = list()
-            if type == "enumeration":
-                assert len(parameter_tree_elements) == 2
-                enumerations_tree = parameter_tree_elements[1]
-                assert len(enumerations_tree.attrib) == 0
-                assert enumerations_tree.tag == "Enumerations"
-                assert len(enumerations_tree) >= 1
-                for enumeration_tree in enumerations_tree:
-                    enumeration = Enumeration(enumeration_tree=enumeration_tree)
-                    enumerations.append(enumeration)
-            else:
-                assert len(parameter_tree_elements) == 1
-        else:
-            name = arguments_table["name"]
-            type = arguments_table["type"]
-            csv = arguments_table["csv"]
-            csv_index = arguments_table["csv_index"]
-            default = arguments_table["defualt"] if "default" in arguments_table else None
-            optional = arguments_table["optional"] if "optional" in arguments_table else False
-            comments = arguments_table["comments"] if "comments" in arguments_table else list()
-            enumerations = (
-              arguments_table["enumerations"] if "enumerations" in arguments_table else list())
-
-        # Load values into *parameter* (i.e. *self*):
-        super().__init__()
-        parameter = self
-        parameter.comments = comments
-        parameter.csv = csv
-        parameter.csv_index = csv_index
-        parameter.default = default
-        parameter.enumerations = enumerations
-        parameter.name = name
-        parameter.optional = optional
-        parameter.type = type
-        parameter.use = False
-        # print("Parameter('{0}'): optional={1}".format(name, optional))
-        # print("Parameter(name='{0}', type='{1}', csv='{1}')".format(name, type, parameter.csv))
-
-    # Parameter.__equ__():
-    def __eq__(self, parameter2):
-        # print("=>Parameter.__eq__()")
-
-        # Verify argument types:
-        assert isinstance(parameter2, Parameter)
-
-        # Compare each field of *parameter1* (i.e. *self*) with the corresponding field
-        # of *parameter2*:
-        parameter1 = self
-        name_equal = (parameter1.name == parameter2.name)
-        default_equal = (parameter1.default == parameter2.default)
-        type_equal = (parameter1.type == parameter2.type)
-        optional_equal = (parameter1.optional == parameter2.optional)
-        comments_equal = (parameter1.comments == parameter2.comments)
-        enumerations_equal = (parameter1.enumerations == parameter2.enumerations)
-        all_equal = (
-          name_equal and default_equal and type_equal and
-          optional_equal and comments_equal and enumerations_equal)
-
-        # Debugging code:
-        # print("name_equal={0}".format(name_equal))
-        # print("default_equal={0}".format(default_equal))
-        # print("type_equal={0}".format(type_equal))
-        # print("optional_equal={0}".format(optional_equal))
-        # print("comments_equal={0}".format(comments_equal))
-        # print("enumerations_equal={0}".format(enumerations_equal))
-        # print("<=Parameter.__eq__()=>{0}".format(all_equal))
-
-        return all_equal
-
-    # Parameter.xml_lines_append():
-    def xml_lines_append(self, xml_lines, indent):
-        assert isinstance(xml_lines, list)
-        assert isinstance(indent, str)
-
-        # Grab some values from *parameter* (i.e. *self*):
-        parameter = self
-        default = parameter.default
-        optional = parameter.optional
-
-        # Start the *parameter* XML add in *optional* and *default* if needed:
-        xml_line = '{0}<Parameter name="{1}" type="{2}" csv="{3}" csv_index="{4}"'.format(
-          indent, parameter.name, parameter.type, parameter.csv, parameter.csv_index)
-        if optional:
-            xml_line += ' optional="true"'
-        if default is not None:
-            xml_line += ' default="{0}"'.format(default)
-        xml_line += '>'
-        xml_lines.append(xml_line)
-
-        # Append all of the comments*:
-        comments = parameter.comments
-        for comment in comments:
-            xml_lines.append('{0}  <ParameterComments>'.format(indent))
-            comment.xml_lines_append(xml_lines)
-            xml_lines.append('{0}  </ParameterComments>'.format(indent))
-
-        # Append all of the *enumerations*:
-        enumerations = parameter.enumerations
-        if len(enumerations) >= 1:
-            xml_lines.append('{0}  <Enumerations>'.format(indent))
-            for enumeration in enumerations:
-                enumeration.xml_lines_append(xml_lines, indent + "    ")
-            xml_lines.append('{0}  </Enumerations>'.format(indent))
-
-        # Close out the *parameter*:
-        xml_lines.append('{0}</Parameter>'.format(indent))
-
-
-class ParameterComment(Comment):
-
-    # ParameterComment.__init__():
-    def __init__(self, **arguments_table):
-        # Verify argument types:
-        is_comment_tree = "comment_tree" in arguments_table
-        if is_comment_tree:
-            assert isinstance(arguments_table["comment_tree"], etree._Element)
-        else:
-            assert "language" in arguments_table and isinstance(arguments_table["language"], str)
-            assert ("long_heading" in arguments_table
-                    and isinstance(arguments_table["long_heading"], str))
-            assert "lines" in arguments_table
-            lines = arguments_table["lines"]
-            for line in lines:
-                assert isinstance(line, str)
-            arguments_count = 3
-            has_short_heading = "short_heading" in arguments_table
-            if has_short_heading:
-                arguments_count += 1
-                assert isinstance(arguments_table["short_heading"], str)
-            assert len(arguments_table) == arguments_count
-
-        if is_comment_tree:
-            comment_tree = arguments_table["comment_tree"]
-            attributes_table = comment_tree.attrib
-            attributes_count = 2
-            long_heading = attributes_table["longHeading"]
-            if "shortHeading" in attributes_table:
-                attributes_count += 1
-                short_heading = attributes_table["shortHeading"]
-            else:
-                short_heading = None
-            assert len(attributes_table) == attributes_count
-        else:
-            long_heading = arguments_table["long_heading"]
-            lines = arguments_table["lines"]
-            short_heading = arguments_table["short_heading"] if has_short_heading else None
-
-        # Initailize the parent of *parameter_comment* (i.e. *self*).  The parent initializer
-        # will fill in the *language* and *lines* fields:
-        parameter_comment = self
-        super().__init__("ParameterComment", **arguments_table)
-        assert isinstance(parameter_comment.language, str)
-        assert isinstance(parameter_comment.lines, list)
-
-        # Initialize the remaining two fields that are specific to a *parameter_comment*:
-        parameter_comment.long_heading = long_heading
-        parameter_comment.short_heading = short_heading
-
-    # ParameterComment.__equ__():
-    def __eq__(self, parameter_comment2):
-        # Verify argument types:
-        assert isinstance(parameter_comment2, ParameterComment)
-
-        parameter_comment1 = self
-        language_equal = parameter_comment1.language == parameter_comment2.language
-        lines_equal = parameter_comment1.lines == parameter_comment2.lines
-        long_equal = parameter_comment1.long_heading == parameter_comment2.long_heading
-        short_equal = parameter_comment1.short_heading == parameter_comment2.short_heading
-        all_equal = language_equal and lines_equal and long_equal and short_equal
-        return all_equal
-
-    # ParameterComment.xml_lines_append():
-    def xml_lines_append(self, xml_lines):
-        parameter_comment = self
-        xml_line = '        <ParameterComment language="{0}" longHeading="{1}"'.format(
-          parameter_comment.language, parameter_comment.long_heading)
-        short_heading = parameter_comment.short_heading
-        if short_heading is not None:
-            xml_line += ' shortHeading="{0}"'.format(short_heading)
-        xml_line += '>'
-        xml_lines.append(xml_line)
-        for line in parameter_comment.lines:
-            xml_lines.append('          {0}'.format(line))
-        xml_lines.append('        </ParameterComment>')
-
-
-# Search:
-class Search(Node):
-
-    # FIXME: This tale belongs in *Units*:
-    ISO_MULTIPLIER_TABLE = {
-      "M": 1.0e6,
-      "K": 1.0e3,
-      "m": 1.0e-3,
-      "u": 1.0e-6,
-      "n": 1.0e-9,
-      "p": 1.0e-12,
-    }
-
-    # Search.__init__():
-    def __init__(self, **arguments_table):
-        # Verify argument types:
-        is_search_tree = "search_tree" in arguments_table
-        required_arguments_size = 1 if "tracing" in arguments_table else 0
-        if is_search_tree:
-            assert "table" in arguments_table
-            table = arguments_table["table"]
-            assert isinstance(table, Table)
-            required_arguments_size += 2
-        else:
-            required_arguments_size += 5
-            assert "name" in arguments_table
-            assert "comments" in arguments_table
-            assert "table" in arguments_table
-            assert "parent_name" in arguments_table
-            assert "url" in arguments_table
-        assert len(arguments_table) == required_arguments_size
-
-        # Perform any requested *tracing*:
-        tracing = arguments_table["tracing"] if "tracing" in arguments_table else None
-        assert isinstance(tracing, str) or tracing is None
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>Search(*)".format(tracing))
-
-        # Dispatch on is *is_search_tree*:
-        if is_search_tree:
-            search_tree = arguments_table["search_tree"]
-            # searches = arguments_table["searches"]
-            # assert isinstance(searches, list)
-            # for search in searches:
-            #    assert isinstance(search, Search)
-
-            # Get the search *name*:
-            attributes_table = search_tree.attrib
-            assert "name" in attributes_table
-            name = attributes_table["name"]
-            parent_name = (attributes_table["parent"] if "parent" in attributes_table else "")
-            if tracing is not None:
-                print("name='{0}' parent_name='{1}'".format(name, parent_name))
-            assert "url" in attributes_table, "attributes_table={0}".format(attributes_table)
-            url = attributes_table["url"]
-
-            comments = list()
-            filters = list()
-            sub_trees = list(search_tree)
-            assert len(sub_trees) == 2
-            for sub_tree in sub_trees:
-                sub_tree_tag = sub_tree.tag
-                if sub_tree_tag == "SearchComments":
-                    search_comment_trees = list(sub_tree)
-                    for search_comment_tree in search_comment_trees:
-                        assert search_comment_tree.tag == "SearchComment"
-                        comment = SearchComment(comment_tree=search_comment_tree)
-                        comments.append(comment)
-                elif sub_tree_tag == "Filters":
-                    filter_trees = list(sub_tree)
-                    for filter_tree in filter_trees:
-                        assert filter_tree.tag == "Filter"
-                        filter = Filter(tree=filter_tree, table=table)
-                        filters.append(filter)
-                else:
-                    assert False
-
-        else:
-            # Grab *name*, *comments* and *table* from *arguments_table*:
-            name = arguments_table["name"]
-            assert isinstance(name, str)
-            comments = arguments_table["comments"]
-            assert isinstance(comments, list)
-            table = arguments_table["table"]
-            assert isinstance(table, Table)
-            url = arguments_table["url"]
-            assert isinstance(url, str)
-            parent_name = arguments_table["parent_name"]
-            assert isinstance(parent_name, str)
-            for comment in comments:
-                assert isinstance(comment, SearchComment)
-            filters = list()
-
-        # Make sure *search* is on the *table.children* list:
-        # for prior_search in table.children:
-        #    assert prior_search.name != name
-
-        # This code does not work since the order that *Search*'s are created is in the
-        # *os.listdir()* returns file names which is kind of random.  See can not force
-        # the binding of *search_parent* here.  It needs to be done sometime after the
-        # call to the *Search* initializer:
-        # if parent_name == "":
-        #    search_parent = None
-        # else:
-        #    for sibling_search in table.children:
-        #        if sibling_search.name == parent_name:
-        #            search_parent = sibling_search
-        #            break
-        #    else:
-        #        assert False, "parent_name '{0}' does not match a search".format(parent_name)
-
-        # Load arguments into *search* (i.e. *self*):
-        search = self
-        path = ""
-        super().__init__(name, path, parent=table)
-        search.comments = comments
-        search.filters = filters
-        assert isinstance(parent_name, str)
-        search.search_parent = None
-        search.search_parent_name = parent_name
-        search.name = name
-        search.table = table
-        search.url = url
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=Search(*):name={1}".format(tracing, name))
-
-    # Search.clicked()
-    def clicked(self, tables_editor, tracing=None):
-        # Verify argument types:
-        assert isinstance(tables_editor, TablesEditor)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Preform any requested *tracing*:
-        if tracing is not None:
-            print("{0}=>Search.clicked()".format(tracing))
-
-        search = self
-        table = search.parent
-        assert isinstance(table, Table)
-        url = search.url
-        assert isinstance(url, str)
-        if tracing is not None:
-            print("{0}url='{1}' table.name='{2}'".format(tracing, url, table.name))
-        webbrowser.open(url, new=0, autoraise=True)
-
-        tables_editor.current_search = search
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=Search.clicked()".format(tracing))
-
-    # Search.filters_refresh()
-    def filters_refresh(self, tracing=None):
-        # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>Search.filters_update()".format(tracing))
-
-        # Before we do anything we have to make sure that *search* has an associated *table*.
-        # Frankly, it is should be impossible not to have an associated table, but we must
-        # be careful:
-        search = self
-        table = search.table
-        assert isinstance(table, Table) or table is None
-        if table is not None:
-            # Now we have to make sure that there is a *filter* for each *parameter* in
-            # *parameters*.  We want to preserve the order of *filters*, so this is pretty
-            # tedious:
-
-            # Step 1: Start by deleting any *filter* from *filters* that does not have a
-            # matching *parameter* in parameters.  This algorithme is O(n^2), so it could
-            # be improved:
-            filters = search.filters
-            parameters = table.parameters
-            new_filters = list()
-            for filter in filters:
-                for parameter in parameters:
-                    if filter.parameter is parameter:
-                        new_filters.append(filter)
-                        break
-
-            # Carefully replace the entire contents of *filters* with the contents of *new_filters*:
-            filters[:] = new_filters[:]
-
-            # Step 2: Sweep through *parameters* and create a new *filter* for each *parameter*
-            # that does not already have a matching *filter* in *filters*.  Again, O(n^2):
-            for pararmeter_index, parameter in enumerate(parameters):
-                for filter in filters:
-                    if filter.parameter is parameter:
-                        break
-                else:
-                    filter = Filter(parameter=parameter, table=table, use=False, select="")
-                    filters.append(filter)
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=Search.filters_refresh()".format(tracing))
-
-    # Search.is_deletable():
-    def is_deletable(self, tracing=None):
-        # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Grab *search_name* from *search* (i.e. *self*):
-        search = self
-        search_name = search.name
-
-        # Perform any requested *tracing*:
-        if tracing is not None:
-            print("{0}=>is_deletable('{1}')".format(tracing, search_name))
-
-        # Search through *sibling_searches* of *table* to ensure that *search* is not
-        # a parent of any *sibling_search* object:
-        table = search.parent
-        assert isinstance(table, Table)
-        sibling_searches = table.children
-        deletable = True
-        for index, sibling_search in enumerate(sibling_searches):
-            # parent = sibling_search.search_parent
-            # if not tracing is None:
-            #    parent_name = "None" if parent is None else "'{0}'".format(parent.name)
-            #    print("{0}Sibling[{1}]'{2}'.parent='{3}".format(
-            #          tracing, index, sibling_search.name, parent_name))
-            if sibling_search.search_parent is search:
-                deletable = False
-                break
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=is_deletable('{1}')=>{2}".format(tracing, search_name, deletable))
-        return deletable
-
-    # Search.key():
-    def key(self):
-        """ Return a sorting key for the *Search* object (i.e. *self*):
-
-            The sorting key is a three tuple consisting of (*Depth*, *UnitsNumber*, *Text*), where:
-            * *Depth*: This is the number of templates between "@ALL" and the search.
-            * *UnitsNumber*: This is the number that matches a number followed by ISO units
-              (e.g. "1KOhm", ".01uF", etc.)
-            * *Text*: This is the remaining text after *UnitsNumber* (if it is present.)
-        """
-        #
-
-        # In the Tree view, we want searches to order templates (which by convention
-        #    start with an '@' character) before the other searches.  In addition, we would
-        #    like to order searches based on a number followed by an ISO type (e.g. "4.7KOhm",
-        #    ".1pF", etc.) to be sorted in numberical order from smallest to largest (e.g.
-        #    ".01pF", ".1pf", "10nF", ".1uF", "10uF", etc.)  Furthermore, the template searches
-        #    are organized as a heirachical set of templates and we want the ones closest to
-        #    to top
-
-        # Grab *table* and *searches_table* from *search* (i.e. *self*):
-        search = self
-        table = search.parent
-        assert isinstance(table, Table)
-        searches_table = table.searches_table
-        assert isinstance(searches_table, dict)
-
-        # Figure out template *depth*:
-        depth = 0
-        nested_search = search
-        while nested_search.search_parent is not None:
-            depth += 1
-            nested_search = nested_search.search_parent
-
-        # Sweep through the *search_name* looking for a number, optionally followed by an
-        # ISO unit mulitplier.:
-        number_end_index = -1
-        search_name = search.name
-        for character_index, character in enumerate(search_name):
-            if character in ".0123456789":
-                # We a *character* that "could" be part of a number:
-                number_end_index = character_index + 1
-            else:
-                break
-
-        # Extract *number* from *search_name* if possible:
-        number = 0.0
-        if number_end_index >= 0:
-            try:
-                number = float(search_name[0:number_end_index])
-            except ValueError:
-                pass
-
-        # Figure out the ISO *multiplier* and adjust *number* appropriately:
-        multiplier = 1.0
-        if number_end_index >= 0 and number_end_index < len(search_name):
-
-            multiplier_character = search_name[number_end_index]
-            iso_multiplier_table = Search.ISO_MULTIPLIER_TABLE
-            if character in iso_multiplier_table:
-                multiplier = iso_multiplier_table[multiplier_character]
-        number *= multiplier
-
-        # Return a tuple used for sorting:
-        rest = search_name if number_end_index < 0 else search_name[number_end_index:]
-        return (depth, number, rest)
-
-    # Search.save():
-    def save(self, tracing=None):
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>Search.save()".format(tracing))
-
-        # Grab the *search_directory* associated with *table*:
-        search = self
-        table = search.parent
-        assert isinstance(table, Table)
-        search_directory = table.search_directory_get(tracing=next_tracing)
-
-        # Ensure that the *directory_path* exists:
-        if not os.path.isdir(search_directory):
-            os.makedirs(search_directory)
-
-        # Compute *search_xml_file_name*:
-        search_xml_base_name = search.title2file_name(search.name) + ".xml"
-        search_xml_file_name = os.path.join(search_directory, search_xml_base_name)
-
-        # Create the *search_xml_content* from *search*:
-        search_xml_lines = list()
-        search.xml_lines_append(search_xml_lines, "", tracing=next_tracing)
-        search_xml_lines.append("")
-        search_xml_content = "\n".join(search_xml_lines)
-
-        # Write *search_xml_content* out to *search_xml_file_name*:
-        with open(search_xml_file_name, "w") as search_file:
-            search_file.write(search_xml_content)
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=Search.save()".format(tracing))
-
-    # Search.search_parent_set():
-    def search_parent_set(self, search_parent):
-        # Verify argument types:
-        assert isinstance(search_parent, Search) or search_parent is None
-
-        # Stuff *search_parent* into *search* (i.e. *self*):
-        search = self
-        print("Search.search_parent_set('{0}', {1})".format(search.name,
-              "None" if search_parent is None else "'{0}'".format(search_parent.name)))
-        search.search_parent = search_parent
-
-    # Search.table_set():
-    def table_set(self, new_table, tracing=None):
-        # Verify argument types:
-        assert isinstance(new_table, Table) or new_table is None
-
-        # Perform any requested *tracing*:
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>Search.table_set('{1})".
-                  format(tracing, "None" if new_table is None else new_table.name))
-
-        search = self
-        search.table = new_table
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=Search.table_set('{1}')".
-                  format(tracing, "None" if new_table is None else new_table.name))
-
-    # Search.title_get():
-    def title_get(self):
-        search = self
-        title = search.name
-        search_parent = search.search_parent
-        if search_parent is not None:
-            title = "{0} ({1})".format(title, search_parent.name)
-        # print("Search.title_get()=>'{0}'".format(title))
-        return title
-
-    # Search.type_letter_get():
-    def type_letter_get(self):
-        return 'S'
-
-    # Search.xml_lines_append()
-    def xml_lines_append(self, xml_lines, indent, tracing=None):
-        # Verify argument types:
-        assert isinstance(xml_lines, list)
-        assert isinstance(indent, str)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>Search.xml_lines_append()".format(tracing))
-
-        # Start the `<Search...>` element:
-        search = self
-        table = search.table
-        search_parent = search.search_parent
-        assert search.name == "@ALL" or isinstance(search_parent, Search)
-        search_parent_name = "" if search_parent is None else search_parent.name
-        xml_lines.append('{0}<Search name="{1}" parent="{2}" table="{3}" url="{4}">'.format(
-                         indent, search.name, search_parent_name, table.name,
-                         text2safe_attribute(search.url)))
-
-        # Append the `<SearchComments>` element:
-        xml_lines.append('{0}  <SearchComments>'.format(indent))
-        search_comments = search.comments
-        search_comment_indent = indent + "    "
-        for search_comment in search_comments:
-            search_comment.xml_lines_append(xml_lines, search_comment_indent)
-        xml_lines.append('{0}  </SearchComments>'.format(indent))
-
-        # Append the `<Filters>` element:
-        filters = search.filters
-        xml_lines.append('{0}  <Filters>'.format(indent))
-        filter_indent = indent + "    "
-        for filter in filters:
-            filter.xml_lines_append(xml_lines, filter_indent, tracing=next_tracing)
-        xml_lines.append('{0}  </Filters>'.format(indent))
-
-        # Wrap up the `<Search>` element:
-        xml_lines.append('{0}</Search>'.format(indent))
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=Search.xml_lines_append()".format(tracing))
-
-
-class SearchComment(Comment):
-    # SearchComment.__init()
-    def __init__(self, **arguments_table):
-        # Verify argument types:
-        is_comment_tree = "comment_tree" in arguments_table
-        if is_comment_tree:
-            assert len(arguments_table) == 1
-            assert isinstance(arguments_table["comment_tree"], etree._Element)
-        else:
-            assert len(arguments_table) == 2
-            assert "language" in arguments_table and isinstance(arguments_table["language"], str)
-            assert "lines" in arguments_table
-            lines = arguments_table["lines"]
-            assert isinstance(lines, list)
-            for line in lines:
-                assert isinstance(line, str)
-
-        # There are no extra attributes above a *Comment* object, so we can just use the
-        # intializer for the *Coment* class:
-        super().__init__("SearchComment", **arguments_table)
-
-    # SearchComment.xml_lines_append():
-    def xml_lines_append(self, xml_lines, indent):
-        # Verify argument types:
-        assert isinstance(xml_lines, list)
-        assert isinstance(indent, str)
-
-        # Append the <SearchComment> element:
-        search_comment = self
-        lines = search_comment.lines
-        xml_lines.append('{0}<SearchComment language="{1}">'.
-                         format(indent, search_comment.language))
-        for line in lines:
-            xml_lines.append("{0}  {1}".format(indent, line))
-        xml_lines.append('{0}</SearchComment>'.format(indent))
-
-
-class Table(Node):
-
-    # Table.__init__()
-    def __init__(self, **arguments_table):
-        # Verify argument types:
-        assert "file_name" in arguments_table
-        file_name = arguments_table["file_name"]
-        assert isinstance(file_name, str)
-        is_table_tree = "table_tree" in arguments_table
-        if is_table_tree:
-            # assert len(arguments_table) == 3, arguments_table
-            assert ("table_tree" in arguments_table and
-                    isinstance(arguments_table["table_tree"], etree._Element))
-        else:
-            # This code also winds up pulling out *name*
-            # print("len(arguments_table)={0}".format(len(arguments_table)))
-            assert len(arguments_table) == 8, \
-              "arguments_table_size={0}".format(arguments_table)
-            # 1: Verify that *comments* is present and has correct type: !
-            assert "comments" in arguments_table
-            comments = arguments_table["comments"]
-            assert isinstance(comments, list)
-            assert len(comments) >= 1, "We must have at least one comment"
-            english_comment_found = False
-            for comment in comments:
-                assert isinstance(comment, TableComment)
-                if comment.language == "EN":
-                    english_comment_found = True
-            assert english_comment_found, "We must have an english comment."
-
-            # 2: Verify that *csv_file_name* is present and has correct type:
-            assert "csv_file_name" in arguments_table
-            csv_file_name = arguments_table["csv_file_name"]
-            assert isinstance(csv_file_name, str)
-            # 3: Verify that *name* is present and has correct type:
-            assert "name" in arguments_table
-            name = arguments_table["name"]
-            assert isinstance(name, str)
-            # 4: Verify that *parameters* is present and has correct type:
-            assert "parameters" in arguments_table
-            parameters = arguments_table["parameters"]
-            # 5: Verify that *path* present and has the correct type:
-            assert "path" in arguments_table
-            path = arguments_table["path"]
-            assert isinstance(parameters, list)
-            for parameter in parameters:
-                assert isinstance(parameter, Parameter)
-            # 6: Verify that the parent is specified:
-            assert "parent" in arguments_table
-            parent = arguments_table["parent"]
-            # 7: Verify that the *full_ref* is specified:
-            assert "url" in arguments_table
-            url = arguments_table["url"]
-            assert url is not None
-
-        # Perform any requested *tracing*:
-        tracing = arguments_table["tracing"] if "tracing" in arguments_table else None
-        if tracing:
-            print("{0}=>Table.__init__(*)".format(tracing))
-
-        base = None
-        id = -1
-        title = None
-        items = -1
-
-        # Dispatch on *is_table_tree*:
-        if is_table_tree:
-            # Make sure that *table_tree* is actually a Table tag:
-            table_tree = arguments_table["table_tree"]
-            assert table_tree.tag == "Table"
-            attributes_table = table_tree.attrib
-
-            # Extract *name*:
-            assert "name" in attributes_table
-            name = attributes_table["name"]
-
-            # Grab *csv_file_name* and *title* from *attributes_table*:
-            csv_file_name = attributes_table["csv_file_name"]
-            title = attributes_table["title"]
-
-            # Extract *url*:
-            url = attributes_table["url"]
-
-            # Ensure that we have exactly two elements:
-            table_tree_elements = list(table_tree)
-            assert len(table_tree_elements) == 2
-
-            # Extract the *comments* from *comments_tree_element*:
-            comments = list()
-            comments_tree = table_tree_elements[0]
-            assert comments_tree.tag == "TableComments"
-            for comment_tree in comments_tree:
-                comment = TableComment(comment_tree=comment_tree)
-                comments.append(comment)
-
-            # Extract the *parameters* from *parameters_tree_element*:
-            parameters = list()
-            parameters_tree = table_tree_elements[1]
-            assert parameters_tree.tag == "Parameters"
-            for parameter_tree in parameters_tree:
-                parameter = Parameter(parameter_tree=parameter_tree)
-                parameters.append(parameter)
-            path = ""
-            parent = None
-        else:
-            # Otherwise just dircectly grab *name*, *comments*, and *parameters*
-            # from *arguments_table*:
-            comments = arguments_table["comments"]
-            csv_file_name = arguments_table["csv_file_name"]
-            name = arguments_table["name"]
-            parameters = arguments_table["parameters"]
-            if "base" in arguments_table:
-                base = arguments_table["base"]
-            if "id" in arguments_table:
-                id = arguments_table["id"]
-            if "title" in arguments_table:
-                title = arguments_table["title"]
-                print("TITLE='{0}'".format(title))
-            if "items" in arguments_table:
-                items = arguments_table["items"]
-            url = None
-            if "url" in arguments_table:
-                url = arguments_table["url"]
-
-        xml_suffix_index = file_name.find(".xml")
-        assert xml_suffix_index + 4 >= len(file_name), "file_name='{0}'".format(file_name)
-
-        # print("=>Node.__init__(...)")
-        super().__init__(name, path, parent=parent)
-        assert url is not None
-
-        # Load up *table* (i.e. *self*):
-        table = self
-        table.base = base
-        table.comments = comments
-        table.csv_file_name = csv_file_name
-        table.file_name = file_name
-        table.id = id
-        table.items = items
-        table.import_column_triples = None
-        table.import_headers = None
-        table.import_rows = None
-        table.name = name
-        table.parameters = parameters
-        table.searches_table = dict()
-        table.title = title
-        table.url = url
-
-        # Wrap up any requested *tracing*:
-        if tracing:
-            print("{0}=>Table.__init__(*)".format(tracing))
-
-    # Table.__equ__():
-    def __eq__(self, table2):
-        # Verify argument types:
-        assert isinstance(table2, Table), "{0}".format(type(table2))
-
-        # Compare each field in *table1* (i.e. *self*) with the corresponding field in *table2*:
-        table1 = self
-        file_name_equal = (table1.file_name == table2.file_name)
-        name_equal = (table1.name == table2.name)
-        comments_equal = (table1.comments == table2.comments)
-        parameters_equal = (table1.parameters == table2.parameters)
-        all_equal = (file_name_equal and name_equal and comments_equal and parameters_equal)
-
-        # Debugging code:
-        # print("file_name_equal={0}".format(file_name_equal))
-        # print("name_equal={0}".format(name_equal))
-        # print("comments_equal={0}".format(comments_equal))
-        # print("parameters_equal={0}".format(parameters_equal))
-        # print("all_equal={0}".format(all_equal))
-
-        return all_equal
-
-    def bind_parameters_from_imports(self, tracing=None):
-        # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>Tables.bind_parameters_from_imports()".format(tracing))
-
-        # Update *current_table* an *parameters* from *tables_editor*:
-        table = self
-        parameters = table.parameters
-        headers = table.import_headers
-        column_triples = table.import_column_triples
-        for column_index, triples in enumerate(column_triples):
-            header = headers[column_index]
-            # Replace '&' with '+' so that we don't choke the evenutaly .xml file with
-            # an  XML entity (i.e. 'Rock & Roll' = > 'Rock + Roll'.  Entities are always
-            # "&name;".
-            header = header.replace('&', '+')
-            header = header.replace('<', '[')
-            header = header.replace('>', ']')
-
-            if len(triples) >= 1:
-                # We only care about the first *triple* in *triples*:
-                triple = triples[0]
-                count, name, value = triple
-
-                # See if an existing *parameter* matches *name* (not likely):
-                for parameter_index, parameter in enumerate(parameters):
-                    if parameter.csv == name:
-                        # This *parameter* already exists, so we done:
-                        break
-                else:
-                    # This is no preexisting *parameter* so we have to create one:
-
-                    # Create *scrunched_name* from *header*:
-                    scrunched_characters = list()
-                    in_word = False
-                    for character in header:
-                        if character.isalnum():
-                            if not in_word:
-                                character = character.upper()
-                            scrunched_characters.append(character)
-                            in_word = True
-                        else:
-                            in_word = False
-                    scrunched_name = "".join(scrunched_characters)
-
-                    # Create *parameter* and append to *parameters*:
-                    comments = [ParameterComment(language="EN",
-                                long_heading=scrunched_name, lines=list())]
-                    parameter = Parameter(name=scrunched_name, type=name, csv=header,
-                                          csv_index=column_index, comments=comments)
-                    parameters.append(parameter)
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=Tables.bind_parameters_from_imports()".format(tracing))
-
-    # Table.clicked():
-    def clicked(self, tables_editor, tracing=None):
-        # Verify argument types:
-        assert isinstance(tables_editor, TablesEditor)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Preform any requested *tracing*:
-        if tracing is not None:
-            print("{0}=>Table.clicked()".format(tracing))
-
-        tables_editor.current_search = None
-
-        # Sweep through *tables* to see if *table* (i.e. *self*) is in it:
-        tables = tables_editor.tables
-        table = self
-        for sub_table in tables:
-            if table is sub_table:
-                # We found a match, so we are done searching:
-                break
-        else:
-            # Nope, *table* is not in *tables*, so let's stuff it in:
-            if tracing is not None:
-                print("{0}Before len(tables)={1}".format(tracing, len(tables)))
-            tables_editor.tables_combo_edit.item_append(table)
-            if tracing is not None:
-                print("{0}After len(tables)={1}".format(tracing, len(tables)))
-
-        # Force whatever is visible to be updated:
-        tables_editor.update(tracing=tracing)
-
-        # Make *table* the current one:
-        tables_editor.current_table = table
-        tables_editor.current_parameter = None
-        tables_editor.current_enumeration = None
-        tables_editor.current_comment = None
-        tables_editor.current_search = None
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=Table.clicked()".format(tracing))
-
-    # Table.csv_read_and_process():
-    def csv_read_and_process(self, csv_directory, bind=False, tracing=None):
-        # Verify argument types:
-        assert isinstance(csv_directory, str)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        table = self
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing:
-            print("{0}=>Table.csv_read_process('{1}', bind={2})".
-                  format(tracing, csv_directory, bind))
-
-        # Grab *parameters* from *table* (i.e. *self*):
-        parameters = table.parameters
-        assert parameters is not None
-
-        # Open *csv_file_name* read in both *rows* and *headers*:
-        csv_file_name = table.csv_file_name
-        assert isinstance(csv_file_name, str)
-        full_csv_file_name = os.path.join(csv_directory, csv_file_name)
-        if tracing is not None:
-            print("{0}csv_file_name='{1}', full_csv_file_name='{2}'".
-                  format(tracing, csv_file_name, full_csv_file_name))
-
-        rows = None
-        headers = None
-        if not os.path.isfile(full_csv_file_name):
-            print("csv_directory='{0}' csv_file_name='{1}'".
-                  format(csv_directory, csv_file_name))
-        with open(full_csv_file_name, newline="") as csv_file:
-            # Read in *csv_file* using *csv_reader*:
-            csv_reader = csv.reader(csv_file, delimiter=',', quotechar='"')
-            rows = list()
-            for row_index, row in enumerate(csv_reader):
-                if row_index == 0:
-                    headers = row
-                else:
-                    rows.append(row)
-
-        # Create *column_tables* which is used to process the following *row*'s:
-        column_tables = [dict() for header in headers]
-        for row in rows:
-            # Build up a count of each of the different data values in for a given column
-            # in *column_table*:
-            for column_index, value in enumerate(row):
-                column_table = column_tables[column_index]
-                if value in column_table:
-                    # We have seen *value* before, so increment its count:
-                    column_table[value] += 1
-                else:
-                    # This is the first time we seen *value*, so insert it into
-                    # *column_table* as the first one:
-                    column_table[value] = 1
-
-        # Now *column_tables* has a list of tables (i.e. *dict*'s) where it entry
-        # has a count of the number of times that value occured in the column.
-
-        # Now sweep through *column_tables* and build *column_triples*:
-        re_table = TablesEditor.re_table_get()
-        column_triples = list()
-        for column_index, column_table in enumerate(column_tables):
-            # FIXME: Does *column_list* really need to be sorted???!!!!
-            # Create *column_list* from *column_table* such that the most common value in the
-            # columns comes first and the least commone one comes last:
-            column_list = sorted(list(column_table.items()),
-                                 key=lambda pair: (pair[1], pair[0]), reverse=True)
-
-            # Build up *matches* which is the regular expressions that match best:
-            regex_table = dict()
-            regex_table["String"] = list()
-            total_count = 0
-            for value, count in column_list:
-                # print("Column[{0}]:'{1}': {2} ".format(column_index, value, count))
-                total_count += count
-                match_count = 0
-                for regex_name, regex in re_table.items():
-                    if not regex.match(value) is None:
-                        if regex_name in regex_table:
-                            regex_table[regex_name].append((value, count))
-                        else:
-                            regex_table[regex_name] = [(value, count)]
-
-                        match_count += 1
-                if match_count == 0:
-                    regex_table["String"].append((value, count))
-            # assert total_count == len(rows), \
-            #  "total_count={0} len_rows={1}".format(total_count, len(rows))
-
-            # if tracing is not None:
-            #    print("{0}Column[{1}]: regex_table={2}".
-            #      format(tracing, column_index, regex_table))
-
-            # Now construct the *triples* list such containing of tuples that have
-            # three values -- *total_count*, *regex_name*, and *value* where,
-            # * *total_count*: is the number column values that the regular expression matched,
-            # * *regex_name*: is the name of the regular expression, and
-            # * *value*: is an example value that matches the regular expression.
-            triples = list()
-            for regex_name, pair_list in regex_table.items():
-                total_count = 0
-                value = ""
-                for pair in pair_list:
-                    value, count = pair
-                    total_count += count
-                triple = (total_count, regex_name, value)
-                triples.append(triple)
-
-            # Sort *triples* such that the regular expression that maches the most entries comes
-            # first the least matches are at the end.  Tack *triples* onto *column_triples* list:
-            triples.sort(reverse=True)
-            column_triples.append(triples)
-
-        # Save some values into *tables_editor* for the update routine:
-        table.import_column_triples = column_triples
-        table.import_headers = headers
-        table.import_rows = rows
-        assert isinstance(column_triples, list)
-        assert isinstance(headers, list)
-        assert isinstance(rows, list)
-
-        if bind:
-            table.bind_parameters_from_imports(tracing=next_tracing)
-        table.save(tracing=None)
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=Table.csv_read_process('{1}', bind={2})".
-                  format(tracing, csv_directory, bind))
-
-    def fix_up(self, tracing=None):
-        # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        if tracing is not None:
-            print("{0}=>Table.fix_up(*)".format(tracing))
-
-        # Grab *searches* list from *table* (i.e. *self*):
-        table = self
-        searches = table.children
-
-        # Grab *searches* list from *table* (i.e. *self*):
-        table = self
-        searches = table.children
-
-        # Create a new *searches_table* that contains every *search* keyed by *search_name*:
-        searches_table = dict()
-        for search in searches:
-            search_name = search.name
-            searches_table[search_name] = search
-        table.searches_Table = searches_table
-        assert len(searches) == len(searches_table), "{0} != {1}".format(
-                                                      len(searches), len(searches_table))
-
-        # Sweep through *searches* and ensure that the *search_parent* field is set:
-        for search in searches:
-            search_parent_name = search.search_parent_name
-            if len(search_parent_name) >= 1:
-                assert search_parent_name in searches_table, \
-                  ("'{0}' not in searches_table {1}".format(
-                   search_parent_name, list(searches_table.keys())))
-                search_parent = searches_table[search_parent_name]
-                search.search_parent = search_parent
-
-        # Now sort *searches*:
-        searches.sort(key=Search.key)
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=Table.fix_up(*)".format(tracing))
-
-    # Table.hasChildren():
-    def hasChildren(self, index):
-        # Override *Node.hasChildren*():
-        print("<=>Table.hasChildren()")
-        return True
-
-    # Table.header_labels_get():
-    def header_labels_get(self):
-        table = self
-        parameters = table.parameters
-        parameters_size = len(parameters)
-        assert parameters_size >= 1
-        header_labels = list()
-        for parameter in parameters:
-            parameter_comments = parameter.comments
-            header_label = "?"
-            if len(parameter_comments) >= 1:
-                parameter_comment = parameter_comments[0]
-                short_heading = parameter_comment.short_heading
-                long_heading = parameter_comment.long_heading
-                header_label = short_heading if short_heading is not None else long_heading
-            header_labels.append(header_label)
-        return header_labels
-
-    # Table.save():
-    def save(self, tracing=None):
-        # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        table = self
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>Table.save('{1}')".format(tracing, table.name))
-
-        # Write out *table* (i.e. *self*) to *file_name*:
-        output_file_name = table.file_name
-        xml_text = table.to_xml_string()
-        with open(output_file_name, "w") as output_file:
-            output_file.write(xml_text)
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}=>Table.save('{1}')".format(tracing, table.name))
-
-    # Table.search_directory_get():
-    def search_directory_get(self, tracing=None):
-        # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Preform any requested *tracing*:
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>Table.search_directory_get()".format(tracing))
-
-        # Verify that *search_directory* exits:
-        search_root_directory = TablesEditor.search_root_directory_get()
-        if not os.path.isdir(search_root_directory):
-            os.mkdir(search_root_directory)
-        # if tracing is not None:
-        #    print("{0}search_directory='{1}".format(tracing, search_directory))
-
-        # Compute the *directories* list of directory names that while lead to *search*
-        # (i.e. *self*) XML file:
-        directories = list()
-        search = self
-        node = search
-        while node is not None:
-            node_name = node.name
-            base_name = node.title2file_name(node_name)
-            directories.append(base_name)
-            # if tracing is not None:
-            #    print("{0}directories={1}".format(tracing, directories))
-            node = node.parent
-        directories.reverse()
-        directories = directories[1:]
-
-        # Compute the *directory_path* to span from the *search_root_directory* down the
-        # place where the directory where the *search* XML file will be stored:
-        directory_path = os.path.join(search_root_directory, *directories)
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=Table.search_directory_get()=>'{1}'".format(tracing, directory_path))
-        return directory_path
-
-    # Table.searches_table_set():
-    def searches_table_set(self, searches_table):
-        # Verify argument types:
-        assert isinstance(searches_table, dict)
-
-        # Stuff *searches_table* into *table* (i.e. *self*):
-        table = self
-        table.searches_stable = searches_table
-
-    # Table.title_get():
-    def title_get(self):
-        table = self
-        title = table.title
-        if title is None:
-            title = table.name
-        # print("Table.title='{0}'".format(title))
-        return title
-
-    # Table.to_xml_string():
-    def to_xml_string(self):
-        table = self
-        xml_lines = list()
-        xml_lines.append('<?xml version="1.0"?>')
-        table.xml_lines_append(xml_lines, "")
-        xml_lines.append("")
-        text = '\n'.join(xml_lines)
-        return text
-
-    # Table.type_letter_get():
-    def type_letter_get(self):
-        return 'T'
-
-    # Table.xml_lines_append():
-    def xml_lines_append(self, xml_lines, indent):
-        # Verify argument types:
-        assert isinstance(xml_lines, list)
-        assert isinstance(indent, str)
-
-        # Start appending the `<Table...>` element:
-        table = self
-        title = table.title
-        title_text = "" if title is None else ' title="{0}"'.format(title)
-
-        # Do not let reserved XML characters get into *title_text*:
-        title_text = title_text.replace('&', '+')
-        title_text = title_text.replace('<', '[')
-        title_text = title_text.replace('>', ']')
-
-        xml_lines.append('{0}<Table name="{1}" csv_file_name="{2}" url="{3}" {4}>'.format(
-                         indent, table.name, table.csv_file_name, table.url, title_text))
-
-        # Append the `<TableComments>` element:
-        xml_lines.append('{0}  <TableComments>'.format(indent))
-        for comment in table.comments:
-            comment.xml_lines_append(xml_lines, indent + "    ")
-        xml_lines.append('{0}  </TableComments>'.format(indent))
-
-        # Append the `<Parameters>` element:
-        xml_lines.append('{0}  <Parameters>'.format(indent))
-        for parameter in table.parameters:
-            parameter.xml_lines_append(xml_lines, "    ")
-        xml_lines.append('{0}  </Parameters>'.format(indent))
-
-        # Close out the `<Table>` element:
-        xml_lines.append('{0}</Table>'.format(indent))
-
-
-class TableComment(Comment):
-
-    # TableComment.__init__():
-    def __init__(self, **arguments_table):
-        # Verify argument types:
-        is_comment_tree = "comment_tree" in arguments_table
-        if is_comment_tree:
-            assert len(arguments_table) == 1
-            assert isinstance(arguments_table["comment_tree"], etree._Element)
-        else:
-            assert len(arguments_table) == 2
-            assert "language" in arguments_table and isinstance(arguments_table["language"], str)
-            assert "lines" in arguments_table
-            lines = arguments_table["lines"]
-            assert isinstance(lines, list)
-            for line in lines:
-                assert isinstance(line, str)
-
-        # There are no extra attributes above a *Comment* object, so we can just use the
-        # intializer for the *Coment* class:
-        super().__init__("TableComment", **arguments_table)
-
-    # TableComment.__equ__():
-    def __equ__(self, table_comment2):
-        # Verify argument types:
-        assert isinstance(table_comment2, TableComment)
-        return super().__eq__(table_comment2)
-
-    # TableComment.xml_lines_append():
-    def xml_lines_append(self, xml_lines, indent):
-        # Verify argument types:
-        assert isinstance(xml_lines, list)
-        assert isinstance(indent, str)
-
-        # Append the <TableComment...> element:
-        table_comment = self
-        xml_lines.append('{0}<TableComment language="{1}">'.format(indent, table_comment.language))
-        for line in table_comment.lines:
-            xml_lines.append('{0}  {1}'.format(indent, line))
-        xml_lines.append('{0}</TableComment>'.format(indent))
 
 
 # TablesEditor:
@@ -10895,6 +10875,96 @@ class Units:
         return si_units_re_text
 
 
+class Vendor_Part:
+    # A vendor part represents a part that can be ordered from a vendor.
+
+    def __init__(self, actual_part, vendor_name, vendor_part_name,
+                 quantity_available, price_breaks, timestamp=0.0):
+        """ *Vendor_Part*: Initialize *self* to contain *actual_part"""
+
+        # print("vendor_part_name=", vendor_part_name)
+
+        # Check argument types:
+        assert isinstance(actual_part, Actual_Part)
+        assert isinstance(vendor_name, str)
+        assert isinstance(vendor_part_name, str)
+        assert isinstance(quantity_available, int), ("quantity_available={0}".format(
+                                                     quantity_available))
+        assert isinstance(price_breaks, list)
+        assert isinstance(timestamp, float)
+        for price_break in price_breaks:
+            assert isinstance(price_break, Price_Break)
+
+        # Clean up *vendor_name*:
+        # original_vendor_name = vendor_name
+        vendor_name = vendor_name.replace('\n', "")
+        if vendor_name.endswith(" •"):
+            vendor_name = vendor_name[:-2]
+        if vendor_name.endswith(" ECIA (NEDA) Member"):
+            vendor_name = vendor_name[:-19]
+        if vendor_name.endswith(" CEDA member"):
+            vendor_name = vendor_name[:-12]
+        vendor_name = vendor_name.strip(" \t")
+        # print("vendor_name='{0}'\t\toriginal_vendor_name='{1}'".format(
+        #  vendor_name, original_vendor_name))
+
+        # Load up *self*:
+        self.actual_part_key = actual_part.key
+        self.vendor_key = (vendor_name, vendor_part_name)
+        self.vendor_name = vendor_name
+        self.vendor_part_name = vendor_part_name
+        self.quantity_available = quantity_available
+        self.price_breaks = price_breaks
+        self.timestamp = timestamp
+
+        # Append *self* to the vendor parts of *actual_part*:
+        actual_part.vendor_part_append(self)
+
+    def __format__(self, format):
+        """ *Vendor_Part*: Print out the information of the *Vendor_Part* (i.e. *self*):
+        """
+
+        vendor_part = self
+        vendor_name = vendor_part.vendor_name
+        vendor_part_name = vendor_part.vendor_part_name
+        # price_breaks = vendor_part.price_breaks
+        return "'{0}':'{1}'".format(vendor_name, vendor_part_name)
+
+    def dump(self, out_stream, indent):
+        """ *Vendor_Part*: Dump the *Vendor_Part* (i.e. *self*) out to
+            *out_stream* in human readable form indented by *indent* spaces.
+        """
+
+        # Verify argument types:
+        assert isinstance(out_stream, io.IOBase)
+        assert isinstance(indent, int)
+
+        # Dump out *self*:
+        out_stream.write("{0}Actual_Part_Key:{1}\n".
+                         format(" " * indent, self.actual_part_key))
+        out_stream.write("{0}Vendor_Key:{1}\n".
+                         format(" " * indent, self.vendor_key))
+        out_stream.write("{0}Vendor_Name:{1}\n".
+                         format(" " * indent, self.vendor_name))
+        out_stream.write("{0}Vendor_Part_Name:{1}\n".
+                         format(" " * indent, self.vendor_part_name))
+        out_stream.write("{0}Quantity_Available:{1}\n".
+                         format(" " * indent, self.quantity_available))
+        out_stream.write("{0}Price_Breaks: (skip)\n".
+                         format(" " * indent))
+
+    def price_breaks_text_get(self):
+        """ *Vendor_Part*: Return the prices breaks for the *Vendor_Part*
+            object (i.e. *self*) as a text string:
+        """
+
+        price_breaks_text = ""
+        for price_break in self.price_breaks:
+            price_breaks_text += "{0}/${1:.3f} ".format(
+              price_break.quantity, price_break.price)
+        return price_breaks_text
+
+
 # class XXXAttribute:
 #    def __init__(self, name, type, default, optional, documentations, enumerates):
 #        # Verify argument types:
@@ -11211,74 +11281,6 @@ class Units:
 #    def itemChecked(self, index):
 #        item = self.model().item(i,0)
 #        return item.checkState() == QtCore.Qt.Checked
-
-def main():
-    # table_file_name = "drills_table.xml"
-    # assert os.path.isfile(table_file_name)
-    # with open(table_file_name) as table_read_file:
-    #    table_input_text = table_read_file.read()
-    # table_tree = etree.fromstring(table_input_text)
-    # table = Table(file_name=table_file_name, table_tree=table_tree)
-    # table_write_text = table.to_xml_string()
-    # with open("/tmp/" + table_file_name, "w") as table_write_file:
-    #    table_write_file.write(table_write_text)
-
-    # Partition the command line *arguments* into *xml_file_names* and *xsd_file_names*:
-    # arguments = sys.argv[1:]
-    # xml_file_names = list()
-    # xsd_file_names = list()
-    # for argument in arguments:
-    #    if argument.endswith(".xml"):
-    #        xml_file_names.append(argument)
-    #    elif argument.endswith(".xsd"):
-    #        xsd_file_names.append(argument)
-    #    else:
-    #        assert "File name '{0}' does not have a suffix of '.xml' or '.xsd'"
-    #
-    # # Verify that we have one '.xsd' file and and one or more '.xml' files:
-    # assert len(xsd_file_names) < 2, "Too many '.xsd` files specified"
-    # assert len(xsd_file_names) > 0, "No '.xsd' file specified"
-    # assert len(xml_file_names) > 0, "No '.xml' file specified"
-
-    # Deal with command line *arguments*:
-    arguments = sys.argv[1:]
-    # print("arguments=", arguments)
-    if True:
-        # Read in each *table_file_name* in *arguments* and append result to *tables*:
-        tables = list()
-        for table_file_name in arguments:
-            # Verify that *table_file_name* exists and has a `.xml` suffix:
-            assert os.path.isfile(table_file_name), "'{0}' does not exist".format(table_file_name)
-            assert table_file_name.endswith(".xml"), (
-              "'{0}' does not have a .xml suffix".format(table_file_name))
-
-            # Read in *table_file_name* as a *table* and append to *tables* list:
-            with open(table_file_name) as table_read_file:
-                table_input_text = table_read_file.read()
-            table_tree = etree.fromstring(table_input_text)
-            table = Table(file_name=table_file_name, table_tree=table_tree, csv_file_name="")
-            tables.append(table)
-
-            # ui_text = table.to_ui_string()
-            # with open("/tmp/test.ui", "w") as ui_file:
-            #    ui_file.write(ui_text)
-
-            # For debugging only, write *table* out to the `/tmp` directory:
-            debug = False
-            debug = True
-            if debug:
-                table_write_text = table.to_xml_string()
-                with open("/tmp/" + table_file_name, "w") as table_write_file:
-                    table_write_file.write(table_write_text)
-
-        # Now create the *tables_editor* graphical user interface (GUI) and run it:
-        tables_editor = TablesEditor(tables, tracing="")
-
-        # Start up the GUI:
-        tables_editor.run()
-
-    # When we get here, *tables_editor* has stopped running and we can return.
-    return 0
 
     # Old Stuff....
 
