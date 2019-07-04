@@ -1326,6 +1326,8 @@ class Directory(Node):
 
 class Collection(Directory):
 
+    #FIXME: Why do we have both *path* and *directory*!!!
+
     # Collection.__init__():
     def __init__(self, name, path, title, directory):
         # Verify argument types:
@@ -2785,7 +2787,6 @@ class TablesEditor(QMainWindow):
         tables_editor.original_tables = copy.deepcopy(tables)
         tables_editor.re_table = TablesEditor.re_table_get()
         tables_editor.searches = list()
-        tables_editor.search_directory = "/home/wayne/public_html/projects/tables_editor/searches"
         tables_editor.tab_unload = None
         tables_editor.tables = tables
         tables_editor.trace_signals = tracing is not None
@@ -2938,99 +2939,39 @@ class TablesEditor(QMainWindow):
         # file_names.sort()
         # print("file_names=", file_names)
 
+        # Create the *root_node*:
+        root_node = Node("Root", "None")
+
+        # Get *working_directory_path*:
+        working_directory_path = os.getcwd()
+        assert isinstance(working_directory_path, str)
+        assert os.path.isdir(working_directory_path)
+
+        # Get *collections_directory_path*:
+        collections_path = os.path.join(working_directory_path, "collections")
+        assert os.path.isdir(collections_path)
+
+        # Sweep through *collections_directory_path*
+        for collection_base_name in os.listdir(collections_path):
+            # Compute *collection_path*:
+            collection_path = os.path.join(collections_path, collection_base_name)
+            if collection_path[0] != '.' and os.path.isdir(collection_path):
+                collection = Collection(collection_base_name, collection_path,
+                                        collection_base_name, collection_path)
+                assert isinstance(collection, Collection)
+                assert collection.type_letter_get() == 'C'
+                root_node.add_child(collection)
+
+        # Create *tree_model* and stuff into *tables_editor*:
+        tree_model = TreeModel(root_node)
+        tables_editor.model = tree_model
+        print("tree_model=", tree_model)
+
         # Temporary *collections_tree* widget experimentation here:
         collections_tree = mw.collections_tree
-        if isinstance(collections_tree, QTreeView):
-            print("*****************************************************")
-            path = "/home/wayne/public_html/projects/digikey_tables"
+        collections_tree.setModel(tree_model)
+        collections_tree.setSortingEnabled(True)
 
-            if False:
-                file_system_model = QFileSystemModel()
-                assert isinstance(file_system_model, QFileSystemModel)
-                assert isinstance(file_system_model, QAbstractItemModel)
-                file_system_model.setRootPath((QDir.rootPath()))
-                model = file_system_model
-            else:
-                digikey_collection_path = "/home/wayne/public_html/projects/digikey_tables"
-                digikey_collection = Collection("Digi-Key",
-                                                path, "Digi-Key", digikey_collection_path)
-                digikey_collection2 = Collection("Digi-Key2",
-                                                 path, "Digi-Key2", digikey_collection_path)
-                assert isinstance(digikey_collection, Collection)
-                assert digikey_collection.type_letter_get() == 'C'
-
-                # assert digikey_directory.is_dir
-
-                root_node = Node("Root", "None")
-                root_node.add_child(digikey_collection)
-                root_node.add_child(digikey_collection2)
-
-                model = TreeModel(root_node)
-
-                # tree_object_model = TreeModel()
-                # assert isinstance(tree_object_model, TreeObjectModel)
-                # assert isinstance(tree_object_model, QAbstractItemModel)
-                # model = tree_object_model
-            tables_editor.model = model
-
-            print("module=", model)
-            collections_tree.setModel(model)
-            # collections_tree.setRootIndex(model.index(path))
-            collections_tree.setSortingEnabled(True)
-        # elif isinstance(collections_tree, QTreeWidget):
-        #    collections_tree.setColumnCount(2)
-        #    collections_tree.setHeaderLabels(["Tree", "Type"])
-
-        #    # Intialize the root of the tree for *tables_root*:
-        #    root_table_item_pairs = dict()
-        #    root_item = QTreeWidgetItem(collections_tree, ["Root", "R"])
-        #    root_table_item_pair = (dict(), root_item)
-        #    root_table_item_pairs["Root"] = root_table_item_pair
-
-        #    # Now flush out the rest of the *collections_tree* by sweeping through *file_names*:
-        #    for file_name_index, file_name in enumerate(file_names):
-        #        # print("File_Name[{0}]:'{1}'".format(file_name_index, file_name))
-
-        #        # FIXME: Fixup *file_name*!!!:
-        #        assert file_name[:17] == "../digikey_tables"
-        #        file_name = "Root" + file_name[17:]
-
-        #        # Now construct the tree for *tables_root*:
-        #        current_table_item_pair = root_table_item_pair
-        #        sub_names = file_name.split('/')
-        #        for sub_name_index, sub_name in enumerate(sub_names[1:]):
-        #            # Skip any empty *sub_name*:
-        #            # print("  Sub_Name[{0}]:'{1}'".format(sub_name_index, sub_name))
-        #            if sub_name != "":
-        #                # Unpack *current_table_item_pair*:
-        #                current_table, current_item = current_table_item_pair
-
-        #                # Figure out if we have already done this *sub_name* before:
-        #                if sub_name in current_table:
-        #                    # Yes, we have already done this *sub_name*:
-        #                    next_table_item_pair = current_table[sub_name]
-        #                else:
-        #                    # No, this is the first time we have seen this *sub_name*; create new
-        #                    # *next_table_item_pair* and stuff it into *current_table*:
-        #                    type = "T" if sub_name.endswith("_Table.xml") else "D"
-        #                    next_item = QTreeWidgetItem(current_item, [sub_name, type])
-        #                    next_table = dict()
-        #                    next_table_item_pair = (next_table, next_item)
-        #                    current_table[sub_name] = next_table_item_pair
-
-        #                # Update *current_item_pair* to point to the next level down:
-        #                current_table_item_pair = next_table_item_pair
-
-        # root_item = QTreeWidgetItem(tables_root, [ "Root", "R" ])
-        # directory1_item = QTreeWidgetItem(root_item, [ "Dir1", "D" ])
-        # table1a_item = QTreeWidgetItem(directory1_item, [ "Table1a", "T" ])
-        # table1b_item = QTreeWidgetItem(directory1_item, [ "Table1b", "T" ])
-        # directory2_item = QTreeWidgetItem(root_item, [ "Dir12", "D" ])
-        # table2a_item = QTreeWidgetItem(directory2_item, [ "Table2a", "T" ])
-        # table2b_item = QTreeWidgetItem(directory2_item, [ "Table2b", "T" ])
-
-        # Set the *current_table*, *current_parameter*, and *current_enumeration*
-        # in *tables_editor*:
         # FIXME: Used *tables_editor.current_update()* instead!!!
         current_table = None
         current_parameter = None
@@ -4620,6 +4561,7 @@ class TablesEditor(QMainWindow):
                 # csv_file_name = current_table.csv_file_name
                 # if tracing is not None:
                 #    print("{0}csv_file_name='{1}'".format(tracing, csv_file_name))
+                assert False
                 current_table.csv_read_and_process(
                   "/home/wayne/public_html/projects/digikey_csvs", tracing=next_tracing)
 
@@ -4853,7 +4795,7 @@ class TablesEditor(QMainWindow):
     @staticmethod
     # TablesEditor.search_root_directory_get():
     def search_root_directory_get():
-        return "/home/wayne/public_html/projects/table_tools/searches"
+        return os.path.join(os.getcwd(), "searches")
 
     # TablesEditor.searches_comment_get():
     def searches_comment_get(self, search, tracing=None):

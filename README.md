@@ -146,9 +146,10 @@ There are a number of different roles involved with BOM Manager:
 * Project Designer: This person interacts with the CAD system to
   design a project.  They are responsible for binding CAD names.
 
-* Search Integrator: This person is responsible for constructing the searches
-  associated with each collection.  They basically need to ensure that each CAD
-  part has an associated search with at least one collection.
+* Search Librarian: This person is responsible for constructing the searches
+  associated with each collection.  This person basically need to ensure that each CAD
+  part has an associated search with at least one collection.  This person is
+  responsible for coming up with naming conventions.
 
 In addition, there are some BOM manager integration roles that:
 
