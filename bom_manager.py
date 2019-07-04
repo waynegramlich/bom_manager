@@ -4132,41 +4132,41 @@ class Board:
 
                 # Now use some regular expressions to improve formatting to be more like
                 # what KiCad outputs:
-                net_se_string = re.sub(" \(design ", "\n  (design ", net_se_string)
+                net_se_string = re.sub(" \\(design ", "\n  (design ", net_se_string)
 
                 # Sheet part of file:
-                net_se_string = re.sub(" \(sheet ",       "\n    (sheet ",         net_se_string)
-                net_se_string = re.sub(" \(title_block ", "\n      (title_block ", net_se_string)
-                net_se_string = re.sub(" \(title ",       "\n        (title ",     net_se_string)
-                net_se_string = re.sub(" \(company ",     "\n        (company ",   net_se_string)
-                net_se_string = re.sub(" \(rev ",         "\n        (rev ",       net_se_string)
-                net_se_string = re.sub(" \(date ",        "\n        (date ",      net_se_string)
-                net_se_string = re.sub(" \(source ",      "\n        (source ",    net_se_string)
-                net_se_string = re.sub(" \(comment ",     "\n        (comment ",   net_se_string)
+                net_se_string = re.sub(" \\(sheet ",       "\n    (sheet ",         net_se_string)
+                net_se_string = re.sub(" \\(title_block ", "\n      (title_block ", net_se_string)
+                net_se_string = re.sub(" \\(title ",       "\n        (title ",     net_se_string)
+                net_se_string = re.sub(" \\(company ",     "\n        (company ",   net_se_string)
+                net_se_string = re.sub(" \\(rev ",         "\n        (rev ",       net_se_string)
+                net_se_string = re.sub(" \\(date ",        "\n        (date ",      net_se_string)
+                net_se_string = re.sub(" \\(source ",      "\n        (source ",    net_se_string)
+                net_se_string = re.sub(" \\(comment ",     "\n        (comment ",   net_se_string)
 
                 # Components part of file:
-                net_se_string = re.sub(" \(components ", "\n  (components ",    net_se_string)
-                net_se_string = re.sub(" \(comp ",       "\n    (comp ",        net_se_string)
-                net_se_string = re.sub(" \(value ",      "\n      (value ",     net_se_string)
-                net_se_string = re.sub(" \(footprint ",  "\n      (footprint ", net_se_string)
-                net_se_string = re.sub(" \(libsource ",  "\n      (libsource ", net_se_string)
-                net_se_string = re.sub(" \(sheetpath ",  "\n      (sheetpath ", net_se_string)
-                net_se_string = re.sub(" \(path ",       "\n      (path ",      net_se_string)
-                net_se_string = re.sub(" \(tstamp ",     "\n      (tstamp ",    net_se_string)
+                net_se_string = re.sub(" \\(components ", "\n  (components ",    net_se_string)
+                net_se_string = re.sub(" \\(comp ",       "\n    (comp ",        net_se_string)
+                net_se_string = re.sub(" \\(value ",      "\n      (value ",     net_se_string)
+                net_se_string = re.sub(" \\(footprint ",  "\n      (footprint ", net_se_string)
+                net_se_string = re.sub(" \\(libsource ",  "\n      (libsource ", net_se_string)
+                net_se_string = re.sub(" \\(sheetpath ",  "\n      (sheetpath ", net_se_string)
+                net_se_string = re.sub(" \\(path ",       "\n      (path ",      net_se_string)
+                net_se_string = re.sub(" \\(tstamp ",     "\n      (tstamp ",    net_se_string)
 
                 # Library parts part of file
-                net_se_string = re.sub(" \(libparts ",    "\n  (libparts ",    net_se_string)
-                net_se_string = re.sub(" \(libpart ",     "\n    (libpart ",   net_se_string)
-                net_se_string = re.sub(" \(description ", "\n      (description ",  net_se_string)
-                net_se_string = re.sub(" \(fields ",      "\n      (fields ",  net_se_string)
-                net_se_string = re.sub(" \(field ",       "\n        (field ", net_se_string)
-                net_se_string = re.sub(" \(pins ",        "\n      (pins ",    net_se_string)
-                # net_se_string = re.sub(" \(pin ",         "\n        (pin ",   net_se_string)
+                net_se_string = re.sub(" \\(libparts ",    "\n  (libparts ",    net_se_string)
+                net_se_string = re.sub(" \\(libpart ",     "\n    (libpart ",   net_se_string)
+                net_se_string = re.sub(" \\(description ", "\n      (description ",  net_se_string)
+                net_se_string = re.sub(" \\(fields ",      "\n      (fields ",  net_se_string)
+                net_se_string = re.sub(" \\(field ",       "\n        (field ", net_se_string)
+                net_se_string = re.sub(" \\(pins ",        "\n      (pins ",    net_se_string)
+                # net_se_string = re.sub(" \\(pin ",         "\n        (pin ",   net_se_string)
 
                 # Network portion of file:
-                net_se_string = re.sub(" \(nets ", "\n  (nets ", net_se_string)
-                net_se_string = re.sub(" \(net ",  "\n    (net ", net_se_string)
-                net_se_string = re.sub(" \(node ", "\n      (node ", net_se_string)
+                net_se_string = re.sub(" \\(nets ", "\n  (nets ", net_se_string)
+                net_se_string = re.sub(" \\(net ",  "\n    (net ", net_se_string)
+                net_se_string = re.sub(" \\(node ", "\n      (node ", net_se_string)
 
                 # General substitutions:
                 # net_se_string = re.sub(" \\;", ";", net_se_string)
