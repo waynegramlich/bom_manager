@@ -2714,11 +2714,11 @@ class Order:
             board_parts = choice_part.board_parts
             board_parts.sort(key = lambda board_part:
                              (board_part.board.name, board_part.reference.upper(),
-                             int(text_filter(board_part.reference, str.isdigit))) )
+                              int(text_filter(board_part.reference, str.isdigit))) )
 
             # Write the first line out to *bom_file*:
-            bom_file.write("  {0}:{1};{2} {3}:{4}\n".\
-                           format(choice_part.schematic_part_name,
+            bom_file.write("  {0}:{1};{2} {3}:{4}\n".format(
+                           choice_part.schematic_part_name,
                            choice_part.kicad_footprint, choice_part.description,
                            choice_part.count_get(), choice_part.references_text_get()))
 
@@ -2787,9 +2787,9 @@ class Order:
         # Sort *final_choice_parts* using *key_function*.
         final_choice_parts = self.final_choice_parts
         final_choice_parts.sort(key = lambda choice_part:
-          (choice_part.selected_vendor_name,
-          choice_part.selected_total_cost,
-          choice_part.schematic_part_name) )
+                                (choice_part.selected_vendor_name,
+                                 choice_part.selected_total_cost,
+                                 choice_part.schematic_part_name) )
 
         vendor_boms = {}
         for choice_part in final_choice_parts:
@@ -2798,8 +2798,8 @@ class Order:
             # Sort the *board_parts* by *board* followed by reference:
             board_parts = choice_part.board_parts
             board_parts.sort(key = lambda board_part:
-              (board_part.board.name, board_part.reference.upper(),
-               int(text_filter(board_part.reference, str.isdigit))))
+                             (board_part.board.name, board_part.reference.upper(),
+                              int(text_filter(board_part.reference, str.isdigit))))
 
             # Select the vendor_part and associated quantity/cost
             choice_part.select(excluded_vendor_names, True)
@@ -2819,12 +2819,12 @@ class Order:
                 lines = vendor_boms[vendor_name]
 
                 # Create *line* and append it to *vendor_bom*:
-                line = '"{0}","{1}","{2}","{3}","{4}"'.format(
-                  selected_order_quantity,
-                  selected_vendor_part.vendor_part_name,
-                  selected_actual_part.manufacturer_name,
-                  selected_actual_part.manufacturer_part_name,
-                  choice_part.schematic_part_name)
+                line = ('"{0}","{1}","{2}","{3}","{4}"'.format(
+                        selected_order_quantity,
+                        selected_vendor_part.vendor_part_name,
+                        selected_actual_part.manufacturer_name,
+                        selected_actual_part.manufacturer_part_name,
+                        choice_part.schematic_part_name))
                 lines.append(line)
 
         # Wrap up the *bom_file*:
@@ -2844,8 +2844,8 @@ class Order:
             # Close *csv_file*:
             csv_file.close()
 
-    def exclude_vendors_to_reduce_shipping_costs(self,
-      choice_parts, excluded_vendor_names, reduced_vendor_messages):
+    def exclude_vendors_to_reduce_shipping_costs(self, choice_parts,
+                                                 excluded_vendor_names, reduced_vendor_messages):
         """ *Order*: Sweep through *choice_parts* and figure out which vendors
             to add to *excluded_vendor_names* to reduce shipping costs.
         """
@@ -2862,8 +2862,7 @@ class Order:
 
         # First figure out the total *missing_parts*.  We will stop if
         # excluding a vendor increases above the *missing_parts* number:
-        quad = \
-          self.quad_compute(choice_parts, excluded_vendor_names, "")
+        quad = self.quad_compute(choice_parts, excluded_vendor_names, "")
         missing_parts = quad[0]
 
         # Sweep through and figure out what vendors to order from:
@@ -2909,8 +2908,8 @@ class Order:
 
                 # Get the base cost for *trial_excluded_vendor_names*
                 # and tack it onto *trial_quads*:
-                trial_quad = self.quad_compute(choice_parts,
-                  trial_excluded_vendor_names, vendor_name)
+                trial_quad = self.quad_compute(choice_parts, trial_excluded_vendor_names,
+                                               vendor_name)
                 trial_quads.append(trial_quad)
 
                 # For debugging only:
@@ -2938,8 +2937,8 @@ class Order:
                 if savings == 0.0:
                     # This vendor offers no savings; get rid of the vendor:
                     # print("trail_quads[0]={0}".format(trial_quads))
-                    reduced_vendor_messages.append("Excluding '{0}': saves nothing\n".
-                      format(lowest_vendor_name, savings))
+                    reduced_vendor_messages.append("Excluding '{0}': saves nothing\n".format(
+                                                   lowest_vendor_name, savings))
                     excluded_vendor_names[lowest_vendor_name] = None
                     del trial_quads[0]
                 else:
@@ -2954,7 +2953,7 @@ class Order:
             # lowest_vendor_name = text_filter(lowest_vendor_name, str.isprintable)
             savings = lowest_cost - base_cost
             print("      Price is ${0:.2f} when '{1}' is excluded".
-              format(lowest_cost, lowest_vendor_name))
+                  format(lowest_cost, lowest_vendor_name))
 
             # We use $15.00 as an approximate minimum shipping cost.
             # If the savings is less that the shipping cost, we exclude
@@ -2962,8 +2961,7 @@ class Order:
             if savings < 15.0 and len(trial_quads) >= 2 and lowest_vendor_name != "Digi-Key":
                 # The shipping costs are too high and there at least one
                 # vendor left; exclude this vendor:
-                message = "Excluding '{0}': only saves {1:.2f}". \
-                  format(lowest_vendor_name, savings)
+                message = "Excluding '{0}': only saves {1:.2f}".format(lowest_vendor_name, savings)
                 reduced_vendor_messages.append(message + '\n')
                 if tracing:
                     print(message)
@@ -2976,8 +2974,8 @@ class Order:
         if tracing:
             print("<=exclude_vendors_to_reduce_shipping_costs")
 
-    def exclude_vendors_with_high_minimums(self,
-      choice_parts, excluded_vendor_names, reduced_vendor_messages):
+    def exclude_vendors_with_high_minimums(self, choice_parts, excluded_vendor_names,
+                                           reduced_vendor_messages):
         """ *Order*: Sweep through *choice* parts and figure out if the
             vendors with large minimum orders can be dropped:
         """
@@ -3040,9 +3038,9 @@ class Order:
             # Sort alphabetically followed by numerically.  The lambda
             # expression converts "SW123" into ("SW", 123).  
             board_parts = board.all_board_parts
-            board_parts.sort(key = lambda board_part:
-              ( text_filter(board_part.reference, str.isalpha).upper(),
-                int(text_filter(board_part.reference, str.isdigit))))
+            board_parts.sort(key = lambda board_part: (
+                             text_filter(board_part.reference, str.isalpha).upper(),
+                             int(text_filter(board_part.reference, str.isdigit))))
 
             # Visit each *board_part* in *board_parts*:
             for board_part in board_parts:
@@ -3170,7 +3168,7 @@ class Order:
             footprint_path = "pretty/{0}.kicad_mod".format(footprint_name)
             if not os.path.isfile(footprint_path):
                 print("Footprint '{0}' does not exist for '{1}'".
-                  format(footprint_path, kicad_footprints[footprint_name]))
+                      format(footprint_path, kicad_footprints[footprint_name]))
 
     def positions_process(self):
         """ *Order*: Process any Pick and Place `.csv` or `.pos` file.
@@ -3233,7 +3231,7 @@ class Order:
             reduced_vendor_messages_file.write(reduced_vendor_message)
         reduced_vendor_messages_file.close()
         print("{0} vendors eliminated.  See '{1}' file for why".
-          format(len(reduced_vendor_messages), reduced_vendor_messages_file_name))
+              format(len(reduced_vendor_messages), reduced_vendor_messages_file_name))
 
         # Check for missing footprints:
         order.footprints_check(final_choice_parts)
@@ -3244,17 +3242,17 @@ class Order:
 
         # Generate the bom file reports for *self.final_choice_parts*:
         order.bom_write("bom_by_price.txt", lambda choice_part:
-          (choice_part.selected_total_cost,
-          choice_part.selected_vendor_name,
-          choice_part.schematic_part_name) )
+                        (choice_part.selected_total_cost,
+                         choice_part.selected_vendor_name,
+                         choice_part.schematic_part_name) )
         order.bom_write("bom_by_vendor.txt", lambda choice_part:
-          (choice_part.selected_vendor_name,
-          choice_part.selected_total_cost,
-          choice_part.schematic_part_name) )
+                        (choice_part.selected_vendor_name,
+                         choice_part.selected_total_cost,
+                         choice_part.schematic_part_name) )
         order.bom_write("bom_by_name.txt", lambda choice_part:
-          (choice_part.schematic_part_name,
-          choice_part.selected_vendor_name,
-          choice_part.selected_total_cost) )
+                        (choice_part.schematic_part_name,
+                         choice_part.selected_vendor_name,
+                         choice_part.selected_total_cost) )
         order.csv_write()
 
         # Write a part summary file for each board:
@@ -3332,8 +3330,8 @@ class Order:
         # print("<=Order.process()")
 
 
-    def quad_compute(self,
-      choice_parts, excluded_vendor_names, excluded_vendor_name, trace=False):
+    def quad_compute(self, choice_parts, excluded_vendor_names,
+                     excluded_vendor_name, trace=False):
         """ *Order*: Return quad tuple of the form:
                (*missing_parts*, *total_cost*,
                 *vendor_priority*, *excluded_vendor_name*) where:
@@ -3604,7 +3602,7 @@ class PositionsTable:
                             side = columns[heading_indices["Side"]]
                             if isinstance(part_height, float):
                                 row = PositionRow(reference, value, package, x, y, rotation,
-                                  feeder_name, pick_dx, pick_dy, side, part_height)
+                                                  feeder_name, pick_dx, pick_dy, side, part_height)
                                 rows.append(row)
                                 row_table[reference] = row
                             else:
@@ -3616,7 +3614,8 @@ class PositionsTable:
         else:
             assert "Bad file suffix for file: '{0}'".format(file_name)
 
-        feeders = {
+        feeders = \
+        {
           "1uF":        "E1",
           "2N7002":     "E2",
           "27K":        "E4",
@@ -3681,7 +3680,7 @@ class PositionsTable:
                 part_height = quintuple[3]
                 rotation = quintuple[4]
                 feeders_file.write("{0}{1}:\t{2}\t{3}\t{4}\n".
-                  format(side, number, part_height, rotation, value))
+                                   format(side, number, part_height, rotation, value))
 
         # Fill in the value of *positions_table* (i.e. *self*):
         positions_table.comments = comments
@@ -3720,7 +3719,7 @@ class PositionsTable:
             else:
                 # No match:            
                 print("Could not find footprint '{0}' from file '{1}'".
-                  format(feeder_name, file_name))
+                      format(feeder_name, file_name))
         positions_table.write("/tmp/" + file_name)
 
     def reorigin(self, reference):
@@ -3754,8 +3753,8 @@ class PositionsTable:
         """
 
         # Verify argument types:
-        assert ( isinstance(file_name, str) and len(file_name) >= 4 and
-          file_name[-4:] in (".csv", ".pos") )          
+        assert isinstance(file_name, str)
+        assert len(file_name) >= 4 and file_name[-4:] in (".csv", ".pos")
 
         # Unpack the *positions_table* (i.e. *self*):
         positions_table = self
@@ -3773,7 +3772,7 @@ class PositionsTable:
         # justified (i.e. ">"):
         extras_table = {"Ref": 5, "Val": 0, "Package": 1, "PosX": 0, "PosY": 0, "Rot": 0, "Side": 0}
         aligns_table = {"Ref": "", "Val": "", "Package": "",
-          "PosX": ">", "PosY": ">", "Rot": ">", "Side": ""}
+                        "PosX": ">", "PosY": ">", "Rot": ">", "Side": ""}
 
         # Build up the final output as a list of *final_lines*:
         final_lines = list()
@@ -3826,7 +3825,7 @@ class PositionsTable:
             assert False, ".csv file support not implemented yet."
         else:
             assert False, ("File name ('{0}') does not have a suffixe of .csv or .pos".
-              format(file_name))
+                           format(file_name))
 
         # Write *final_lines* to *file_name*:
         with open(file_name, "w") as output_file:
@@ -3835,8 +3834,8 @@ class PositionsTable:
 class PositionRow:
     """ PositionRow: Represents one row of data for a *PositionsTable*: """
 
-    def __init__(self,
-      reference, value, package, x, y, rotation, feeder_name, pick_dx, pick_dy, side, part_height):
+    def __init__(self, reference, value, package, x, y,
+                 rotation, feeder_name, pick_dx, pick_dy, side, part_height):
         """ *PositionRow*: ...
         """
 
@@ -4055,9 +4054,8 @@ class Board:
                 schematic_part = database.lookup(part_name)
                 if schematic_part == None:
                     # {part_name} is not in {database}; output error message:
-                    print(("File '{0}: Part Name '{2}' {3}" +
-                      " not in database").format(net_file_name, 0,
-                      part_name, reference))
+                    print("File '{0}: Part Name '{2}' {3} not in database".format(
+                          net_file_name, 0, part_name, reference))
                     errors += 1
                 else:
                     # We have a match; create the *board_part*:
@@ -4080,7 +4078,7 @@ class Board:
                         component_se.append(
                           [Symbol("footprint"), Symbol("common:" + kicad_footprint)])
                         print("Part {0}: Adding binding to footprint '{1}'".
-                          format(part_name, kicad_footprint))
+                              format(part_name, kicad_footprint))
                         net_file_changed = True
                     else:
                         # We have a footprint in .net file:
@@ -4106,8 +4104,8 @@ class Board:
                         elif len(current_split) == 1:
                             new_footprint = "common:" + kicad_footprint
                         else:
-                            assert False, "previous_slit={0} current_split={1}".format(
-                              previous_split, current_split)
+                            assert False, ("previous_slit={0} current_split={1}".
+                                           format(previous_split, current_split))
 
                         # Only do something if it changed:
                         if previous_footprint != new_footprint:
@@ -4116,16 +4114,16 @@ class Board:
                             #        print("**Alias_Part.footprint={0}".
                             #          format(schematic_part.kicad_footprint))
                             print(("Part '{0}': " + 
-                              "Footprint changed from '{1}' to '{2}'").
-                              format(part_name,
-                              previous_footprint, new_footprint))
+                                  "Footprint changed from '{1}' to '{2}'").
+                                  format(part_name,
+                                  previous_footprint, new_footprint))
                             footprint_se[1] = Symbol(new_footprint)
                             net_file_changed = True
 
             # Write out updated *net_file_name* if *net_file_changed*:
             if net_file_changed:
                 print("Updating '{0}' with new footprints".
-                  format(net_file_name))
+                      format(net_file_name))
                 net_file = open(net_file_name, "wa")
                 # sexpdata.dump(net_se, net_file)
                 net_se_string = sexpdata.dumps(net_se)
@@ -4218,9 +4216,8 @@ class Board:
                     part = database.part_lookup(part_name)
                     if part == None:
                         # {part_name} not in {database}; output error message:
-                        print(("File '{0}', line {1}: Part Name {2} ({3} {4})" +
-                          " not in database").format(cmp_file_name, line_number,
-                          part_name, reference, footprint))
+                        print("File '{0}', line {1}: Part Name {2} ({3} {4}) not in database".
+                              format(cmp_file_name, line_number, part_name, reference, footprint))
                         errors = errors + 1
                     else:
                         footprint_pattern = part.footprint_pattern
@@ -4231,11 +4228,11 @@ class Board:
                             self.board_parts_append(board_part)
                             part.board_parts.append(board_part)
                         else:
-                            print ("File '{0}',  line {1}: {2}:{3} Footprint" +
-                              "'{4}' does not match database '{5}'"). \
-                              format(cmp_file_name, line_number,
-                              reference, part_name, footprint,
-                              footprint_pattern)
+                            print(("File '{0}',  line {1}: {2}:{3} Footprint" +
+                                   "'{4}' does not match database '{5}'").
+                                   format(cmp_file_name, line_number,
+                                          reference, part_name, footprint,
+                                          footprint_pattern))
                             errors = errors + 1
                 elif line == "\n" or line.startswith("TimeStamp") or \
                   line.startswith("EndListe") or line.startswith("Cmp-Mod V01"):
@@ -4244,11 +4241,10 @@ class Board:
                 else:
                     # Unrecognized {line}:
                     print("'{0}', line {1}: Unrecognized line '{2}'". \
-                      format(cmp_file_name, line_number, line))
+                          format(cmp_file_name, line_number, line))
                     errors = errors + 1
         else:
-            print("Net file '{0}' name does not have a recognized suffix".
-              format(net_file_name))
+            print("Net file '{0}' name does not have a recognized suffix".format(net_file_name))
 
         return errors
 
@@ -4375,10 +4371,10 @@ class Board:
                     fractional = "Yes"
                     has_fractional_parts = True
                 board_file.write('"{0} x","{1}","{2}","{3}","{4}","{5}","{6}","{7}","{8}"\n'.
-                  format(quantity,
-                  reference_board_parts_key, schematic_part_key, final_choice_part.description,
-                  fractional,
-                  manufacturer_name, manufacturer_part_name, vendor_name, vendor_part_name))
+                                 format(quantity, reference_board_parts_key,
+                                        schematic_part_key, final_choice_part.description,
+                                        fractional, manufacturer_name, manufacturer_part_name,
+                                        vendor_name, vendor_part_name))
             else:
                 print("Problems with actual_part", actual_part)
 
@@ -4447,7 +4443,7 @@ class Schematic_Part:
         else:
             self.schematic_part_name = schematic_part_name
             print("Schematic Part Name '{0}' has no ';' separator!".
-              format(schematic_part_name))
+                  format(schematic_part_name))
 
     def __format__(self, format):
         """ *Schematic_Part*: Format the *Schematic_Part* object (i.e. *self*) using *format***. """
@@ -4469,8 +4465,8 @@ class Schematic_Part:
 class Choice_Part(Schematic_Part):
     # A *Choice_Part* specifies a list of *Actual_Part*'s to choose from.
 
-    def __init__(self, schematic_part_name,
-      kicad_footprint, location, description, rotation, pick_dx, pick_dy, feeder_name, part_height):
+    def __init__(self, schematic_part_name, kicad_footprint,
+                 location, description, rotation, pick_dx, pick_dy, feeder_name, part_height):
         """ *Choice_Part*: Initiailize *self* to contain *schematic_part_name*
             *kicad_footprint* and *actual_parts*. """
 
@@ -4521,8 +4517,7 @@ class Choice_Part(Schematic_Part):
         return result
 
 
-    def actual_part(self,
-      manufacturer_name, manufacturer_part_name, vendor_triples = []):
+    def actual_part(self, manufacturer_name, manufacturer_part_name, vendor_triples = []):
         """ *Choice_Part*: Create an *Actual_Part* that contains *manufacturer_name* and
             *manufacturer_part_name* and append it to the *Choice_Part* object (i.e. *self*.)
             For parts whose prices are not available via screen scraping, it is possible to specify
@@ -4586,7 +4581,7 @@ class Choice_Part(Schematic_Part):
                 # Create the *vendor_part* and append it to *actual_part*:
                 assert len(price_breaks) > 0
                 vendor_part = Vendor_Part(actual_part,
-                  vendor_name, vendor_part_name, 1000000, price_breaks)
+                                          vendor_name, vendor_part_name, 1000000, price_breaks)
                 actual_part.vendor_part_append(vendor_part)
                 # if tracing:
                 #    print("vendor_part_append called")
@@ -4617,9 +4612,9 @@ class Choice_Part(Schematic_Part):
         # "SW123" gets conferted to (..., "SW123", 123):
         board_parts = self.board_parts
         board_parts.sort(key = lambda board_part:
-          (board_part.board.name,
-           text_filter(board_part.reference, str.isalpha).upper(),
-           int(text_filter(board_part.reference, str.isdigit))))
+                         (board_part.board.name,
+                          text_filter(board_part.reference, str.isalpha).upper(),
+                          int(text_filter(board_part.reference, str.isdigit))))
 
         # print("  {0}:{1};{2} {3}:{4}".\
         #  format(choice_part.schematic_part_name,
@@ -4646,9 +4641,9 @@ class Choice_Part(Schematic_Part):
                 assert denominator == fractional_part.denominator, \
                   "'{0}' has a denominator of {1} and '{2}' has one of {3}". \
                   format(first_fractional_part.schematic_part_name,
-                  first_fractional_part.denominator,
-                  fractional_part.schematic_part_name,
-                  fractional_part.denominator)
+                         first_fractional_part.denominator,
+                         fractional_part.schematic_part_name,
+                         fractional_part.denominator)
 
             # Compute the *count*:
             numerator = 0
@@ -4747,13 +4742,13 @@ class Choice_Part(Schematic_Part):
         for actual_part_index in range(len(actual_parts)):
             actual_part = actual_parts[actual_part_index]
             if tracing:
-                print(" Manufacturer: {0} {1}".
-              format(actual_part.manufacturer_name, actual_part.manufacturer_part_name))
+                print(" Manufacturer: {0} {1}".format(
+                      actual_part.manufacturer_name, actual_part.manufacturer_part_name))
             vendor_parts = actual_part.vendor_parts
             for vendor_part_index, vendor_part in enumerate(vendor_parts):
                 if tracing:
                     print("  Vendor: {0} {1}".
-                      format(vendor_part.vendor_name, vendor_part.vendor_part_name))
+                          format(vendor_part.vendor_name, vendor_part.vendor_part_name))
                 price_breaks = vendor_part.price_breaks
                 for price_break_index, price_break in enumerate(price_breaks):
                     # if tracing:
@@ -4768,19 +4763,19 @@ class Choice_Part(Schematic_Part):
                     total_cost = order_quantity * price
                     if tracing:
                         print("   price={0:.2f} quant={1} order_quantity={2} total_cost={3:.2f}".
-                          format(price, quantity, order_quantity, total_cost))
+                              format(price, quantity, order_quantity, total_cost))
 
                     # Assemble the *quint* and append to *quints* if there
                     # enough parts available:
                     is_excluded = vendor_part.vendor_name in excluded_vendor_names
                     if tracing:
                         print("   Quantity Available: {0} Is excluded: {1}".
-                          format(vendor_part.quantity_available, is_excluded))
+                              format(vendor_part.quantity_available, is_excluded))
                     if not is_excluded and vendor_part.quantity_available >= order_quantity:
                         assert price_break_index < len(price_breaks)
                         quint = (total_cost, order_quantity,
-                          actual_part_index, vendor_part_index,
-                          price_break_index, len(price_breaks))
+                                 actual_part_index, vendor_part_index,
+                                 price_break_index, len(price_breaks))
                         quints.append(quint)
                         if tracing:
                             print("    quint={0}".format(quint))
@@ -4788,8 +4783,7 @@ class Choice_Part(Schematic_Part):
         if len(quints) == 0:
             choice_part_name = self.schematic_part_name
             if announce:
-                print("No vendor parts found for Part '{0}'".
-                  format(choice_part_name))
+                print("No vendor parts found for Part '{0}'".format(choice_part_name))
         else:
             # Now sort in ascending order:
             quints.sort()
@@ -4863,7 +4857,7 @@ class Alias_Part(Schematic_Part):
     # An *Alias_Part* specifies one or more *Schematic_Parts* to use.
 
     def __init__(self, schematic_part_name, schematic_parts, kicad_footprint,
-      feeder_name=None, part_height=None, pick_dx=0.0, pick_dy=0.0):
+                 feeder_name=None, part_height=None, pick_dx=0.0, pick_dy=0.0):
         """ *Alias_Part*: Initialize *self* to contain *schematic_part_name*,
             *kicad_footprint*, and *schematic_parts*. """
 
@@ -4943,7 +4937,7 @@ class Fractional_Part(Schematic_Part):
     # using a portion of another *Schematic_Part*.
 
     def __init__(self, schematic_part_name, kicad_footprint,
-      choice_part, numerator, denominator, description):
+                 choice_part, numerator, denominator, description):
         """ *Fractional_Part*: Initialize *self* to contain
             *schematic_part_name*, *kicad_footprint*, *choie_part*,
             *numerator*, *denomoniator*, and *description*. """
@@ -5015,7 +5009,7 @@ class Actual_Part:
         actual_part = self
         tracine = False
         tracing = ( actual_part.manufacturer_name == "Pololu" and
-          actual_part.manufacturer_part_name == "S18V20F6)" )
+                    actual_part.manufacturer_part_name == "S18V20F6)" )
         if tracing:
             print("appending part")
             assert False
@@ -5042,7 +5036,7 @@ class Vendor_Part:
     # A vendor part represents a part that can be ordered from a vendor.
 
     def __init__(self, actual_part, vendor_name, vendor_part_name,
-      quantity_available, price_breaks, timestamp=0.0):
+                 quantity_available, price_breaks, timestamp=0.0):
         """ *Vendor_Part*: Initialize *self* to contain *actual_part"""
 
         # print("vendor_part_name=", vendor_part_name)
@@ -5105,17 +5099,17 @@ class Vendor_Part:
 
         # Dump out *self*:
         out_stream.write("{0}Actual_Part_Key:{1}\n".
-          format(" " * indent, self.actual_part_key))
+                         format(" " * indent, self.actual_part_key))
         out_stream.write("{0}Vendor_Key:{1}\n".
-          format(" " * indent, self.vendor_key))
+                         format(" " * indent, self.vendor_key))
         out_stream.write("{0}Vendor_Name:{1}\n".
-          format(" " * indent, self.vendor_name))
+                         format(" " * indent, self.vendor_name))
         out_stream.write("{0}Vendor_Part_Name:{1}\n".
-          format(" " * indent, self.vendor_part_name))
+                         format(" " * indent, self.vendor_part_name))
         out_stream.write("{0}Quantity_Available:{1}\n".
-          format(" " * indent, self.quantity_available))
+                         format(" " * indent, self.quantity_available))
         out_stream.write("{0}Price_Breaks: (skip)\n".
-          format(" " * indent))
+                         format(" " * indent))
 
     def price_breaks_text_get(self):
         """ *Vendor_Part*: Return the prices breaks for the *Vendor_Part*
