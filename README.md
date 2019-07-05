@@ -12,7 +12,7 @@ in greater detail a bit further below.  The BOM manager takes this list of parts
 and generates a list of vendor orders.  You send the order to each vendor and
 they fulfill your order by shipping the requested parts back to you.  Once all
 of the parts have arrived you can assemble your project.  In brief, the BOM manager
-is a program that assists you in generating vendor orders.
+is a program that assists you in generating vendor orders for a project.
 
 The BOM manager program is meant to work in conjunction with a CAD (Computer Aided
 Design) program.  The initial CAD program supported is KiCAD which is an
@@ -32,8 +32,8 @@ Immediately below are some of the more concise part names:
   and sells.  Each manufacturer has a name (e.g. Intel, Texas Instruments, etc.)
   and a unique part name for each purchasable part.
 
-* Vendor Part: Frequently there are vendors, typically called distributors, that
-  purchase parts directly from manufacturers, store the parts and resell them
+* Vendor Part: Frequently there are vendors (typically called distributors) that
+  purchase parts directly from manufacturers, store the parts, and resell them
   to customers.  Sometimes a manufacturer only sells directly to the customer,
   in which case the Manufacturer part and the Vendor part are the same.  Each
   Vendor typically has their own part name that is different from the manufacturer
@@ -45,24 +45,33 @@ Immediately below are some of the more concise part names:
   a collection of interchangeable parts that can be substituted in depending upon
   pricing and availability.
 
+* Posed Part: Each project part may occur in multiple locations within a project.
+  A "pose" specifies the X/Y/Z location and orientation (e.g. &alpha;/&beta;/&gamma;)
+  of the project part.  The count of the number of posed parts associated with a
+  specific posed part, determines the total number of the project parts that need
+  to be ordered.
+
 What BOM manager does is:
 
-1. It starts with a list of project parts.
+1. It starts with a list of posed parts.
 
-2. The project part list is expended into a list of acceptable manufacturer parts.
+2. The posed part list is converted into a list of project parts.
 
-3. The BOM manager queries to find which vendors sell each manufacturer part
+3. The project parts list is expended into a list of acceptable manufacturer parts.
+
+4. The BOM manager queries to find which vendors sell each manufacturer part
    an generates a list of vendor parts, where each vendor part has pricing
    and availability information.
 
-4. The BOM manager takes the list vendor parts and selects between them to
-   minimize overall cost.  It takes into account shipping costs.
+5. The BOM manager takes the list vendor parts and selects between them all to
+   minimize overall cost.  It takes into account shipping costs and well as some
+   other heuristics.
 
-5. The BOM manager generates a list of vendor orders that can be sent to each vendor.
+6. The BOM manager generates a list of vendor orders that can be sent to each vendor.
 
 For now, BOM manager is summarized as:
 
-        Project Parts => Manufacturer Parts => Vendor Parts => Vendor Orders
+     Posed Parts => Project Parts => Manufacturer Parts => Vendor Parts => Vendor Orders
 
 There are some further nuances in parts:
 
@@ -91,12 +100,12 @@ There are some further nuances in parts:
 Now that we have described parts in greater detail, it is time to introduce
 the over all architecture of BOM manager:
 
-* Project: The BOM manager manages one or more projects.  A project is basically
-  one-to-one with a CAD "file".  Note, CAD systems do not reduce a project down to a
-  single file, but instead to a collection of files in one or more directories
-  (or folders.)
+* Project: The BOM manager orders parts for one or more projects.  A project is
+  basically one-to-one with a CAD "file".  Note, CAD systems do not reduce a
+  project down to a single file, but instead to a collection of files in one
+  or more directories/folders.
 
-* Order: An order specifies one or more projects and the number of each project
+* Order: An order specifies a list of projects and the number of each project
   instance that is desired.
 
 * Collection: A collection is typically associated with a vendor.  It is a more
@@ -117,42 +126,51 @@ the over all architecture of BOM manager:
   project part name in a project must match at least one search name in one of the
   collections.
 
-With these new concepts the over all BOM manager process is:
+With these new concepts the over all BOM manager algorithm is:
 
 1. Each order specifies one or more projects.
 
-2. Each project generates a list named project parts.
+2. All projects are scanned to generates a list named posed parts.
 
-3. BOM manager searches all of the selected collections to find searches
-   that match project part names.
+3. The posed parts list generates a list named project parts.
 
-4. Each search generates a list available manufacturer parts. (As before)
+4. BOM manager searches all of the selected collections to find searches
+   that match each project part.
 
-5. Manufacturer part names are converted into a list vendor parts.  (As before)
+5. Each search generates a list available manufacturer parts.
 
-6. Vendor parts are winnowed down to vendor orders. (As before)
+6. Manufacturer part names are converted into a list vendor parts.
+
+7. Vendor parts are winnowed down to vendor orders.
 
 With these new concepts, the BOM manager algorithm is summarized as:
 
-        Order => Projects => Project Parts =>
+        Order => Projects => Posed Parts => Project Parts =>
             Collections => Tables => Searches =>
                 Manufacturer Parts => Vendor Parts => Vendor Orders
 
-There are a number of different roles involved with BOM Manager:
+That wraps up the overall BOM manager conceptual algorithm.
 
-* Order Agent: This person actually runs BOM manager to get a particular
-  set of vendor orders out the door.
+The BOM manager should be viewed as just one step of an overall workflow that
+goes from idea to an assembled project that is ready to use.  For large projects,
+a team of people is responsible for performing the overall workflow.  For smaller
+projects, one person usually gets to do most of the workflow steps.
 
-* Project Designer: This person interacts with the CAD system to design a project.
+There are a distinct roles that can given to different people:
+
+* Project Designer Role: This person interacts with the CAD system to design a project.
   This person is responsible for ensuring that project part names match up with
   search names.
 
-* Search Librarian: This person is responsible for constructing the searches
-  associated with each collection.  This person basically needs to ensure that each project
-  part has an associated search with at least one collection.  This person is
-  responsible for coming up with naming conventions.
+* Librarian Role: This person is responsible for constructing the collection searches.
+  This person basically needs to ensure that each project part has an associated
+  search associated with at least one collection.  This person is responsible for
+  coming up with naming conventions.
 
-In addition, there are some BOM manager integration roles that:
+* Order Management Role: This person is responsible for running BOM manager, submitting
+  orders to vendors, etc.
+
+In addition, there are some BOM manager plug-in integration roles:
 
 * Collection Integrator: This person is responsible for constructing the collection
   information and developing the collection software plug-in for BOM manager.
