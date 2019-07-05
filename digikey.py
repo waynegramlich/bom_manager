@@ -30,6 +30,7 @@ import subprocess
 import time
 import bom_manager as bm
 
+
 class Digikey:
     # Digikey.__init__():
     def __init__(self):
@@ -610,8 +611,8 @@ class DigikeyTable(bm.Table):
         assert path.find(".xml") < 0, "path='{0}'".format(path)
         file_name = path + "/" + base + ".xml"
         # print("=>DigikeyTable.__init__(base='{0}', path='{1}')".format(base, path))
-        
-        comments = [ bm.TableComment(language="EN", lines=[]) ]
+
+        comments = [bm.TableComment(language="EN", lines=[])]
         super().__init__(file_name=file_name, comments=comments, name=base,
                          csv_file_name=csv_file_name, parameters=list(),
                          path=path, parent=parent, url=url)

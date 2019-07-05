@@ -3380,7 +3380,7 @@ class Database:
         # if isinstance(feeder_name, str):
         #    footprint = database.footprint(feeder_name, rotation)
         alias_part = AliasPart(project_part_name,
-                                alias_parts, kicad_footprint, feeder_name, part_height)
+                               alias_parts, kicad_footprint, feeder_name, part_height)
         return database.insert(alias_part)
 
     def choice_part(self, project_part_name, kicad_footprint, location, description,
@@ -3411,7 +3411,7 @@ class Database:
         # if isinstance(feeder_name, str):
         #    footprint = database.footprint(feeder_name, rotation)
         choice_part = ChoicePart(project_part_name, kicad_footprint, location, description,
-                                  rotation, pick_dx, pick_dy, feeder_name, part_height)
+                                 rotation, pick_dx, pick_dy, feeder_name, part_height)
 
         return database.insert(choice_part)
 
@@ -3655,7 +3655,7 @@ class Database:
                     if original_manufacturer_part_name == manufacturer_part_name:
                         now = time.time()
                         vendor_part = VendorPart(actual_part, vendor_name, vendor_part_name,
-                                                  stock, price_breaks, now)
+                                                 stock, price_breaks, now)
                         vendor_parts.append(vendor_part)
 
                         # Print stuff out if *trace* in enabled:
@@ -3742,7 +3742,7 @@ class Database:
 
             # Verify argument types:
             fractional_part = FractionalPart(project_part_name, kicad_footprint,
-                                              whole_part, numerator, denominator, description)
+                                             whole_part, numerator, denominator, description)
             self.insert(fractional_part)
         else:
             print("Whole part '{0}' not found for fractional part '{1}'!".
@@ -3823,7 +3823,7 @@ class Database:
                       format(vendor_name, vendor_part_name))
             else:
                 vendor_part = VendorPart(actual_part,
-                                          vendor_name, vendor_part_name, 10000, price_breaks)
+                                         vendor_name, vendor_part_name, 10000, price_breaks)
                 vendor_parts[vendor_part_key] = vendor_part
         else:
             print("Actual Part: '{0} {1}' is not in database".format(
@@ -5417,8 +5417,8 @@ class Order:
             # Sort the *pose_parts* by *project* followed by reference:
             pose_parts = choice_part.pose_parts
             pose_parts.sort(key=lambda pose_part:
-                               (pose_part.project.name, pose_part.reference.upper(),
-                                int(text_filter(pose_part.reference, str.isdigit))))
+                            (pose_part.project.name, pose_part.reference.upper(),
+                             int(text_filter(pose_part.reference, str.isdigit))))
 
             # Write the first line out to *bom_file*:
             bom_file.write("  {0}:{1};{2} {3}:{4}\n".format(
@@ -5501,8 +5501,8 @@ class Order:
             # Sort the *pose_parts* by *project* followed by reference:
             pose_parts = choice_part.pose_parts
             pose_parts.sort(key=lambda pose_part:
-                               (pose_part.project.name, pose_part.reference.upper(),
-                                int(text_filter(pose_part.reference, str.isdigit))))
+                            (pose_part.project.name, pose_part.reference.upper(),
+                             int(text_filter(pose_part.reference, str.isdigit))))
 
             # Select the vendor_part and associated quantity/cost
             choice_part.select(excluded_vendor_names, True)
@@ -6869,9 +6869,9 @@ class Project:
         project.count = count
         project.positions_file_name = positions_file_name
         project.order = order
-        project.all_pose_parts = []         # [PosePart...] of all project parts
-        project.installed_pose_parts = []   # [PosePart...] project parts to be installed
-        project.uninstalled_pose_parts = [] # [PosePart...] project parts not to be installed
+        project.all_pose_parts = []          # [PosePart...] of all project parts
+        project.installed_pose_parts = []    # [PosePart...] project parts to be installed
+        project.uninstalled_pose_parts = []  # [PosePart...] project parts not to be installed
 
         # Read in the `.net` file associated with *project*:
         project.net_file_read()
@@ -7539,7 +7539,7 @@ class ChoicePart(ProjectPart):
                 # Create the *vendor_part* and append it to *actual_part*:
                 assert len(price_breaks) > 0
                 vendor_part = VendorPart(actual_part,
-                                          vendor_name, vendor_part_name, 1000000, price_breaks)
+                                         vendor_name, vendor_part_name, 1000000, price_breaks)
                 actual_part.vendor_part_append(vendor_part)
                 # if tracing:
                 #    print("vendor_part_append called")
@@ -7570,9 +7570,9 @@ class ChoicePart(ProjectPart):
         # "SW123" gets conferted to (..., "SW123", 123):
         pose_parts = self.pose_parts
         pose_parts.sort(key=lambda pose_part:
-                           (pose_part.project.name,
-                            text_filter(pose_part.reference, str.isalpha).upper(),
-                            int(text_filter(pose_part.reference, str.isdigit))))
+                        (pose_part.project.name,
+                         text_filter(pose_part.reference, str.isalpha).upper(),
+                         int(text_filter(pose_part.reference, str.isdigit))))
 
         # print("  {0}:{1};{2} {3}:{4}".\
         #  format(choice_part.project_part_name,
