@@ -31,7 +31,9 @@ import time
 import bom_manager as bm
 
 
+# Digikey:
 class Digikey:
+
     # Digikey.__init__():
     def __init__(self):
         digikey = self
@@ -162,6 +164,7 @@ class Digikey:
         # *root_directory* is in its first incarnation and ready for reorganization:
         return root_directory
 
+    # Digikey.root_directory_reorganize():
     def root_directory_reorganize(self, root_directory):
         # Verify argument types:
         assert isinstance(root_directory, DigikeyDirectory)
@@ -354,7 +357,9 @@ class Digikey:
                     print("[{0}]: Keep '{1}'".format(file_name_index, file_name))
 
 
+# DigikeyDirectory:
 class DigikeyDirectory(bm.Directory):
+
     # DigikeyDirectory.__init__():
     def __init__(self, base, path, title, id, parent=None):
         # Verify argument types:
@@ -594,7 +599,9 @@ class DigikeyDirectory(bm.Directory):
         return digikey_directory.file_name2title()
 
 
+# DigikeyTable:
 class DigikeyTable(bm.Table):
+
     # DigikeyTable.__init__():
     def __init__(self, base, path, title, id, items, url, parent=None):
         # Verify argument types:
@@ -694,6 +701,7 @@ class DigikeyTable(bm.Table):
         return digikey_table.file_name2title()
 
 
+# main():
 def main():
     digikey = Digikey()
     digikey.process()
