@@ -248,7 +248,7 @@ import webbrowser
 # There is a fairly complex set of data structures that link the above
 # data structures together.  They are listed below:
 #
-# *Project_Part*: A *Project_Part* is essentially one-to-one with a Schematic
+# *ProjectPart*: A *ProjectPart* is essentially one-to-one with a Schematic
 # symbol in KiCad.  In particular, it specifies both the annotation
 # reference (e.g. SW12, U7, R213, etc.) and a *Schematic_Symbol_Name*
 # (e.g. ATMEGA328-PU;QFP32, 74HC08;SOIC14, etc.)
@@ -304,9 +304,9 @@ import webbrowser
 # to exclude from the order.
 #
 # *Project*: A *Project* is one-to-one with KiCad PCB.  It is basicaly
-# consists of a list of *Project_Part*'s.
+# consists of a list of *ProjectPart*'s.
 #
-# *Project_Part*: A *Project_Part* is basically a *Schematic_Symbol_Name*
+# *ProjectPart*: A *ProjectPart* is basically a *Schematic_Symbol_Name*
 # along with a project annotation reference (e.g. R123, U7, etc.)
 #
 
@@ -5808,7 +5808,7 @@ class Order:
         self.final_choice_parts = final_choice_parts
 
         # Sweep through *final_choice_parts* and force the associated
-        # *Project_Part*'s to be in a reasonable order:
+        # *ProjectPart*'s to be in a reasonable order:
         for choice_part in final_choice_parts:
             # Make sure that we only have *Choice_Part* objects:
             assert isinstance(choice_part, Choice_Part)
@@ -5829,7 +5829,7 @@ class Order:
         kicad_footprints = {}
         for project in self.projects:
             for project_part in project.all_project_parts:
-                assert isinstance(project_part, Project_Part)
+                assert isinstance(project_part, ProjectPart)
                 schematic_part = project_part.schematic_part
                 assert isinstance(schematic_part, Schematic_Part)
 
@@ -6818,10 +6818,13 @@ class Price_Break:
         self.order_price = order_quantity * self.price
 
 
+# Project:
 class Project:
+    # Project.__init__():
     def __init__(self, name, revision, net_file_name, count, order, positions_file_name=None):
-        """ *Project*: Create a new project containing *name*, *revision*,
-            *net_file_name*, *count*. """
+        """ Initialize a new *Project* object (i.e. *self*) containing *name*, *revision*,
+            *net_file_name*, *count*, *order*, and optionally *positions_file_name.
+        """
 
         # Verify argument types:
         assert isinstance(name, str)
@@ -6831,42 +6834,50 @@ class Project:
         assert isinstance(order, Order)
         assert isinstance(positions_file_name, str) or positions_file_name is None
 
-        # Load up *self*:
-        self.name = name
-        self.revision = revision
-        self.net_file_name = net_file_name
-        self.count = count
-        self.positions_file_name = positions_file_name
-        self.order = order
-        self.all_project_parts = []           # List[Project_Part] of all project parts
-        self.installed_project_parts = []     # List[Project_Part] project parts to be installed
-        self.uninstalled_project_parts = []   # List[Project_Part] project parts not to be installed
+        # Load up *project* (i.e. *self*):
+        project = self
+        project.name = name
+        project.revision = revision
+        project.net_file_name = net_file_name
+        project.count = count
+        project.positions_file_name = positions_file_name
+        project.order = order
+        project.all_project_parts = []         # [ProjectPart...] of all project parts
+        project.installed_project_parts = []   # [ProjectPart...] project parts to be installed
+        project.uninstalled_project_parts = [] # [ProjectPart...] project parts not to be installed
 
-        self.net_file_read()
+        # Read in the `.net` file associated with *project*:
+        project.net_file_read()
 
+    # Project.project_aprt_append():
     def project_part_append(self, project_part):
-        """ *Project*: Append *project_part* onto the *Project* object (i.e. *self*). """
+        """ Append *project_part* onto the *Project* object (i.e. *self*).
+        """
 
         # Verify argument types:
-        assert isinstance(project_part, Project_Part)
+        assert isinstance(project_part, ProjectPart)
 
-        self.all_project_parts.append(project_part)
+        # Tack *project_part* onto the appropriate lists inside of *project*:
+        project = self
+        project.all_project_parts.append(project_part)
         if project_part.install:
-            self.installed_project_parts.append(project_part)
+            project.installed_project_parts.append(project_part)
         else:
-            self.uninstalled_project_parts.append(project_part)
+            project.uninstalled_project_parts.append(project_part)
 
+    # Project.new_file_read():
     def net_file_read(self):
-        """ *Project*: Read in net file for {self}. """
+        """ Read in net file for the *Project* object (i.e. *self*).
+        """
 
-        # Prevent accidental double read:
-        project_parts = self.all_project_parts
+        # Prevent accidental double of *project* (i.e. *self*):
+        project = self
+        project_parts = project.all_project_parts
         assert len(project_parts) == 0
 
-        errors = 0
-
         # Process *net_file_name* adding footprints as needed:
-        net_file_name = self.net_file_name
+        errors = 0
+        net_file_name = project.net_file_name
         # print("Read '{0}'".format(net_file_name))
         if net_file_name.endswith(".net"):
             with open(net_file_name, "r") as net_stream:
@@ -6882,7 +6893,7 @@ class Project:
 
             # Visit each *component_se* in *net_se*:
             net_file_changed = False
-            database = self.order.database
+            database = project.order.database
             components_se = se_find(net_se, "export", "components")
 
             # Each component has the following form:
@@ -6938,8 +6949,8 @@ class Project:
                     errors += 1
                 else:
                     # We have a match; create the *project_part*:
-                    project_part = Project_Part(self, schematic_part, reference, comment)
-                    self.project_part_append(project_part)
+                    project_part = ProjectPart(project, schematic_part, reference, comment)
+                    project.project_part_append(project_part)
 
                     # Grab *kicad_footprint* from *schematic_part*:
                     kicad_footprint = schematic_part.kicad_footprint
@@ -7060,7 +7071,7 @@ class Project:
             cmp_stream.close()
 
             # Process each {line} in {cmp_lines}:
-            database = self.database
+            database = project.database
             errors = 0
             line_number = 0
             for line in cmp_lines:
@@ -7100,8 +7111,8 @@ class Project:
                         if fnmatch.fnmatch(footprint, footprint_pattern):
                             # The footprints match:
                             project_part = \
-                              Project_Part(self, part, reference, footprint)
-                            self.project_parts_append(project_part)
+                              ProjectPart(project, part, reference, footprint)
+                            project.project_parts_append(project_part)
                             part.project_parts.append(project_part)
                         else:
                             print(("File '{0}',  line {1}: {2}:{3} Footprint" +
@@ -7124,45 +7135,48 @@ class Project:
 
         return errors
 
+    # Project.assembly_summary_write():
     def assembly_summary_write(self, final_choice_parts):
-        """ *Project*: Write out an assembly summary .csv file for the *Project* object (i.e. *self*)
+        """ Write out an assembly summary .csv file for the *Project* object (i.e. *self*)
             using *final_choice_parts*.
         """
 
         # Verify argument types:
         assert isinstance(final_choice_parts, list)
 
-        # Open *project_file*:
-        project_file_name = "/tmp/{0}.csv".format(self.name)
-        project_file = open(project_file_name, "w")
-
-        # Write out the column headings:
-        project_file.write(
-          '"Quan.","Reference","Schematic Name","Description","Fractional",' +
-          '"Manufacturer","Manufacture PN","Vendor","Vendor PN"\n\n')
-
-        # Output the installed parts:
-        has_fractional_parts1 = self.assembly_summary_write_helper(True,
-                                                                   final_choice_parts, project_file)
-
-        # Output the uninstalled parts:
-        project_file.write("\nDo Not Install\n")
-
-        # Output the installed parts:
-        has_fractional_parts2 = self.assembly_summary_write_helper(False,
-                                                                   final_choice_parts, project_file)
-
-        # Explain what a fractional part is:
-        if has_fractional_parts1 or has_fractional_parts2:
+        # Open *project_file* (i.e. *self*):
+        project = self
+        project_file_name = "/tmp/{0}.csv".format(project.name)
+        with open(project_file_name, "w") as project_file:
+            # Write out the column headings:
             project_file.write(
-              '"","\nFractional parts are snipped off of 1xN or 2xN break-way headers"\n')
+              '"Quan.","Reference","Schematic Name","Description","Fractional",' +
+              '"Manufacturer","Manufacture PN","Vendor","Vendor PN"\n\n')
 
-        # Close *project_file* and print out a summary announcement:
-        project_file.close()
+            # Output the installed parts:
+            has_fractional_parts1 = project.assembly_summary_write_helper(True, final_choice_parts,
+                                                                          project_file)
+
+            # Output the uninstalled parts:
+            project_file.write("\nDo Not Install\n")
+
+            # Output the installed parts:
+            has_fractional_parts2 = project.assembly_summary_write_helper(False, final_choice_parts,
+                                                                          project_file)
+
+            # Explain what a fractional part is:
+            if has_fractional_parts1 or has_fractional_parts2:
+                project_file.write(
+                  '"","\nFractional parts are snipped off of 1xN or 2xN break-way headers"\n')
+
+            # Close *project_file* and print out a summary announcement:
+
+        # Write out a progress message:
         print("Wrote out assembly file '{0}'".format(project_file_name))
 
+    # Project.assembly_summary_write_helper():
     def assembly_summary_write_helper(self, install, final_choice_parts, project_file):
-        """ *Project*: Write out an assembly summary .csv file for *Project* object (i.e. *self*)
+        """ Write out an assembly summary .csv file for *Project* object (i.e. *self*)
             out to *project_file*.  *install* is set *True* to list the installable parts from
             *final_choice_parts* and *False* for an uninstallable parts listing.
             This routine returns *True* if there are any fractional parts output to *project_file*.
@@ -7175,6 +7189,7 @@ class Project:
 
         # Each *final_choice_part* that is part of the project (i.e. *self*) will wind up
         # in a list in *project_parts_table*.  The key is the *schematic_part_key*:
+        project = self
         project_parts_table = {}
         for final_choice_part in final_choice_parts:
             # Now figure out if final choice part is part of *project_parts*:
@@ -7182,7 +7197,7 @@ class Project:
             for project_part in project_parts:
                 # We only care care about *final_choice_part* if is used on *project* and
                 # it matches the *install* selector:
-                if project_part.project == self and project_part.install == install:
+                if project_part.project is project and project_part.install == install:
                     # We are on the project; create *schemati_part_key*:
                     schematic_part = project_part.schematic_part
                     schematic_part_key = "{0};{1}".format(
@@ -7256,8 +7271,10 @@ class Project:
 
         return has_fractional_parts
 
+    # Project.positions_process():
     def positions_process(self, database):
-        """ *Project*: """
+        """ Reorigin the the contents of the positions table.
+        """
 
         project = self
         positions_file_name = project.positions_file_name
@@ -7266,14 +7283,17 @@ class Project:
         positions_table.footprints_rotate(database)
 
 
-class Project_Part:
-    # A Project_Part basically specifies the binding of a Schematic_Part
+# ProjectPart:
+class ProjectPart:
+    # A ProjectPart basically specifies the binding of a Schematic_Part
     # and is associated schemtatic reference.  Reference strings must
     # be unique for a given project.
 
+    # ProjectPart.__init__():
     def __init__(self, project, schematic_part, reference, comment):
-        """ *Project_Part*: Initialize *self* to contain *project*,
-            *schematic_part*, *reference*, and *comment*. """
+        """ Initialize *ProjectPart* object (i.e. *self*) to contain *project*,
+            *schematic_part*, *reference*, and *comment*.
+        """
 
         # Verify argument types:
         assert isinstance(project, Project)
@@ -7281,12 +7301,13 @@ class Project_Part:
         assert isinstance(reference, str)
         assert isinstance(comment, str)
 
-        # Load up *self*:
-        self.project = project
-        self.schematic_part = schematic_part
-        self.reference = reference
-        self.comment = comment
-        self.install = (comment != "DNI")
+        # Load up *project_part* (i.e. *self*):
+        project_part = self
+        project_part.project = project
+        project_part.schematic_part = schematic_part
+        project_part.reference = reference
+        project_part.comment = comment
+        project_part.install = (comment != "DNI")
 
 
 class Request:
@@ -7544,7 +7565,7 @@ class Choice_Part(Schematic_Part):
         """
 
         # Verify argument types:
-        assert isinstance(project_part, Project_Part)
+        assert isinstance(project_part, ProjectPart)
 
         # Append *project_part* to *project_parts*:
         self.project_parts.append(project_part)
