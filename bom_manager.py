@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# <------------------------------------------- 100 characters ------------------------------------>|
+# <------------------------------------------- 100 characters -----------------------------------> #
 
 # Coding standards:
 # * In general, the coding guidelines for PEP 8 are used.
@@ -248,7 +248,7 @@ import webbrowser
 # There is a fairly complex set of data structures that link the above
 # data structures together.  They are listed below:
 #
-# *ProjectPart*: A *ProjectPart* is essentially one-to-one with a Schematic
+# *PosePart*: A *PosePart* is essentially one-to-one with a Schematic
 # symbol in KiCad.  In particular, it specifies both the annotation
 # reference (e.g. SW12, U7, R213, etc.) and a *Schematic_Symbol_Name*
 # (e.g. ATMEGA328-PU;QFP32, 74HC08;SOIC14, etc.)
@@ -304,9 +304,9 @@ import webbrowser
 # to exclude from the order.
 #
 # *Project*: A *Project* is one-to-one with KiCad PCB.  It is basicaly
-# consists of a list of *ProjectPart*'s.
+# consists of a list of *PosePart*'s.
 #
-# *ProjectPart*: A *ProjectPart* is basically a *Schematic_Symbol_Name*
+# *PosePart*: A *PosePart* is basically a *Schematic_Symbol_Name*
 # along with a project annotation reference (e.g. R123, U7, etc.)
 #
 
@@ -5414,11 +5414,11 @@ class Order:
             # Make sure that nonething nasty got into *final_choice_parts*:
             assert isinstance(choice_part, Choice_Part)
 
-            # Sort the *project_parts* by *project* followed by reference:
-            project_parts = choice_part.project_parts
-            project_parts.sort(key=lambda project_part:
-                               (project_part.project.name, project_part.reference.upper(),
-                                int(text_filter(project_part.reference, str.isdigit))))
+            # Sort the *pose_parts* by *project* followed by reference:
+            pose_parts = choice_part.pose_parts
+            pose_parts.sort(key=lambda pose_part:
+                               (pose_part.project.name, pose_part.reference.upper(),
+                                int(text_filter(pose_part.reference, str.isdigit))))
 
             # Write the first line out to *bom_file*:
             bom_file.write("  {0}:{1};{2} {3}:{4}\n".format(
@@ -5498,11 +5498,11 @@ class Order:
         for choice_part in final_choice_parts:
             assert isinstance(choice_part, Choice_Part)
 
-            # Sort the *project_parts* by *project* followed by reference:
-            project_parts = choice_part.project_parts
-            project_parts.sort(key=lambda project_part:
-                               (project_part.project.name, project_part.reference.upper(),
-                                int(text_filter(project_part.reference, str.isdigit))))
+            # Sort the *pose_parts* by *project* followed by reference:
+            pose_parts = choice_part.pose_parts
+            pose_parts.sort(key=lambda pose_part:
+                               (pose_part.project.name, pose_part.reference.upper(),
+                                int(text_filter(pose_part.reference, str.isdigit))))
 
             # Select the vendor_part and associated quantity/cost
             choice_part.select(excluded_vendor_names, True)
@@ -5735,21 +5735,21 @@ class Order:
         for project in projects:
             # print("Order.final_choice_parts_compute(): project:{0}".format(project.name))
 
-            # Sort *project_parts* by reference.  A reference is a sequence
+            # Sort *pose_parts* by reference.  A reference is a sequence
             # letters followed by an integer (e.g. SW1, U12, D123...)
             # Sort alphabetically followed by numerically.  The lambda
             # expression converts "SW123" into ("SW", 123).
-            project_parts = project.all_project_parts
-            project_parts.sort(key=lambda project_part: (
-                             text_filter(project_part.reference, str.isalpha).upper(),
-                             int(text_filter(project_part.reference, str.isdigit))))
+            pose_parts = project.all_pose_parts
+            pose_parts.sort(key=lambda pose_part: (
+                             text_filter(pose_part.reference, str.isalpha).upper(),
+                             int(text_filter(pose_part.reference, str.isdigit))))
 
-            # Visit each *project_part* in *project_parts*:
-            for project_part in project_parts:
-                schematic_part = project_part.schematic_part
+            # Visit each *pose_part* in *pose_parts*:
+            for pose_part in pose_parts:
+                schematic_part = pose_part.schematic_part
                 # schematic_part_name = schematic_part.schematic_part_name
                 # print("Order.final_choice_parts_compute():  {0}: {1}".
-                #  format(project_part.reference, schematic_part_name))
+                #  format(pose_part.reference, schematic_part_name))
 
                 # Only *choice_parts* can be ordered from a vendor:
                 # Visit each *choice_part* in *choice_parts* and
@@ -5772,8 +5772,8 @@ class Order:
                     #    print("Order.final_choice_parts_compute(): Key {0} in table".format(
                     #          choice_part_name))
 
-                    # Remember *project_part* in *choice_part*:
-                    choice_part.project_part_append(project_part)
+                    # Remember *pose_part* in *choice_part*:
+                    choice_part.pose_part_append(pose_part)
 
                     # Refresh the vendor part cache for each *actual_part*:
                     vendor_parts_cache = database.vendor_parts_cache
@@ -5808,11 +5808,11 @@ class Order:
         self.final_choice_parts = final_choice_parts
 
         # Sweep through *final_choice_parts* and force the associated
-        # *ProjectPart*'s to be in a reasonable order:
+        # *PosePart*'s to be in a reasonable order:
         for choice_part in final_choice_parts:
             # Make sure that we only have *Choice_Part* objects:
             assert isinstance(choice_part, Choice_Part)
-            choice_part.project_parts_sort()
+            choice_part.pose_parts_sort()
 
         # for choice_part in final_choice_parts:
         #    print("End_Order.final_choice_parts_compute(): project:{0}".format(choice_part))
@@ -5828,9 +5828,9 @@ class Order:
         # Visit each *schematic_part* in all of the *projects*:
         kicad_footprints = {}
         for project in self.projects:
-            for project_part in project.all_project_parts:
-                assert isinstance(project_part, ProjectPart)
-                schematic_part = project_part.schematic_part
+            for pose_part in project.all_pose_parts:
+                assert isinstance(pose_part, PosePart)
+                schematic_part = pose_part.schematic_part
                 assert isinstance(schematic_part, Schematic_Part)
 
                 schematic_part.footprints_check(kicad_footprints)
@@ -6358,6 +6358,33 @@ class Parameter:
         xml_lines.append('{0}</Parameter>'.format(indent))
 
 
+# PosePart:
+class PosePart:
+    # A PosePart basically specifies the binding of a Schematic_Part
+    # and is associated schemtatic reference.  Reference strings must
+    # be unique for a given project.
+
+    # PosePart.__init__():
+    def __init__(self, project, schematic_part, reference, comment):
+        """ Initialize *PosePart* object (i.e. *self*) to contain *project*,
+            *schematic_part*, *reference*, and *comment*.
+        """
+
+        # Verify argument types:
+        assert isinstance(project, Project)
+        assert isinstance(schematic_part, Schematic_Part)
+        assert isinstance(reference, str)
+        assert isinstance(comment, str)
+
+        # Load up *pose_part* (i.e. *self*):
+        pose_part = self
+        pose_part.project = project
+        pose_part.schematic_part = schematic_part
+        pose_part.reference = reference
+        pose_part.comment = comment
+        pose_part.install = (comment != "DNI")
+
+
 class PositionRow:
     """ PositionRow: Represents one row of data for a *PositionsTable*: """
 
@@ -6842,28 +6869,28 @@ class Project:
         project.count = count
         project.positions_file_name = positions_file_name
         project.order = order
-        project.all_project_parts = []         # [ProjectPart...] of all project parts
-        project.installed_project_parts = []   # [ProjectPart...] project parts to be installed
-        project.uninstalled_project_parts = [] # [ProjectPart...] project parts not to be installed
+        project.all_pose_parts = []         # [PosePart...] of all project parts
+        project.installed_pose_parts = []   # [PosePart...] project parts to be installed
+        project.uninstalled_pose_parts = [] # [PosePart...] project parts not to be installed
 
         # Read in the `.net` file associated with *project*:
         project.net_file_read()
 
     # Project.project_aprt_append():
-    def project_part_append(self, project_part):
-        """ Append *project_part* onto the *Project* object (i.e. *self*).
+    def pose_part_append(self, pose_part):
+        """ Append *pose_part* onto the *Project* object (i.e. *self*).
         """
 
         # Verify argument types:
-        assert isinstance(project_part, ProjectPart)
+        assert isinstance(pose_part, PosePart)
 
-        # Tack *project_part* onto the appropriate lists inside of *project*:
+        # Tack *pose_part* onto the appropriate lists inside of *project*:
         project = self
-        project.all_project_parts.append(project_part)
-        if project_part.install:
-            project.installed_project_parts.append(project_part)
+        project.all_pose_parts.append(pose_part)
+        if pose_part.install:
+            project.installed_pose_parts.append(pose_part)
         else:
-            project.uninstalled_project_parts.append(project_part)
+            project.uninstalled_pose_parts.append(pose_part)
 
     # Project.new_file_read():
     def net_file_read(self):
@@ -6872,8 +6899,8 @@ class Project:
 
         # Prevent accidental double of *project* (i.e. *self*):
         project = self
-        project_parts = project.all_project_parts
-        assert len(project_parts) == 0
+        pose_parts = project.all_pose_parts
+        assert len(pose_parts) == 0
 
         # Process *net_file_name* adding footprints as needed:
         errors = 0
@@ -6948,9 +6975,9 @@ class Project:
                           net_file_name, 0, part_name, reference))
                     errors += 1
                 else:
-                    # We have a match; create the *project_part*:
-                    project_part = ProjectPart(project, schematic_part, reference, comment)
-                    project.project_part_append(project_part)
+                    # We have a match; create the *pose_part*:
+                    pose_part = PosePart(project, schematic_part, reference, comment)
+                    project.pose_part_append(pose_part)
 
                     # Grab *kicad_footprint* from *schematic_part*:
                     kicad_footprint = schematic_part.kicad_footprint
@@ -7110,10 +7137,10 @@ class Project:
                         footprint_pattern = part.footprint_pattern
                         if fnmatch.fnmatch(footprint, footprint_pattern):
                             # The footprints match:
-                            project_part = \
-                              ProjectPart(project, part, reference, footprint)
-                            project.project_parts_append(project_part)
-                            part.project_parts.append(project_part)
+                            pose_part = \
+                              PosePart(project, part, reference, footprint)
+                            project.pose_parts_append(pose_part)
+                            part.pose_parts.append(pose_part)
                         else:
                             print(("File '{0}',  line {1}: {2}:{3} Footprint" +
                                    "'{4}' does not match database '{5}'").format(
@@ -7188,57 +7215,57 @@ class Project:
         assert isinstance(project_file, io.IOBase)
 
         # Each *final_choice_part* that is part of the project (i.e. *self*) will wind up
-        # in a list in *project_parts_table*.  The key is the *schematic_part_key*:
+        # in a list in *pose_parts_table*.  The key is the *schematic_part_key*:
         project = self
-        project_parts_table = {}
+        pose_parts_table = {}
         for final_choice_part in final_choice_parts:
-            # Now figure out if final choice part is part of *project_parts*:
-            project_parts = final_choice_part.project_parts
-            for project_part in project_parts:
+            # Now figure out if final choice part is part of *pose_parts*:
+            pose_parts = final_choice_part.pose_parts
+            for pose_part in pose_parts:
                 # We only care care about *final_choice_part* if is used on *project* and
                 # it matches the *install* selector:
-                if project_part.project is project and project_part.install == install:
+                if pose_part.project is project and pose_part.install == install:
                     # We are on the project; create *schemati_part_key*:
-                    schematic_part = project_part.schematic_part
+                    schematic_part = pose_part.schematic_part
                     schematic_part_key = "{0};{1}".format(
                       schematic_part.base_name, schematic_part.short_footprint)
 
-                    # Create/append a list to *project_parts_table*, keyed on *schematic_part_key*:
-                    if schematic_part_key not in project_parts_table:
-                        project_parts_table[schematic_part_key] = []
-                    pairs_list = project_parts_table[schematic_part_key]
+                    # Create/append a list to *pose_parts_table*, keyed on *schematic_part_key*:
+                    if schematic_part_key not in pose_parts_table:
+                        pose_parts_table[schematic_part_key] = []
+                    pairs_list = pose_parts_table[schematic_part_key]
 
-                    # Append a pair of *project_part* and *final_choice_part* onto *pairs_list*:
-                    project_final_pair = (project_part, final_choice_part)
+                    # Append a pair of *pose_part* and *final_choice_part* onto *pairs_list*:
+                    project_final_pair = (pose_part, final_choice_part)
                     pairs_list.append(project_final_pair)
 
         # Now organize everything around the *reference_list*:
-        reference_project_parts = {}
-        for pairs_list in project_parts_table.values():
+        reference_pose_parts = {}
+        for pairs_list in pose_parts_table.values():
             # We want to sort base on *reference_value* which is converted into *reference_text*:
             reference_list = \
               [project_final_pair[0].reference.upper() for project_final_pair in pairs_list]
             reference_text = ", ".join(reference_list)
             # print("reference_text='{0}'".format(reference_text))
-            project_part = pairs_list[0]
-            reference_project_parts[reference_text] = project_part
+            pose_part = pairs_list[0]
+            reference_pose_parts[reference_text] = pose_part
 
         # Sort the *reference_parts_keys*:
-        reference_project_parts_keys = list(reference_project_parts.keys())
-        reference_project_parts_keys.sort()
+        reference_pose_parts_keys = list(reference_pose_parts.keys())
+        reference_pose_parts_keys.sort()
 
         # Now dig down until we have all the information we need for output the next
         # `.csv` file line:
         has_fractional_parts = False
-        for reference_project_parts_key in reference_project_parts_keys:
-            # Extract the *project_part* and *final_choice_part*:
-            project_final_pair = reference_project_parts[reference_project_parts_key]
-            project_part = project_final_pair[0]
+        for reference_pose_parts_key in reference_pose_parts_keys:
+            # Extract the *pose_part* and *final_choice_part*:
+            project_final_pair = reference_pose_parts[reference_pose_parts_key]
+            pose_part = project_final_pair[0]
             final_choice_part = project_final_pair[1]
             assert isinstance(final_choice_part, Choice_Part)
 
             # Now get the corresponding *schematic_part*:
-            schematic_part = project_part.schematic_part
+            schematic_part = pose_part.schematic_part
             schematic_part_key = "{0};{1}".format(
               schematic_part.base_name, schematic_part.short_footprint)
             assert isinstance(schematic_part, Schematic_Part)
@@ -7262,7 +7289,7 @@ class Project:
                     fractional = "Yes"
                     has_fractional_parts = True
                 project_file.write('"{0} x","{1}","{2}","{3}","{4}","{5}","{6}","{7}","{8}"\n'.
-                                   format(quantity, reference_project_parts_key,
+                                   format(quantity, reference_pose_parts_key,
                                           schematic_part_key, final_choice_part.description,
                                           fractional, manufacturer_name, manufacturer_part_name,
                                           vendor_name, vendor_part_name))
@@ -7281,33 +7308,6 @@ class Project:
         positions_table = PositionsTable(positions_file_name, database)
         positions_table.reorigin("FD1")
         positions_table.footprints_rotate(database)
-
-
-# ProjectPart:
-class ProjectPart:
-    # A ProjectPart basically specifies the binding of a Schematic_Part
-    # and is associated schemtatic reference.  Reference strings must
-    # be unique for a given project.
-
-    # ProjectPart.__init__():
-    def __init__(self, project, schematic_part, reference, comment):
-        """ Initialize *ProjectPart* object (i.e. *self*) to contain *project*,
-            *schematic_part*, *reference*, and *comment*.
-        """
-
-        # Verify argument types:
-        assert isinstance(project, Project)
-        assert isinstance(schematic_part, Schematic_Part)
-        assert isinstance(reference, str)
-        assert isinstance(comment, str)
-
-        # Load up *project_part* (i.e. *self*):
-        project_part = self
-        project_part.project = project
-        project_part.schematic_part = schematic_part
-        project_part.reference = reference
-        project_part.comment = comment
-        project_part.install = (comment != "DNI")
 
 
 class Request:
@@ -7348,7 +7348,7 @@ class Schematic_Part:
             self.base_name = base_name
             self.short_footprint = short_footprint
             self.kicad_footprint = kicad_footprint
-            self.project_parts = []
+            self.pose_parts = []
         else:
             self.schematic_part_name = schematic_part_name
             print("Schematic Part Name '{0}' has no ';' separator!".
@@ -7559,30 +7559,30 @@ class Choice_Part(Schematic_Part):
 
         return self
 
-    def project_part_append(self, project_part):
-        """ *Choice_Part*: Store *project_part* into the *Choice_Part* object
+    def pose_part_append(self, pose_part):
+        """ *Choice_Part*: Store *pose_part* into the *Choice_Part* object
             (i.e. *self*.)
         """
 
         # Verify argument types:
-        assert isinstance(project_part, ProjectPart)
+        assert isinstance(pose_part, PosePart)
 
-        # Append *project_part* to *project_parts*:
-        self.project_parts.append(project_part)
+        # Append *pose_part* to *pose_parts*:
+        self.pose_parts.append(pose_part)
 
-    def project_parts_sort(self):
-        """ *Choice_Part*: Sort the *project_parts* of the *Choice_Part* object
+    def pose_parts_sort(self):
+        """ *Choice_Part*: Sort the *pose_parts* of the *Choice_Part* object
             (i.e. *self*.)
         """
 
-        # Sort the *project_parts* using a key of
+        # Sort the *pose_parts* using a key of
         # (project_name, reference, reference_number).  A reference of
         # "SW123" gets conferted to (..., "SW123", 123):
-        project_parts = self.project_parts
-        project_parts.sort(key=lambda project_part:
-                           (project_part.project.name,
-                            text_filter(project_part.reference, str.isalpha).upper(),
-                            int(text_filter(project_part.reference, str.isdigit))))
+        pose_parts = self.pose_parts
+        pose_parts.sort(key=lambda pose_part:
+                           (pose_part.project.name,
+                            text_filter(pose_part.reference, str.isalpha).upper(),
+                            int(text_filter(pose_part.reference, str.isdigit))))
 
         # print("  {0}:{1};{2} {3}:{4}".\
         #  format(choice_part.schematic_part_name,
@@ -7596,8 +7596,8 @@ class Choice_Part(Schematic_Part):
 
         fractional_parts = self.fractional_parts
         if len(fractional_parts) == 0:
-            for project_part in self.project_parts:
-                count += project_part.project.count
+            for pose_part in self.pose_parts:
+                count += pose_part.project.count
         else:
             # for fractional_part in fractional_parts:
             #        print("{0}".format(fractional_part.schematic_part_name))
@@ -7615,8 +7615,8 @@ class Choice_Part(Schematic_Part):
 
             # Compute the *count*:
             numerator = 0
-            for project_part in self.project_parts:
-                schematic_part = project_part.schematic_part
+            for pose_part in self.pose_parts:
+                schematic_part = pose_part.schematic_part
                 # print("'{0}'".format(schematic_part.schematic_part_name))
                 if isinstance(schematic_part, Alias_Part):
                     alias_parts = schematic_part
@@ -7629,7 +7629,7 @@ class Choice_Part(Schematic_Part):
                     assert False, "Missing code"
 
                 fractional_numerator = fractional_part.numerator
-                for index in range(project_part.project.count):
+                for index in range(pose_part.project.count):
                     if numerator + fractional_numerator > denominator:
                         count += 1
                         numerator = 0
@@ -7669,8 +7669,8 @@ class Choice_Part(Schematic_Part):
         references_text = ""
         previous_project = None
         is_first = True
-        for project_part in self.project_parts:
-            project = project_part.project
+        for pose_part in self.pose_parts:
+            project = pose_part.project
             if project != previous_project:
                 if not is_first:
                     references_text += "]"
@@ -7679,7 +7679,7 @@ class Choice_Part(Schematic_Part):
             is_first = False
 
             # Now tack the reference to the end:
-            references_text += " {0}".format(project_part.reference)
+            references_text += " {0}".format(pose_part.reference)
         references_text += "]"
         return references_text
 
