@@ -534,10 +534,12 @@ def text_filter(text, function):
     return "".join([character for character in text if function(character)])
 
 
+# ActualPart:
 class ActualPart:
     # An *ActualPart* represents a single manufacturer part.
     # A list of vendor parts specifies where the part can be ordered from.
 
+    # ActualPart.__init__():
     def __init__(self, manufacturer_name, manufacturer_part_name):
         """ *ActualPart*: Initialize *self* to contain *manufacturer* and
             *manufacturer_part_name*. """
@@ -557,6 +559,7 @@ class ActualPart:
         self.vendor_parts = []
         self.selected_vendor_part = None
 
+    # ActualPart.vendor_part_append():
     def vendor_part_append(self, vendor_part):
         """ *ActualPart: Append *vendor_part* to the vendor parts
             of *self*. """
@@ -571,6 +574,7 @@ class ActualPart:
         assert isinstance(vendor_part, VendorPart)
         self.vendor_parts.append(vendor_part)
 
+    # ActualPart.vendor_names_load():
     def vendor_names_load(self, vendor_names_table, excluded_vendor_names):
         """ *ActualPart*:*: Add each possible to vendor name for the
             *ActualPart* object (i.e. *self*) to *vendor_names_table*:
@@ -588,6 +592,7 @@ class ActualPart:
                 vendor_names_table[vendor_name] = None
 
 
+# ComboEdit:
 class ComboEdit:
     """ A *ComboEdit* object repesents the GUI controls for manuipulating a combo box widget.
     """
@@ -1267,6 +1272,7 @@ class ComboEdit:
     }
 
 
+# Comment:
 class Comment:
 
     # Comment.__init__():
@@ -1323,6 +1329,7 @@ class Comment:
         return all_equal
 
 
+# EnumerationComment:
 class EnumerationComment(Comment):
 
     # EnumerationComment.__init__():
@@ -1353,6 +1360,7 @@ class EnumerationComment(Comment):
         xml_lines.append('{0}</EnumerationComment>'.format(indent))
 
 
+# ParameterComment:
 class ParameterComment(Comment):
 
     # ParameterComment.__init__():
@@ -1431,6 +1439,7 @@ class ParameterComment(Comment):
         xml_lines.append('        </ParameterComment>')
 
 
+# SearchComment:
 class SearchComment(Comment):
     # SearchComment.__init()
     def __init__(self, **arguments_table):
@@ -1468,6 +1477,7 @@ class SearchComment(Comment):
         xml_lines.append('{0}</SearchComment>'.format(indent))
 
 
+# TableComment:
 class TableComment(Comment):
 
     # TableComment.__init__():
@@ -1510,9 +1520,11 @@ class TableComment(Comment):
         xml_lines.append('{0}</TableComment>'.format(indent))
 
 
+# Database:
 class Database:
     # Database of *ProjectParts*:
 
+    # Database.__init__():
     def __init__(self):
         """ *Database*: Initialize *self* to be a database of
             *project_part*'s. """
@@ -3325,6 +3337,7 @@ class Database:
         #  "Digi-Key", "541-22KGCT-ND",
         #  ".074/10 .04/50 .02295/200 .01566/1000")
 
+    # Database.aliase_part():
     def alias_part(self, project_part_name, alias_part_names,
                    kicad_footprint="", feeder_name=None, rotation=None, part_height=None):
         """ *Database*: Create *AliasPart* named *project_part_name* and containing
@@ -3383,6 +3396,7 @@ class Database:
                                alias_parts, kicad_footprint, feeder_name, part_height)
         return database.insert(alias_part)
 
+    # Database.choice_part():
     def choice_part(self, project_part_name, kicad_footprint, location, description,
                     rotation=None, pick_dx=0.0, pick_dy=0.0, feeder_name=None, part_height=None):
         """ *Database*: Add a *ChoicePart* to *self*. """
@@ -3415,6 +3429,7 @@ class Database:
 
         return database.insert(choice_part)
 
+    # Database.dump():
     def dump(self, out_stream):
         """ *Database*: Output the *Database* object (i.e. *self*) out to *out_stream*
             in human readable form.
@@ -3432,6 +3447,7 @@ class Database:
                 vendor_part.dump(out_stream, 2)
             out_stream.write("\n")
 
+    # Database.exchange_rate():
     def exchange_rate(self, from_currency, to_currency):
         """ *Database*: Lookup current currency exchange rate:
         """
@@ -3444,6 +3460,7 @@ class Database:
         exchange_rate = converter.convert(1.0, from_currency, to_currency)
         return exchange_rate
 
+    # Database.findchips_scrape():
     def findchips_scrape(self, actual_part):
         """ *Database*: Return a list of *VendorParts* associated with
             *actual_part* scraped from the findchips.com web page.
@@ -3645,7 +3662,7 @@ class Database:
                                 # Sometimes we get a bogus price of 0.0 and
                                 # we just need to ignore the whole record:
                                 if price > 0.0:
-                                    price_break = Price_Break(
+                                    price_break = PriceBreak(
                                       quantity, price * exchange_rate)
                                     price_breaks.append(price_break)
 
@@ -3683,6 +3700,7 @@ class Database:
 
         return vendor_parts
 
+    # Database.footprint():
     def footprint(self, feeder_name, rotation):
         """ *Database*: Return a *Footprint* object that matches *name*:
 
@@ -3721,6 +3739,7 @@ class Database:
             # print("footprints['{0}'].rotation={1}".format(feeder_name, rotation))
         return footprint
 
+    # Database.fractional_part():
     def fractional_part(self, project_part_name, kicad_footprint,
                         whole_part_name, numerator, denominator, description):
         """ *Database*: Insert a new *FractionalPart* named
@@ -3748,6 +3767,7 @@ class Database:
             print("Whole part '{0}' not found for fractional part '{1}'!".
                   format(whole_part_name, project_part_name))
 
+    # Database.lookup():
     def lookup(self, project_part_name):
         """ *Database*: Return the *ProjectPart* associated with
             *project_part_name*. """
@@ -3760,6 +3780,7 @@ class Database:
             project_part = project_parts[project_part_name]
         return project_part
 
+    # Database.insert():
     def insert(self, project_part):
         """ *Database*: Add a *ProjectPart* to *self*. """
 
@@ -3774,6 +3795,7 @@ class Database:
             project_parts[project_part_name] = project_part
         return project_part
 
+    # Database.save():
     def save(self):
         """ *Database*: Save the *vendor_parts* portion of the *Database*
             object (i.e. *self*).
@@ -3793,6 +3815,7 @@ class Database:
 
         # print("<=Database.save")
 
+    # Database.vendor_part():
     def vendor_part(self, manufacturer_name, manufacturer_part_name,
                     vendor_name, vendor_part_name, price_break_text):
         """ *Database*: Add a vendor part to the database. """
@@ -3804,12 +3827,12 @@ class Database:
         assert isinstance(vendor_part_name, str)
         assert isinstance(price_break_text, str)
 
-        # Parse *price_break_text* int a list of *Price_Break*'s:
+        # Parse *price_break_text* int a list of *PriceBreak*'s:
         price_breaks = []
         breaks_text = price_break_text.split()
         for break_text in breaks_text:
             cost_quantity_pair = break_text.split("/")
-            price_break = Price_Break(int(cost_quantity_pair[1]), float(cost_quantity_pair[0]))
+            price_break = PriceBreak(int(cost_quantity_pair[1]), float(cost_quantity_pair[0]))
             price_breaks.append(price_break)
 
         actual_part_key = (manufacturer_name, manufacturer_part_name)
@@ -3830,6 +3853,7 @@ class Database:
                   manufacturer_name, manufacturer_part_name))
 
 
+# Enumeration:
 class Enumeration:
 
     # Enumeration.__init__():
@@ -3891,6 +3915,7 @@ class Enumeration:
         xml_lines.append('{0}</Enumeration>'.format(indent))
 
 
+# Filter:
 class Filter:
 
     # Filter.__init__():
@@ -4016,9 +4041,11 @@ class Filter:
             print("{0}<=Filter.xml_lines_append()".format(tracing))
 
 
+# Footprint:
 class Footprint:
     """ *Footprint*: Represents a PCB footprint. """
 
+    # Footprint.__init__():
     def __init__(self, name, rotation):
         """ *Footprint*: Initialize a new *FootPrint* object.
 
@@ -4038,7 +4065,10 @@ class Footprint:
         footprint.rotation = rotation
 
 
+# Inventory:
 class Inventory:
+
+    # Inventory.__init__():
     def __init__(self, project_part, amount):
         """ *Inventory*: Initialize *self* to contain *scheamtic_part* and
             *amount*. """
@@ -4052,6 +4082,7 @@ class Inventory:
         self.amount = amount
 
 
+# Node:
 class Node:
     """ Represents a single *Node* in a *QTreeView* tree. """
 
@@ -4232,7 +4263,9 @@ class Node:
         return result
 
 
+# Directory:
 class Directory(Node):
+
     # Directory.__init__():
     def __init__(self, name, path, title, parent=None):
         # Verify argument types:
@@ -4746,6 +4779,7 @@ class Search(Node):
             print("{0}<=Search.xml_lines_append()".format(tracing))
 
 
+# Table:
 class Table(Node):
 
     # Table.__init__()
@@ -4920,6 +4954,7 @@ class Table(Node):
 
         return all_equal
 
+    # Table.bind_parameters_from_imports():
     def bind_parameters_from_imports(self, tracing=None):
         # Verify argument types:
         assert isinstance(tracing, str) or tracing is None
@@ -5151,6 +5186,7 @@ class Table(Node):
             print("{0}<=Table.csv_read_process('{1}', bind={2})".
                   format(tracing, csv_directory, bind))
 
+    # Table.fix_up():
     def fix_up(self, tracing=None):
         # Verify argument types:
         assert isinstance(tracing, str) or tracing is None
@@ -5346,6 +5382,7 @@ class Table(Node):
         xml_lines.append('{0}</Table>'.format(indent))
 
 
+# Order:
 class Order:
     # An Order consists of a list of projects to orders parts for.
     # In addition, the list of vendors to exclude from the ordering
@@ -5367,6 +5404,7 @@ class Order:
         self.inventories = []            # List[Inventory]: Existing inventoried parts
         self.database = database
 
+    # Order.project():
     def project(self, name, revision, net_file_name, count, positions_file_name=None):
         """ *Order*: Create a *Project* containing *name*, *revision*,
             *net_file_name* and *count*. """
@@ -5385,6 +5423,7 @@ class Order:
         order.projects.append(project)
         return project
 
+    # Order.bom_write():
     def bom_write(self, bom_file_name, key_function):
         """ *Order*: Write out the BOM (Bill Of Materials) for the
             *Order* object (i.e. *self*) to *bom_file_name* ("" for stdout)
@@ -5478,6 +5517,7 @@ class Order:
         bom_file.write("Total: ${0:.2f}\n".format(total_cost))
         bom_file.close()
 
+    # Order.csv_write():
     def csv_write(self):
         """ *Order*: Write out the *Order* object (i.e. *self) BOM (Bill Of Materials)
             for each vendor as a .csv (Comma Seperated Values).
@@ -5547,6 +5587,7 @@ class Order:
             # Close *csv_file*:
             csv_file.close()
 
+    # Order.exclude_vendors_to_reduce_shipping_costs():
     def exclude_vendors_to_reduce_shipping_costs(self, choice_parts,
                                                  excluded_vendor_names, reduced_vendor_messages):
         """ *Order*: Sweep through *choice_parts* and figure out which vendors
@@ -5676,6 +5717,7 @@ class Order:
         if tracing:
             print("<=exclude_vendors_to_reduce_shipping_costs")
 
+    # Order.exclude_vendors_with_high_minimums():
     def exclude_vendors_with_high_minimums(self, choice_parts, excluded_vendor_names,
                                            reduced_vendor_messages):
         """ *Order*: Sweep through *choice* parts and figure out if the
@@ -5713,6 +5755,7 @@ class Order:
                   "Excluding '{0}': needed order {1} < minimum order {2}\n".
                   format(vendor_name, vendor_total_cost, vendor_minimum_cost))
 
+    # Order.final_choice_parts_compute():
     def final_choice_parts_compute(self):
         """ *Order*: Return a list of final *ChoicePart* objects to order
             for the the *Order* object (i.e. *self*).  This routine also
@@ -5819,6 +5862,7 @@ class Order:
 
         return final_choice_parts
 
+    # Order.footprints_check():
     def footprints_check(self, final_choice_parts):
         """ *Order*: Verify that footprints exist. """
 
@@ -5872,6 +5916,7 @@ class Order:
                 print("Footprint '{0}' does not exist for '{1}'".
                       format(footprint_path, kicad_footprints[footprint_name]))
 
+    # Order.positions_process():
     def positions_process(self):
         """ *Order*: Process any Pick and Place `.csv` or `.pos` file.
         """
@@ -5882,6 +5927,7 @@ class Order:
         for project in projects:
             project.positions_process(database)
 
+    # Order.process():
     def process(self):
         """ *Order*: Process the *Order* object (i.e. *self*.) """
 
@@ -6028,6 +6074,7 @@ class Order:
 
         # print("<=Order.process()")
 
+    # Order.quad_compute():
     def quad_compute(self, choice_parts, excluded_vendor_names,
                      excluded_vendor_name, trace=False):
         """ *Order*: Return quad tuple of the form:
@@ -6101,6 +6148,7 @@ class Order:
 
         return quad
 
+    # Order.xxxrequest():
     def xxxrequest(self, name, amount):
         """ *Order*: Request *amount* parts named *name*. """
 
@@ -6125,6 +6173,7 @@ class Order:
             total_cost += choice_part.selected_total_cost
         print("Total Cost: {0}".format(total_cost))
 
+    # Order.summary_print():
     def summary_print(self, choice_parts, excluded_vendor_names):
         """ *Order*: Print a summary of the selected vendors.
         """
@@ -6152,6 +6201,7 @@ class Order:
                     vendor_cost += choice_part.selected_total_cost
             print("    {0}: ${1:.2f}".format(vendor_name, vendor_cost))
 
+    # Order.vendor_exclude():
     def vendor_exclude(self, vendor_name):
         """ *Order*: Exclude *vendor_name* from the *Order* object (i.e. *self*)
         """
@@ -6162,6 +6212,7 @@ class Order:
         # Mark *vendor_name* from being selectable:
         self.excluded_vendor_names[vendor_name] = None
 
+    # Order.vendor_names_get():
     def vendor_names_get(self, choice_parts, excluded_vendor_names):
         """ *Order*: Return all possible vendor names for *choice_parts*:
         """
@@ -6179,6 +6230,7 @@ class Order:
         # Return the sorted list of vendor names:
         return tuple(sorted(vendor_names_table.keys()))
 
+    # Order.vendors_select():
     def vendors_select(self, selected_vendor_names):
         """ *Order*: Force the selected vendors for the *order* object (i.e. *self*)
             to *selected_vendors.
@@ -6194,6 +6246,7 @@ class Order:
         order.selected_vendor_names = selected_vendor_names
 
 
+# Parameter():
 class Parameter:
 
     # Parameter.__init__():
@@ -6385,9 +6438,11 @@ class PosePart:
         pose_part.install = (comment != "DNI")
 
 
+# PositionRow:
 class PositionRow:
     """ PositionRow: Represents one row of data for a *PositionsTable*: """
 
+    # PositionRow.__init__():
     def __init__(self, reference, value, package, x, y,
                  rotation, feeder_name, pick_dx, pick_dy, side, part_height):
         """ *PositionRow*: ...
@@ -6423,6 +6478,7 @@ class PositionRow:
         position_row.pick_dx = pick_dx
         position_row.pick_dy = pick_dx
 
+    # PositionsRow.as_strings():
     def as_strings(self, mapping, feeders):
         """ *PositionsRow*: Return a list of formatted strings.
 
@@ -6448,6 +6504,7 @@ class PositionRow:
         row_strings[mapping[6]] = positions_row.side
         return row_strings
 
+    # PositionsRow.part_rotate():
     def part_rotate(self, rotation_adjust):
         """ *PostitionRow*: """
 
@@ -6462,6 +6519,7 @@ class PositionRow:
             rotation -= 360.0
         row.rotation = rotation
 
+    # PositionsRow.translate():
     def translate(self, dx, dy):
         """
         """
@@ -6471,9 +6529,11 @@ class PositionRow:
         row.y += dy
 
 
+# PositionsTable:
 class PositionsTable:
     """ PositionsTable: Represents a part positining table for a Pick and Place machine. """
 
+    # PositionsTable.__init__():
     def __init__(self, file_name, database):
         """ *PositionsTable*: Initialize the *PositionsTable* object read in from *file_name*:
 
@@ -6670,6 +6730,7 @@ class PositionsTable:
         positions_table.row_table = row_table
         positions_table.trailers = trailers
 
+    # PositionsTable.footprints_rotate():
     def footprints_rotate(self, database):
         """ *Positions_Table: ..."""
 
@@ -6698,6 +6759,7 @@ class PositionsTable:
                       format(feeder_name, file_name))
         positions_table.write("/tmp/" + file_name)
 
+    # PositionsTable.reorigin():
     def reorigin(self, reference):
         """
         """
@@ -6710,6 +6772,7 @@ class PositionsTable:
             dy = -row.y
             positions.translate(dx, dy)
 
+    # PositionsTable.translate():
     def translate(self, dx, dy):
         """
         """
@@ -6719,6 +6782,7 @@ class PositionsTable:
         for row in rows:
             row.translate(dx, dy)
 
+    # PositionsTable.write():
     def write(self, file_name):
         """ *PositionsTable*: Write out the *PostionsTable* object to *file_name*.
 
@@ -6808,11 +6872,13 @@ class PositionsTable:
             output_file.write("\r\n".join(final_lines))
 
 
-class Price_Break:
+# PriceBreak:
+class PriceBreak:
     # A price break is where a the pricing changes:
 
+    # PriceBreak.__init__():
     def __init__(self, quantity, price):
-        """ *Price_Break*: Initialize *self* to contain *quantity*
+        """ *PriceBreak*: Initialize *self* to contain *quantity*
             and *price*.  """
 
         # Verify argument types:
@@ -6825,8 +6891,9 @@ class Price_Break:
         self.order_quantity = 0
         self.order_price = 0.00
 
+    # PriceBreak.__format__():
     def __format__(self, format):
-        """ *Price_Break*: Return the *Price_Break* object as a human redable string.
+        """ *PriceBreak*: Return the *PriceBreak* object as a human redable string.
         """
 
         price_break = self
@@ -6836,8 +6903,9 @@ class Price_Break:
         print("Result='{0}'".format(result))
         return result
 
+    # PriceBreak.compute():
     def compute(self, needed):
-        """ *Price_Break*: """
+        """ *PriceBreak*: """
 
         assert isinstance(needed, int)
 
@@ -6847,6 +6915,7 @@ class Price_Break:
 
 # Project:
 class Project:
+
     # Project.__init__():
     def __init__(self, name, revision, net_file_name, count, order, positions_file_name=None):
         """ Initialize a new *Project* object (i.e. *self*) containing *name*, *revision*,
@@ -7310,6 +7379,7 @@ class Project:
         positions_table.footprints_rotate(database)
 
 
+# ProjectPart:
 class ProjectPart:
     # A *ProjectPart* represents part with a footprint.  The schematic
     # part name must adhere to the format of "name;footprint:comment", where
@@ -7318,6 +7388,7 @@ class ProjectPart:
     # footprints associated with "name".  A *ProjectPart* is always
     # sub-classed by one of *ChoicePart*, *AliasPart*, or *FractionalPart*.
 
+    # ProjectPart.__init__():
     def __init__(self, project_part_name, kicad_footprint):
         """ *ProjectPart*: Initialize *self* to contain
             *project_part_name*, and *kicad_footprint*. """
@@ -7344,6 +7415,7 @@ class ProjectPart:
             print("Schematic Part Name '{0}' has no ';' separator!".
                   format(project_part_name))
 
+    # Project.__format__():
     def __format__(self, format):
         """ *ProjectPart*: Format the *ProjectPart* object (i.e. *self*) using *format***. """
 
@@ -7354,6 +7426,7 @@ class ProjectPart:
             # Long format:
             return "{0};{1}::{2}".format(self.base_name, self.short_footprint, self.kicad_footprint)
 
+    # Project.footprints_check():
     def footprints_check(self, kicad_footprints):
         """ *ProjectPart*: Verify that all the footprints exist for the *ProjectPart* object
             (i.e. *self*.)
@@ -7362,9 +7435,11 @@ class ProjectPart:
         assert False, "No footprints_check method for this Schematic Part"
 
 
+# AliasPart():
 class AliasPart(ProjectPart):
     # An *AliasPart* specifies one or more *ProjectParts* to use.
 
+    # AliasPart.__init__():
     def __init__(self, project_part_name, project_parts, kicad_footprint,
                  feeder_name=None, part_height=None, pick_dx=0.0, pick_dy=0.0):
         """ *AliasPart*: Initialize *self* to contain *project_part_name*,
@@ -7391,6 +7466,7 @@ class AliasPart(ProjectPart):
         alias_part.pick_dx = pick_dx
         alias_part.pick_dy = pick_dy
 
+    # AliasPart.choice_parts():
     def choice_parts(self):
         """ *AliasPart*: Return a list of *ChoicePart*'s corresponding to *self*
         """
@@ -7404,6 +7480,7 @@ class AliasPart(ProjectPart):
         #  "No choice parts for '{0}'".format(self.project_part_name)
         return choice_parts
 
+    # AliasPart.footprints_check():
     def footprints_check(self, kicad_footprints):
         """ *AliasPart*: Verify that all the footprints exist for the *AliasPart* object
             (i.e. *self*.)
@@ -7421,9 +7498,11 @@ class AliasPart(ProjectPart):
             project_part.footprints_check(kicad_footprints)
 
 
+# ChoicePart:
 class ChoicePart(ProjectPart):
     # A *ChoicePart* specifies a list of *ActualPart*'s to choose from.
 
+    # ChoicePart.__init__():
     def __init__(self, project_part_name, kicad_footprint,
                  location, description, rotation, pick_dx, pick_dy, feeder_name, part_height):
         """ *ChoicePart*: Initiailize *self* to contain *project_part_name*
@@ -7464,6 +7543,7 @@ class ChoicePart(ProjectPart):
         choice_part.selected_price_break_index = -1
         choice_part.selected_price_break = None
 
+    # ChoicePart.__format__():
     def __format__(self, format):
         """ *ChoicePart*: Return the *ChoicePart object (i.e. *self* as a string formatted by
             *format*.
@@ -7475,6 +7555,7 @@ class ChoicePart(ProjectPart):
             result = "{0};{1}".format(self.base_name, self.short_footprint)
         return result
 
+    # ChoicePart.actual_part():
     def actual_part(self, manufacturer_name, manufacturer_part_name, vendor_triples=[]):
         """ *ChoicePart*: Create an *ActualPart* that contains *manufacturer_name* and
             *manufacturer_part_name* and append it to the *ChoicePart* object (i.e. *self*.)
@@ -7533,7 +7614,7 @@ class ChoicePart(ProjectPart):
                           "Price '{0}' is not a float".format(price_pair[1])
 
                     # Construct the *price_break* and append to *price_breaks*:
-                    price_break = Price_Break(quantity, price)
+                    price_break = PriceBreak(quantity, price)
                     price_breaks.append(price_break)
 
                 # Create the *vendor_part* and append it to *actual_part*:
@@ -7549,6 +7630,7 @@ class ChoicePart(ProjectPart):
 
         return self
 
+    # ChoicePart.pose_part_append():
     def pose_part_append(self, pose_part):
         """ *ChoicePart*: Store *pose_part* into the *ChoicePart* object
             (i.e. *self*.)
@@ -7560,6 +7642,7 @@ class ChoicePart(ProjectPart):
         # Append *pose_part* to *pose_parts*:
         self.pose_parts.append(pose_part)
 
+    # ChoicePart.pose_parts_sort():
     def pose_parts_sort(self):
         """ *ChoicePart*: Sort the *pose_parts* of the *ChoicePart* object
             (i.e. *self*.)
@@ -7579,6 +7662,7 @@ class ChoicePart(ProjectPart):
         # choice_part.kicad_footprint, choice_part.description,
         #  choice_part.count_get(), choice_part.references_text_get()))
 
+    # ChoicePart.count_get():
     def count_get(self):
         """ *ChoicePart*: Return the number of needed instances of *self*. """
 
@@ -7630,6 +7714,7 @@ class ChoicePart(ProjectPart):
 
         return count
 
+    # ChoicePart.choice_parts():
     def choice_parts(self):
         """ *ChoicePart*: Return a list of *ChoicePart* corresponding
             to *self* """
@@ -7637,6 +7722,7 @@ class ChoicePart(ProjectPart):
         assert isinstance(self, ChoicePart)
         return [self]
 
+    # ChoicePart.footprints_check():
     def footprints_check(self, kicad_footprints):
         """ *ChoicePart*: Verify that all the footprints exist for the *ChoicePart* object
             (i.e. *self*.)
@@ -7653,6 +7739,7 @@ class ChoicePart(ProjectPart):
             kicad_footprints[kicad_footprint] = choice_part.project_part_name
             # rotation = choice_part.rotation
 
+    # ChoicePart.references_text_get():
     def references_text_get(self):
         """ *ChoicePart*: Return a string of references for *self*. """
 
@@ -7673,6 +7760,7 @@ class ChoicePart(ProjectPart):
         references_text += "]"
         return references_text
 
+    # ChoicePart.select():
     def select(self, excluded_vendor_names, announce=False):
         """ *ChoicePart*: Select and return the best priced *ActualPart*
             for the *ChoicePart* (i.e. *self*) excluding any vendors
@@ -7794,6 +7882,7 @@ class ChoicePart(ProjectPart):
             print("<=ChoicePart.select()\n")
         return missing_part
 
+    # ChoicePart.vendor_names_load():
     def vendor_names_load(self, vendor_names_table, excluded_vendor_names):
         """ *ChoicePart*: Add each possible vendor name possible for the
             *ChoicePart* object (i.e. *self*) to *vendor_names_table*
@@ -7811,10 +7900,12 @@ class ChoicePart(ProjectPart):
               vendor_names_table, excluded_vendor_names)
 
 
+# FractionalPart:
 class FractionalPart(ProjectPart):
     # A *FractionalPart* specifies a part that is constructed by
     # using a portion of another *ProjectPart*.
 
+    # FractionalPart.__init__():
     def __init__(self, project_part_name, kicad_footprint,
                  choice_part, numerator, denominator, description):
         """ *FractionalPart*: Initialize *self* to contain
@@ -7833,6 +7924,7 @@ class FractionalPart(ProjectPart):
         self.denominator = denominator
         self.description = description
 
+    # FractionalPart.choice_parts():
     def choice_parts(self):
         """ *FractionalPart*: Return the *ChoicePart* objects associated
             with *self*.
@@ -7842,6 +7934,7 @@ class FractionalPart(ProjectPart):
         choice_part.fractional_parts.append(self)
         return [choice_part]
 
+    # FractionalPart.footprints_check():
     def footprints_check(self, kicad_footprints):
         """ *FractionalPart*: Verify that all the footprints exist for the *FractionalPart* object
             (i.e. *self*.)
@@ -10517,6 +10610,7 @@ class TablesEditor(QMainWindow):
             print("{0}<=TablesEditor.search_update(*)".format(tracing))
 
 
+# TreeModel:
 class TreeModel(QAbstractItemModel):
 
     FLAG_DEFAULT = Qt.ItemIsEnabled | Qt.ItemIsSelectable
@@ -10614,6 +10708,7 @@ class TreeModel(QAbstractItemModel):
 
     # called if canFetchMore returns True, then dynamically inserts nodes required for
     # directory contents
+
     # TreeModel.fetchMore():
     def fetchMore(self, model_index):
         # Verify argument types:
@@ -10711,6 +10806,7 @@ class TreeModel(QAbstractItemModel):
         print("<=TreeModle.fetchMore()\n")
 
     # takes a model index and returns the related Python node
+
     # TreeModel.getNode():
     def getNode(self, model_index):
         # Verify argument types:
@@ -10722,6 +10818,7 @@ class TreeModel(QAbstractItemModel):
         return node
 
     # returns True for directory nodes so that Qt knows to check if there is more to load
+
     # TreeModel.hasChildren():
     def hasChildren(self, model_index):
         # Verify argument types:
@@ -10838,10 +10935,13 @@ class TreeModel(QAbstractItemModel):
         return node.child_count()
 
 
+# Units:
 class Units:
+    # Units.__init():
     def __init__(self):
         pass
 
+    # Units.si_units_re_text_get():
     @staticmethod
     def si_units_re_text_get():
         base_units = (
@@ -10884,9 +10984,11 @@ class Units:
         return si_units_re_text
 
 
+# VendorPart:
 class VendorPart:
     # A vendor part represents a part that can be ordered from a vendor.
 
+    # VendorPart.__init__():
     def __init__(self, actual_part, vendor_name, vendor_part_name,
                  quantity_available, price_breaks, timestamp=0.0):
         """ *VendorPart*: Initialize *self* to contain *actual_part"""
@@ -10902,7 +11004,7 @@ class VendorPart:
         assert isinstance(price_breaks, list)
         assert isinstance(timestamp, float)
         for price_break in price_breaks:
-            assert isinstance(price_break, Price_Break)
+            assert isinstance(price_break, PriceBreak)
 
         # Clean up *vendor_name*:
         # original_vendor_name = vendor_name
@@ -10929,6 +11031,7 @@ class VendorPart:
         # Append *self* to the vendor parts of *actual_part*:
         actual_part.vendor_part_append(self)
 
+    # VendorPart.__format__():
     def __format__(self, format):
         """ *VendorPart*: Print out the information of the *VendorPart* (i.e. *self*):
         """
@@ -10939,6 +11042,7 @@ class VendorPart:
         # price_breaks = vendor_part.price_breaks
         return "'{0}':'{1}'".format(vendor_name, vendor_part_name)
 
+    # VendorPart.dump():
     def dump(self, out_stream, indent):
         """ *VendorPart*: Dump the *VendorPart* (i.e. *self*) out to
             *out_stream* in human readable form indented by *indent* spaces.
@@ -10959,9 +11063,10 @@ class VendorPart:
                          format(" " * indent, self.vendor_part_name))
         out_stream.write("{0}Quantity_Available:{1}\n".
                          format(" " * indent, self.quantity_available))
-        out_stream.write("{0}Price_Breaks: (skip)\n".
+        out_stream.write("{0}PriceBreaks: (skip)\n".
                          format(" " * indent))
 
+    # VendorPart.price_breaks_text_get():
     def price_breaks_text_get(self):
         """ *VendorPart*: Return the prices breaks for the *VendorPart*
             object (i.e. *self*) as a text string:
