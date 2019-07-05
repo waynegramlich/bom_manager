@@ -266,35 +266,35 @@ import webbrowser
 # essentially provides a mapping from a *Schematic_Symbol_Name" to a list of
 # acceptable manufacturer parts, which in turn provides a mapping to
 # acceptable vendor parts.  There are three sub-classes of *ProjectPart* --
-# *Choice_Part*, *Alias_Part*, and *Fractional_Part*.  As the algorithm
-# proceeds, all *Alias_Part*'s and *Fractional_Part*'s are converted into
-# associated *Choice_Part*'s.  Thus, *Choice_Part* is the most important
+# *ChoicePart*, *AliasPart*, and *FractionalPart*.  As the algorithm
+# proceeds, all *AliasPart*'s and *FractionalPart*'s are converted into
+# associated *ChoicePart*'s.  Thus, *ChoicePart* is the most important
 # sub-class of *ProjectPart*.
 #
-# *Choice_Part*: A *Choice_Part* is sub-classed from *ProjectPart*
-# and lists one or more acceptable *Actual_Part*'s. (An actual part
-# is one-to-one with a manufacturer part -- see below.)  A *Choice_Part*
+# *ChoicePart*: A *ChoicePart* is sub-classed from *ProjectPart*
+# and lists one or more acceptable *ActualPart*'s. (An actual part
+# is one-to-one with a manufacturer part -- see below.)  A *ChoicePart*
 # also specifies a full KiCad Footprint.
 #
-# *Alias_Part*: An *Alias_Part* is also sub-classed from *ProjectPart*
+# *AliasPart*: An *AliasPart* is also sub-classed from *ProjectPart*
 # and specifies one or more *ProjectParts* to substitute.
 #
-# *Fractional_Part*: A *Fractional_Part* is also sub-classed from
+# *FractionalPart*: A *FractionalPart* is also sub-classed from
 # *ProjectPart* and corresponds to a 1xN or 2xN break away header.
 # It is common special case that specifies a smaller number of pins
 # than the full length header.
 #
-# *Actual_Part*: An *Actual_Part* should probably have been defined
-# as a *Manufacturer_Part*.  An *Actual_Part* consists of a *Manufacturer*
+# *ActualPart*: An *ActualPart* should probably have been defined
+# as a *Manufacturer_Part*.  An *ActualPart* consists of a *Manufacturer*
 # (e.g "Atmel"), and Manufacturer part name (e.g. "ATMEGA328-PU".)
 #
-# *Vendor_Part*: A *Vendor_Part* should have probably been defined
+# *VendorPart*: A *VendorPart* should have probably been defined
 # as a *Distributor_Part*.  A *Vendor* part consists of a *Vendor*
-# (e.g. "Mouser") and a *Vendor_Part_Name* (e.g. "123-ATMEGA328-PU").
+# (e.g. "Mouser") and a *VendorPart_Name* (e.g. "123-ATMEGA328-PU").
 #
 # Notice that there are 6 different part classes:  *ProjectPart*,
-# *Choice_Part*, *Alias_Part*, *Fractional_Part*, *Actual_Part* and
-# *Vendor_Part*.  Having this many different part classes is needed
+# *ChoicePart*, *AliasPart*, *FractionalPart*, *ActualPart* and
+# *VendorPart*.  Having this many different part classes is needed
 # to precisely keep track of everything.
 #
 # There are a few more classes to worry about:
@@ -315,38 +315,38 @@ import webbrowser
 #
 # There are three sub_classes of *ProjectPart*:
 #
-# * Choice_Part*: A list of possible *Actual_Part*'s to choose from.
+# * ChoicePart*: A list of possible *ActualPart*'s to choose from.
 #
-# * Alias_Part*: An alias specifies one or more schematic parts to
+# * AliasPart*: An alias specifies one or more schematic parts to
 #   redirect to.
 #
-# * Fractional_Part*: A fractional part is an alias to another schematic
+# * FractionalPart*: A fractional part is an alias to another schematic
 #   part that specifes a fraction of the part.  A fractional part is
 #   usually a 1x40 or 2x40 break-away male header.  They are so common
 #   they must be supported.
 #
 # Now the algorithm iterates through each *ProjectPart* to convert
-# each *Fractional_Part* and *Alias_Part* into *Choice_Part*.
+# each *FractionalPart* and *AliasPart* into *ChoicePart*.
 # Errors are flagged.
 #
-# The *Database* maintains a list of *Vendor*'s and *Vendor_Parts*.
+# The *Database* maintains a list of *Vendor*'s and *VendorParts*.
 #
-# For each *Choice_Part*, the *Actual_Part* list is iterated over.
+# For each *ChoicePart*, the *ActualPart* list is iterated over.
 # (Warning: the code has evolved somewhat here...)
-# Octopart is queried to find build up a *Vendor_Part* list.  The
+# Octopart is queried to find build up a *VendorPart* list.  The
 # queries are cached to avoid making excessive queries to Octopart.
-# Only *Actual_Part*'s that are not in the cache get sent off to
+# Only *ActualPart*'s that are not in the cache get sent off to
 # Octopart to fill the cache.  A log of Octopart quries is kept to
 # get an idea of how often the database is queried.  It may be the
 # case that there is a flag that disables queries until the user
 # explicitly asks for it.
 #
-# Now that there is a list of *Vendor_Part*'s for each *Actual_Part*,
-# the lowest cost *Vendor_Part* is selected based on the number of
-# *Actual_Part*'s needed.  The code identifies the cheapest *Vendor_Part*
+# Now that there is a list of *VendorPart*'s for each *ActualPart*,
+# the lowest cost *VendorPart* is selected based on the number of
+# *ActualPart*'s needed.  The code identifies the cheapest *VendorPart*
 # and it may adjust the quantity ordered up to get the benefit of a
 # price break.  This is where vendor exclusion occurs.  Errors are
-# generated if there are no *Vendor_Part* left due to exclusion or
+# generated if there are no *VendorPart* left due to exclusion or
 # unavailable stock.
 #
 # Now various reports are generated based on sorting by vendor,
@@ -534,12 +534,12 @@ def text_filter(text, function):
     return "".join([character for character in text if function(character)])
 
 
-class Actual_Part:
-    # An *Actual_Part* represents a single manufacturer part.
+class ActualPart:
+    # An *ActualPart* represents a single manufacturer part.
     # A list of vendor parts specifies where the part can be ordered from.
 
     def __init__(self, manufacturer_name, manufacturer_part_name):
-        """ *Actual_Part*: Initialize *self* to contain *manufacturer* and
+        """ *ActualPart*: Initialize *self* to contain *manufacturer* and
             *manufacturer_part_name*. """
 
         # Verify argument_types:
@@ -558,7 +558,7 @@ class Actual_Part:
         self.selected_vendor_part = None
 
     def vendor_part_append(self, vendor_part):
-        """ *Actual_Part: Append *vendor_part* to the vendor parts
+        """ *ActualPart: Append *vendor_part* to the vendor parts
             of *self*. """
 
         actual_part = self
@@ -568,12 +568,12 @@ class Actual_Part:
         if tracing:
             print("appending part")
             assert False
-        assert isinstance(vendor_part, Vendor_Part)
+        assert isinstance(vendor_part, VendorPart)
         self.vendor_parts.append(vendor_part)
 
     def vendor_names_load(self, vendor_names_table, excluded_vendor_names):
-        """ *Actual_Part*:*: Add each possible to vendor name for the
-            *Actual_Part* object (i.e. *self*) to *vendor_names_table*:
+        """ *ActualPart*:*: Add each possible to vendor name for the
+            *ActualPart* object (i.e. *self*) to *vendor_names_table*:
         """
 
         # Verify argument types:
@@ -1578,7 +1578,7 @@ class Database:
             for actual_key in pickled_vendor_parts_cache.keys():
                 vendor_parts = pickled_vendor_parts_cache[actual_key]
                 for vendor_part in vendor_parts:
-                    assert isinstance(vendor_part, Vendor_Part)
+                    assert isinstance(vendor_part, VendorPart)
                     if vendor_part.timestamp < old:
                         del vendor_parts[vendor_part.vendor_key]
                 if len(vendor_parts) > 0:
@@ -3271,7 +3271,7 @@ class Database:
         for project_part in self.project_parts.values():
             # print("project_part: {0}".
             #  format(project_part.project_part_name))
-            if isinstance(project_part, Choice_Part):
+            if isinstance(project_part, ChoicePart):
                 choice_part = project_part
                 for actual_part in choice_part.actual_parts:
                     actual_part_key = actual_part.key
@@ -3279,7 +3279,7 @@ class Database:
                         print("'{0}' is a duplicate".format(actual_part_key))
                     else:
                         actual_parts[actual_part_key] = actual_part
-                        # print("Insert Actual_Part '{0} {1}'".format(
+                        # print("Insert ActualPart '{0} {1}'".format(
                         # actual_part.manufacturer_name,
                         # actual_part.manufacturer_part_name))
 
@@ -3327,7 +3327,7 @@ class Database:
 
     def alias_part(self, project_part_name, alias_part_names,
                    kicad_footprint="", feeder_name=None, rotation=None, part_height=None):
-        """ *Database*: Create *Alias_Part* named *project_part_name* and containing
+        """ *Database*: Create *AliasPart* named *project_part_name* and containing
             *alias_names* and stuff it into the *Database* object (i.e. *self*).
             Each item in *alias_part_names* can be either a simple string or a tuple.
             A tuple has the form of (count, "project_part_name") and means that we need *count*
@@ -3379,13 +3379,13 @@ class Database:
         # assert len(alias_parts) == 1, "alias_parts={0}".format(alias_parts)
         # if isinstance(feeder_name, str):
         #    footprint = database.footprint(feeder_name, rotation)
-        alias_part = Alias_Part(project_part_name,
+        alias_part = AliasPart(project_part_name,
                                 alias_parts, kicad_footprint, feeder_name, part_height)
         return database.insert(alias_part)
 
     def choice_part(self, project_part_name, kicad_footprint, location, description,
                     rotation=None, pick_dx=0.0, pick_dy=0.0, feeder_name=None, part_height=None):
-        """ *Database*: Add a *Choice_Part* to *self*. """
+        """ *Database*: Add a *ChoicePart* to *self*. """
 
         # Verify argument types:
         assert isinstance(project_part_name, str)
@@ -3410,7 +3410,7 @@ class Database:
         database = self
         # if isinstance(feeder_name, str):
         #    footprint = database.footprint(feeder_name, rotation)
-        choice_part = Choice_Part(project_part_name, kicad_footprint, location, description,
+        choice_part = ChoicePart(project_part_name, kicad_footprint, location, description,
                                   rotation, pick_dx, pick_dy, feeder_name, part_height)
 
         return database.insert(choice_part)
@@ -3445,12 +3445,12 @@ class Database:
         return exchange_rate
 
     def findchips_scrape(self, actual_part):
-        """ *Database*: Return a list of *Vendor_Parts* associated with
+        """ *Database*: Return a list of *VendorParts* associated with
             *actual_part* scraped from the findchips.com web page.
         """
 
         # Verify argument types:
-        assert isinstance(actual_part, Actual_Part)
+        assert isinstance(actual_part, ActualPart)
 
         # Grab some values from *actual_part*:
         manufacturer_name = actual_part.manufacturer_name
@@ -3519,7 +3519,7 @@ class Database:
             if vendor_name is None:
                 continue
 
-            # This code is in the *Vendor_Part* initialize now:
+            # This code is in the *VendorPart* initialize now:
             # Strip some boring stuff off the end of *vendor_name*:
             # vendor_name = text_filter(vendor_name, str.isprintable)
             # if vendor_name.endswith("Authorized Distributor"):
@@ -3654,7 +3654,7 @@ class Database:
                     # *vendor_parts*:
                     if original_manufacturer_part_name == manufacturer_part_name:
                         now = time.time()
-                        vendor_part = Vendor_Part(actual_part, vendor_name, vendor_part_name,
+                        vendor_part = VendorPart(actual_part, vendor_name, vendor_part_name,
                                                   stock, price_breaks, now)
                         vendor_parts.append(vendor_part)
 
@@ -3723,7 +3723,7 @@ class Database:
 
     def fractional_part(self, project_part_name, kicad_footprint,
                         whole_part_name, numerator, denominator, description):
-        """ *Database*: Insert a new *Fractional_Part* named
+        """ *Database*: Insert a new *FractionalPart* named
             *project_part_name* and containing *whole_part_name*,
             *numerator*, *denominator*, and *description* in to the
             *Database* object (i.e. *self*.) """
@@ -3741,7 +3741,7 @@ class Database:
             whole_part = project_parts[whole_part_name]
 
             # Verify argument types:
-            fractional_part = Fractional_Part(project_part_name, kicad_footprint,
+            fractional_part = FractionalPart(project_part_name, kicad_footprint,
                                               whole_part, numerator, denominator, description)
             self.insert(fractional_part)
         else:
@@ -3785,7 +3785,7 @@ class Database:
         for vendor_parts in vendor_parts_cache.values():
             assert isinstance(vendor_parts, list)
             for vendor_part in vendor_parts:
-                assert isinstance(vendor_part, Vendor_Part)
+                assert isinstance(vendor_part, VendorPart)
 
         bom_pickle_file = open(self.bom_parts_file_name, "wb")
         pickle.dump(self.vendor_parts_cache, bom_pickle_file)
@@ -3822,7 +3822,7 @@ class Database:
                 print("Vendor Part: '{0} {1}' is duplicated in database".
                       format(vendor_name, vendor_part_name))
             else:
-                vendor_part = Vendor_Part(actual_part,
+                vendor_part = VendorPart(actual_part,
                                           vendor_name, vendor_part_name, 10000, price_breaks)
                 vendor_parts[vendor_part_key] = vendor_part
         else:
@@ -5389,7 +5389,7 @@ class Order:
         """ *Order*: Write out the BOM (Bill Of Materials) for the
             *Order* object (i.e. *self*) to *bom_file_name* ("" for stdout)
             using *key_function* to provide the sort key for each
-            *Choice_Part*.
+            *ChoicePart*.
         """
 
         # Verify argument types:
@@ -5412,7 +5412,7 @@ class Order:
         total_cost = 0.0
         for choice_part in final_choice_parts:
             # Make sure that nonething nasty got into *final_choice_parts*:
-            assert isinstance(choice_part, Choice_Part)
+            assert isinstance(choice_part, ChoicePart)
 
             # Sort the *pose_parts* by *project* followed by reference:
             pose_parts = choice_part.pose_parts
@@ -5434,9 +5434,9 @@ class Order:
             selected_total_cost = choice_part.selected_total_cost
             selected_price_break_index = choice_part.selected_price_break_index
 
-            if isinstance(selected_vendor_part, Vendor_Part):
+            if isinstance(selected_vendor_part, VendorPart):
                 # Grab the *vendor_name*:
-                assert isinstance(selected_vendor_part, Vendor_Part)
+                assert isinstance(selected_vendor_part, VendorPart)
                 # vendor_name = selected_vendor_part.vendor_name
 
                 # Show the *price breaks* on each side of the
@@ -5496,7 +5496,7 @@ class Order:
 
         vendor_boms = {}
         for choice_part in final_choice_parts:
-            assert isinstance(choice_part, Choice_Part)
+            assert isinstance(choice_part, ChoicePart)
 
             # Sort the *pose_parts* by *project* followed by reference:
             pose_parts = choice_part.pose_parts
@@ -5510,9 +5510,9 @@ class Order:
             selected_vendor_part = choice_part.selected_vendor_part
             selected_order_quantity = choice_part.selected_order_quantity
 
-            if isinstance(selected_vendor_part, Vendor_Part):
+            if isinstance(selected_vendor_part, VendorPart):
                 # Grab the *vendor_name* and *vendor_part_name*:
-                assert isinstance(selected_vendor_part, Vendor_Part)
+                assert isinstance(selected_vendor_part, VendorPart)
                 vendor_name = selected_vendor_part.vendor_name
                 # vendor_part_name = selected_vendor_part.vendor_name
 
@@ -5714,10 +5714,10 @@ class Order:
                   format(vendor_name, vendor_total_cost, vendor_minimum_cost))
 
     def final_choice_parts_compute(self):
-        """ *Order*: Return a list of final *Choice_Part* objects to order
+        """ *Order*: Return a list of final *ChoicePart* objects to order
             for the the *Order* object (i.e. *self*).  This routine also
             has the side effect of looking up the vendor information for
-            each selected *Choice_Part* object.
+            each selected *ChoicePart* object.
         """
 
         # Grab the *projects* and *database*:
@@ -5728,8 +5728,8 @@ class Order:
         projects.sort(key=lambda project: project.name)
 
         # Visit each *project* in *projects* to locate the associated
-        # *Choice_Part* objects.  We want to eliminate duplicate
-        # *Choice_Part* objects, so we use *choice_parts_table* to
+        # *ChoicePart* objects.  We want to eliminate duplicate
+        # *ChoicePart* objects, so we use *choice_parts_table* to
         # eliminate duplicates.
         choice_parts_table = {}
         for project in projects:
@@ -5758,7 +5758,7 @@ class Order:
                 for choice_part in choice_parts:
                     # Do some consistency checking:
                     choice_part_name = choice_part.project_part_name
-                    assert isinstance(choice_part, Choice_Part), ("Not a choice part '{0}'".format(
+                    assert isinstance(choice_part, ChoicePart), ("Not a choice part '{0}'".format(
                                                                   choice_part_name))
 
                     # Make sure *choice_part* is in *choice_parts_table*
@@ -5780,7 +5780,7 @@ class Order:
                     actual_parts = choice_part.actual_parts
                     for actual_part in actual_parts:
                         # Check for errors:
-                        assert isinstance(actual_part, Actual_Part)
+                        assert isinstance(actual_part, ActualPart)
 
                         # Get *vendor_parts* from the cache or from
                         # a screen scrape:
@@ -5810,8 +5810,8 @@ class Order:
         # Sweep through *final_choice_parts* and force the associated
         # *PosePart*'s to be in a reasonable order:
         for choice_part in final_choice_parts:
-            # Make sure that we only have *Choice_Part* objects:
-            assert isinstance(choice_part, Choice_Part)
+            # Make sure that we only have *ChoicePart* objects:
+            assert isinstance(choice_part, ChoicePart)
             choice_part.pose_parts_sort()
 
         # for choice_part in final_choice_parts:
@@ -5836,7 +5836,7 @@ class Order:
                 project_part.footprints_check(kicad_footprints)
 
                 # Sweep through aliases:
-                # while isinstance(project_part, Alias_Part):
+                # while isinstance(project_part, AliasPart):
                 #    alias_part = project_part
                 #    project_parts = alias_part.project_parts
                 #    # Conceptually, alias parts can reference one or more parts.
@@ -5845,17 +5845,17 @@ class Order:
                 #      "Multiple Schematic Parts for {0}".format(alias_part.base_name)
                 #    project_part = project_parts[0]
                 # assert isinstance(project_part, ProjectPart)
-                # assert not isinstance(project_part, Alias_Part)
+                # assert not isinstance(project_part, AliasPart)
 
                 # Dispatch on type of *project_part*.  This really should be done with
                 # with a method:
-                # if isinstance(project_part, Fractional_Part):
+                # if isinstance(project_part, FractionalPart):
                 #    fractional_part = project_part
                 #    # print("{0} is fractional {1}".
                 #    #  format(fractional_part.base_name, fractional_part.kicad_footprint))
                 #    kicad_footprints[fractional_part.kicad_footprint] = \
                 #      project_part.project_part_name
-                # elif isinstance(project_part, Choice_Part):
+                # elif isinstance(project_part, ChoicePart):
                 #    choice_part = project_part
                 #    # print("{0} is choice".format(choice_part.base_name))
                 #    kicad_footprint = choice_part.kicad_footprint
@@ -5893,12 +5893,12 @@ class Order:
         # Collect the messages from each vendor reduction operation into *reduced_vendor_messages*:
         reduced_vendor_messages = []
 
-        # We need to contruct a list of *Choice_Part* objects.  This
-        # will land in *final_choice_parts* below.   Only *Choice_Part*
+        # We need to contruct a list of *ChoicePart* objects.  This
+        # will land in *final_choice_parts* below.   Only *ChoicePart*
         # objects can actually be ordered because they list one or
-        # more *Actual_Part* objects to choose from.  Both *Alias_Part*
-        # objects and *Fractional_Part* objects eventually get
-        # converted to *Choice_Part* objects.  Once we have
+        # more *ActualPart* objects to choose from.  Both *AliasPart*
+        # objects and *FractionalPart* objects eventually get
+        # converted to *ChoicePart* objects.  Once we have
         # *final_choice_parts* it can be sorted various different ways
         # (by vendor, by cost, by part_name, etc.)
         final_choice_parts = order.final_choice_parts_compute()
@@ -5976,7 +5976,7 @@ class Order:
                 selected_price_break_index = choice_part.selected_price_break_index
 
             # Per vendor order lists need some more thought:
-            if isinstance(selected_vendor_part, Vendor_Part):
+            if isinstance(selected_vendor_part, VendorPart):
                 vendor_name = selected_vendor_part.vendor_name
                 assert False
                 vendor_files = None
@@ -6034,7 +6034,7 @@ class Order:
                (*missing_parts*, *total_cost*,
                 *vendor_priority*, *excluded_vendor_name*) where:
             * *missing_parts* is number of parts that can not be fullfilled.
-            * *total_cost* is the sum the parts costs for all *Choice_Part*
+            * *total_cost* is the sum the parts costs for all *ChoicePart*
               objects in *choice_parts* that do not use any vendors in
               *excluded_vendor_names*.
             * *vendor_priority* is a sort order for *excluded_vendor_name*.
@@ -6064,8 +6064,8 @@ class Order:
         missing_parts = 0
         total_cost = 0.0
         for choice_part in choice_parts:
-            # Make sure *choice_part* is actually a *Choice_Part*:
-            assert isinstance(choice_part, Choice_Part)
+            # Make sure *choice_part* is actually a *ChoicePart*:
+            assert isinstance(choice_part, ChoicePart)
 
             # Perform the vendor selection excluding all vendors in
             # *excluded_vendor_names*:
@@ -6550,7 +6550,7 @@ class PositionsTable:
                             value = columns[heading_indices["Val"]]
                             value = value.replace('\\', "")
                             part = database.lookup(value)
-                            if isinstance(part, Choice_Part):
+                            if isinstance(part, ChoicePart):
                                 choice_part = part
                                 feeder_name = choice_part.feeder_name
                                 part_height = choice_part.part_height
@@ -6561,7 +6561,7 @@ class PositionsTable:
                                     value = feeder_name
                                     part_heights[value] = part_height
                                 # print("part_heights['{0}'] = {1}".format(value, part_height))
-                            elif isinstance(part, Alias_Part):
+                            elif isinstance(part, AliasPart):
                                 alias_part = part
                                 feeder_name = alias_part.feeder_name
                                 part_height = alias_part.part_height
@@ -7026,8 +7026,8 @@ class Project:
                         # Only do something if it changed:
                         if previous_footprint != new_footprint:
                             # Since they changed, update in place:
-                            # if isinstance(project_part, Alias_Part):
-                            #        print("**Alias_Part.footprint={0}".
+                            # if isinstance(project_part, AliasPart):
+                            #        print("**AliasPart.footprint={0}".
                             #          format(project_part.kicad_footprint))
                             print("Part '{0}': Footprint changed from '{1}' to '{2}'".
                                   format(part_name, previous_footprint, new_footprint))
@@ -7262,7 +7262,7 @@ class Project:
             project_final_pair = reference_pose_parts[reference_pose_parts_key]
             pose_part = project_final_pair[0]
             final_choice_part = project_final_pair[1]
-            assert isinstance(final_choice_part, Choice_Part)
+            assert isinstance(final_choice_part, ChoicePart)
 
             # Now get the corresponding *project_part*:
             project_part = pose_part.project_part
@@ -7272,13 +7272,13 @@ class Project:
 
             # Now get the *actual_part*:
             actual_part = final_choice_part.selected_actual_part
-            if isinstance(actual_part, Actual_Part):
+            if isinstance(actual_part, ActualPart):
 
-                # Now get the Vendor_Part:
+                # Now get the VendorPart:
                 manufacturer_name = actual_part.manufacturer_name
                 manufacturer_part_name = actual_part.manufacturer_part_name
                 vendor_part = final_choice_part.selected_vendor_part
-                assert isinstance(vendor_part, Vendor_Part)
+                assert isinstance(vendor_part, VendorPart)
 
                 # Output the line for the .csv file:
                 vendor_name = vendor_part.vendor_name
@@ -7316,7 +7316,7 @@ class ProjectPart:
     # ":comment" is optional.  The footprint name can be short (e.g. 1608,
     # QFP100, SOIC20, SOT3), since it only has to disambiguate the various
     # footprints associated with "name".  A *ProjectPart* is always
-    # sub-classed by one of *Choice_Part*, *Alias_Part*, or *Fractional_Part*.
+    # sub-classed by one of *ChoicePart*, *AliasPart*, or *FractionalPart*.
 
     def __init__(self, project_part_name, kicad_footprint):
         """ *ProjectPart*: Initialize *self* to contain
@@ -7362,12 +7362,12 @@ class ProjectPart:
         assert False, "No footprints_check method for this Schematic Part"
 
 
-class Alias_Part(ProjectPart):
-    # An *Alias_Part* specifies one or more *ProjectParts* to use.
+class AliasPart(ProjectPart):
+    # An *AliasPart* specifies one or more *ProjectParts* to use.
 
     def __init__(self, project_part_name, project_parts, kicad_footprint,
                  feeder_name=None, part_height=None, pick_dx=0.0, pick_dy=0.0):
-        """ *Alias_Part*: Initialize *self* to contain *project_part_name*,
+        """ *AliasPart*: Initialize *self* to contain *project_part_name*,
             *kicad_footprint*, and *project_parts*. """
 
         # Verify argument types:
@@ -7392,10 +7392,10 @@ class Alias_Part(ProjectPart):
         alias_part.pick_dy = pick_dy
 
     def choice_parts(self):
-        """ *Alias_Part*: Return a list of *Choice_Part*'s corresponding to *self*
+        """ *AliasPart*: Return a list of *ChoicePart*'s corresponding to *self*
         """
 
-        assert isinstance(self, Alias_Part)
+        assert isinstance(self, AliasPart)
         choice_parts = []
         for project_part in self.project_parts:
             choice_parts += project_part.choice_parts()
@@ -7405,7 +7405,7 @@ class Alias_Part(ProjectPart):
         return choice_parts
 
     def footprints_check(self, kicad_footprints):
-        """ *Alias_Part*: Verify that all the footprints exist for the *Alias_Part* object
+        """ *AliasPart*: Verify that all the footprints exist for the *AliasPart* object
             (i.e. *self*.)
         """
 
@@ -7421,12 +7421,12 @@ class Alias_Part(ProjectPart):
             project_part.footprints_check(kicad_footprints)
 
 
-class Choice_Part(ProjectPart):
-    # A *Choice_Part* specifies a list of *Actual_Part*'s to choose from.
+class ChoicePart(ProjectPart):
+    # A *ChoicePart* specifies a list of *ActualPart*'s to choose from.
 
     def __init__(self, project_part_name, kicad_footprint,
                  location, description, rotation, pick_dx, pick_dy, feeder_name, part_height):
-        """ *Choice_Part*: Initiailize *self* to contain *project_part_name*
+        """ *ChoicePart*: Initiailize *self* to contain *project_part_name*
             *kicad_footprint* and *actual_parts*. """
 
         # Use *choice_part* instead of *self*:
@@ -7465,7 +7465,7 @@ class Choice_Part(ProjectPart):
         choice_part.selected_price_break = None
 
     def __format__(self, format):
-        """ *Choice_Part*: Return the *Choice_Part object (i.e. *self* as a string formatted by
+        """ *ChoicePart*: Return the *ChoicePart object (i.e. *self* as a string formatted by
             *format*.
         """
 
@@ -7476,8 +7476,8 @@ class Choice_Part(ProjectPart):
         return result
 
     def actual_part(self, manufacturer_name, manufacturer_part_name, vendor_triples=[]):
-        """ *Choice_Part*: Create an *Actual_Part* that contains *manufacturer_name* and
-            *manufacturer_part_name* and append it to the *Choice_Part* object (i.e. *self*.)
+        """ *ChoicePart*: Create an *ActualPart* that contains *manufacturer_name* and
+            *manufacturer_part_name* and append it to the *ChoicePart* object (i.e. *self*.)
             For parts whose prices are not available via screen scraping, it is possible to specify
             vendor/pricing information as a list of vendor triples.  The vendor triples are a
             *tuple* of consisting of (*vendor_name*, *vendor_part_name*, *price_pairs_text*),
@@ -7500,7 +7500,7 @@ class Choice_Part(ProjectPart):
         # tracing = False
         # tracing = manufacturer_name == "Pololu"
 
-        actual_part = Actual_Part(manufacturer_name, manufacturer_part_name)
+        actual_part = ActualPart(manufacturer_name, manufacturer_part_name)
         self.actual_parts.append(actual_part)
 
         if True:
@@ -7538,19 +7538,19 @@ class Choice_Part(ProjectPart):
 
                 # Create the *vendor_part* and append it to *actual_part*:
                 assert len(price_breaks) > 0
-                vendor_part = Vendor_Part(actual_part,
+                vendor_part = VendorPart(actual_part,
                                           vendor_name, vendor_part_name, 1000000, price_breaks)
                 actual_part.vendor_part_append(vendor_part)
                 # if tracing:
                 #    print("vendor_part_append called")
 
-                # print("Choice_Part.actual_part(): Explicit vendor_part specified={0}".
+                # print("ChoicePart.actual_part(): Explicit vendor_part specified={0}".
                 #  format(vendor_part))
 
         return self
 
     def pose_part_append(self, pose_part):
-        """ *Choice_Part*: Store *pose_part* into the *Choice_Part* object
+        """ *ChoicePart*: Store *pose_part* into the *ChoicePart* object
             (i.e. *self*.)
         """
 
@@ -7561,7 +7561,7 @@ class Choice_Part(ProjectPart):
         self.pose_parts.append(pose_part)
 
     def pose_parts_sort(self):
-        """ *Choice_Part*: Sort the *pose_parts* of the *Choice_Part* object
+        """ *ChoicePart*: Sort the *pose_parts* of the *ChoicePart* object
             (i.e. *self*.)
         """
 
@@ -7580,7 +7580,7 @@ class Choice_Part(ProjectPart):
         #  choice_part.count_get(), choice_part.references_text_get()))
 
     def count_get(self):
-        """ *Choice_Part*: Return the number of needed instances of *self*. """
+        """ *ChoicePart*: Return the number of needed instances of *self*. """
 
         count = 0
 
@@ -7608,12 +7608,12 @@ class Choice_Part(ProjectPart):
             for pose_part in self.pose_parts:
                 project_part = pose_part.project_part
                 # print("'{0}'".format(project_part.project_part_name))
-                if isinstance(project_part, Alias_Part):
+                if isinstance(project_part, AliasPart):
                     alias_parts = project_part
                     for project_part in alias_parts.project_parts:
-                        if isinstance(project_part, Fractional_Part):
+                        if isinstance(project_part, FractionalPart):
                             fractional_part = project_part
-                elif isinstance(project_part, Fractional_Part):
+                elif isinstance(project_part, FractionalPart):
                     fractional_part = project_part
                 else:
                     assert False, "Missing code"
@@ -7631,14 +7631,14 @@ class Choice_Part(ProjectPart):
         return count
 
     def choice_parts(self):
-        """ *Choice_Part*: Return a list of *Choice_Part* corresponding
+        """ *ChoicePart*: Return a list of *ChoicePart* corresponding
             to *self* """
 
-        assert isinstance(self, Choice_Part)
+        assert isinstance(self, ChoicePart)
         return [self]
 
     def footprints_check(self, kicad_footprints):
-        """ *Choice_Part*: Verify that all the footprints exist for the *Choice_Part* object
+        """ *ChoicePart*: Verify that all the footprints exist for the *ChoicePart* object
             (i.e. *self*.)
         """
 
@@ -7654,7 +7654,7 @@ class Choice_Part(ProjectPart):
             # rotation = choice_part.rotation
 
     def references_text_get(self):
-        """ *Choice_Part*: Return a string of references for *self*. """
+        """ *ChoicePart*: Return a string of references for *self*. """
 
         references_text = ""
         previous_project = None
@@ -7674,8 +7674,8 @@ class Choice_Part(ProjectPart):
         return references_text
 
     def select(self, excluded_vendor_names, announce=False):
-        """ *Choice_Part*: Select and return the best priced *Actual_Part*
-            for the *Choice_Part* (i.e. *self*) excluding any vendors
+        """ *ChoicePart*: Select and return the best priced *ActualPart*
+            for the *ChoicePart* (i.e. *self*) excluding any vendors
             in the *excluded_vendor_names* dictionary.
         """
 
@@ -7691,7 +7691,7 @@ class Choice_Part(ProjectPart):
         tracing = False
         # tracing = self.project_part_name == "S18V20F6;S18V20Fx"
         if tracing:
-            print("=>Choice_Part.select()")
+            print("=>ChoicePart.select()")
             print(" Choice_part:{0}".format(self.project_part_name))
 
         quints = []
@@ -7773,7 +7773,7 @@ class Choice_Part(ProjectPart):
 
         # actual_parts = self.actual_parts
         # selected_actual_part = actual_parts[0]
-        # assert isinstance(selected_actual_part, Actual_Part)
+        # assert isinstance(selected_actual_part, ActualPart)
         # self.selected_actual_part = selected_actual_part
 
         # vendor_parts = selected_actual_part.vendor_parts
@@ -7784,19 +7784,19 @@ class Choice_Part(ProjectPart):
         # else:
         #    selected_actual_part.selected_vendor_part = vendor_parts[0]
 
-        # assert isinstance(selected_actual_part, Actual_Part)
+        # assert isinstance(selected_actual_part, ActualPart)
 
         missing_part = 0
         if len(quints) == 0:
             missing_part = 1
 
         if tracing:
-            print("<=Choice_Part.select()\n")
+            print("<=ChoicePart.select()\n")
         return missing_part
 
     def vendor_names_load(self, vendor_names_table, excluded_vendor_names):
-        """ *Choice_Part*: Add each possible vendor name possible for the
-            *Choice_Part* object (i.e. *self*) to *vendor_names_table*
+        """ *ChoicePart*: Add each possible vendor name possible for the
+            *ChoicePart* object (i.e. *self*) to *vendor_names_table*
             provided it is not in *excluded_vendor_names*:
         """
 
@@ -7811,20 +7811,20 @@ class Choice_Part(ProjectPart):
               vendor_names_table, excluded_vendor_names)
 
 
-class Fractional_Part(ProjectPart):
-    # A *Fractional_Part* specifies a part that is constructed by
+class FractionalPart(ProjectPart):
+    # A *FractionalPart* specifies a part that is constructed by
     # using a portion of another *ProjectPart*.
 
     def __init__(self, project_part_name, kicad_footprint,
                  choice_part, numerator, denominator, description):
-        """ *Fractional_Part*: Initialize *self* to contain
+        """ *FractionalPart*: Initialize *self* to contain
             *project_part_name*, *kicad_footprint*, *choie_part*,
             *numerator*, *denomoniator*, and *description*. """
 
         # Verify argument types:
         assert isinstance(project_part_name, str)
         assert isinstance(kicad_footprint, str)
-        assert isinstance(choice_part, Choice_Part)
+        assert isinstance(choice_part, ChoicePart)
 
         # Load up *self*:
         super().__init__(project_part_name, kicad_footprint)
@@ -7834,7 +7834,7 @@ class Fractional_Part(ProjectPart):
         self.description = description
 
     def choice_parts(self):
-        """ *Fractional_Part*: Return the *Choice_Part* objects associated
+        """ *FractionalPart*: Return the *ChoicePart* objects associated
             with *self*.
         """
 
@@ -7843,7 +7843,7 @@ class Fractional_Part(ProjectPart):
         return [choice_part]
 
     def footprints_check(self, kicad_footprints):
-        """ *Fractional_Part*: Verify that all the footprints exist for the *Fractional_Part* object
+        """ *FractionalPart*: Verify that all the footprints exist for the *FractionalPart* object
             (i.e. *self*.)
         """
 
@@ -10884,17 +10884,17 @@ class Units:
         return si_units_re_text
 
 
-class Vendor_Part:
+class VendorPart:
     # A vendor part represents a part that can be ordered from a vendor.
 
     def __init__(self, actual_part, vendor_name, vendor_part_name,
                  quantity_available, price_breaks, timestamp=0.0):
-        """ *Vendor_Part*: Initialize *self* to contain *actual_part"""
+        """ *VendorPart*: Initialize *self* to contain *actual_part"""
 
         # print("vendor_part_name=", vendor_part_name)
 
         # Check argument types:
-        assert isinstance(actual_part, Actual_Part)
+        assert isinstance(actual_part, ActualPart)
         assert isinstance(vendor_name, str)
         assert isinstance(vendor_part_name, str)
         assert isinstance(quantity_available, int), ("quantity_available={0}".format(
@@ -10930,7 +10930,7 @@ class Vendor_Part:
         actual_part.vendor_part_append(self)
 
     def __format__(self, format):
-        """ *Vendor_Part*: Print out the information of the *Vendor_Part* (i.e. *self*):
+        """ *VendorPart*: Print out the information of the *VendorPart* (i.e. *self*):
         """
 
         vendor_part = self
@@ -10940,7 +10940,7 @@ class Vendor_Part:
         return "'{0}':'{1}'".format(vendor_name, vendor_part_name)
 
     def dump(self, out_stream, indent):
-        """ *Vendor_Part*: Dump the *Vendor_Part* (i.e. *self*) out to
+        """ *VendorPart*: Dump the *VendorPart* (i.e. *self*) out to
             *out_stream* in human readable form indented by *indent* spaces.
         """
 
@@ -10949,13 +10949,13 @@ class Vendor_Part:
         assert isinstance(indent, int)
 
         # Dump out *self*:
-        out_stream.write("{0}Actual_Part_Key:{1}\n".
+        out_stream.write("{0}ActualPart_Key:{1}\n".
                          format(" " * indent, self.actual_part_key))
         out_stream.write("{0}Vendor_Key:{1}\n".
                          format(" " * indent, self.vendor_key))
         out_stream.write("{0}Vendor_Name:{1}\n".
                          format(" " * indent, self.vendor_name))
-        out_stream.write("{0}Vendor_Part_Name:{1}\n".
+        out_stream.write("{0}VendorPart_Name:{1}\n".
                          format(" " * indent, self.vendor_part_name))
         out_stream.write("{0}Quantity_Available:{1}\n".
                          format(" " * indent, self.quantity_available))
@@ -10963,7 +10963,7 @@ class Vendor_Part:
                          format(" " * indent))
 
     def price_breaks_text_get(self):
-        """ *Vendor_Part*: Return the prices breaks for the *Vendor_Part*
+        """ *VendorPart*: Return the prices breaks for the *VendorPart*
             object (i.e. *self*) as a text string:
         """
 
