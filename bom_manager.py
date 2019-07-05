@@ -261,26 +261,26 @@ import webbrowser
 # (Note: The *Schematic_Symbol_Name* has not yet been defined as a
 # Python class.)
 #
-# *Schematic_Part*: A schematic part is one-to-one with a
-# *Schematic_Symbol_Name* (excluding the comment field.)  A *Schematic_Part*
+# *ProjectPart*: A schematic part is one-to-one with a
+# *Schematic_Symbol_Name* (excluding the comment field.)  A *ProjectPart*
 # essentially provides a mapping from a *Schematic_Symbol_Name" to a list of
 # acceptable manufacturer parts, which in turn provides a mapping to
-# acceptable vendor parts.  There are three sub-classes of *Schematic_Part* --
+# acceptable vendor parts.  There are three sub-classes of *ProjectPart* --
 # *Choice_Part*, *Alias_Part*, and *Fractional_Part*.  As the algorithm
 # proceeds, all *Alias_Part*'s and *Fractional_Part*'s are converted into
 # associated *Choice_Part*'s.  Thus, *Choice_Part* is the most important
-# sub-class of *Schematic_Part*.
+# sub-class of *ProjectPart*.
 #
-# *Choice_Part*: A *Choice_Part* is sub-classed from *Schematic_Part*
+# *Choice_Part*: A *Choice_Part* is sub-classed from *ProjectPart*
 # and lists one or more acceptable *Actual_Part*'s. (An actual part
 # is one-to-one with a manufacturer part -- see below.)  A *Choice_Part*
 # also specifies a full KiCad Footprint.
 #
-# *Alias_Part*: An *Alias_Part* is also sub-classed from *Schematic_Part*
-# and specifies one or more *Schematic_Parts* to substitute.
+# *Alias_Part*: An *Alias_Part* is also sub-classed from *ProjectPart*
+# and specifies one or more *ProjectParts* to substitute.
 #
 # *Fractional_Part*: A *Fractional_Part* is also sub-classed from
-# *Schematic_Part* and corresponds to a 1xN or 2xN break away header.
+# *ProjectPart* and corresponds to a 1xN or 2xN break away header.
 # It is common special case that specifies a smaller number of pins
 # than the full length header.
 #
@@ -292,7 +292,7 @@ import webbrowser
 # as a *Distributor_Part*.  A *Vendor* part consists of a *Vendor*
 # (e.g. "Mouser") and a *Vendor_Part_Name* (e.g. "123-ATMEGA328-PU").
 #
-# Notice that there are 6 different part classes:  *Schematic_Part*,
+# Notice that there are 6 different part classes:  *ProjectPart*,
 # *Choice_Part*, *Alias_Part*, *Fractional_Part*, *Actual_Part* and
 # *Vendor_Part*.  Having this many different part classes is needed
 # to precisely keep track of everything.
@@ -313,7 +313,7 @@ import webbrowser
 # **:
 #
 #
-# There are three sub_classes of *Schematic_Part*:
+# There are three sub_classes of *ProjectPart*:
 #
 # * Choice_Part*: A list of possible *Actual_Part*'s to choose from.
 #
@@ -325,7 +325,7 @@ import webbrowser
 #   usually a 1x40 or 2x40 break-away male header.  They are so common
 #   they must be supported.
 #
-# Now the algorithm iterates through each *Schematic_Part* to convert
+# Now the algorithm iterates through each *ProjectPart* to convert
 # each *Fractional_Part* and *Alias_Part* into *Choice_Part*.
 # Errors are flagged.
 #
@@ -1511,11 +1511,11 @@ class TableComment(Comment):
 
 
 class Database:
-    # Database of *Schematic_Parts*:
+    # Database of *ProjectParts*:
 
     def __init__(self):
         """ *Database*: Initialize *self* to be a database of
-            *Schematic_part*'s. """
+            *project_part*'s. """
 
         self.euro_to_dollar_exchange_rate = self.exchange_rate("EUR", "USD")
         self.pound_to_dollar_exchange_rate = self.exchange_rate("GBP", "USD")
@@ -1555,7 +1555,7 @@ class Database:
         database.actual_parts = {}  # Key:(manufacturer_name, manufacturer_part_name)
         database.bom_parts_file_name = bom_parts_file_name
         database.footprints = {}  # Key: "footprint_name"
-        database.schematic_parts = {}   # Key: "part_name;footprint:comment"
+        database.project_parts = {}   # Key: "part_name;footprint:comment"
         database.vendor_minimums = vendor_minimums
         database.vendor_parts_cache = {}  # Key:(actual_key)
         database.vendor_priorities = vendor_priorities
@@ -3268,11 +3268,11 @@ class Database:
         # print("-------------------------")
         actual_parts = self.actual_parts
         # vendor_parts = self.vendor_parts
-        for schematic_part in self.schematic_parts.values():
-            # print("schematic_part: {0}".
-            #  format(schematic_part.schematic_part_name))
-            if isinstance(schematic_part, Choice_Part):
-                choice_part = schematic_part
+        for project_part in self.project_parts.values():
+            # print("project_part: {0}".
+            #  format(project_part.project_part_name))
+            if isinstance(project_part, Choice_Part):
+                choice_part = project_part
                 for actual_part in choice_part.actual_parts:
                     actual_part_key = actual_part.key
                     if actual_part_key in actual_parts:
@@ -3283,7 +3283,7 @@ class Database:
                         # actual_part.manufacturer_name,
                         # actual_part.manufacturer_part_name))
 
-                # print("schematic_part=", schematic_part)
+                # print("project_part=", project_part)
                 # assert False, "Deal with Fractional and Alias parts"
                 pass
         # print("-------------------------")
@@ -3325,17 +3325,17 @@ class Database:
         #  "Digi-Key", "541-22KGCT-ND",
         #  ".074/10 .04/50 .02295/200 .01566/1000")
 
-    def alias_part(self, schematic_part_name, alias_part_names,
+    def alias_part(self, project_part_name, alias_part_names,
                    kicad_footprint="", feeder_name=None, rotation=None, part_height=None):
-        """ *Database*: Create *Alias_Part* named *schematic_part_name* and containing
+        """ *Database*: Create *Alias_Part* named *project_part_name* and containing
             *alias_names* and stuff it into the *Database* object (i.e. *self*).
             Each item in *alias_part_names* can be either a simple string or a tuple.
-            A tuple has the form of (count, "schematic_part_name") and means that we need *count*
-            instances of "schematic_part_name*".
+            A tuple has the form of (count, "project_part_name") and means that we need *count*
+            instances of "project_part_name*".
         """
 
         # Verify argument types:
-        assert isinstance(schematic_part_name, str)
+        assert isinstance(project_part_name, str)
         assert isinstance(alias_part_names, list)
         assert isinstance(feeder_name, str) or feeder_name is None
         assert isinstance(part_height, float) or part_height is None
@@ -3364,31 +3364,31 @@ class Database:
 
         # Lookup each *alias_name* in *expanded_alias_names* and tack it onto *alias_parts*:
         database = self
-        schematic_parts = database.schematic_parts
+        project_parts = database.project_parts
         alias_parts = []
         for alias_part_name in expanded_alias_part_names:
-            if alias_part_name in schematic_parts:
-                schematic_part = schematic_parts[alias_part_name]
-                assert isinstance(schematic_part, Schematic_Part)
-                alias_parts.append(schematic_part)
+            if alias_part_name in project_parts:
+                project_part = project_parts[alias_part_name]
+                assert isinstance(project_part, ProjectPart)
+                alias_parts.append(project_part)
             else:
                 print("Part '{0}' not found for for alias '{1}'".
-                      format(alias_part_name, schematic_part_name))
+                      format(alias_part_name, project_part_name))
 
         # Create and return the new *alias_part*:
         # assert len(alias_parts) == 1, "alias_parts={0}".format(alias_parts)
         # if isinstance(feeder_name, str):
         #    footprint = database.footprint(feeder_name, rotation)
-        alias_part = Alias_Part(schematic_part_name,
+        alias_part = Alias_Part(project_part_name,
                                 alias_parts, kicad_footprint, feeder_name, part_height)
         return database.insert(alias_part)
 
-    def choice_part(self, schematic_part_name, kicad_footprint, location, description,
+    def choice_part(self, project_part_name, kicad_footprint, location, description,
                     rotation=None, pick_dx=0.0, pick_dy=0.0, feeder_name=None, part_height=None):
         """ *Database*: Add a *Choice_Part* to *self*. """
 
         # Verify argument types:
-        assert isinstance(schematic_part_name, str)
+        assert isinstance(project_part_name, str)
         assert isinstance(kicad_footprint, str)
         assert isinstance(location, str)
         assert isinstance(description, str)
@@ -3399,18 +3399,18 @@ class Database:
         assert isinstance(part_height, float) or part_height is None
 
         # Make sure we do not have a duplicate:
-        schematic_parts = self.schematic_parts
-        if schematic_part_name in schematic_parts:
-            print("'{0}' is duplicated".format(schematic_part_name))
+        project_parts = self.project_parts
+        if project_part_name in project_parts:
+            print("'{0}' is duplicated".format(project_part_name))
 
         # if kicad_footprint.find(':') < 0:
         #    print("part '{0}' has no associated library in footprint '{1}'".
-        #      format(schematic_part_name, kicad_footprint))
+        #      format(project_part_name, kicad_footprint))
 
         database = self
         # if isinstance(feeder_name, str):
         #    footprint = database.footprint(feeder_name, rotation)
-        choice_part = Choice_Part(schematic_part_name, kicad_footprint, location, description,
+        choice_part = Choice_Part(project_part_name, kicad_footprint, location, description,
                                   rotation, pick_dx, pick_dy, feeder_name, part_height)
 
         return database.insert(choice_part)
@@ -3721,58 +3721,58 @@ class Database:
             # print("footprints['{0}'].rotation={1}".format(feeder_name, rotation))
         return footprint
 
-    def fractional_part(self, schematic_part_name, kicad_footprint,
+    def fractional_part(self, project_part_name, kicad_footprint,
                         whole_part_name, numerator, denominator, description):
         """ *Database*: Insert a new *Fractional_Part* named
-            *schematic_part_name* and containing *whole_part_name*,
+            *project_part_name* and containing *whole_part_name*,
             *numerator*, *denominator*, and *description* in to the
             *Database* object (i.e. *self*.) """
 
         # Verify argument types:
-        assert isinstance(schematic_part_name, str)
+        assert isinstance(project_part_name, str)
         assert isinstance(kicad_footprint, str)
         assert isinstance(whole_part_name, str)
         assert isinstance(numerator, int)
         assert isinstance(denominator, int)
         assert isinstance(description, str)
 
-        schematic_parts = self.schematic_parts
-        if whole_part_name in schematic_parts:
-            whole_part = schematic_parts[whole_part_name]
+        project_parts = self.project_parts
+        if whole_part_name in project_parts:
+            whole_part = project_parts[whole_part_name]
 
             # Verify argument types:
-            fractional_part = Fractional_Part(schematic_part_name, kicad_footprint,
+            fractional_part = Fractional_Part(project_part_name, kicad_footprint,
                                               whole_part, numerator, denominator, description)
             self.insert(fractional_part)
         else:
             print("Whole part '{0}' not found for fractional part '{1}'!".
-                  format(whole_part_name, schematic_part_name))
+                  format(whole_part_name, project_part_name))
 
-    def lookup(self, schematic_part_name):
-        """ *Database*: Return the *Schematic_Part* associated with
-            *schematic_part_name*. """
+    def lookup(self, project_part_name):
+        """ *Database*: Return the *ProjectPart* associated with
+            *project_part_name*. """
 
-        assert isinstance(schematic_part_name, str)
+        assert isinstance(project_part_name, str)
 
-        schematic_part = None
-        schematic_parts = self.schematic_parts
-        if schematic_part_name in schematic_parts:
-            schematic_part = schematic_parts[schematic_part_name]
-        return schematic_part
+        project_part = None
+        project_parts = self.project_parts
+        if project_part_name in project_parts:
+            project_part = project_parts[project_part_name]
+        return project_part
 
-    def insert(self, schematic_part):
-        """ *Database*: Add a *Schematic_Part* to *self*. """
+    def insert(self, project_part):
+        """ *Database*: Add a *ProjectPart* to *self*. """
 
         # Verify argument_types:
-        assert isinstance(schematic_part, Schematic_Part)
+        assert isinstance(project_part, ProjectPart)
 
-        schematic_part_name = schematic_part.schematic_part_name
-        schematic_parts = self.schematic_parts
-        if schematic_part_name in schematic_parts:
-            print("{0} is being inserted into database more than once".format(schematic_part_name))
+        project_part_name = project_part.project_part_name
+        project_parts = self.project_parts
+        if project_part_name in project_parts:
+            print("{0} is being inserted into database more than once".format(project_part_name))
         else:
-            schematic_parts[schematic_part_name] = schematic_part
-        return schematic_part
+            project_parts[project_part_name] = project_part
+        return project_part
 
     def save(self):
         """ *Database*: Save the *vendor_parts* portion of the *Database*
@@ -4039,16 +4039,16 @@ class Footprint:
 
 
 class Inventory:
-    def __init__(self, schematic_part, amount):
+    def __init__(self, project_part, amount):
         """ *Inventory*: Initialize *self* to contain *scheamtic_part* and
             *amount*. """
 
         # Verify argument types:
-        assert isinstance(schematic_part, Schematic_Part)
+        assert isinstance(project_part, ProjectPart)
         assert isinstance(amount, int)
 
         # Load up *self*:
-        self.schematic_part = schematic_part
+        self.project_part = project_part
         self.amount = amount
 
 
@@ -5422,7 +5422,7 @@ class Order:
 
             # Write the first line out to *bom_file*:
             bom_file.write("  {0}:{1};{2} {3}:{4}\n".format(
-                           choice_part.schematic_part_name,
+                           choice_part.project_part_name,
                            choice_part.kicad_footprint, choice_part.description,
                            choice_part.count_get(), choice_part.references_text_get()))
 
@@ -5492,7 +5492,7 @@ class Order:
         final_choice_parts.sort(key=lambda choice_part:
                                 (choice_part.selected_vendor_name,
                                  choice_part.selected_total_cost,
-                                 choice_part.schematic_part_name))
+                                 choice_part.project_part_name))
 
         vendor_boms = {}
         for choice_part in final_choice_parts:
@@ -5527,7 +5527,7 @@ class Order:
                         selected_vendor_part.vendor_part_name,
                         selected_actual_part.manufacturer_name,
                         selected_actual_part.manufacturer_part_name,
-                        choice_part.schematic_part_name))
+                        choice_part.project_part_name))
                 lines.append(line)
 
         # Wrap up the *bom_file*:
@@ -5746,18 +5746,18 @@ class Order:
 
             # Visit each *pose_part* in *pose_parts*:
             for pose_part in pose_parts:
-                schematic_part = pose_part.schematic_part
-                # schematic_part_name = schematic_part.schematic_part_name
+                project_part = pose_part.project_part
+                # project_part_name = project_part.project_part_name
                 # print("Order.final_choice_parts_compute():  {0}: {1}".
-                #  format(pose_part.reference, schematic_part_name))
+                #  format(pose_part.reference, project_part_name))
 
                 # Only *choice_parts* can be ordered from a vendor:
                 # Visit each *choice_part* in *choice_parts* and
                 # load it into *choice_parts_table*:
-                choice_parts = schematic_part.choice_parts()
+                choice_parts = project_part.choice_parts()
                 for choice_part in choice_parts:
                     # Do some consistency checking:
-                    choice_part_name = choice_part.schematic_part_name
+                    choice_part_name = choice_part.project_part_name
                     assert isinstance(choice_part, Choice_Part), ("Not a choice part '{0}'".format(
                                                                   choice_part_name))
 
@@ -5804,7 +5804,7 @@ class Order:
         # Sort by *final_choice_parts* by schematic part name:
         final_choice_parts = list(choice_parts_table.values())
         final_choice_parts.sort(
-          key=lambda choice_part: choice_part.schematic_part_name)
+          key=lambda choice_part: choice_part.project_part_name)
         self.final_choice_parts = final_choice_parts
 
         # Sweep through *final_choice_parts* and force the associated
@@ -5825,43 +5825,43 @@ class Order:
         # Verify argument types:
         assert isinstance(final_choice_parts, list)
 
-        # Visit each *schematic_part* in all of the *projects*:
+        # Visit each *project_part* in all of the *projects*:
         kicad_footprints = {}
         for project in self.projects:
             for pose_part in project.all_pose_parts:
                 assert isinstance(pose_part, PosePart)
-                schematic_part = pose_part.schematic_part
-                assert isinstance(schematic_part, Schematic_Part)
+                project_part = pose_part.project_part
+                assert isinstance(project_part, ProjectPart)
 
-                schematic_part.footprints_check(kicad_footprints)
+                project_part.footprints_check(kicad_footprints)
 
                 # Sweep through aliases:
-                # while isinstance(schematic_part, Alias_Part):
-                #    alias_part = schematic_part
-                #    schematic_parts = alias_part.schematic_parts
+                # while isinstance(project_part, Alias_Part):
+                #    alias_part = project_part
+                #    project_parts = alias_part.project_parts
                 #    # Conceptually, alias parts can reference one or more parts.
                 #    # For now, assume it is 1-to-1:
-                #    assert len(schematic_parts) == 1, \
+                #    assert len(project_parts) == 1, \
                 #      "Multiple Schematic Parts for {0}".format(alias_part.base_name)
-                #    schematic_part = schematic_parts[0]
-                # assert isinstance(schematic_part, Schematic_Part)
-                # assert not isinstance(schematic_part, Alias_Part)
+                #    project_part = project_parts[0]
+                # assert isinstance(project_part, ProjectPart)
+                # assert not isinstance(project_part, Alias_Part)
 
-                # Dispatch on type of *schematic_part*.  This really should be done with
+                # Dispatch on type of *project_part*.  This really should be done with
                 # with a method:
-                # if isinstance(schematic_part, Fractional_Part):
-                #    fractional_part = schematic_part
+                # if isinstance(project_part, Fractional_Part):
+                #    fractional_part = project_part
                 #    # print("{0} is fractional {1}".
                 #    #  format(fractional_part.base_name, fractional_part.kicad_footprint))
                 #    kicad_footprints[fractional_part.kicad_footprint] = \
-                #      schematic_part.schematic_part_name
-                # elif isinstance(schematic_part, Choice_Part):
-                #    choice_part = schematic_part
+                #      project_part.project_part_name
+                # elif isinstance(project_part, Choice_Part):
+                #    choice_part = project_part
                 #    # print("{0} is choice".format(choice_part.base_name))
                 #    kicad_footprint = choice_part.kicad_footprint
-                #    kicad_footprints[kicad_footprint] = schematic_part.schematic_part_name
+                #    kicad_footprints[kicad_footprint] = project_part.project_part_name
                 # else:
-                #    print("{0} is ??".format(schematic_part.base_name))
+                #    print("{0} is ??".format(project_part.base_name))
                 #    assert False
 
         # Now verify that each footprint exists:
@@ -5943,13 +5943,13 @@ class Order:
         order.bom_write("bom_by_price.txt", lambda choice_part:
                         (choice_part.selected_total_cost,
                          choice_part.selected_vendor_name,
-                         choice_part.schematic_part_name))
+                         choice_part.project_part_name))
         order.bom_write("bom_by_vendor.txt", lambda choice_part:
                         (choice_part.selected_vendor_name,
                          choice_part.selected_total_cost,
-                         choice_part.schematic_part_name))
+                         choice_part.project_part_name))
         order.bom_write("bom_by_name.txt", lambda choice_part:
-                        (choice_part.schematic_part_name,
+                        (choice_part.project_part_name,
                          choice_part.selected_vendor_name,
                          choice_part.selected_total_cost))
         order.csv_write()
@@ -6020,7 +6020,7 @@ class Order:
                 csv_file.write("{0},{1},{2}\n".format(
                   selected_order_quantity,
                   selected_vendor_part.vendor_part_name,
-                  choice_part.schematic_part_name))
+                  choice_part.project_part_name))
 
             # Close all the vendor files:
             for csv_file in vendor_files.values():
@@ -6052,7 +6052,7 @@ class Order:
         # *trace* is set to *True* to debug stuff:
         if trace:
             print("=>quad_compute({0}, {1}, '{2}')".format(
-              [choice_part.schematic_part_name for choice_part in choice_parts],
+              [choice_part.project_part_name for choice_part in choice_parts],
               excluded_vendor_names.keys(), excluded_vendor_name))
 
         # Verify argument types:
@@ -6096,7 +6096,7 @@ class Order:
         # *trace* for debugging:
         if trace:
             print("<=quad_compute({0}, {1}, '{2}')=>{3}".format(
-              [choice_part.schematic_part_name for choice_part in choice_parts],
+              [choice_part.project_part_name for choice_part in choice_parts],
               excluded_vendor_names.keys(), excluded_vendor_name, quad))
 
         return quad
@@ -6360,26 +6360,26 @@ class Parameter:
 
 # PosePart:
 class PosePart:
-    # A PosePart basically specifies the binding of a Schematic_Part
+    # A PosePart basically specifies the binding of a ProjectPart
     # and is associated schemtatic reference.  Reference strings must
     # be unique for a given project.
 
     # PosePart.__init__():
-    def __init__(self, project, schematic_part, reference, comment):
+    def __init__(self, project, project_part, reference, comment):
         """ Initialize *PosePart* object (i.e. *self*) to contain *project*,
-            *schematic_part*, *reference*, and *comment*.
+            *project_part*, *reference*, and *comment*.
         """
 
         # Verify argument types:
         assert isinstance(project, Project)
-        assert isinstance(schematic_part, Schematic_Part)
+        assert isinstance(project_part, ProjectPart)
         assert isinstance(reference, str)
         assert isinstance(comment, str)
 
         # Load up *pose_part* (i.e. *self*):
         pose_part = self
         pose_part.project = project
-        pose_part.schematic_part = schematic_part
+        pose_part.project_part = project_part
         pose_part.reference = reference
         pose_part.comment = comment
         pose_part.install = (comment != "DNI")
@@ -6968,19 +6968,19 @@ class Project:
                     part_name = part_name[0:colon_index]
 
                 # Now see if we have a match for *part_name* in *database*:
-                schematic_part = database.lookup(part_name)
-                if schematic_part is None:
+                project_part = database.lookup(part_name)
+                if project_part is None:
                     # {part_name} is not in {database}; output error message:
                     print("File '{0}: Part Name '{2}' {3} not in database".format(
                           net_file_name, 0, part_name, reference))
                     errors += 1
                 else:
                     # We have a match; create the *pose_part*:
-                    pose_part = PosePart(project, schematic_part, reference, comment)
+                    pose_part = PosePart(project, project_part, reference, comment)
                     project.pose_part_append(pose_part)
 
-                    # Grab *kicad_footprint* from *schematic_part*:
-                    kicad_footprint = schematic_part.kicad_footprint
+                    # Grab *kicad_footprint* from *project_part*:
+                    kicad_footprint = project_part.kicad_footprint
                     assert isinstance(kicad_footprint, str)
 
                     # Grab *footprint_se* from *component_se* (if it exists):
@@ -7026,9 +7026,9 @@ class Project:
                         # Only do something if it changed:
                         if previous_footprint != new_footprint:
                             # Since they changed, update in place:
-                            # if isinstance(schematic_part, Alias_Part):
+                            # if isinstance(project_part, Alias_Part):
                             #        print("**Alias_Part.footprint={0}".
-                            #          format(schematic_part.kicad_footprint))
+                            #          format(project_part.kicad_footprint))
                             print("Part '{0}': Footprint changed from '{1}' to '{2}'".
                                   format(part_name, previous_footprint, new_footprint))
                             footprint_se[1] = Symbol(new_footprint)
@@ -7215,7 +7215,7 @@ class Project:
         assert isinstance(project_file, io.IOBase)
 
         # Each *final_choice_part* that is part of the project (i.e. *self*) will wind up
-        # in a list in *pose_parts_table*.  The key is the *schematic_part_key*:
+        # in a list in *pose_parts_table*.  The key is the *project_part_key*:
         project = self
         pose_parts_table = {}
         for final_choice_part in final_choice_parts:
@@ -7226,14 +7226,14 @@ class Project:
                 # it matches the *install* selector:
                 if pose_part.project is project and pose_part.install == install:
                     # We are on the project; create *schemati_part_key*:
-                    schematic_part = pose_part.schematic_part
-                    schematic_part_key = "{0};{1}".format(
-                      schematic_part.base_name, schematic_part.short_footprint)
+                    project_part = pose_part.project_part
+                    project_part_key = "{0};{1}".format(
+                      project_part.base_name, project_part.short_footprint)
 
-                    # Create/append a list to *pose_parts_table*, keyed on *schematic_part_key*:
-                    if schematic_part_key not in pose_parts_table:
-                        pose_parts_table[schematic_part_key] = []
-                    pairs_list = pose_parts_table[schematic_part_key]
+                    # Create/append a list to *pose_parts_table*, keyed on *project_part_key*:
+                    if project_part_key not in pose_parts_table:
+                        pose_parts_table[project_part_key] = []
+                    pairs_list = pose_parts_table[project_part_key]
 
                     # Append a pair of *pose_part* and *final_choice_part* onto *pairs_list*:
                     project_final_pair = (pose_part, final_choice_part)
@@ -7264,11 +7264,11 @@ class Project:
             final_choice_part = project_final_pair[1]
             assert isinstance(final_choice_part, Choice_Part)
 
-            # Now get the corresponding *schematic_part*:
-            schematic_part = pose_part.schematic_part
-            schematic_part_key = "{0};{1}".format(
-              schematic_part.base_name, schematic_part.short_footprint)
-            assert isinstance(schematic_part, Schematic_Part)
+            # Now get the corresponding *project_part*:
+            project_part = pose_part.project_part
+            project_part_key = "{0};{1}".format(
+              project_part.base_name, project_part.short_footprint)
+            assert isinstance(project_part, ProjectPart)
 
             # Now get the *actual_part*:
             actual_part = final_choice_part.selected_actual_part
@@ -7290,7 +7290,7 @@ class Project:
                     has_fractional_parts = True
                 project_file.write('"{0} x","{1}","{2}","{3}","{4}","{5}","{6}","{7}","{8}"\n'.
                                    format(quantity, reference_pose_parts_key,
-                                          schematic_part_key, final_choice_part.description,
+                                          project_part_key, final_choice_part.description,
                                           fractional, manufacturer_name, manufacturer_part_name,
                                           vendor_name, vendor_part_name))
             else:
@@ -7310,52 +7310,42 @@ class Project:
         positions_table.footprints_rotate(database)
 
 
-class Request:
-    def __init__(self, schematic_part, amount):
-        """ *Request*: Create *Request* containing *schematic_part*
-            and *amount*. """
-        assert isinstance(schematic_part, Schematic_Part)
-        assert isinstance(amount, int)
-        self.schematic_part = schematic_part
-        self.amount = amount
-
-
-class Schematic_Part:
-    # A *Schematic_Part* represents part with a footprint.  The schematic
+class ProjectPart:
+    # A *ProjectPart* represents part with a footprint.  The schematic
     # part name must adhere to the format of "name;footprint:comment", where
     # ":comment" is optional.  The footprint name can be short (e.g. 1608,
     # QFP100, SOIC20, SOT3), since it only has to disambiguate the various
-    # footprints associated with "name".  A *Schematic_Part* is always
+    # footprints associated with "name".  A *ProjectPart* is always
     # sub-classed by one of *Choice_Part*, *Alias_Part*, or *Fractional_Part*.
 
-    def __init__(self, schematic_part_name, kicad_footprint):
-        """ *Schematic_Part*: Initialize *self* to contain
-            *schematic_part_name*, and *kicad_footprint*. """
+    def __init__(self, project_part_name, kicad_footprint):
+        """ *ProjectPart*: Initialize *self* to contain
+            *project_part_name*, and *kicad_footprint*. """
 
         # Verify argument types:
-        assert isinstance(schematic_part_name, str)
+        assert isinstance(project_part_name, str)
         assert isinstance(kicad_footprint, str)
-        assert kicad_footprint != "", "Empty Footprint for {0}".format(schematic_part_name)
+        assert kicad_footprint != "", "Empty Footprint for {0}".format(project_part_name)
 
-        # Split *schematic_part_name" into *base_name* and *short_footprint*:
-        base_name_short_footprint = schematic_part_name.split(';')
+        # Split *project_part_name" into *base_name* and *short_footprint*:
+        base_name_short_footprint = project_part_name.split(';')
         if len(base_name_short_footprint) == 2:
             base_name = base_name_short_footprint[0]
             short_footprint = base_name_short_footprint[1]
 
             # Load up *self*:
-            self.schematic_part_name = schematic_part_name
+            self.project_part_name = project_part_name
             self.base_name = base_name
             self.short_footprint = short_footprint
             self.kicad_footprint = kicad_footprint
             self.pose_parts = []
         else:
-            self.schematic_part_name = schematic_part_name
+            self.project_part_name = project_part_name
             print("Schematic Part Name '{0}' has no ';' separator!".
-                  format(schematic_part_name))
+                  format(project_part_name))
 
     def __format__(self, format):
-        """ *Schematic_Part*: Format the *Schematic_Part* object (i.e. *self*) using *format***. """
+        """ *ProjectPart*: Format the *ProjectPart* object (i.e. *self*) using *format***. """
 
         if format == "s":
             # Short format:
@@ -7365,37 +7355,37 @@ class Schematic_Part:
             return "{0};{1}::{2}".format(self.base_name, self.short_footprint, self.kicad_footprint)
 
     def footprints_check(self, kicad_footprints):
-        """ *Schematic_Part*: Verify that all the footprints exist for the *Schematic_Part* object
+        """ *ProjectPart*: Verify that all the footprints exist for the *ProjectPart* object
             (i.e. *self*.)
         """
 
         assert False, "No footprints_check method for this Schematic Part"
 
 
-class Alias_Part(Schematic_Part):
-    # An *Alias_Part* specifies one or more *Schematic_Parts* to use.
+class Alias_Part(ProjectPart):
+    # An *Alias_Part* specifies one or more *ProjectParts* to use.
 
-    def __init__(self, schematic_part_name, schematic_parts, kicad_footprint,
+    def __init__(self, project_part_name, project_parts, kicad_footprint,
                  feeder_name=None, part_height=None, pick_dx=0.0, pick_dy=0.0):
-        """ *Alias_Part*: Initialize *self* to contain *schematic_part_name*,
-            *kicad_footprint*, and *schematic_parts*. """
+        """ *Alias_Part*: Initialize *self* to contain *project_part_name*,
+            *kicad_footprint*, and *project_parts*. """
 
         # Verify argument types:
-        assert isinstance(schematic_part_name, str)
-        assert isinstance(schematic_parts, list)
+        assert isinstance(project_part_name, str)
+        assert isinstance(project_parts, list)
         assert isinstance(feeder_name, str) or feeder_name is None
         assert isinstance(part_height, float) or part_height is None
         assert isinstance(pick_dx, float)
         assert isinstance(pick_dy, float)
-        for schematic_part in schematic_parts:
-            assert isinstance(schematic_part, Schematic_Part)
+        for project_part in project_parts:
+            assert isinstance(project_part, ProjectPart)
 
-        # assert len(schematic_parts) == 1, "schematic_parts={0}".format(schematic_parts)
+        # assert len(project_parts) == 1, "project_parts={0}".format(project_parts)
 
         # Load up *alias_part* (i.e *self*):
         alias_part = self
-        super().__init__(schematic_part_name, kicad_footprint)
-        alias_part.schematic_parts = schematic_parts
+        super().__init__(project_part_name, kicad_footprint)
+        alias_part.project_parts = project_parts
         alias_part.feeder_name = feeder_name
         alias_part.part_height = part_height
         alias_part.pick_dx = pick_dx
@@ -7407,11 +7397,11 @@ class Alias_Part(Schematic_Part):
 
         assert isinstance(self, Alias_Part)
         choice_parts = []
-        for schematic_part in self.schematic_parts:
-            choice_parts += schematic_part.choice_parts()
+        for project_part in self.project_parts:
+            choice_parts += project_part.choice_parts()
 
         # assert False, \
-        #  "No choice parts for '{0}'".format(self.schematic_part_name)
+        #  "No choice parts for '{0}'".format(self.project_part_name)
         return choice_parts
 
     def footprints_check(self, kicad_footprints):
@@ -7426,24 +7416,24 @@ class Alias_Part(Schematic_Part):
         assert isinstance(kicad_footprints, dict)
 
         # Visit all of the listed schematic parts:
-        schematic_parts = alias_part.schematic_parts
-        for schematic_part in schematic_parts:
-            schematic_part.footprints_check(kicad_footprints)
+        project_parts = alias_part.project_parts
+        for project_part in project_parts:
+            project_part.footprints_check(kicad_footprints)
 
 
-class Choice_Part(Schematic_Part):
+class Choice_Part(ProjectPart):
     # A *Choice_Part* specifies a list of *Actual_Part*'s to choose from.
 
-    def __init__(self, schematic_part_name, kicad_footprint,
+    def __init__(self, project_part_name, kicad_footprint,
                  location, description, rotation, pick_dx, pick_dy, feeder_name, part_height):
-        """ *Choice_Part*: Initiailize *self* to contain *schematic_part_name*
+        """ *Choice_Part*: Initiailize *self* to contain *project_part_name*
             *kicad_footprint* and *actual_parts*. """
 
         # Use *choice_part* instead of *self*:
         choice_part = self
 
         # Verify argument types:
-        assert isinstance(schematic_part_name, str)
+        assert isinstance(project_part_name, str)
         assert isinstance(kicad_footprint, str)
         assert isinstance(location, str)
         assert isinstance(description, str)
@@ -7454,7 +7444,7 @@ class Choice_Part(Schematic_Part):
         assert isinstance(part_height, float) or part_height is None
 
         # Load up *choice_part* (i.e. *self*):
-        super().__init__(schematic_part_name, kicad_footprint)
+        super().__init__(project_part_name, kicad_footprint)
         choice_part.actual_parts = []
         choice_part.description = description
         choice_part.feeder_name = feeder_name
@@ -7585,7 +7575,7 @@ class Choice_Part(Schematic_Part):
                             int(text_filter(pose_part.reference, str.isdigit))))
 
         # print("  {0}:{1};{2} {3}:{4}".\
-        #  format(choice_part.schematic_part_name,
+        #  format(choice_part.project_part_name,
         # choice_part.kicad_footprint, choice_part.description,
         #  choice_part.count_get(), choice_part.references_text_get()))
 
@@ -7600,7 +7590,7 @@ class Choice_Part(Schematic_Part):
                 count += pose_part.project.count
         else:
             # for fractional_part in fractional_parts:
-            #        print("{0}".format(fractional_part.schematic_part_name))
+            #        print("{0}".format(fractional_part.project_part_name))
 
             # This code is not quite right:
             first_fractional_part = fractional_parts[0]
@@ -7608,23 +7598,23 @@ class Choice_Part(Schematic_Part):
             for fractional_part in fractional_parts[1:]:
                 assert denominator == fractional_part.denominator, \
                   "'{0}' has a denominator of {1} and '{2}' has one of {3}". \
-                  format(first_fractional_part.schematic_part_name,
+                  format(first_fractional_part.project_part_name,
                          first_fractional_part.denominator,
-                         fractional_part.schematic_part_name,
+                         fractional_part.project_part_name,
                          fractional_part.denominator)
 
             # Compute the *count*:
             numerator = 0
             for pose_part in self.pose_parts:
-                schematic_part = pose_part.schematic_part
-                # print("'{0}'".format(schematic_part.schematic_part_name))
-                if isinstance(schematic_part, Alias_Part):
-                    alias_parts = schematic_part
-                    for schematic_part in alias_parts.schematic_parts:
-                        if isinstance(schematic_part, Fractional_Part):
-                            fractional_part = schematic_part
-                elif isinstance(schematic_part, Fractional_Part):
-                    fractional_part = schematic_part
+                project_part = pose_part.project_part
+                # print("'{0}'".format(project_part.project_part_name))
+                if isinstance(project_part, Alias_Part):
+                    alias_parts = project_part
+                    for project_part in alias_parts.project_parts:
+                        if isinstance(project_part, Fractional_Part):
+                            fractional_part = project_part
+                elif isinstance(project_part, Fractional_Part):
+                    fractional_part = project_part
                 else:
                     assert False, "Missing code"
 
@@ -7660,7 +7650,7 @@ class Choice_Part(Schematic_Part):
 
         kicad_footprint = choice_part.kicad_footprint
         if kicad_footprint != "-":
-            kicad_footprints[kicad_footprint] = choice_part.schematic_part_name
+            kicad_footprints[kicad_footprint] = choice_part.project_part_name
             # rotation = choice_part.rotation
 
     def references_text_get(self):
@@ -7699,10 +7689,10 @@ class Choice_Part(Schematic_Part):
         # off the head of the list.
 
         tracing = False
-        # tracing = self.schematic_part_name == "S18V20F6;S18V20Fx"
+        # tracing = self.project_part_name == "S18V20F6;S18V20Fx"
         if tracing:
             print("=>Choice_Part.select()")
-            print(" Choice_part:{0}".format(self.schematic_part_name))
+            print(" Choice_part:{0}".format(self.project_part_name))
 
         quints = []
         required_quantity = self.count_get()
@@ -7749,7 +7739,7 @@ class Choice_Part(Schematic_Part):
                             print("    quint={0}".format(quint))
 
         if len(quints) == 0:
-            choice_part_name = self.schematic_part_name
+            choice_part_name = self.project_part_name
             if announce:
                 print("No vendor parts found for Part '{0}'".format(choice_part_name))
         else:
@@ -7821,23 +7811,23 @@ class Choice_Part(Schematic_Part):
               vendor_names_table, excluded_vendor_names)
 
 
-class Fractional_Part(Schematic_Part):
+class Fractional_Part(ProjectPart):
     # A *Fractional_Part* specifies a part that is constructed by
-    # using a portion of another *Schematic_Part*.
+    # using a portion of another *ProjectPart*.
 
-    def __init__(self, schematic_part_name, kicad_footprint,
+    def __init__(self, project_part_name, kicad_footprint,
                  choice_part, numerator, denominator, description):
         """ *Fractional_Part*: Initialize *self* to contain
-            *schematic_part_name*, *kicad_footprint*, *choie_part*,
+            *project_part_name*, *kicad_footprint*, *choie_part*,
             *numerator*, *denomoniator*, and *description*. """
 
         # Verify argument types:
-        assert isinstance(schematic_part_name, str)
+        assert isinstance(project_part_name, str)
         assert isinstance(kicad_footprint, str)
         assert isinstance(choice_part, Choice_Part)
 
         # Load up *self*:
-        super().__init__(schematic_part_name, kicad_footprint)
+        super().__init__(project_part_name, kicad_footprint)
         self.choice_part = choice_part
         self.numerator = numerator
         self.denominator = denominator
@@ -7866,7 +7856,7 @@ class Fractional_Part(Schematic_Part):
         # Record *kicad_footprint* into *kicad_footprints*:
         kicad_footprint = fractional_part.kicad_footprint
         if kicad_footprint != "-":
-            kicad_footprints[kicad_footprint] = fractional_part.schematic_part_name
+            kicad_footprints[kicad_footprint] = fractional_part.project_part_name
 
 
 # TablesEditor:
