@@ -28,22 +28,24 @@ Over time, additional CAD plugins are expected to be developed.
 The term "part" by itself is ambiguous, so an adjective is used to be more concise.
 Immediately below are some of the more concise part names:
 
-* Manufacturer Part: A manufacturer part is the part that a manufacturer creates
-  and sells.  Each manufacturer has a name (e.g. Intel, Texas Instruments, etc.)
-  and a unique part name for each purchasable part.
+* Actual Part: An actual part is the part that a manufacturer creates and sells.
+  The manufacturer (e.g. Intel, Texas Instruments, etc.) assigns there own unique
+  name to the actual part.
 
-* Vendor Part: Frequently there are vendors (typically called distributors) that
-  purchase parts directly from manufacturers, store the parts, and resell them
-  to customers.  Sometimes a manufacturer only sells directly to the customer,
-  in which case the Manufacturer part and the Vendor part are the same.  Each
-  Vendor typically has their own part name that is different from the manufacturer
-  part name.
+* Vendor Part: A vendor part is a part that can be purchased.  Sometimes the
+  vendor and the manufacturer are the same, in which case, the part purchased
+  directly from the manufacturer.  More frequently, there vendors (typically
+  called distributors or resellers) that purchase actual parts directly from
+  manufacturers, store the parts, and resell them.  Each distributor/reseller
+  vendor typically assigns their own part name to the actual part that is different
+  manufacturer part name.
 
-* Project Part: A project part is the name of a part within the CAD system.  Ultimately,
-  BOM manager provides tools to map the project part into a list of manufacturer parts.
-  A project part can be "generic" in that is does not map to a single part, but instead
-  a collection of interchangeable parts that can be substituted in depending upon
-  pricing and availability.
+* Project Part: A project part is a named part within the CAD system.  Ultimately,
+  BOM manager provides tools to map the project part into a pool of one or more actual
+  parts.  A project part is "specific" if there is only one actual part in the pool.
+  A project part is "generic" if there multiple actual parts in the pool, and the BOM
+  manager will eventually pick one actual part from the pool based one pricing and
+  availability considerations.
 
 * Posed Part: Each project part may occur in multiple locations within a project.
   A "pose" specifies the X/Y/Z location and orientation (e.g. &alpha;/&beta;/&gamma;)
@@ -57,9 +59,9 @@ What BOM manager does is:
 
 2. The posed part list is converted into a list of project parts.
 
-3. The project parts list is expended into a list of acceptable manufacturer parts.
+3. The project parts list is expended into a list of actual parts.
 
-4. The BOM manager queries to find which vendors sell each manufacturer part
+4. The BOM manager queries to find which vendors sell each actual part
    an generates a list of vendor parts, where each vendor part has pricing
    and availability information.
 
@@ -71,7 +73,7 @@ What BOM manager does is:
 
 For now, BOM manager is summarized as:
 
-     Posed Parts => Project Parts => Manufacturer Parts => Vendor Parts => Vendor Orders
+     Posed Parts => Project Parts => Actual Parts => Vendor Parts => Vendor Orders
 
 There are some further nuances in parts:
 
@@ -82,7 +84,7 @@ There are some further nuances in parts:
   an alias part, where one of the parts "points" to another part to substitute
   in its place.  By the way, it is possible to have an alias chain where Part1
   aliases to Part2 which aliases to Part3, etc.  This is acceptable as long as
-  there is no loop (e.g. Part1 points to Part2 and Part2 points Part1.)
+  there is no loop (e.g. Part1 points to Part2 and Part2 points back to Part1.)
 
 * Multi-part: Sometimes a part in the CAD system is not really one part but
   a set of parts.  For example, sometimes an electrical connector consists of a

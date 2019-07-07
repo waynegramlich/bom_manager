@@ -5763,6 +5763,9 @@ class Order:
             each selected *ChoicePart* object.
         """
 
+        # Set *trace* to *True* to enable tracing:
+        trace = True
+
         # Grab the *projects* and *database*:
         projects = self.projects
         database = self.database
@@ -5775,8 +5778,9 @@ class Order:
         # *ChoicePart* objects, so we use *choice_parts_table* to
         # eliminate duplicates.
         choice_parts_table = {}
-        for project in projects:
-            # print("Order.final_choice_parts_compute(): project:{0}".format(project.name))
+        for project_index, project in enumerate(projects):
+            if trace:
+                print("Project[{0}]:'{1}'".format(project_index, project.name))
 
             # Sort *pose_parts* by reference.  A reference is a sequence
             # letters followed by an integer (e.g. SW1, U12, D123...)
@@ -5788,7 +5792,9 @@ class Order:
                              int(text_filter(pose_part.reference, str.isdigit))))
 
             # Visit each *pose_part* in *pose_parts*:
-            for pose_part in pose_parts:
+            for pose_part_index, pose_part in enumerate(pose_parts):
+                print("  Pose_Part[{0}]:'{1}'".format(pose_part_index, pose_part.reference))
+
                 project_part = pose_part.project_part
                 # project_part_name = project_part.project_part_name
                 # print("Order.final_choice_parts_compute():  {0}: {1}".
@@ -5798,11 +5804,13 @@ class Order:
                 # Visit each *choice_part* in *choice_parts* and
                 # load it into *choice_parts_table*:
                 choice_parts = project_part.choice_parts()
-                for choice_part in choice_parts:
+                for choice_part_index, choice_part in enumerate(choice_parts):
                     # Do some consistency checking:
                     choice_part_name = choice_part.project_part_name
                     assert isinstance(choice_part, ChoicePart), ("Not a choice part '{0}'".format(
                                                                   choice_part_name))
+                    if trace:
+                        print("    ChoicePart[{0}]:'{1}'".format(choice_part, choice_part_name))
 
                     # Make sure *choice_part* is in *choice_parts_table*
                     # exactly once:
@@ -5821,9 +5829,12 @@ class Order:
                     # Refresh the vendor part cache for each *actual_part*:
                     vendor_parts_cache = database.vendor_parts_cache
                     actual_parts = choice_part.actual_parts
-                    for actual_part in actual_parts:
+                    for actual_part_index, actual_part in enumerate(actual_parts):
                         # Check for errors:
                         assert isinstance(actual_part, ActualPart)
+                        if trace:
+                            print("      Actual_Part[{0}]:'{1}'".format(
+                                  actual_part_index, actual_part.manufacturer_part_name))
 
                         # Get *vendor_parts* from the cache or from
                         # a screen scrape:
@@ -5838,7 +5849,13 @@ class Order:
                             vendor_parts_cache[actual_key] = vendor_parts
                             database.save()
 
-                        for vendor_part in vendor_parts:
+                        for vendor_part_index, vendor_part in enumerate(vendor_parts):
+                            #vendor_name = vendor_part.vendor_name
+                            #space_index = vendor_name.find(' ')
+                            #if space_index >= 0:
+                            #    vendor_name = vendor_name[:space_index]
+                            #print("        Vendor_Part[{0}]:'{1}:{2}'".format(
+                            #      vendor_part_index, vendor_name, vendor_part.vendor_part_name))
                             actual_part.vendor_part_append(vendor_part)
 
         # Save the *database* because we've loaded all of the *vendor_parts*'s:
@@ -5857,8 +5874,11 @@ class Order:
             assert isinstance(choice_part, ChoicePart)
             choice_part.pose_parts_sort()
 
-        # for choice_part in final_choice_parts:
-        #    print("End_Order.final_choice_parts_compute(): project:{0}".format(choice_part))
+        for choice_part_index, choice_part in enumerate(final_choice_parts):
+            if trace:
+                print("Final_Choice_Part[{0}]:'{1}".format(
+                      choice_part_index, choice_part.project_part_name))
+            #print("End_Order.final_choice_parts_compute(): project:{0}".format(choice_part))
 
         return final_choice_parts
 
