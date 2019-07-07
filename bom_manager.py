@@ -4349,6 +4349,25 @@ class Collection(Directory):
         return 'C'
 
 
+class Collections(Directory):
+
+    # Collections.__init__():
+    def __init__(self, name, path, title):
+        # Verify argument types:
+        assert isinstance(name, str)
+        assert isinstance(path, str)
+        assert isinstance(title, str)
+
+        # Intialize the collections:
+        collections = self
+        super().__init__(name, path, title)
+        assert collections.type_letter_get() == 'R'
+
+    # Collections.type_leter_get():
+    def type_letter_get(self):
+        # print("Collections.type_letter_get(): name='{0}'".format(self.name))
+        return 'R'
+
 # Search:
 class Search(Node):
 
@@ -8212,9 +8231,6 @@ class TablesEditor(QMainWindow):
         # file_names.sort()
         # print("file_names=", file_names)
 
-        # Create the *root_node*:
-        root_node = Node("Root", "None")
-
         # Get *working_directory_path*:
         working_directory_path = os.getcwd()
         assert isinstance(working_directory_path, str)
@@ -8223,6 +8239,9 @@ class TablesEditor(QMainWindow):
         # Get *collections_directory_path*:
         collections_path = os.path.join(working_directory_path, "collections")
         assert os.path.isdir(collections_path)
+
+        # Create the *collections_node*:
+        collections_node = Collections("Collections","Collections", collections_path)
 
         # Sweep through *collections_directory_path*
         for collection_base_name in os.listdir(collections_path):
@@ -8233,10 +8252,10 @@ class TablesEditor(QMainWindow):
                                         collection_base_name, collection_path)
                 assert isinstance(collection, Collection)
                 assert collection.type_letter_get() == 'C'
-                root_node.add_child(collection)
+                collections_node.add_child(collection)
 
         # Create *tree_model* and stuff into *tables_editor*:
-        tree_model = TreeModel(root_node)
+        tree_model = TreeModel(collections_node)
         tables_editor.model = tree_model
         print("tree_model=", tree_model)
 
@@ -10637,19 +10656,19 @@ class TreeModel(QAbstractItemModel):
 
     # FIXME: *TreeModel* should not have a directory!!!
     # TreeModel.__init__():
-    def __init__(self, root_node):
+    def __init__(self, collections_node):
         # Verify argument types:
-        assert isinstance(root_node, Node)
+        assert isinstance(collections_node, Node)
 
         # Initialize the parent *QAbstraceItemModel*:
         super().__init__()
 
-        # Stuff *root_node* into *tree_model* (i.e. *self*):
+        # Stuff *collections_node* into *tree_model* (i.e. *self*):
         tree_model = self
         tree_model.headers = {0: "Type", 1: "Name"}
-        tree_model.root_node = root_node
+        tree_model.collections_node = collections_node
 
-        # Populate the top level of *root_node*:
+        # Populate the top level of *collections_node*:
         # file_names = sorted(os.listdir(path))
         # for file in file_names:
         #    file_path = os.path.join(path, file)
@@ -10833,7 +10852,7 @@ class TreeModel(QAbstractItemModel):
         assert isinstance(model_index, QModelIndex)
 
         tree_model = self
-        node = model_index.internalPointer() if model_index.isValid() else tree_model.root_node
+        node = model_index.internalPointer() if model_index.isValid() else tree_model.collections_node
         assert isinstance(node, Node)
         return node
 
@@ -10940,7 +10959,7 @@ class TreeModel(QAbstractItemModel):
         node = tree_model.getNode(model_index)
 
         parent = node.parent
-        parent_model_index = (QModelIndex() if parent is tree_model.root_node else
+        parent_model_index = (QModelIndex() if parent is tree_model.collections_node else
                               tree_model.createIndex(parent.row(), 0, parent))
         assert isinstance(model_index, QModelIndex)
         return parent_model_index
