@@ -194,6 +194,7 @@ import csv
 import currency_converter         # Currency converter
 from functools import partial
 import fnmatch                    # File Name Matching
+import glob                       # Global file name scanning
 import io                         # I/O stuff
 import lxml.etree as etree
 import pickle                     # Python data structure pickle/unpickle
@@ -4349,6 +4350,7 @@ class Collection(Directory):
         return 'C'
 
 
+# Collections:
 class Collections(Directory):
 
     # Collections.__init__():
@@ -4798,10 +4800,53 @@ class Search(Node):
             print("{0}<=Search.xml_lines_append()".format(tracing))
 
 
+# Searches:
+class Searches(Directory):
+
+    # Searches.__init__():
+    def __init__(self, name, path, title):
+        # Verify argument types:
+        assert isinstance(name, str)
+        assert isinstance(path, str)
+        assert isinstance(title, str)
+
+        # Intialize the searches:
+        searches = self
+        super().__init__(name, path, title)
+        assert searches.type_letter_get() == 'F'
+
+    # Searches.type_leter_get():
+    def type_letter_get(self):
+        # print("Searches.type_letter_get(): name='{0}'".format(self.name))
+        return 'F' # Find
+
+    # Searches.populate():
+    def populate(self, tracing=None):
+        # Verify argument types:
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}=>Searches.populate(*)")
+
+        # Compute the *glob_pattern* for searching:
+        searches = self
+        path = searches.path
+        slash = os.sep
+        glob_pattern = path + slash + "**" + os.sep + "*.xml"
+        if tracing is not None:
+            print(f"{tracing}glob_pattern='{glob_pattern}'")
+        for index, file_name in enumerate(glob.glob(glob_pattern, recursive=True)):
+            print(f"Search[{index}]:'{file_name}'")
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}<=Searches.populate(*)")
+
 # Table:
 class Table(Node):
 
-    # Table.__init__()
+    # Table.__init__():
     def __init__(self, **arguments_table):
         # Verify argument types:
         assert "file_name" in arguments_table
@@ -8066,6 +8111,7 @@ class TablesEditor(QMainWindow):
         current_table = tables[0] if len(tables) >= 1 else None
         tables_editor = self
         tables_editor.application = application
+        tables_editor.collections = None  # Filled in below
         tables_editor.current_comment = None
         tables_editor.current_enumeration = None
         tables_editor.current_model_index = None
@@ -8079,6 +8125,7 @@ class TablesEditor(QMainWindow):
         tables_editor.original_tables = copy.deepcopy(tables)
         tables_editor.re_table = TablesEditor.re_table_get()
         tables_editor.searches = list()
+        tables_editor.xsearches = None
         tables_editor.tab_unload = None
         tables_editor.tables = tables
         tables_editor.trace_signals = tracing is not None
@@ -8236,14 +8283,14 @@ class TablesEditor(QMainWindow):
         assert isinstance(working_directory_path, str)
         assert os.path.isdir(working_directory_path)
 
-        # Get *collections_directory_path*:
+        # Create *collections* *Node*:
         collections_path = os.path.join(working_directory_path, "collections")
         assert os.path.isdir(collections_path)
+        collections = Collections("Collections","Collections", collections_path)
+        tables_editor.collections = collections
 
-        # Create the *collections_node*:
-        collections_node = Collections("Collections","Collections", collections_path)
-
-        # Sweep through *collections_directory_path*
+        # FIXME: This code block should be a method of *Collections* class!!!
+        # Sweep through *collections_path*:
         for collection_base_name in os.listdir(collections_path):
             # Compute *collection_path*:
             collection_path = os.path.join(collections_path, collection_base_name)
@@ -8252,10 +8299,17 @@ class TablesEditor(QMainWindow):
                                         collection_base_name, collection_path)
                 assert isinstance(collection, Collection)
                 assert collection.type_letter_get() == 'C'
-                collections_node.add_child(collection)
+                collections.add_child(collection)
+
+        # Create the *searches*:
+        searches_path = os.path.join(working_directory_path, "searches")
+        assert os.path.isdir(searches_path)
+        searches = Searches("Searches", searches_path, "Searches")
+        tables_editor.xsearches = searches
+        searches.populate(tracing="")
 
         # Create *tree_model* and stuff into *tables_editor*:
-        tree_model = TreeModel(collections_node)
+        tree_model = TreeModel(collections)
         tables_editor.model = tree_model
         print("tree_model=", tree_model)
 
@@ -8295,6 +8349,7 @@ class TablesEditor(QMainWindow):
         # Wrap up any requested *tracing*:
         if tracing is not None:
             print("{0}<=TablesEditor.__init__(...)\n".format(tracing))
+
 
     # TablesEditor.comment_text_set()
     def comment_text_set(self, new_text, tracing=None):
