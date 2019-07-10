@@ -415,7 +415,7 @@ def main():
                     table_write_file.write(table_write_text)
 
         # Now create the *tables_editor* graphical user interface (GUI) and run it:
-        tables_editor = TablesEditor(tables, tracing="")
+        tables_editor = TablesEditor(tables)  # , tracing="")
 
         # Start up the GUI:
         tables_editor.run()
@@ -430,6 +430,37 @@ def file_name2name(file_name):
 
     return file_name
 
+
+def file_name2title(file_name):
+    # Verify argument types:
+    assert isinstance(file_name, str)
+
+    # Decode *file_name* into a list of *characters*:
+    characters = list()
+    index = 0
+    file_name_size = len(file_name)
+    while index < file_name_size:
+        character = file_name[index]
+        if character == '_':
+            # Underscores are always translated to spaces:
+            character = ' '
+            index += 1
+        elif character == '%':
+            # `%XX` is converted into a single *character*:
+            try:
+                sub_string = file_name[index+1:index+3]
+                character = chr(int(sub_string, 16))
+            except ValueError:
+                assert False, f"file_name='{file_name}' sub_string='{sub_string}' index={index}"
+            index += 3
+        else:
+            # Everything else just taken as is:
+            index += 1
+        characters.append(character)
+
+    # Join *characters* back into a single *title* string:
+    title = "".join(characters)
+    return title
 
 def name2file_name(name):
     # Verify argument types:
@@ -4088,10 +4119,11 @@ class Node:
     """ Represents a single *Node* in a *QTreeView* tree. """
 
     # Node.__init__():
-    def __init__(self, name, path, parent=None):
+    def __init__(self, name, path, title, parent):
         # Verify argument types:
         assert isinstance(name, str)
         assert isinstance(path, str)
+        assert isinstance(title, str)
         assert isinstance(parent, Node) or parent is None
 
         # print("=>Node.__init__(*, '{0}', '...', '{2}')".
@@ -4099,6 +4131,7 @@ class Node:
         # Initilize the super class:
         super().__init__()
 
+        # FIXME: Is this needed any more:
         node = self
         if isinstance(node, Table):
             is_dir = True
@@ -4108,10 +4141,11 @@ class Node:
             is_traversed = not is_dir or is_dir and len(list(os.listdir(path))) == 0
 
         # Load up *node* (i.e. *self*):
-        node.children = []
+        node.children = list()
         node.name = name
         node.is_dir = is_dir
         node.is_traversed = is_traversed
+        node.title = title
         node.parent = parent
         node.path = path
 
@@ -4149,7 +4183,8 @@ class Node:
     # Node.child_count():
     def child_count(self):
         node = self
-        return len(node.children)
+        count = len(node.children)
+        return count
 
     # Node.clicked():
     def clicked(self, tables_editor, tracing=None):
@@ -4195,6 +4230,19 @@ class Node:
         title = "".join(characters)
         return title
 
+    # Node.has_child():
+    def has_child(self, sub_node):
+        # Verify argument types:
+        assert isinstance(sub_node, Node)
+
+        node = self
+        found = False
+        for child in node.children:
+            if sub_node is child:
+                found = True
+                break
+        return found
+
     # Node.insert_child():
     def insert_child(self, position, child):
         # Verify argument types:
@@ -4226,10 +4274,23 @@ class Node:
                            format(remove_node.name, node.name))
 
     # Node.title_get():
-    def title_get(self):
+    def title_get(self, tracing=None):
+        # Verify argument types:
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform an requested *tracing*:
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}=>title_get()")
+
+        # Make sure that *table* has been loaded:
         table = self
-        title = table.name
-        print("Node.title='{0}'".format(title))
+        table.load(tracing=next_tracing)
+        title = table.title
+
+        # Perform an requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}=>title_get()=>{title}")
         return title
 
     # Node.title2file_name():
@@ -4268,12 +4329,12 @@ class Node:
 class Directory(Node):
 
     # Directory.__init__():
-    def __init__(self, name, path, title, parent=None):
+    def __init__(self, name, path, title, parent):
         # Verify argument types:
         assert isinstance(name, str)
         assert isinstance(path, str)
         assert isinstance(title, str)
-        assert isinstance(parent, Node) or parent is None
+        assert isinstance(parent, Directory) or parent is None  # *Collections* do not have parent.
 
         # print("=>Directory.__init__(*, '{0}', '...', '{2}')".
         #  format(name, path, "None" if parent is None else parent.name))
@@ -4283,9 +4344,8 @@ class Directory(Node):
         assert not base_name.startswith('.'), "Directory '{0}' starts with '.'".format(path)
 
         # Initlialize the *Node* super class:
-        super().__init__(name, path, parent)
+        super().__init__(name, path, title, parent)
         directory = self
-        directory.title = title
 
         # print("<=Directory.__init__(*, '{0}', '...', '{2}')".
         #  format(name, path, "None" if parent is None else parent.name))
@@ -4312,6 +4372,55 @@ class Directory(Node):
         if tracing is not None:
             print("{0}<=Directory.clicked()".format(tracing))
 
+    # Directory.partial_load():
+    def partial_load(self, collections_root, searches_root, relative_path, tracing=None):
+        # Verify argument types:
+        assert isinstance(collections_root, str)
+        assert isinstance(searches_root, str)
+        assert isinstance(relative_path, str)
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested *tracing*:
+        directory = self
+        next_tracing = None if tracing is None else tracing + " "
+        if not tracing is None:
+            print(f"{tracing}=>Directory.partial_load(*, *, '{relative_path}')")
+        
+        # Visit all of the files and directories in *directory_path*:
+        directory_path = os.path.join(collections_root, relative_path)
+        for index, base_name in enumerate(sorted(list(os.listdir(directory_path)))):
+            if tracing is not None:
+                print(f"{tracing}File_Name[{index}]:'{base_name}'")
+
+            # Skip over any files/directories that start with '.':
+            if not base_name.startswith('.'):
+                # Recursively do a partial load for *full_path*:
+                full_path = os.path.join(directory_path, base_name)
+                if os.path.isdir(full_path):
+                    # *full_path* is a directory:
+                    name = file_name2name(base_name)
+                    title = file_name2title(base_name)
+                    sub_directory = Directory(name, full_path, title, directory)
+                    sub_relative_path = os.path.join(relative_path, base_name)
+                    assert directory.has_child(sub_directory)
+                    sub_directory.partial_load(collections_root, searches_root, sub_relative_path,
+                                               tracing=next_tracing)
+                elif base_name.endswith(".xml"):
+                    # Full path is a *Table* `.xml` file:
+                    name = base_name[:-4]
+                    title = file_name2title(base_name)
+                    table = Table(name, full_path, title, directory, tracing=next_tracing)
+                    assert directory.has_child(table)
+                    sub_relative_path = os.path.join(relative_path, name)
+                    table.partial_load(collections_root, searches_root, sub_relative_path,
+                                       tracing=next_tracing)
+                else:
+                    assert False, f"'{full_path}' is neither an .xml nor a directory"
+
+        # Wrap up any requested *tracing*:
+        if not tracing is None:
+            print(f"{tracing}<=Directory.partial_load(*, *, '{relative_path}')")
+
     # Directory.title_get():
     def title_get(self):
         directory = self
@@ -4326,22 +4435,20 @@ class Directory(Node):
         return 'D'
 
 
+# Collection:
 class Collection(Directory):
 
-    # FIXME: Why do we have both *path* and *directory*!!!
-
     # Collection.__init__():
-    def __init__(self, name, path, title, directory):
+    def __init__(self, name, path, title, parent):
         # Verify argument types:
         assert isinstance(name, str)
         assert isinstance(path, str)
         assert isinstance(title, str)
-        assert isinstance(directory, str) and os.path.isdir(directory)
+        assert isinstance(parent, Collections)
 
         # Intialize the collection:
         collection = self
-        super().__init__(name, path, title)
-        collection.directory = directory
+        super().__init__(name, path, title, parent)
         assert collection.type_letter_get() == 'C'
 
     # Collection.type_leter_get()
@@ -4349,6 +4456,50 @@ class Collection(Directory):
         # print("Collection.type_letter_get(): name='{0}'".format(self.name))
         return 'C'
 
+
+    # Collection.partial_load():
+    def partial_load(self, collections_root, searches_root, relative_path, tracing=None):
+        # Verify argument types:
+        assert isinstance(collections_root, str)
+        assert isinstance(searches_root, str)
+        assert isinstance(relative_path, str)
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform an requested *tracing*:
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}=>Collection.partial_load()")
+
+        # Visit all of the directories and files in *collection_path*:
+        collection = self
+        collection_path = os.path.join(collections_root, relative_path)
+        assert os.path.isdir(collection_path)
+        for index, base_name in enumerate(list(sorted(os.listdir(collection_path)))):
+            if tracing is not None:
+                print(f"{tracing}File_Name[{index}]:'{base_name}'")
+
+            # Compute a *full_path* to *base_name*:
+            if not base_name.startswith('.'):
+                full_path = os.path.join(collection_path, base_name)
+                if base_name == "README.md":
+                    pass
+                elif base_name.endswith(".xml"):
+                    assert False, "Top level tables not implemented yet"
+                elif os.path.isdir(full_path):
+                    name = file_name2name(base_name)
+                    title = file_name2title(base_name)
+                    directory = Directory(name, full_path, title, parent=collection)
+                    sub_relative_path = os.path.join(relative_path, base_name)
+                    directory.partial_load(collections_root, searches_root, sub_relative_path,
+                                           tracing=next_tracing)
+                    assert directory in collection.children
+                else:
+                    assert False, f"'{full_path}' is neither an .xml file nor a directory"
+
+
+        # Wrap-up any requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}<=Collection.partial_load()")
 
 # Collections:
 class Collections(Directory):
@@ -4362,8 +4513,44 @@ class Collections(Directory):
 
         # Intialize the collections:
         collections = self
-        super().__init__(name, path, title)
+        super().__init__(name, path, title, None)
         assert collections.type_letter_get() == 'R'
+
+    # Collections.partial_load():
+    def partial_load(self, collections_root, searches_root, tracing=None):
+        # Verify argument types:
+        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(collections_root, str)
+        assert isinstance(searches_root, str)
+        
+        # Perform any requested *tracing*:
+        next_tracing = None if tracing is None else tracing + " "
+        if not tracing is None:
+            print(f"{tracing}=>Collections.partial_load()")
+
+        # Extract some values from *collections*:
+        collections = self
+        assert collections_root == collections.path
+        if not tracing is None:
+            print(f"{tracing}collections_root'{collections_root}'")
+
+        # Sweep through *path* finding directories (technically symbolic links):
+        for index, directory_name in enumerate(os.listdir(collections_root)):
+            collection_path = os.path.join(collections_root, directory_name)
+            if tracing is not None:
+                print(f"{tracing}Collection[{index}]:'{collection_path}'")
+            if not directory_name.startswith('.'):
+                assert os.path.isdir(collection_path)
+                collection_title = file_name2title(directory_name)
+                collection = Collection(directory_name,
+                                        collections_root, collection_title, collections)
+                assert collections.has_child(collection)
+                collection.partial_load(collections_root, searches_root, directory_name,
+                                        tracing=next_tracing)
+
+        # Wrap any requested *tracing*:
+        if not tracing is None:
+            print(f"{tracing}<=Collections.partial_load()")
 
     # Collections.type_leter_get():
     def type_letter_get(self):
@@ -4384,120 +4571,39 @@ class Search(Node):
     }
 
     # Search.__init__():
-    def __init__(self, **arguments_table):
+    def __init__(self, name, path, title, table, tracing=None):
         # Verify argument types:
-        is_search_tree = "search_tree" in arguments_table
-        required_arguments_size = 1 if "tracing" in arguments_table else 0
-        if is_search_tree:
-            assert "table" in arguments_table
-            table = arguments_table["table"]
-            assert isinstance(table, Table)
-            required_arguments_size += 2
-        else:
-            required_arguments_size += 5
-            assert "name" in arguments_table
-            assert "comments" in arguments_table
-            assert "table" in arguments_table
-            assert "parent_name" in arguments_table
-            assert "url" in arguments_table
-        assert len(arguments_table) == required_arguments_size
+        assert isinstance(name, str)
+        assert isinstance(path, str)
+        assert isinstance(title, str)
+        assert isinstance(table, Table)
+        assert isinstance(tracing, str) or tracing is None
 
         # Perform any requested *tracing*:
-        tracing = arguments_table["tracing"] if "tracing" in arguments_table else None
-        assert isinstance(tracing, str) or tracing is None
-        # next_tracing = None if tracing is None else tracing + " "
+        next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
-            print("{0}=>Search(*)".format(tracing))
-
-        # Dispatch on is *is_search_tree*:
-        if is_search_tree:
-            search_tree = arguments_table["search_tree"]
-            # searches = arguments_table["searches"]
-            # assert isinstance(searches, list)
-            # for search in searches:
-            #    assert isinstance(search, Search)
-
-            # Get the search *name*:
-            attributes_table = search_tree.attrib
-            assert "name" in attributes_table
-            name = attributes_table["name"]
-            parent_name = (attributes_table["parent"] if "parent" in attributes_table else "")
-            if tracing is not None:
-                print("name='{0}' parent_name='{1}'".format(name, parent_name))
-            assert "url" in attributes_table, "attributes_table={0}".format(attributes_table)
-            url = attributes_table["url"]
-
-            comments = list()
-            filters = list()
-            sub_trees = list(search_tree)
-            assert len(sub_trees) == 2
-            for sub_tree in sub_trees:
-                sub_tree_tag = sub_tree.tag
-                if sub_tree_tag == "SearchComments":
-                    search_comment_trees = list(sub_tree)
-                    for search_comment_tree in search_comment_trees:
-                        assert search_comment_tree.tag == "SearchComment"
-                        comment = SearchComment(comment_tree=search_comment_tree)
-                        comments.append(comment)
-                elif sub_tree_tag == "Filters":
-                    filter_trees = list(sub_tree)
-                    for filter_tree in filter_trees:
-                        assert filter_tree.tag == "Filter"
-                        filter = Filter(tree=filter_tree, table=table)
-                        filters.append(filter)
-                else:
-                    assert False
-
-        else:
-            # Grab *name*, *comments* and *table* from *arguments_table*:
-            name = arguments_table["name"]
-            assert isinstance(name, str)
-            comments = arguments_table["comments"]
-            assert isinstance(comments, list)
-            table = arguments_table["table"]
-            assert isinstance(table, Table)
-            url = arguments_table["url"]
-            assert isinstance(url, str)
-            parent_name = arguments_table["parent_name"]
-            assert isinstance(parent_name, str)
-            for comment in comments:
-                assert isinstance(comment, SearchComment)
-            filters = list()
-
-        # Make sure *search* is on the *table.children* list:
-        # for prior_search in table.children:
-        #    assert prior_search.name != name
-
-        # This code does not work since the order that *Search*'s are created is in the
-        # *os.listdir()* returns file names which is kind of random.  See can not force
-        # the binding of *search_parent* here.  It needs to be done sometime after the
-        # call to the *Search* initializer:
-        # if parent_name == "":
-        #    search_parent = None
-        # else:
-        #    for sibling_search in table.children:
-        #        if sibling_search.name == parent_name:
-        #            search_parent = sibling_search
-        #            break
-        #    else:
-        #        assert False, "parent_name '{0}' does not match a search".format(parent_name)
+            print(f"{tracing}=>Search.__init__('{name}')")
 
         # Load arguments into *search* (i.e. *self*):
         search = self
-        path = ""
-        super().__init__(name, path, parent=table)
-        search.comments = comments
-        search.filters = filters
-        assert isinstance(parent_name, str)
+        super().__init__(name, path, title, table)
+        assert isinstance(search.title, str)
+
+        # Mark that the *table* is no longer sorted:
+        table.is_sorted = False
+
+        # Stuff values into *search*:
+        search.comments = list()
+        search.filters = list()
+        search.loaded = False
         search.search_parent = None
-        search.search_parent_name = parent_name
-        search.name = name
-        search.table = table
-        search.url = url
+        search.search_parent_name = ""
+        search.url = None
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
-            print("{0}<=Search(*):name={1}".format(tracing, name))
+            print(f"{tracing}<=Search.__init__('{name}')")
+
 
     # Search.clicked()
     def clicked(self, tables_editor, tracing=None):
@@ -4523,6 +4629,42 @@ class Search(Node):
         # Wrap up any requested *tracing*:
         if tracing is not None:
             print("{0}<=Search.clicked()".format(tracing))
+
+    # Search.file_load():
+    def file_load(self, tracing=None):
+        # Verify argument types:
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any required *tracing*:
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}=>Search.file_load()")
+                
+        # Only load *search* (i.e. *self*) the file once:
+        search = self
+        if not search.loaded:
+            path = search.path
+            assert os.path.exists(path), f"File '{path}' does not exist"
+            with open(path, "r") as search_file:
+                # Read in *search_xml_text* from *search_file*:
+                search_xml_text = search_file.read()
+
+                # Parse the XML in *search_xml_text* into *search_tree*:
+                search_tree = etree.fromstring(search_xml_text)
+
+                # Now process the contents of *search_tree* and stuff the result:
+                search.tree_load(search_tree, tracing=next_tracing)
+
+                table = search.parent
+                assert isinstance(table, Table)
+                table.is_sorted = False
+
+            # Mark *search* as *loaded*:
+            search.loaded = True
+
+        # Wrap up any required *tracing*:
+        if tracing is not None:
+            print(f"{tracing}=>Search.file_load()")
 
     # Search.filters_refresh()
     def filters_refresh(self, tracing=None):
@@ -4710,6 +4852,29 @@ class Search(Node):
         if tracing is not None:
             print("{0}<=Search.save()".format(tracing))
 
+    # Search.partial_load():
+    #def partial_load(self, tracing=None):
+    #    # Verify argument types:
+    #    assert isinstance(tracing, str) or tracing is None
+    #    assert False
+
+    #    # Perform any requested *tracing*:
+    #    if tracing is not None:
+    #        print(f"{tracing}=>Searches.populate(*)")
+
+    #    # Compute the *glob_pattern* for searching:
+    #    searches = self
+    #    path = searches.path
+    #    slash = os.sep
+    #    if tracing is not None:
+    #        print(f"{tracing}glob_pattern='{glob_pattern}'")
+    #    #for index, file_name in enumerate(glob.glob(glob_pattern, recursive=True)):
+    #    #    print(f"Search[{index}]:'{file_name}'")
+
+    #    # Wrap up any requested *tracing*:
+    #    if tracing is not None:
+    #        print(f"{tracing}<=Searches.populate(*)")
+
     # Search.search_parent_set():
     def search_parent_set(self, search_parent):
         # Verify argument types:
@@ -4741,14 +4906,96 @@ class Search(Node):
                   format(tracing, "None" if new_table is None else new_table.name))
 
     # Search.title_get():
-    def title_get(self):
+    def title_get(self, tracing=None):
+        # Verify argument types:
+        assert isinstance(tracing, str) or tracing is None
+    
+        # Perform any requested *tracing*:
         search = self
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}=>Search.title_get('{search.name}')")
+
+        # Make sure that *search* has been fully loaded from it associated `.xml` file:
+        search.file_load(tracing=next_tracing)
+
+        # Make sure that *table* is *sort*'ed:
+        table = search.parent
+        assert isinstance(table, Table)
+        table.sort(tracing=next_tracing)
+
+        # Construct the *title*:
         title = search.name
         search_parent = search.search_parent
         if search_parent is not None:
             title = "{0} ({1})".format(title, search_parent.name)
-        # print("Search.title_get()=>'{0}'".format(title))
+
+        # Wrap any requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}=>Search.title_get('{search.name}')=>'{title}'")
         return title
+
+    # Search.tree_load():
+    def tree_load(self, search_tree, tracing=None):
+        # Verify argument types:
+        assert isinstance(search_tree, etree._Element)
+        assert isinstance(tracing, str) or tracing is None
+
+        # The basic format of the *search_tree* is:
+        #
+        #        <Search name="..." parent="..." table="..." url="...">
+        #          <SerachComments>
+        #            <SerachComment language="EN">
+        #            </SerachComment language="EN">
+        #            ...
+        #          </SerachComments>
+        #          <Filters>
+        #            ...
+        #          </Filters>
+        #        </Search>
+
+        # Extract the attributes from *attributes_table* of the `<Search ...>` tag:
+        attributes_table = search_tree.attrib
+        assert "name" in attributes_table
+        name = attributes_table["name"]
+        table_name = attributes_table["table"]
+        search_parent_name = (attributes_table["parent"] if "parent" in attributes_table else "")
+        assert "url" in attributes_table, "attributes_table={0}".format(attributes_table)
+        url = attributes_table["url"]
+
+        # Extract the *comments* and *filters* from *search_tree*:
+        comments = list()
+        filters = list()
+        sub_trees = list(search_tree)
+        assert len(sub_trees) == 2
+        for sub_tree in sub_trees:
+            sub_tree_tag = sub_tree.tag
+            if sub_tree_tag == "SearchComments":
+                # We have `<SearchComments ...>`:
+                search_comment_trees = list(sub_tree)
+                for search_comment_tree in search_comment_trees:
+                    # We should have `<SearchComment ...>... `:
+                    assert search_comment_tree.tag == "SearchComment"
+                    comment = SearchComment(comment_tree=search_comment_tree)
+                    comments.append(comment)
+            elif sub_tree_tag == "Filters":
+                # We have `<Filters ...>...`:
+                filter_trees = list(sub_tree)
+                for filter_tree in filter_trees:
+                    # We should have `<Filter ...>... `:
+                    assert filter_tree.tag == "Filter"
+                    filter = Filter(tree=filter_tree, table=table)
+                    filters.append(filter)
+            else:
+                assert False, f"Unexpected tag <{sub_tree_tag}...> under <Search> tag"
+
+        # Stuff new values into *search* (i.e. *self*):
+        search = self
+        search.comments[:] = comments[:]
+        search.filters[:] = filters[:]
+        search.search = None
+        search.search_parent_name = search_parent_name
+        search.url = url
 
     # Search.type_letter_get():
     def type_letter_get(self):
@@ -4804,15 +5051,16 @@ class Search(Node):
 class Searches(Directory):
 
     # Searches.__init__():
-    def __init__(self, name, path, title):
+    def __init__(self, name, path, title, parent):
         # Verify argument types:
         assert isinstance(name, str)
         assert isinstance(path, str)
         assert isinstance(title, str)
+        assert isinstance(table, Table)
 
         # Intialize the searches:
         searches = self
-        super().__init__(name, path, title)
+        super().__init__(name, path, title, table)
         assert searches.type_letter_get() == 'F'
 
     # Searches.type_leter_get():
@@ -4820,203 +5068,59 @@ class Searches(Directory):
         # print("Searches.type_letter_get(): name='{0}'".format(self.name))
         return 'F' # Find
 
-    # Searches.populate():
-    def populate(self, tracing=None):
-        # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}=>Searches.populate(*)")
-
-        # Compute the *glob_pattern* for searching:
-        searches = self
-        path = searches.path
-        slash = os.sep
-        glob_pattern = path + slash + "**" + os.sep + "*.xml"
-        if tracing is not None:
-            print(f"{tracing}glob_pattern='{glob_pattern}'")
-        for index, file_name in enumerate(glob.glob(glob_pattern, recursive=True)):
-            print(f"Search[{index}]:'{file_name}'")
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Searches.populate(*)")
-
 # Table:
 class Table(Node):
 
     # Table.__init__():
-    def __init__(self, **arguments_table):
+    def __init__(self, name, path, title, parent, tracing=None):
         # Verify argument types:
-        assert "file_name" in arguments_table
-        file_name = arguments_table["file_name"]
-        assert isinstance(file_name, str)
-        is_table_tree = "table_tree" in arguments_table
-        if is_table_tree:
-            # assert len(arguments_table) == 3, arguments_table
-            assert ("table_tree" in arguments_table and
-                    isinstance(arguments_table["table_tree"], etree._Element))
-        else:
-            # This code also winds up pulling out *name*
-            # print("len(arguments_table)={0}".format(len(arguments_table)))
-            assert len(arguments_table) == 8, \
-              "arguments_table_size={0}".format(arguments_table)
-            # 1: Verify that *comments* is present and has correct type: !
-            assert "comments" in arguments_table
-            comments = arguments_table["comments"]
-            assert isinstance(comments, list)
-            assert len(comments) >= 1, "We must have at least one comment"
-            english_comment_found = False
-            for comment in comments:
-                assert isinstance(comment, TableComment)
-                if comment.language == "EN":
-                    english_comment_found = True
-            assert english_comment_found, "We must have an english comment."
-
-            # 2: Verify that *csv_file_name* is present and has correct type:
-            assert "csv_file_name" in arguments_table
-            csv_file_name = arguments_table["csv_file_name"]
-            assert isinstance(csv_file_name, str)
-            # 3: Verify that *name* is present and has correct type:
-            assert "name" in arguments_table
-            name = arguments_table["name"]
-            assert isinstance(name, str)
-            # 4: Verify that *parameters* is present and has correct type:
-            assert "parameters" in arguments_table
-            parameters = arguments_table["parameters"]
-            # 5: Verify that *path* present and has the correct type:
-            assert "path" in arguments_table
-            path = arguments_table["path"]
-            assert isinstance(parameters, list)
-            for parameter in parameters:
-                assert isinstance(parameter, Parameter)
-            # 6: Verify that the parent is specified:
-            assert "parent" in arguments_table
-            parent = arguments_table["parent"]
-            # 7: Verify that the *full_ref* is specified:
-            assert "url" in arguments_table
-            url = arguments_table["url"]
-            assert url is not None
+        assert isinstance(name, str)
+        assert isinstance(path, str)
+        assert isinstance(title, str)
+        assert isinstance(parent, Directory)
+        assert isinstance(tracing, str) or tracing is None
 
         # Perform any requested *tracing*:
-        tracing = arguments_table["tracing"] if "tracing" in arguments_table else None
-        if tracing:
-            print("{0}=>Table.__init__(*)".format(tracing))
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}=>Table.__init__('{name}', *, {parent.name}')")
 
-        base = None
-        id = -1
-        title = None
-        items = -1
-
-        # Dispatch on *is_table_tree*:
-        if is_table_tree:
-            # Make sure that *table_tree* is actually a Table tag:
-            table_tree = arguments_table["table_tree"]
-            assert table_tree.tag == "Table"
-            attributes_table = table_tree.attrib
-
-            # Extract *name*:
-            assert "name" in attributes_table
-            name = attributes_table["name"]
-
-            # Grab *csv_file_name* and *title* from *attributes_table*:
-            csv_file_name = attributes_table["csv_file_name"]
-            title = attributes_table["title"]
-
-            # Extract *url*:
-            url = attributes_table["url"]
-
-            # Ensure that we have exactly two elements:
-            table_tree_elements = list(table_tree)
-            assert len(table_tree_elements) == 2
-
-            # Extract the *comments* from *comments_tree_element*:
-            comments = list()
-            comments_tree = table_tree_elements[0]
-            assert comments_tree.tag == "TableComments"
-            for comment_tree in comments_tree:
-                comment = TableComment(comment_tree=comment_tree)
-                comments.append(comment)
-
-            # Extract the *parameters* from *parameters_tree_element*:
-            parameters = list()
-            parameters_tree = table_tree_elements[1]
-            assert parameters_tree.tag == "Parameters"
-            for parameter_tree in parameters_tree:
-                parameter = Parameter(parameter_tree=parameter_tree)
-                parameters.append(parameter)
-            path = ""
-            parent = None
-        else:
-            # Otherwise just dircectly grab *name*, *comments*, and *parameters*
-            # from *arguments_table*:
-            comments = arguments_table["comments"]
-            csv_file_name = arguments_table["csv_file_name"]
-            name = arguments_table["name"]
-            parameters = arguments_table["parameters"]
-            if "base" in arguments_table:
-                base = arguments_table["base"]
-            if "id" in arguments_table:
-                id = arguments_table["id"]
-            if "title" in arguments_table:
-                title = arguments_table["title"]
-                print("TITLE='{0}'".format(title))
-            if "items" in arguments_table:
-                items = arguments_table["items"]
-            url = None
-            if "url" in arguments_table:
-                url = arguments_table["url"]
-
-        xml_suffix_index = file_name.find(".xml")
-        assert xml_suffix_index + 4 >= len(file_name), "file_name='{0}'".format(file_name)
+        assert path.endswith(".xml")
 
         # print("=>Node.__init__(...)")
-        super().__init__(name, path, parent=parent)
-        assert url is not None
+        super().__init__(name, path, title, parent)
 
         # Load up *table* (i.e. *self*):
         table = self
-        table.base = base
-        table.comments = comments
-        table.csv_file_name = csv_file_name
-        table.file_name = file_name
-        table.id = id
-        table.items = items
-        table.import_column_triples = None
-        table.import_headers = None
-        table.import_rows = None
-        table.name = name
-        table.parameters = parameters
+        table.is_sorted = False
+        table.loaded = False
+        table.comments = list()
+        table.parameters = list()
         table.searches_table = dict()
-        table.title = title
-        table.url = url
+
+        #base = None
+        #id = -1
+        #title = None
+        #assert url is not None
+        #items = -1
+
+        #table.base = base
+        #table.comments = comments
+        #table.csv_file_name = None
+        #table.file_name = file_name
+        #table.id = id
+        #table.items = items
+        #table.import_column_triples = None
+        #table.import_headers = None
+        #table.import_rows = None
+        #table.parameters = parameters
+        #table.title = title
+        #table.url = url
 
         # Wrap up any requested *tracing*:
-        if tracing:
-            print("{0}=>Table.__init__(*)".format(tracing))
+        if tracing is not None:
+            print(f"{tracing}<=Table.__init__('{name}', *, {parent.name}')")
 
-    # Table.__equ__():
-    def __eq__(self, table2):
-        # Verify argument types:
-        assert isinstance(table2, Table), "{0}".format(type(table2))
-
-        # Compare each field in *table1* (i.e. *self*) with the corresponding field in *table2*:
-        table1 = self
-        file_name_equal = (table1.file_name == table2.file_name)
-        name_equal = (table1.name == table2.name)
-        comments_equal = (table1.comments == table2.comments)
-        parameters_equal = (table1.parameters == table2.parameters)
-        all_equal = (file_name_equal and name_equal and comments_equal and parameters_equal)
-
-        # Debugging code:
-        # print("file_name_equal={0}".format(file_name_equal))
-        # print("name_equal={0}".format(name_equal))
-        # print("comments_equal={0}".format(comments_equal))
-        # print("parameters_equal={0}".format(parameters_equal))
-        # print("all_equal={0}".format(all_equal))
-
-        return all_equal
 
     # Table.bind_parameters_from_imports():
     def bind_parameters_from_imports(self, tracing=None):
@@ -5250,48 +5354,153 @@ class Table(Node):
             print("{0}<=Table.csv_read_process('{1}', bind={2})".
                   format(tracing, csv_directory, bind))
 
-    # Table.fix_up():
-    def fix_up(self, tracing=None):
+    # Table.file_load():
+    def file_load(self, tracing=None):
+        # Verify argument types:
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested *tracing*:
+        table = self
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print("{0}=>Table.file_load('{0}')".format(table.name, tracing))
+        
+        # Only load *table* (i.e. *self*) if it is not already *loaded*:
+        if not table.loaded:
+            # Create the *xml_file_path* from *directory_path* and *xml_file_name*:
+            path = table.path
+
+            # Read *table_tree* in from *xml_file_path*:
+            with open(path) as table_file:
+                # Read in *table_xml_text* from *table_file*:
+                table_xml_text = table_file.read()
+
+                # Parse the XML in *table_xml_text* into *table_tree*:
+                table_tree = etree.fromstring(table_xml_text)
+                # FIXME: Catch XML parsing errors here!!!
+
+                # Now process the contents of *table_tree* and stuff the results into *table*:
+                table.tree_load(table_tree, tracing=next_tracing)
+
+            # Mark *table* as *loaded*:
+            table.loaded = True
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            next_tracing = tracing + " "
+            print("{0}=>Table.file_load('{0}')".format(table.name, tracing))
+        
+    # Table.tree_load():
+    def tree_load(self, table_tree, tracing=None):
+        # Verify argument types:
+        assert isinstance(table_tree, etree._Element)
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform an request *tracing*:
+        if tracing is not None:
+            next_tracing = tracing + " "
+            print(f"{tracing}=>Table.tree_load()")
+
+        # Verify that we have a "<Table ...> ... </Table>" at the top level of *table_tree*:
+        assert table_tree.tag == "Table"
+
+        # The format of a *Table* `.xml` file is basically:
+        #
+        #        <Table name="..." csv_file_name="..." title="..." url="...">
+        #          <TableComments>
+        #            ...
+        #          </TableComments>
+        #          <Parameters>
+        #            ...
+        #          </Parameters>
+        #        </Table>
+
+        # Extract the attributes from *attributes_table*:
+        attributes_table = table_tree.attrib
+        assert "name" in attributes_table
+        name = attributes_table["name"]
+        csv_file_name = attributes_table["csv_file_name"]
+        title = attributes_table["title"]
+        url = attributes_table["url"]
+
+        # Extract the *comments* from *comments_tree_element*:
+        table_tree_elements = list(table_tree)
+        comments_tree = table_tree_elements[0]
+        assert comments_tree.tag == "TableComments"
+        comments = list()
+        for comment_tree in comments_tree:
+            comment = TableComment(comment_tree=comment_tree)
+            comments.append(comment)
+
+        # Extract the *parameters* from *parameters_tree_element*:
+        parameters = list()
+        parameters_tree = table_tree_elements[1]
+        assert parameters_tree.tag == "Parameters"
+        for parameter_tree in parameters_tree:
+            parameter = Parameter(parameter_tree=parameter_tree)
+            parameters.append(parameter)
+        path = ""
+
+        # Ensure that there are no extra elements:
+        assert len(table_tree_elements) == 2
+
+        # Load the extracted information into *table* (i.e. *self*):
+        table = self
+        table.comments[:] = comments[:]
+        table.csv_file_name = csv_file_name
+        table.name = name
+        table.parameters[:] = parameters[:]
+        table.title = title
+        table.url = url
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}<=Table.file_load()")
+
+    # Table.sort():
+    def sort(self, tracing=None):
         # Verify argument types:
         assert isinstance(tracing, str) or tracing is None
 
         # Perform any requested *tracing*:
         if tracing is not None:
-            print("{0}=>Table.fix_up(*)".format(tracing))
+            print("{0}=>Table.sort(*)".format(tracing))
 
-        # Grab *searches* list from *table* (i.e. *self*):
+        # Only sort *table* if it is not *sorted*:
         table = self
-        searches = table.children
+        if not table.is_sorted:
+            # Grab *searches* list from *table* (i.e. *self*):
+            searches = table.children
 
-        # Grab *searches* list from *table* (i.e. *self*):
-        table = self
-        searches = table.children
+            # Create a new *searches_table* that contains every *search* keyed by *search_name*:
+            searches_table = dict()
+            for search in searches:
+                search_name = search.name
+                searches_table[search_name] = search
+            table.searches_table = searches_table
+            assert len(searches) == len(searches_table), f"{len(searches)} != {len(searches_table)}"
 
-        # Create a new *searches_table* that contains every *search* keyed by *search_name*:
-        searches_table = dict()
-        for search in searches:
-            search_name = search.name
-            searches_table[search_name] = search
-        table.searches_Table = searches_table
-        assert len(searches) == len(searches_table), "{0} != {1}".format(
-                                                      len(searches), len(searches_table))
+            # Sweep through *searches* and ensure that the *search_parent* field is set:
+            for index, search in enumerate(searches):
+                search_parent_name = search.search_parent_name
+                if len(search_parent_name) >= 1:
+                    if search_parent_name not in searches_table:
+                        keys = list(searches_table.keys())
+                        assert False, f"'{search_parent_name}' not in searches_table {keys}"
+                    search_parent = searches_table[search_parent_name]
+                    search.search_parent = search_parent
+                if tracing is not None:
+                    print(f"{tracing}Search[{index}]:'{search.name}' '{search_parent_name}'")
 
-        # Sweep through *searches* and ensure that the *search_parent* field is set:
-        for search in searches:
-            search_parent_name = search.search_parent_name
-            if len(search_parent_name) >= 1:
-                assert search_parent_name in searches_table, \
-                  ("'{0}' not in searches_table {1}".format(
-                   search_parent_name, list(searches_table.keys())))
-                search_parent = searches_table[search_parent_name]
-                search.search_parent = search_parent
+            # Now sort *searches*:
+            searches.sort(key=Search.key)
 
-        # Now sort *searches*:
-        searches.sort(key=Search.key)
+            # Mark that *table* *is_sorted*:
+            table.is_sorted = True
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
-            print("{0}<=Table.fix_up(*)".format(tracing))
+            print("{0}<=Table.sort(*)".format(tracing))
 
     # Table.hasChildren():
     def hasChildren(self, index):
@@ -5316,6 +5525,39 @@ class Table(Node):
                 header_label = short_heading if short_heading is not None else long_heading
             header_labels.append(header_label)
         return header_labels
+
+    # Table.partial_load():
+    def partial_load(self, collections_root, searches_root, relative_path, tracing=None):
+        # Verify argument types:
+        assert isinstance(collections_root, str)
+        assert isinstance(searches_root, str)
+        assert isinstance(relative_path, str)
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested *tracing*:
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}=>Table.partial_load()")
+
+        # Scan through *searches_path* looking for `.xml` files:
+        table = self
+        searches_path = os.path.join(searches_root, relative_path)
+        #print(f"searches_path='{searches_path}'")
+        if os.path.isdir(searches_path):
+            # Scan for searches:
+            for index, search_file_name in enumerate(sorted(list(os.listdir(searches_path)))):
+                if tracing is not None:
+                    print(f"{tracing}Search[{index}]:'{search_file_name}'")
+                if search_file_name.endswith(".xml"):
+                    name = file_name2title(search_file_name[:-4])
+                    path = os.path.join(searches_root, relative_path, search_file_name)
+                    title = file_name2title(search_file_name)
+                    search = Search(name, path, title, table)
+                    assert table.has_child(search)
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}<=Table.partial_load()")
 
     # Table.save():
     def save(self, tracing=None):
@@ -5389,12 +5631,27 @@ class Table(Node):
         table.searches_stable = searches_table
 
     # Table.title_get():
-    def title_get(self):
+    def title_get(self, tracing=None):
+        # Verify argument types:
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform an requested *tracing*:
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}=>Table.title_get()")
+
+        # Force *table* (i.e. *self*) *load* if it has not already been loaded:
         table = self
+        table.file_load(tracing=next_tracing)
+
+        # Grab the *title* from *table*:
         title = table.title
         if title is None:
             title = table.name
-        # print("Table.title='{0}'".format(title))
+
+        # Wrap up an requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}<=Table.title_get()=>{title}")
         return title
 
     # Table.to_xml_string():
@@ -8283,35 +8540,25 @@ class TablesEditor(QMainWindow):
         assert isinstance(working_directory_path, str)
         assert os.path.isdir(working_directory_path)
 
-        # Create *collections* *Node*:
-        collections_path = os.path.join(working_directory_path, "collections")
-        assert os.path.isdir(collections_path)
-        collections = Collections("Collections","Collections", collections_path)
+        # Create *collections_path* and *searches_path*:
+        collections_root= os.path.join(working_directory_path, "collections")
+        assert os.path.isdir(collections_root)
+        searches_root = os.path.join(working_directory_path, "searches")
+        assert os.path.isdir(searches_root)
+
+        # Create the *collections* and do a recursive *partial_load*:
+        collections = Collections("Collections", collections_root, "Collections")
         tables_editor.collections = collections
+        collections.partial_load(collections_root, searches_root)  # , tracing="")
 
-        # FIXME: This code block should be a method of *Collections* class!!!
-        # Sweep through *collections_path*:
-        for collection_base_name in os.listdir(collections_path):
-            # Compute *collection_path*:
-            collection_path = os.path.join(collections_path, collection_base_name)
-            if collection_path[0] != '.' and os.path.isdir(collection_path):
-                collection = Collection(collection_base_name, collection_path,
-                                        collection_base_name, collection_path)
-                assert isinstance(collection, Collection)
-                assert collection.type_letter_get() == 'C'
-                collections.add_child(collection)
-
-        # Create the *searches*:
-        searches_path = os.path.join(working_directory_path, "searches")
-        assert os.path.isdir(searches_path)
-        searches = Searches("Searches", searches_path, "Searches")
-        tables_editor.xsearches = searches
-        searches.populate(tracing="")
+        #searches = Searches("Searches", searches_path, "Searches")
+        #tables_editor.xsearches = searches
+        #searches.populate(tracing="")
 
         # Create *tree_model* and stuff into *tables_editor*:
         tree_model = TreeModel(collections)
         tables_editor.model = tree_model
-        print("tree_model=", tree_model)
+        #print("tree_model=", tree_model)
 
         # Temporary *collections_tree* widget experimentation here:
         collections_tree = mw.collections_tree
@@ -10723,19 +10970,6 @@ class TreeModel(QAbstractItemModel):
         tree_model.headers = {0: "Type", 1: "Name"}
         tree_model.collections_node = collections_node
 
-        # Populate the top level of *collections_node*:
-        # file_names = sorted(os.listdir(path))
-        # for file in file_names:
-        #    file_path = os.path.join(path, file)
-        #    title = root_directory.file_name2title(file)
-        #    slash_index = file_path.rfind('/')
-        #    dot_directory = False if slash_index < 0 else file_path[slash_index+1:].startswith('.')
-        #    # print("path='{0} slash_index={1} dot_directory={2}".
-        #    #       format(path, slash_index, dot_directory))
-        #    if os.path.isdir(file_path) and not dot_directory:
-        #        Directory(file, file_path, title, parent=root_directory)
-        # root_directory.is_traversed = True
-
     # check if the node has data that has not been loaded yet
     # TreeModel.canFetchMore():
     def canFetchMore(self, model_index):
@@ -10745,6 +10979,7 @@ class TreeModel(QAbstractItemModel):
         tree_model = self
         node = tree_model.getNode(model_index)
         can_fetch_more = node.is_dir and not node.is_traversed
+        return False
         return can_fetch_more
 
     # TreeModel.columnCount():
@@ -10759,9 +10994,10 @@ class TreeModel(QAbstractItemModel):
         assert isinstance(model_index, QModelIndex)
         assert isinstance(role, int)
 
-        column = model_index.column()
         value = None
         if model_index.isValid():
+            row = model_index.row()
+            column = model_index.column()
             node = model_index.internalPointer()
             if role == Qt.DisplayRole:
                 if column == 0:
@@ -11026,7 +11262,8 @@ class TreeModel(QAbstractItemModel):
         assert isinstance(parent, QModelIndex)
         tree_model = self
         node = tree_model.getNode(parent)
-        return node.child_count()
+        count = node.child_count()
+        return count
 
 
 # Units:
