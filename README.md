@@ -110,10 +110,10 @@ the over all architecture of BOM manager:
 * Order: An order specifies a list of projects and the number of each project
   instance that is desired.
 
-* Collection: A collection is typically associated with a vendor.  It is a more
-  generic term for a catalog.  In the past, vendors would print up a catalog
-  that lists all of the parts and associated prices that a vendor would sell.
-  These days, most vendors have a web presence that allows people to order
+* Collection: A collection is typically (but not always) associated with a vendor.
+  It is a more generic term for a catalog.  In the past, vendors would print up a
+  catalog   that lists all of the parts and associated prices that a vendor would
+  sell.  These days, most vendors have a web presence that allows people to order
   on-line with up-to-date pricing and availability.  Each collection has a
   software plug-in that plugs into the BOM manager that supports access to the
   collection.  (At the moment there is only a Digi-Key plug-in.)
@@ -124,9 +124,10 @@ the over all architecture of BOM manager:
   each column specifies some parameter about the part.
   
 * Search: A search has a name that is unique across the entire collection and
-  winnows rows of a specific down to ones that meet project requirements.  Each
-  project part name in a project must match at least one search name in one of the
-  collections.
+  winnows rows of a specific table down to ones that meet project requirements.
+  While search names must unique across an entire collection, the names m
+  Each project part name in a project must match at least one search name in one
+  of the collections.
 
 With these new concepts the over all BOM manager algorithm is:
 
