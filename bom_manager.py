@@ -382,6 +382,8 @@ def main():
     # assert len(xsd_file_names) > 0, "No '.xsd' file specified"
     # assert len(xml_file_names) > 0, "No '.xml' file specified"
 
+    Encode.test()
+
     # Deal with command line *arguments*:
     arguments = sys.argv[1:]
     # print("arguments=", arguments)
@@ -414,7 +416,7 @@ def main():
                     table_write_file.write(table_write_text)
 
         # Now create the *tables_editor* graphical user interface (GUI) and run it:
-        tables_editor = TablesEditor(tables)  # , tracing="")
+        tables_editor = TablesEditor(tables , tracing="")
 
         # Start up the GUI:
         tables_editor.run()
@@ -423,86 +425,86 @@ def main():
     return 0
 
 
-def file_name2name(file_name):
-    # Verify argument types:
-    assert isinstance(file_name, str)
-
-    return file_name
-
-
-def file_name2title(file_name):
-    # Verify argument types:
-    assert isinstance(file_name, str)
-
-    # Decode *file_name* into a list of *characters*:
-    characters = list()
-    index = 0
-    file_name_size = len(file_name)
-    while index < file_name_size:
-        character = file_name[index]
-        if character == '_':
-            # Underscores are always translated to spaces:
-            character = ' '
-            index += 1
-        elif character == '%':
-            # `%XX` is converted into a single *character*:
-            try:
-                sub_string = file_name[index+1:index+3]
-                character = chr(int(sub_string, 16))
-            except ValueError:
-                assert False, f"file_name='{file_name}' sub_string='{sub_string}' index={index}"
-            index += 3
-        else:
-            # Everything else just taken as is:
-            index += 1
-        characters.append(character)
-
-    # Join *characters* back into a single *title* string:
-    title = "".join(characters)
-    return title
-
-
-def name2file_name(name):
-    # Verify argument types:
-    assert isinstance(name, str)
-    return name
-
-
-def safe_attribute2text(safe_attribute):
-    # Verify argument types:
-    assert isinstance(safe_attribute, str)
-
-    # Sweep across *safe_attribute* one *character* at a time performing any neccesary conversions:
-    # print("safe_attribute='{0}'".format(safe_attribute))
-    new_characters = list()
-    safe_attribute_size = len(safe_attribute)
-    character_index = 0
-    while character_index < safe_attribute_size:
-        character = safe_attribute[character_index]
-        # print("character[{0}]='{1}'".format(character_index, character))
-        new_character = character
-        if character == '&':
-            remainder = safe_attribute[character_index:]
-            # print("remainder='{0}'".format(remainder))
-            if remainder.startswith("&amp;"):
-                new_character = '&'
-                character_index += 5
-            elif remainder.startswith("&lt;"):
-                new_character = '<'
-                character_index += 4
-            elif remainder.startswith("&gt;"):
-                new_character = '>'
-                character_index += 4
-            elif remainder.startswith("&semi;"):
-                new_character = ';'
-                character_index += 6
-            else:
-                assert False, "remainder='{0}'".format(remainder)
-        else:
-            character_index += 1
-        new_characters.append(new_character)
-    text = "".join(new_characters)
-    return text
+# def file_name2name(file_name):
+#     # Verify argument types:
+#     assert isinstance(file_name, str)
+# 
+#     return file_name
+# 
+# 
+# def file_name2title(file_name):
+#     # Verify argument types:
+#     assert isinstance(file_name, str)
+# 
+#     # Decode *file_name* into a list of *characters*:
+#     characters = list()
+#     index = 0
+#     file_name_size = len(file_name)
+#     while index < file_name_size:
+#         character = file_name[index]
+#         if character == '_':
+#             # Underscores are always translated to spaces:
+#             character = ' '
+#             index += 1
+#         elif character == '%':
+#             # `%XX` is converted into a single *character*:
+#             try:
+#                 sub_string = file_name[index+1:index+3]
+#                 character = chr(int(sub_string, 16))
+#             except ValueError:
+#                 assert False, f"file_name='{file_name}' sub_string='{sub_string}' index={index}"
+#             index += 3
+#         else:
+#             # Everything else just taken as is:
+#             index += 1
+#         characters.append(character)
+# 
+#     # Join *characters* back into a single *title* string:
+#     title = "".join(characters)
+#     return title
+# 
+# 
+# def name2file_name(name):
+#     # Verify argument types:
+#     assert isinstance(name, str)
+#     return name
+# 
+# 
+# def safe_attribute2text(safe_attribute):
+#     # Verify argument types:
+#     assert isinstance(safe_attribute, str)
+# 
+#     # Sweep across *safe_attribute* one *character* at a time performing any neccesary conversions:
+#     # print("safe_attribute='{0}'".format(safe_attribute))
+#     new_characters = list()
+#     safe_attribute_size = len(safe_attribute)
+#     character_index = 0
+#     while character_index < safe_attribute_size:
+#         character = safe_attribute[character_index]
+#         # print("character[{0}]='{1}'".format(character_index, character))
+#         new_character = character
+#         if character == '&':
+#             remainder = safe_attribute[character_index:]
+#             # print("remainder='{0}'".format(remainder))
+#             if remainder.startswith("&amp;"):
+#                 new_character = '&'
+#                 character_index += 5
+#             elif remainder.startswith("&lt;"):
+#                 new_character = '<'
+#                 character_index += 4
+#             elif remainder.startswith("&gt;"):
+#                 new_character = '>'
+#                 character_index += 4
+#             elif remainder.startswith("&semi;"):
+#                 new_character = ';'
+#                 character_index += 6
+#             else:
+#                 assert False, "remainder='{0}'".format(remainder)
+#         else:
+#             character_index += 1
+#         new_characters.append(new_character)
+#     text = "".join(new_characters)
+#     return text
 
 
 # "se" stands for "S Expression":
@@ -550,8 +552,10 @@ def text2safe_attribute(text):
             new_character = "&lt;"
         elif character == '>':
             new_character = "&gt;"
-        elif character == ';':
-            new_character = "&semi"
+        elif character == "'":
+            new_character = "&apos;"
+        elif character == '"':
+            new_character = "&quot;"
         new_characters.append(new_character)
     safe_attribute = "".join(new_characters)
     return safe_attribute
@@ -1384,8 +1388,9 @@ class EnumerationComment(Comment):
 
         # Append and `<EnumerationComment>` an element to *xml_lines*:
         enumeration_comment = self
-        xml_lines.append(
-          '{0}<EnumerationComment language="{1}">'.format(indent, enumeration_comment.language))
+        language = enumeration_comment.language
+        xml_lines.append(enumeration_comment.language,
+          f'{indent}<EnumerationComment language="{language1}">')
         for line in enumeration_comment.lines:
             xml_lines.append('{0}  {1}'.format(indent, line))
         xml_lines.append('{0}</EnumerationComment>'.format(indent))
@@ -3884,6 +3889,245 @@ class Database:
                   manufacturer_name, manufacturer_part_name))
 
 
+# Encode:
+class Encode:
+
+    @staticmethod
+    def from_attribute(attribute):
+        characters = list()
+        attribute_size = len(attribute)
+        index = 0
+        while index < attribute_size:
+            # Grab the *character* and compute the *next_index:
+            character = attribute[index]
+            next_index = index + 1
+
+            # Determine if we have an HTML entity:
+            if character == '&':
+                # We do have an HTML entity; find the closing ';':
+                rest = attribute[index:]
+                # print(f"rest='{rest}'")
+                entity = ""
+                for entity_index in range(index, attribute_size):
+                    entity_character = attribute[entity_index]
+                    # print(f"Attribute[{entity_index}]='{entity_character}'")
+                    if entity_character == ';':
+                        next_index = entity_index + 1
+                        entity = attribute[index:next_index]
+                        break
+                else:
+                     assert False, "No closing ';' for entity"   
+                # print(f"entity='{entity}'")
+
+                # Parse the expected entities:
+                assert len(entity) >= 2, f"Empty HTML entity '{entity}'"
+                if entity[1] == '#':
+                    # Numeric entity of the form `&#XXXX;`, try to parse the 4 hexadecimal digits:
+                    assert len(entity) == 7
+                    try:
+                        character = chr(int(entity[2:6], 16))
+                    except ValueError:
+                        assert False, f"Entity '{entity}' is broken."
+                elif entity == "&amp;":
+                    character = '&'
+                elif entity == "&lt;":
+                    character = '<'
+                elif entity == "&gt;":
+                    character = '>'
+                elif entity == "&apos;":
+                    character = "'"
+                elif entity == "&quot;":
+                    character = '"'
+                else:
+                    assert False, f"Unrecognized HTML entity '{entity}'"
+            else:
+                # *character* is not the start of an HTML entity.  Leave it alone:
+                pass
+
+            # Tack *character* onto *characters* and advance to *next_index*:
+            characters.append(character)
+            index = next_index
+
+        # Concatenate *characters* into final *text* and return it:
+        text = "".join(characters)
+        return text
+
+    @staticmethod
+    def from_file_name(file_name):
+        # Verify argument types:
+        assert isinstance(file_name, str)
+
+        # Construct a list of *characters* one at a time to join together into final *text*:
+        characters = list()
+        index = 0
+        file_name_size = len(file_name)
+        while index < file_name_size:
+            # Dispatch on *character* and compute *next_index*:
+            character = file_name[index]
+            next_index = index + 1
+
+            # Dispatch on *character*:
+            if character == '_':
+                # Underscores are always translated to spaces:
+                character = ' '
+            elif character == '%':
+                # We should have either "%XX" or "%%XXXX, where "X" is a hexadecimal digit.
+
+                # First, ensure that there is a *next_character* following the initial '%':
+                if next_index < file_name_size:
+                    next_character = file_name[next_index]
+                    
+                    # Dispatch on *next_character* to figure out whether we have a 2 or 4
+                    # digit number:
+                    if next_character == '%':
+                        # We have "%%XXXX"" to parse:
+                        hex_index = index + 2
+                        next_index = index + 6
+                    else:
+                        # We have "%XX" to parse into a single *character*:
+                        hex_index = index + 1
+                        next_index = index + 3
+
+                    # Extract the *hex_text* from *file_name* to parse:
+                    assert next_index <= file_name_size, "'%' at end of string is wrong"
+                    hex_text = file_name[hex_index:next_index]
+
+                    # Now attempt top arse *hex_text* into *character*:
+                    try:
+                        character = chr(int(hex_text, 16))
+                        # print(f"'{hex_text}'=>'{character}'")
+                    except ValueError:
+                        assert False, f"'%%{hex_text}' is invalid"
+                else:
+                    # No character after '%":
+                    assert False, "'%' at end of string"
+            else:
+                # Everything else just taken as is:
+                pass
+
+            # Tack *character* (which now may be multiple characters) onto *characters*
+            # and advance *index* to *next_index*:
+            characters.append(character)
+            assert next_index > index
+            index = next_index
+
+        # Join *characters* back into a single *text* string:
+        text = "".join(characters)
+        return text
+
+    @staticmethod
+    def to_attribute(text):
+        characters = list()
+        ord_space = ord(' ')
+        ord_tilde = ord('~')
+        for character in text:
+            ord_character = ord(character)
+            if ord_space <= ord_character <= ord_tilde:
+                # *character* is ASCII printable; now convert some of them to HTML entity:
+                if character == '&':
+                    character = "&amp;"
+                elif character == '<':
+                    character = "&lt;"
+                elif character == '>':
+                    character = "&gt;"
+                elif character == "'":
+                    character = "&apos;"
+                elif character == '"':
+                    character = "&quot;"
+            else:
+                # Non-ASII printable, so use decimal version of HTML entity syntax:
+                character = "&#{0:04x};".format(ord_character)
+            characters.append(character)
+
+        # Convert *characters* to an *attribute* string and return it:
+        attribute = "".join(characters)
+        return attribute
+
+    @staticmethod
+    def to_file_name(text):
+        characters = list()
+        ord_space = ord(' ')
+        ord_tilde = ord('~')
+        ord_del = ord('\xff')
+        for character in text:
+            # Dispatch on the integer *ord_character*:
+            ord_character = ord(character)
+            if ord_character == ord_space:
+                # Convert *character* space (' ') to an underscore ('_'):
+                character = '_'
+            elif ord_space < ord_character <= ord_tilde:
+                # *character* is in normal visible printing ASCII range, but not a space:
+                # Since the Unix/Linux shell treats many of the non-alphanumeric ones
+                # specially, most of them are convert to '%XX' format.  The ones that are
+                # not converted are '+', ',', '.',  and ':'.  Note that '_' must be converted
+                # because spaces have been converted to underscores:
+                if character in "!\"#$%&'()*/;<=>?[\\]^_`{|}~":
+                    character = "%{0:02x}".format(ord_character)
+            elif ord_character < ord_space or ord_character == ord_del:
+                # *character* is one of the ASCII control characters to convert into '%XX':
+                character = "%{0:02x}".format(ord_character)
+            else:
+                # *character* is a larger unicode character to convert into '%%XXXX':
+                character = "%%{0:04x}".format(ord_character)
+
+            # Collect the new *character* (which might be several characters) onto *characters*:
+            characters.append(character)
+
+        # Concatenate *characters* into *file_name* and return it:
+        file_name = "".join(characters)
+        return file_name
+
+    @staticmethod
+    def test():
+        printable_ascii = "".join([chr(index) for index in range(ord(' '), ord('~')+1)])
+        Encode.test_both(printable_ascii)
+        control_ascii = "".join([chr(index) for index in range(ord(' ')-1)]) + "\xff"
+        Encode.test_both(control_ascii)
+        unicode_characters = "\u03a9Ω\u03bcμ"
+        Encode.test_both(unicode_characters)
+
+    @staticmethod
+    def test_attribute(before_attribute):
+        assert isinstance(before_attribute, str)
+        # print(f"before_attribute='{before_attribute}'")
+        attribute_text  = Encode.to_attribute(before_attribute)
+        # print(f"attribute_text='{attribute_text}'")
+        after_attribute = Encode.from_attribute(attribute_text)
+        # print(f"after_attribute='{after_attribute}'")
+        Encode.test_compare(before_attribute, after_attribute)
+
+    @staticmethod
+    def test_both(text):
+        assert isinstance(text, str)
+        Encode.test_attribute(text)
+        Encode.test_file_name(text)
+
+    @staticmethod
+    def test_compare(text1, text2):
+        # Verify argument types:
+        assert isinstance(text1, str)
+        assert isinstance(text2, str)
+
+        if text1 != text2:
+            text1_size = len(text1)
+            text2_size = len(text2)
+            text_size = min(text1_size, text2_size)
+            for index, character in enumerate(range(text_size)):
+                character1 = text1[index]
+                character2 = text2[index]
+                assert character1 == character2, \
+                  (f"Mismatch at index={index} '{character1}' != '{character2}' "
+                   f"text1='{text1}' text2='{text2}'")
+            assert text1_size == text2_size
+
+    @staticmethod
+    def test_file_name(before_text):
+        assert isinstance(before_text, str)
+        file_name_text  = Encode.to_file_name(before_text)
+        after_text = Encode.from_file_name(file_name_text)
+        Encode.test_compare(before_text, after_text)
+
+
 # Enumeration:
 class Enumeration:
 
@@ -3940,7 +4184,8 @@ class Enumeration:
 
         # Append an `<Enumeration>` element to *xml_lines*:
         enumeration = self
-        xml_lines.append('{0}<Enumeration name="{1}">'.format(indent, enumeration.name))
+        enumerat_name = Encode.to_attribute(enumeration.name)
+        xml_lines.append(f'{indent}<Enumeration name="{enumeration_name}">')
         for comment in enumeration.comments:
             comment.xml_lines_append(xml_lines, indent + "  ")
         xml_lines.append('{0}</Enumeration>'.format(indent))
@@ -4048,9 +4293,8 @@ class Filter:
         parameter = filter.parameter
         use = filter.use
         select = filter.select
-        xml_lines.append(
-          '{0}<Filter name="{1}" use="{2}" select="{3}">'.
-          format(indent, parameter.name, use, select))
+        parameter_name = parameter.name
+        xml_lines.append('{indent}<Filter name="{parameter_name}" use="{use}" select="{select}">')
         if tracing is not None:
             print("{0}Name='{1}' Use='{2}' Select='{3}'".
                   format(tracing, parameter.name, filter.use, select))
@@ -4060,16 +4304,18 @@ class Filter:
         if len(enumerations) >= 1:
             xml_lines.append('{0}  <FilterEnumerations>'.format(indent))
             for enumeration in enumerations:
-                xml_lines.append('{0}    <FilterEnumeration name="{1}" match="{2}"/>'.
-                                 format(indent, enumeration.name, False))
-            xml_lines.append('{0}  </FilterEnumerations>'.format(indent))
+                enumeration_name = enumeration.name
+                match = False
+                xml_lines.append(f'{indent}    <FilterEnumeration'
+                                 f' name="{enumeration_name1}" match="{match}"/>')
+            xml_lines.append(f'{indent}  </FilterEnumerations>')
 
         # Wrap up `<Filter...>` element:
-        xml_lines.append('{0}</Filter>'.format(indent))
+        xml_lines.append(f'{indent}</Filter>')
 
         # Wrap up any requested *Tracing*:
         if tracing is not None:
-            print("{0}<=Filter.xml_lines_append()".format(tracing))
+            print(f"{tracing}<=Filter.xml_lines_append()")
 
 
 # Footprint:
@@ -4112,6 +4358,49 @@ class Inventory:
         self.project_part = project_part
         self.amount = amount
 
+
+# The *Node* class and its associated sub-classes *Collections*, *Collection*, *Directory*
+# *Table*, *Search* (and eventually *Filter*) are designed to be displayed in the GUI
+# (Graphical User Interface) using a *QTreeView* widget.  The graphical display is not
+# required, so non-GUI code that uses this *bom_manager* module use the code as well.
+# When the GUI is displayed, it uses a *QTreeView* widget in conjunction with the *TreeModel*
+# class (which is a sub-class of *QAbstractItemModel*.)
+#
+# The tree model looks like:
+#
+#        Collections
+#          Collection1
+#            Directory1
+#              SubDirectory1
+#                ...
+#                  Sub...SubDirectory1
+#                    Table1
+#                      Search1
+#                      Search2
+#                      ..
+#                      SearchN
+#                    Table2
+#                    ...
+#                    TableN
+#                   ...
+#                  Sub...SubDirectoryN
+#               ...
+#               SubDirectoryN
+#            ...
+#            DirectoryN
+#          ...
+#          CollectionN
+#
+# To summarize:
+#
+# * There is a top-most *Collections* object that is the root of the tree.
+# * There are zero, one or more *Collection* objects under the *Collections* object.
+# * There ar zero, one or more *Directory* objects under each *Collections* object.
+# * Each *Directory* object can have zero, one or more sub-*Directory* objects and/or
+#   zero,one or more *Table* objects. 
+# * Each *Table* object can have zero, one or more *Search* objects.
+#
+# {Talk about file system structure here:}
 
 # Node:
 class Node:
@@ -4200,9 +4489,10 @@ class Node:
         return count
 
     # Node.clicked():
-    def clicked(self, tables_editor, tracing=None):
+    def clicked(self, tables_editor, model_index, tracing=None):
         # Verify argument types:
         assert isinstance(tables_editor, TablesEditor)
+        assert isinstance(model_index, QModelIndex)
         assert isinstance(tracing, str) or tracing is None
 
         node = self
@@ -4378,10 +4668,11 @@ class Directory(Node):
         directory.children.append(node)
 
     # Directory.clicked():
-    def clicked(self, tables_editor, tracing=None):
+    def clicked(self, tables_editor, model_index, tracing=None):
         # Verify argument types:
         assert isinstance(tables_editor, TablesEditor)
         assert isinstance(tracing, str) or tracing is None
+        assert isinstance(model_index, QModelIndex)
 
         # Preform any requested *tracing*:
         if tracing is not None:
@@ -4430,7 +4721,7 @@ class Directory(Node):
                 if os.path.isdir(sub_full_path):
                     # *full_path* is a directory:
                     name = file_or_directory_name
-                    title = file_name2title(name)
+                    title = Encode.from_file_name(file_or_directory_name)
                     sub_directory = Directory(name, sub_relative_path, title, directory,
                                               collection, tracing=next_tracing)
                     assert directory.has_child(sub_directory)
@@ -4438,7 +4729,7 @@ class Directory(Node):
                 elif sub_full_path.endswith(".xml"):
                     # Full path is a *Table* `.xml` file:
                     name = file_or_directory_name[:-4]
-                    title = file_name2title(name)
+                    title = Encode.from_file_name(name)
                     table = Table(name, relative_path, title, directory, collection,
                                   tracing=next_tracing)
                     assert directory.has_child(table)
@@ -4534,8 +4825,8 @@ class Collection(Node):
                 elif base_name.endswith(".xml"):
                     assert False, "Top level tables not implemented yet"
                 elif os.path.isdir(full_path):
-                    name = file_name2name(base_name)
-                    title = file_name2title(base_name)
+                    name = base_name
+                    title = Encode.from_file_name(base_name)
                     directory = Directory(name, relative_path, title, collection, collection,
                                           tracing=next_tracing)
                     assert collection.has_child(directory)
@@ -4597,7 +4888,7 @@ class Collections(Node):
             # Skip over Unix/Linux *directory_names*'s that start with a '.':
             if not directory_name.startswith('.'):
                 # Create the *collection_title* from *directory_name*:
-                title = file_name2title(directory_name)
+                title = Encode.from_file_name(directory_name)
 
                 # Create *collection_root_path* and *search_root_path*:
                 collection_root_path = os.path.join(collections_root, directory_name)
@@ -4670,14 +4961,14 @@ class Search(Node):
         search.filters = list()
         search.loaded = False
         search.search_parent = None
-        search.search_parent_name = ""
+        search.search_parent_title = ""
         search.url = None
 
         # Valid at that *search_full_file_name* exists:
         search_full_file_name = search.full_file_name_get()
         if tracing is not None:
             print(f"{tracing}search_full_file_name='{search_full_file_name}'")
-        assert os.path.exists(search_full_file_name)
+        #assert os.path.exists(search_full_file_name)
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
@@ -4685,25 +4976,42 @@ class Search(Node):
                   f" {table_name}, '{collection_name}')")
 
     # Search.clicked()
-    def clicked(self, tables_editor, tracing=None):
+    def clicked(self, tables_editor, model_index, tracing=None):
         # Verify argument types:
         assert isinstance(tables_editor, TablesEditor)
+        assert isinstance(model_index, QModelIndex)
         assert isinstance(tracing, str) or tracing is None
 
         # Preform any requested *tracing*:
         if tracing is not None:
             print("{0}=>Search.clicked()".format(tracing))
 
+        # Fetch the *url* from *search*:
         search = self
         table = search.parent
         assert isinstance(table, Table)
         url = search.url
         assert isinstance(url, str)
         if tracing is not None:
-            print("{0}url='{1}' table.name='{2}'".format(tracing, url, table.name))
+            print(f"{tracing}url='{url}' table.name='{table.name}'")
+
+        # Force the *url* to open in the web browser:
         webbrowser.open(url, new=0, autoraise=True)
 
+        # Remember that *search*  and *model_index* are current:
         tables_editor.current_search = search
+        tables_editor.current_model_index = model_index
+
+        # Get the *selection_model* associated with *collections_tree*:
+        main_window = tables_editor.main_window
+        collections_tree = main_window.collections_tree
+        selection_model = collections_tree.selectionModel()
+
+        # Now tediously force the GUI to high-light *model_index*:
+        flags = (QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
+        selection_model.setCurrentIndex(model_index, flags)
+        flags = (QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
+        selection_model.setCurrentIndex(model_index, flags)
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
@@ -4748,7 +5056,7 @@ class Search(Node):
                 search.tree_load(search_tree, tracing=next_tracing)
 
                 # Mark that *table* is no longer sorted since we may updated the
-                # *search_parent* and *search_parent_name* fields:
+                # *search_parent* and *search_parent_title* fields:
                 table = search.parent
                 assert isinstance(table, Table)
                 table.is_sorted = False
@@ -4937,7 +5245,7 @@ class Search(Node):
         assert isinstance(table, Table)
         search_directory = table.search_directory_get(tracing=next_tracing)
 
-        # Ensure that the *directory_path* exists:
+        # Ensure that the *search_path* exists:
         if not os.path.isdir(search_directory):
             os.makedirs(search_directory)
 
@@ -4990,14 +5298,14 @@ class Search(Node):
               "None" if search_parent is None else "'{0}'".format(search_parent.name)))
         search.search_parent = search_parent
 
-    # Search.search_parent_name_set():
-    def search_parent_name_set(self, search_parent_name):
+    # Search.search_parent_title_set():
+    def search_parent_title_set(self, search_parent_title):
         # Verify argument types:
-        assert isinstance(search_parent_name, str)
+        assert isinstance(search_parent_title, str)
 
-        # Stuff *search_parent_name* into *search* (i.e. *self*):
+        # Stuff *search_parent_title* into *search* (i.e. *self*):
         search = self
-        search.search_parent_name = search_parent_name
+        search.search_parent_title = search_parent_title
 
     # Search.table_set():
     def table_set(self, new_table, tracing=None):
@@ -5038,10 +5346,10 @@ class Search(Node):
         table.sort(tracing=next_tracing)
 
         # Construct the *title*:
-        title = search.name
+        title = search.title
         search_parent = search.search_parent
         if search_parent is not None:
-            title = "{0} ({1})".format(title, search_parent.name)
+            title = "{0} ({1})".format(title, search_parent.title)
 
         # Wrap any requested *tracing*:
         if tracing is not None:
@@ -5077,8 +5385,9 @@ class Search(Node):
         attributes_table = search_tree.attrib
         assert "name" in attributes_table
         name = attributes_table["name"]
+        title = Encode.from_file_name(name)
         assert table_name == attributes_table["table"]
-        search_parent_name = (attributes_table["parent"] if "parent" in attributes_table else "")
+        search_parent_title = (attributes_table["parent"] if "parent" in attributes_table else "")
         assert "url" in attributes_table, "attributes_table={0}".format(attributes_table)
         url = attributes_table["url"]
 
@@ -5114,7 +5423,8 @@ class Search(Node):
         search.comments[:] = comments[:]
         search.filters[:] = filters[:]
         search.search = None
-        search.search_parent_name = search_parent_name
+        search.search_parent_title = search_parent_title
+        search.title = title
         search.url = url
 
     # Search.type_letter_get():
@@ -5140,40 +5450,61 @@ class Search(Node):
         # Perform any requested *tracing*:
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
-            print("{0}=>Search.xml_lines_append()".format(tracing))
+            print(f"{tracing}=>Search.xml_lines_append()")
+
+        # Grab some values from *search* (i.e. *self*):
+        search = self
+        table = search.parent
+        assert isinstance(table, Table)
+        search_parent = search.search_parent
+        search_name = search.name
+        search_url = search.url
+        
+        # Figure out *search_parent_title* which is empty only for the `@ALL` *Search* object:
+        search_parent_title = ""
+        if search_name == "@ALL":
+            assert search_parent is None
+        else:
+            assert isinstance(search_parent, Search)
+            search_parent_title = search_parent.title
+
+        # Compute the `<Search ...>` attribute strings:
+        table_name_attribute = Encode.to_attribute(table.name)
+        search_name_attribute = Encode.to_attribute(search_name)
+        search_parent_title_attribute = Encode.to_attribute(search_parent_title)
+        search_title_attribute = Encode.to_attribute(search.title)
+        search_url_attribute = Encode.to_attribute(search.url)
 
         # Start the `<Search...>` element:
-        search = self
-        table = search.table
-        search_parent = search.search_parent
-        assert search.name == "@ALL" or isinstance(search_parent, Search)
-        search_parent_name = "" if search_parent is None else search_parent.name
-        xml_lines.append('{0}<Search name="{1}" parent="{2}" table="{3}" url="{4}">'.format(
-                         indent, search.name, search_parent_name, table.name,
-                         text2safe_attribute(search.url)))
+        xml_lines.append(f'{indent}<Search'
+                         f' name="{search_name_attribute}"'
+                         f' parent="{search_parent_title_attribute}"'
+                         f' table="{table_name_attribute}"'
+                         f' title="{search_title_attribute}"'
+                         f' url="{search_url_attribute}">')
 
         # Append the `<SearchComments>` element:
-        xml_lines.append('{0}  <SearchComments>'.format(indent))
+        xml_lines.append(f'{indent}  <SearchComments>')
         search_comments = search.comments
         search_comment_indent = indent + "    "
         for search_comment in search_comments:
             search_comment.xml_lines_append(xml_lines, search_comment_indent)
-        xml_lines.append('{0}  </SearchComments>'.format(indent))
+        xml_lines.append(f'{indent}  </SearchComments>')
 
         # Append the `<Filters>` element:
         filters = search.filters
-        xml_lines.append('{0}  <Filters>'.format(indent))
+        xml_lines.append(f'{indent}  <Filters>')
         filter_indent = indent + "    "
         for filter in filters:
             filter.xml_lines_append(xml_lines, filter_indent, tracing=next_tracing)
-        xml_lines.append('{0}  </Filters>'.format(indent))
+        xml_lines.append(f'{indent}  </Filters>')
 
         # Wrap up the `<Search>` element:
-        xml_lines.append('{0}</Search>'.format(indent))
+        xml_lines.append(f'{indent}</Search>')
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
-            print("{0}<=Search.xml_lines_append()".format(tracing))
+            print(f"{indent}<=Search.xml_lines_append()")
 
 
 # Table:
@@ -5294,9 +5625,10 @@ class Table(Node):
             print("{0}<=Tables.bind_parameters_from_imports()".format(tracing))
 
     # Table.clicked():
-    def clicked(self, tables_editor, tracing=None):
+    def clicked(self, tables_editor, model_index, tracing=None):
         # Verify argument types:
         assert isinstance(tables_editor, TablesEditor)
+        assert isinstance(model_index, QModelIndex)
         assert isinstance(tracing, str) or tracing is None
 
         # Preform any requested *tracing*:
@@ -5599,24 +5931,26 @@ class Table(Node):
             # Create a new *searches_table* that contains every *search* keyed by *search_name*:
             searches_table = dict()
             for index, search in enumerate(searches):
-                search_name = search.name
-                search_key = file_name2title(search_name)
-                searches_table[search_key] = search
+                search_title = search.title
+                if search_title in searches_table:
+                    assert searches_table[search_title] is search
+                else:
+                    searches_table[search_title] = search
                 # print(f"Search[{index}]:'{search_name}'=>'{search_key}'")
             assert len(searches) == len(searches_table), f"{len(searches)} != {len(searches_table)}"
 
             # Sweep through *searches* and ensure that the *search_parent* field is set:
             for index, search in enumerate(searches):
-                search_parent_name = search.search_parent_name
-                if len(search_parent_name) >= 1:
-                    search_parent_name_key = search_parent_name
-                    if search_parent_name_key not in searches_table:
+                search_parent_title = search.search_parent_title
+                if len(search_parent_title) >= 1:
+                    search_parent_title_key = search_parent_title
+                    if search_parent_title_key not in searches_table:
                         keys = list(searches_table.keys())
-                        assert False, f"'{search_parent_name}' not in searches_table {keys}"
-                    search_parent = searches_table[search_parent_name_key]
+                        assert False, f"'{search_parent_title}' not in searches_table {keys}"
+                    search_parent = searches_table[search_parent_title_key]
                     search.search_parent = search_parent
                 if tracing is not None:
-                    print(f"{tracing}Search[{index}]:'{search.name}' '{search_parent_name}'")
+                    print(f"{tracing}Search[{index}]:'{search.name}' '{search_parent_title}'")
 
             # Now sort *searches*:
             searches.sort(key=Search.key)
@@ -5689,7 +6023,7 @@ class Table(Node):
                     print(f"{tracing}Search[{index}]:'{search_file_name}'")
                 if search_file_name.endswith(".xml"):
                     name = search_file_name[:-4]
-                    title = file_name2title(name)
+                    title = Encode.from_file_name(name)
                     search = Search(name, search_relative_path, title, table, collection,
                                     tracing=next_tracing)
                     assert table.has_child(search)
@@ -8811,13 +9145,13 @@ class TablesEditor(QMainWindow):
                         tables_editor.current_model_index = None
                         tables_editor.current_search = None
                     else:
-                        search_parent_name = search_parent.name
-                        print("Parent is '{0}'".format(search_parent_name))
+                        search_parent_title = search_parent.name
+                        print("Parent is '{0}'".format(search_parent_title))
                         main_window = tables_editor.main_window
                         collections_tree = main_window.collections_tree
                         selection_model = collections_tree.selectionModel()
                         collections_line = main_window.collections_line
-                        collections_line.setText(search_parent_name)
+                        collections_line.setText(search_parent_title)
                         flags = (QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
                         selection_model.setCurrentIndex(parent_search_model_index, flags)
                         tables_editor.current_model_index = parent_search_model_index
@@ -8894,27 +9228,35 @@ class TablesEditor(QMainWindow):
             # Grab some stuff from *tables_editor*:
             main_window = tables_editor.main_window
             collections_line = main_window.collections_line
-            new_search_name = collections_line.text()
-            search_parent_name = current_search.name
-            table = current_search.parent
-            assert isinstance(table, Table)
+            new_search_title = collections_line.text()
+
             # searches = table.children
             # if tracing is not None:
             #    print("{0}1:len(searches)={1}".format(tracing, len(searches)))
             comment = SearchComment(language="EN", lines=list())
             comments = [comment]
             # Note: The *Search* initializer will append the new *Search* object to *table*:
-            search_base_name = name2file_name(new_search_name)
+            new_search_name = Encode.to_file_name(new_search_title)
             # table_relative_path = table.relative_path
-            relative_path = os.path.join(table.path, search_base_name)
-            new_search = Search(new_search_name, relative_path, new_search_name, table)
+
+            # Grab some values from *current_search*:
+            collection = current_search.collection
+            relative_path = current_search.relative_path
+            search_parent_title = current_search.title
+            table = current_search.parent
+            assert isinstance(table, Table)
+
+            # Construct *new_search_name*:
+            new_search_name = Encode.to_file_name(new_search_title)
+            new_search = Search(new_search_name, relative_path, new_search_title, table, collection)
+            assert table.has_child(new_search)
             new_search.comments_append(comments)
             new_search.url_set(url)
-            new_search.search_parent_name_set(search_parent_name)
+            new_search.search_parent_title_set(search_parent_title)
 
             # if tracing is not None:
             #    print("{0}1:len(searches)={1}".format(tracing, len(searches)))
-            table.fix_up(tracing=next_tracing)
+            table.sort(tracing=next_tracing)
             new_search.save(tracing=next_tracing)
 
             model_index = tables_editor.current_model_index
@@ -8939,21 +9281,22 @@ class TablesEditor(QMainWindow):
         # Verify argument types:
         assert isinstance(model_index, QModelIndex)
 
-        # Perform any requested signal tracing:
+        # Perform any requested signal *tracing* for *tables_editor* (i.e. *self*):
         tables_editor = self
         tracing = "" if tables_editor.trace_signals else None
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
             print("=>TablesEditor.collections_tree_clicked()")
 
+        # Grab the *node* associated with *model_index*:
         tables_editor.current_model_index = model_index
         row = model_index.row()
         column = model_index.column()
-        # data = model_index.data()
-        # parent = model_index.parent()
+        # parent_model_index = model_index.parent()
         model = model_index.model()
         node = model.getNode(model_index)
-        node.clicked(tables_editor, tracing=next_tracing)
+        assert isinstance(node, Node)
+        node.clicked(tables_editor, model_index, tracing=next_tracing)
 
         if isinstance(node, Search):
             main_window = tables_editor.main_window
@@ -11283,7 +11626,7 @@ class TreeModel(QAbstractItemModel):
         assert isinstance(model_index, QModelIndex)
 
         tree_model = self
-        node = (model_index.internalPointer()if model_index.isValid()
+        node = (model_index.internalPointer() if model_index.isValid()
                 else tree_model.collections_node)
         assert isinstance(node, Node)
         return node
