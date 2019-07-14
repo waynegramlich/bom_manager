@@ -3922,10 +3922,9 @@ class Encode:
                 # Parse the expected entities:
                 assert len(entity) >= 2, f"Empty HTML entity '{entity}'"
                 if entity[1] == '#':
-                    # Numeric entity of the form `&#XXXX;`, try to parse the 4 hexadecimal digits:
-                    assert len(entity) == 7
+                    # Numeric entity of the form `&#d...d;`, try to parse the decimal digits:
                     try:
-                        character = chr(int(entity[2:6], 16))
+                        character = chr(int(entity[2:-1]))
                     except ValueError:
                         assert False, f"Entity '{entity}' is broken."
                 elif entity == "&amp;":
@@ -4036,7 +4035,7 @@ class Encode:
                     character = "&quot;"
             else:
                 # Non-ASII printable, so use decimal version of HTML entity syntax:
-                character = "&#{0:04x};".format(ord_character)
+                character = f"&#{ord_character};"
             characters.append(character)
 
         # Convert *characters* to an *attribute* string and return it:
@@ -4599,30 +4598,6 @@ class Node:
             print(f"{tracing}=>title_get()=>{title}")
         return title
 
-    # Node.title2file_name():
-    def title2file_name(self, title):
-        # Verify argument types:
-        assert isinstance(title, str)
-
-        node = self
-        characters = list()
-        # ok_characters = "-,:.%+"
-        translate_characters = "!\"#$&'()*/;<=>?[]\\_`{|}~"
-        for character in title:
-            if character in translate_characters:
-                character = "%{0:02x}".format(ord(character))
-            elif character == ' ':
-                character = '_'
-            characters.append(character)
-        file_name = "".join(characters)
-
-        # Set to *True* to a little debugging:
-        if False:
-            converted_title = node.file_name2title(file_name)
-            assert title == converted_title, ("'{0}' '{1}' '{2}'".
-                                              format(title, file_name, converted_title))
-        return file_name
-
     # Node.row():
     def row(self):
         node = self
@@ -4998,13 +4973,14 @@ class Search(Node):
         # Force the *url* to open in the web browser:
         webbrowser.open(url, new=0, autoraise=True)
 
-        # Remember that *search*  and *model_index* are current:
+        # Remember that *search* and *model_index* are current:
         tables_editor.current_search = search
         tables_editor.current_model_index = model_index
 
         # Get the *selection_model* associated with *collections_tree*:
         main_window = tables_editor.main_window
         collections_tree = main_window.collections_tree
+        collections_line = main_window.collections_line
         selection_model = collections_tree.selectionModel()
 
         # Now tediously force the GUI to high-light *model_index*:
@@ -5012,6 +4988,10 @@ class Search(Node):
         selection_model.setCurrentIndex(model_index, flags)
         flags = (QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
         selection_model.setCurrentIndex(model_index, flags)
+
+        # Force *search_title* into the *collections_line* widget:
+        search_title = search.title
+        collections_line.setText(search_title)
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
@@ -5138,31 +5118,29 @@ class Search(Node):
 
         # Grab *search_name* from *search* (i.e. *self*):
         search = self
-        search_name = search.name
+        search_title = search.title
 
         # Perform any requested *tracing*:
+        next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
-            print("{0}=>is_deletable('{1}')".format(tracing, search_name))
+            print(f"{tracing}=>is_deletable('{search_title}')")
 
         # Search through *sibling_searches* of *table* to ensure that *search* is not
         # a parent of any *sibling_search* object:
         table = search.parent
         assert isinstance(table, Table)
         sibling_searches = table.children
+
+        # Make sure that there are now *sibling_search*'s that depend upon *search*:
         deletable = True
         for index, sibling_search in enumerate(sibling_searches):
-            # parent = sibling_search.search_parent
-            # if tracing is not None:
-            #    parent_name = "None" if parent is None else "'{0}'".format(parent.name)
-            #    print("{0}Sibling[{1}]'{2}'.parent='{3}".format(
-            #          tracing, index, sibling_search.name, parent_name))
             if sibling_search.search_parent is search:
                 deletable = False
                 break
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
-            print("{0}<=is_deletable('{1}')=>{2}".format(tracing, search_name, deletable))
+            print(f"{tracing0}<=is_deletable('{search_title}')=>{deletable}")
         return deletable
 
     # Search.key():
@@ -6077,8 +6055,7 @@ class Table(Node):
         node = search
         while node is not None:
             node_name = node.name
-            base_name = node.title2file_name(node_name)
-            directories.append(base_name)
+            directories.append(node.name)
             # if tracing is not None:
             #    print("{0}directories={1}".format(tracing, directories))
             node = node.parent
@@ -8779,7 +8756,7 @@ class TablesEditor(QMainWindow):
         # Perform any requested *tracing*:
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
-            print("{0}=>TablesEditor.__init__(...)".format(tracing))
+            print(f"{tracing}=>TablesEditor.__init__(...)")
 
         # Create the *application* first:
         application = QApplication(sys.argv)
@@ -9064,7 +9041,7 @@ class TablesEditor(QMainWindow):
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
-            print("{0}<=TablesEditor.__init__(...)\n".format(tracing))
+            print(f"{tracing}<=TablesEditor.__init__(...)\n")
 
     # TablesEditor.comment_text_set()
     def comment_text_set(self, new_text, tracing=None):
@@ -9088,13 +9065,12 @@ class TablesEditor(QMainWindow):
 
     # TablesEditor.collections_delete_changed():
     def collections_delete_clicked(self):
-        # Perform any requested signal tracing:
+        # Perform any requested signal *tracing*:
         tables_editor = self
-        trace_signals = tables_editor.trace_signals
-        tracing = "" if trace_signals else None
+        tracing = "" if tables_editor.trace_signals else None
         next_tracing = None if tracing is None else tracing + " "
-        if trace_signals:
-            print("=>Tables_Editor.collections_delete_clicked()")
+        if tracing is not None:
+            print(f"{tracing}=>Tables_Editor.collections_delete_clicked()")
 
         # Grab the *current_model_index* from *tables_editor* and process it if it exists:
         current_model_index = tables_editor.current_model_index
@@ -9118,7 +9094,7 @@ class TablesEditor(QMainWindow):
                 # Grab the *table* from *current_search* and force it to be fixed up:
                 table = current_search.parent
                 assert isinstance(table, Table)
-                table.fix_up()
+                table.sort()
 
                 # Only attempt to delete *current_search* if it is in *searches*:
                 searches = table.children
@@ -9130,7 +9106,8 @@ class TablesEditor(QMainWindow):
                     # search_parent_model_index = None
                     current_search_index = -1
                     for search_index, search in enumerate(searches):
-                        print("Sub_Search[{0}]: '{1}'".format(search_index, search.name))
+                        search_title = search.title
+                        print(f"{tracing}Sub_Search[{search_index}]: '{search_title}'")
                         if search is search_parent:
                             current_search_index = search_index
                             break
@@ -9145,8 +9122,9 @@ class TablesEditor(QMainWindow):
                         tables_editor.current_model_index = None
                         tables_editor.current_search = None
                     else:
-                        search_parent_title = search_parent.name
-                        print("Parent is '{0}'".format(search_parent_title))
+                        search_parent_title = search_parent.title
+                        if tracing is not None:
+                            print(f"{tracing}Parent is '{search_parent_title}'")
                         main_window = tables_editor.main_window
                         collections_tree = main_window.collections_tree
                         selection_model = collections_tree.selectionModel()
@@ -9157,12 +9135,9 @@ class TablesEditor(QMainWindow):
                         tables_editor.current_model_index = parent_search_model_index
                         tables_editor.current_search = search_parent
 
-                    # Remove the associated files:
-                    search_directory = table.search_directory_get(tracing=next_tracing)
-                    file_name_base = search.title2file_name(current_search.name)
-                    file_name_prefix = os.path.join(search_directory, file_name_base)
-                    xml_file_name = file_name_prefix + ".xml"
-                    csv_file_name = file_name_prefix + ".csv"
+                    # Remove the associated files `.xml` and `.csv` files (if they exist):
+                    xml_file_name = current_search.full_file_name_get()
+                    csv_file_name = xml_file_name[:-4] + ".csv"
                     if os.path.isfile(xml_file_name):
                         os.remove(xml_file_name)
                     if os.path.isfile(csv_file_name):
@@ -9174,8 +9149,8 @@ class TablesEditor(QMainWindow):
         tables_editor.update(tracing=next_tracing)
 
         # Wrap up any requested signal tracing:
-        if trace_signals:
-            print("<=Tables_Editor.collections_delete_clicked()\n")
+        if tracing is not None:
+            print(f"{tracing}<=Tables_Editor.collections_delete_clicked()\n")
 
     # TablesEditor.collections_line_changed():
     def collections_line_changed(self, text):
@@ -9184,27 +9159,26 @@ class TablesEditor(QMainWindow):
 
         # Perform any requested signal tracing:
         tables_editor = self
-        trace_signals = tables_editor.trace_signals
-        next_tracing = " " if trace_signals else None
-        if trace_signals:
-            print("=>Tables_Editor.collections_line_changed('{0}')".format(text))
+        tracing = "" if tables_editor.trace_signals else None
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}=>Tables_Editor.collections_line_changed('{text}')")
 
         # Update the collections tab:
         tables_editor.update(tracing=next_tracing)
 
         # Wrap up any requested signal tracing:
-        if trace_signals:
-            print("<=Tables_Editor.collections_line_changed('{0}')\n".format(text))
+        if tracing is not None:
+            print(f"{tracing}<=Tables_Editor.collections_line_changed('{text}')\n")
 
     # TablesEditor.collections_new_clicked():
     def collections_new_clicked(self):
         # Perform any requested *tracing*:
         tables_editor = self
-        trace_signals = tables_editor.trace_signals
-        tracing = "" if trace_signals else None
+        tracing = "" if tables_editor.trace_signals else None
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
-            print("=>TablesEditor.collections_new_clicked()")
+            print(f"{tracing}=>TablesEditor.collections_new_clicked()")
 
         # Make sure *current_search* exists (this button click should be disabled if not available):
         current_search = tables_editor.current_search
@@ -9218,8 +9192,10 @@ class TablesEditor(QMainWindow):
             url = selection
         elif clip_board.startswith("http"):
             url = clip_board
-        if trace_signals:
-            print("clip_board='{0}' selection='{1}' url='{2}'".format(clip_board, selection, url))
+        if tracing is not None:
+            print(f"{tracing}clip_board='{clip_board}'")
+            print(f"{tracing}selection='{selection}'")
+            print(f"{tracing}url='{url}'")
 
         # Process *url* (if it is valid):
         if url is None:
@@ -9274,7 +9250,7 @@ class TablesEditor(QMainWindow):
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
-            print("<=TablesEditor.collections_new_clicked()\n")
+            print("{tracing}<=TablesEditor.collections_new_clicked()\n")
 
     # TablesEditor.collections_tree_clicked():
     def collections_tree_clicked(self, model_index):
@@ -9286,7 +9262,7 @@ class TablesEditor(QMainWindow):
         tracing = "" if tables_editor.trace_signals else None
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
-            print("=>TablesEditor.collections_tree_clicked()")
+            print(f"{tracing}=>TablesEditor.collections_tree_clicked()")
 
         # Grab the *node* associated with *model_index*:
         tables_editor.current_model_index = model_index
@@ -9301,17 +9277,16 @@ class TablesEditor(QMainWindow):
         if isinstance(node, Search):
             main_window = tables_editor.main_window
             collections_line = main_window.collections_line
-            collections_line.setText(node.name)
+            collections_line.setText(node.title)
 
         tables_editor.update(tracing=next_tracing)
 
         if tracing is not None:
-            print("{0}row={1} column={2} model={3} node={4}".
-                  format(tracing, row, column, type(model), type(node)))
+            print(f"{tracing}row={row} column={column}")
 
         # Wrap up any requested signal tracing:
         if tracing is not None:
-            print("<=TablesEditor.collections_tree_clicked()\n")
+            print(f"{tracing}<=TablesEditor.collections_tree_clicked()\n")
 
     # TablesEditor.collections_update():
     def collections_update(self, tracing=None):
@@ -9321,7 +9296,7 @@ class TablesEditor(QMainWindow):
         # Perform any requested *tracing*:
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
-            print("{0}=>TablesEditor.collections_update()".format(tracing))
+            print(f"{tracing}=>TablesEditor.collections_update()")
 
         # Grab some widgets from *tables_editor*:
         tables_editor = self
@@ -9333,55 +9308,73 @@ class TablesEditor(QMainWindow):
         # Grab the *current_search* object:
         current_search = tables_editor.current_search
         if tracing is not None:
-            print("{0}current_search='{1}'".format(tracing,
-                  "" if current_search is None else current_search.name))
+            current_search_title = "" if current_search is None else current_search.title
+            print(f"{tracing}current_search='{current_search_title}'")
 
-        # Only allow *search_name* that are non-empty, printable, have no spaces, and won't
-        # cause problems inside of an XML attribute string (i.e. no '<', '&', or '>'):
-        new_button_enable = True
-        delete_button_enable = False
-        why = "OK"
-        search_name = collections_line.text()
-        if search_name == "" or not search_name.isprintable():
+        # Grab the *search_tile* from the *collections_line* widget*:
+        search_title = collections_line.text()
+
+        # We can only create a search if 1) is a non-empty name, 2) there is a preexisting
+        # *current_search* to depend upon, and 3) the search name is 
+        new_button_enable = False
+        new_button_why = "Default off"
+        if search_title == "":
+            # Empty search names are not acceptable:
             new_button_enable = False
-            why = "Empty or non-printable"
+            new_button_why = "Empty Search name"
+        elif search_title == "@ALL":
+            # '@ALL' is not allowed:
+            new_button_enable = False
+            new_button_why = "@ALL is reserved"
+        elif current_search is None:
+            # We really need to have a *current_search* selected to add as a dependency:
+            new_button_enable = False
+            new_button_why = "No search seleted"
         else:
-            for character in search_name:
-                if character in ' <&>':
-                    new_button_enable = False
-                    why = "Bad character '{0}'".format(character)
-                    break
-
-        # Dispatch on results *current_search* and *new_button_enable*:
-        if current_search is None:
-            new_button_enable = False
-            why = "No current search"
-        elif new_button_enable:
+            # Search *table* for a match of *search_title*:
             table = current_search.parent
             assert isinstance(table, Table)
-            search_directory = table.search_directory_get()
-            xml_file_name_base = current_search.title2file_name(search_name) + ".xml"
-            xml_file_name = os.path.join(search_directory, xml_file_name_base)
-            if tracing is not None:
-                print("{0}xml_file_name='{1}'".format(tracing, xml_file_name))
-            if os.path.isfile(xml_file_name):
-                # print("here 2")
-                why = "Already exists"
-                new_button_enable = False
-                deletable = current_search.is_deletable(tracing=next_tracing)
-                delete_button_enable = search_name != "@ALL" and deletable
-            if tracing is not None:
-                print("{0}delete_button_enable={1}".format(tracing, delete_button_enable))
+            existing_searches = table.children
+            for search in existing_searches:
+                if search.title == search_title:
+                    # We already have a *search* named *search_title*:
+                    new_button_enable = False
+                    new_button_why = "Search already exists"
+                    break
+            else:
+                # Nothing matched, so this must be a new and unique search name:
+                new_button_enable = True
+                new_button_why = "Unique Name"
 
-        # Enable/disable the widgets:
-        collections_delete.setEnabled(why == "Already exists" and search_name != "@ALL")
+        # Enable/disable the *collections_new* button widget:
         collections_new.setEnabled(new_button_enable)
+        if tracing is not None:
+            print(f"{tracing}new_button_enable={new_button_enable} why='{new_button_why}'")
+
+        # We can only delete a search that exists and has no other sub searches that depend on it:
+        delete_button_enable = False
+        delete_button_why = "Default Off"
+        if current_search is None:
+            delete_button_enable = False
+            delete_button_why = "Default Off"
+        elif current_search.title == "@ALL":
+            delete_button_enable = False
+            delete_button_why = "Can not delete @All"
+        elif current_search.is_deletable():
+            delete_button_enable = True
+            delete_button_why = "No sub-search dependencies"
+        else:
+            delete_button_enable = False
+            delete_button_why = "Sub-search_dependencies"
+
+        # Enable/disable *delete_button_enable* button widget:
         collections_delete.setEnabled(delete_button_enable)
+        if tracing is not None:
+            print(f"{tracing}delete_button_enable={delete_button_enable} why='{delete_button_why}'")
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
-            print("{0}new_button_enable={1} why='{2}'".format(tracing, new_button_enable, why))
-            print("{0}<=TablesEditor.collections_update()".format(tracing))
+            print(f"{tracing}<=TablesEditor.collections_update()")
 
     # TablesEditor.current_enumeration_set()
     def current_enumeration_set(self, enumeration, tracing=None):
@@ -11315,7 +11308,7 @@ class TablesEditor(QMainWindow):
         tables_editor = self
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
-            print("{0}=>TablesEditor.update()".format(tracing))
+            print(f"{tracing}=>TablesEditor.update()")
 
         # Only update the visible tabs based on *root_tabs_index*:
         main_window = tables_editor.main_window
@@ -11334,7 +11327,7 @@ class TablesEditor(QMainWindow):
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
-            print("{0}<=TablesEditor.update()".format(tracing))
+            print(f"{tracing}<=TablesEditor.update()")
 
     # TablesEditor.search_update():
     def xxx_search_update(self, tracing=None):
@@ -11510,7 +11503,7 @@ class TreeModel(QAbstractItemModel):
             if sub_node is child_node:
                 # We have a match and now e can carefully delete *child_node* from the
                 # *children_nodes* of *parent_node*:
-                print("match")
+                # print("match")
                 tree_model.beginRemoveRows(parent_model_index, sub_node_index, sub_node_index)
                 del children_nodes[sub_node_index]
                 tree_model.endRemoveRows()
