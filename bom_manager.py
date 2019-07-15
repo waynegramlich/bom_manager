@@ -35,13 +35,8 @@
 #
 # Tasks:
 # * Decode Digi-Key parametric search URL's.
-# * Start integration with bom_manager.py
-#   * Record Digi-Key URL's via clip-board
-#   * Capture Digi-Key CSV table via F12 & clip-board
 # * Start providing ordering operations.
 # * Reorder tables/parameters/enumerations/searches.
-# * Sort search results
-# * Table search templates
 # * Footprint hooks
 # * Better parametric search
 #
@@ -416,95 +411,13 @@ def main():
                     table_write_file.write(table_write_text)
 
         # Now create the *tables_editor* graphical user interface (GUI) and run it:
-        tables_editor = TablesEditor(tables , tracing="")
+        tables_editor = TablesEditor(tables, tracing="")
 
         # Start up the GUI:
         tables_editor.run()
 
     # When we get here, *tables_editor* has stopped running and we can return.
     return 0
-
-
-# def file_name2name(file_name):
-#     # Verify argument types:
-#     assert isinstance(file_name, str)
-# 
-#     return file_name
-# 
-# 
-# def file_name2title(file_name):
-#     # Verify argument types:
-#     assert isinstance(file_name, str)
-# 
-#     # Decode *file_name* into a list of *characters*:
-#     characters = list()
-#     index = 0
-#     file_name_size = len(file_name)
-#     while index < file_name_size:
-#         character = file_name[index]
-#         if character == '_':
-#             # Underscores are always translated to spaces:
-#             character = ' '
-#             index += 1
-#         elif character == '%':
-#             # `%XX` is converted into a single *character*:
-#             try:
-#                 sub_string = file_name[index+1:index+3]
-#                 character = chr(int(sub_string, 16))
-#             except ValueError:
-#                 assert False, f"file_name='{file_name}' sub_string='{sub_string}' index={index}"
-#             index += 3
-#         else:
-#             # Everything else just taken as is:
-#             index += 1
-#         characters.append(character)
-# 
-#     # Join *characters* back into a single *title* string:
-#     title = "".join(characters)
-#     return title
-# 
-# 
-# def name2file_name(name):
-#     # Verify argument types:
-#     assert isinstance(name, str)
-#     return name
-# 
-# 
-# def safe_attribute2text(safe_attribute):
-#     # Verify argument types:
-#     assert isinstance(safe_attribute, str)
-# 
-#     # Sweep across *safe_attribute* one *character* at a time performing any neccesary conversions:
-#     # print("safe_attribute='{0}'".format(safe_attribute))
-#     new_characters = list()
-#     safe_attribute_size = len(safe_attribute)
-#     character_index = 0
-#     while character_index < safe_attribute_size:
-#         character = safe_attribute[character_index]
-#         # print("character[{0}]='{1}'".format(character_index, character))
-#         new_character = character
-#         if character == '&':
-#             remainder = safe_attribute[character_index:]
-#             # print("remainder='{0}'".format(remainder))
-#             if remainder.startswith("&amp;"):
-#                 new_character = '&'
-#                 character_index += 5
-#             elif remainder.startswith("&lt;"):
-#                 new_character = '<'
-#                 character_index += 4
-#             elif remainder.startswith("&gt;"):
-#                 new_character = '>'
-#                 character_index += 4
-#             elif remainder.startswith("&semi;"):
-#                 new_character = ';'
-#                 character_index += 6
-#             else:
-#                 assert False, "remainder='{0}'".format(remainder)
-#         else:
-#             character_index += 1
-#         new_characters.append(new_character)
-#     text = "".join(new_characters)
-#     return text
 
 
 # "se" stands for "S Expression":
@@ -1390,7 +1303,7 @@ class EnumerationComment(Comment):
         enumeration_comment = self
         language = enumeration_comment.language
         xml_lines.append(enumeration_comment.language,
-          f'{indent}<EnumerationComment language="{language1}">')
+                         f'{indent}<EnumerationComment language="{language}">')
         for line in enumeration_comment.lines:
             xml_lines.append('{0}  {1}'.format(indent, line))
         xml_lines.append('{0}</EnumerationComment>'.format(indent))
@@ -3905,7 +3818,7 @@ class Encode:
             # Determine if we have an HTML entity:
             if character == '&':
                 # We do have an HTML entity; find the closing ';':
-                rest = attribute[index:]
+                # rest = attribute[index:]
                 # print(f"rest='{rest}'")
                 entity = ""
                 for entity_index in range(index, attribute_size):
@@ -3916,7 +3829,7 @@ class Encode:
                         entity = attribute[index:next_index]
                         break
                 else:
-                     assert False, "No closing ';' for entity"   
+                    assert False, "No closing ';' for entity"
                 # print(f"entity='{entity}'")
 
                 # Parse the expected entities:
@@ -3975,7 +3888,7 @@ class Encode:
                 # First, ensure that there is a *next_character* following the initial '%':
                 if next_index < file_name_size:
                     next_character = file_name[next_index]
-                    
+
                     # Dispatch on *next_character* to figure out whether we have a 2 or 4
                     # digit number:
                     if next_character == '%':
@@ -4089,7 +4002,7 @@ class Encode:
     def test_attribute(before_attribute):
         assert isinstance(before_attribute, str)
         # print(f"before_attribute='{before_attribute}'")
-        attribute_text  = Encode.to_attribute(before_attribute)
+        attribute_text = Encode.to_attribute(before_attribute)
         # print(f"attribute_text='{attribute_text}'")
         after_attribute = Encode.from_attribute(attribute_text)
         # print(f"after_attribute='{after_attribute}'")
@@ -4114,15 +4027,15 @@ class Encode:
             for index, character in enumerate(range(text_size)):
                 character1 = text1[index]
                 character2 = text2[index]
-                assert character1 == character2, \
-                  (f"Mismatch at index={index} '{character1}' != '{character2}' "
-                   f"text1='{text1}' text2='{text2}'")
+                assert character1 == character2, (f"Mismatch at index={index}"
+                                                  f" '{character1}' != '{character2}'"
+                                                  f" text1='{text1}' text2='{text2}'")
             assert text1_size == text2_size
 
     @staticmethod
     def test_file_name(before_text):
         assert isinstance(before_text, str)
-        file_name_text  = Encode.to_file_name(before_text)
+        file_name_text = Encode.to_file_name(before_text)
         after_text = Encode.from_file_name(file_name_text)
         Encode.test_compare(before_text, after_text)
 
@@ -4183,11 +4096,12 @@ class Enumeration:
 
         # Append an `<Enumeration>` element to *xml_lines*:
         enumeration = self
-        enumerat_name = Encode.to_attribute(enumeration.name)
-        xml_lines.append(f'{indent}<Enumeration name="{enumeration_name}">')
+        name = enumeration.name
+        name_attribute = Encode.to_attribute(name)
+        xml_lines.append(f'{indent}<Enumeration name="{name_attribute}">')
         for comment in enumeration.comments:
             comment.xml_lines_append(xml_lines, indent + "  ")
-        xml_lines.append('{0}</Enumeration>'.format(indent))
+        xml_lines.append(f'{indent}</Enumeration>')
 
 
 # Filter:
@@ -4293,7 +4207,7 @@ class Filter:
         use = filter.use
         select = filter.select
         parameter_name = parameter.name
-        xml_lines.append('{indent}<Filter name="{parameter_name}" use="{use}" select="{select}">')
+        xml_lines.append(f'{indent}<Filter name="{parameter_name}" use="{use}" select="{select}">')
         if tracing is not None:
             print("{0}Name='{1}' Use='{2}' Select='{3}'".
                   format(tracing, parameter.name, filter.use, select))
@@ -4306,7 +4220,7 @@ class Filter:
                 enumeration_name = enumeration.name
                 match = False
                 xml_lines.append(f'{indent}    <FilterEnumeration'
-                                 f' name="{enumeration_name1}" match="{match}"/>')
+                                 f' name="{enumeration_name}" match="{match}"/>')
             xml_lines.append(f'{indent}  </FilterEnumerations>')
 
         # Wrap up `<Filter...>` element:
@@ -4396,7 +4310,7 @@ class Inventory:
 # * There are zero, one or more *Collection* objects under the *Collections* object.
 # * There ar zero, one or more *Directory* objects under each *Collections* object.
 # * Each *Directory* object can have zero, one or more sub-*Directory* objects and/or
-#   zero,one or more *Table* objects. 
+#   zero,one or more *Table* objects.
 # * Each *Table* object can have zero, one or more *Search* objects.
 #
 # {Talk about file system structure here:}
@@ -4439,7 +4353,7 @@ class Node:
 
         # Load up *node* (i.e. *self*):
         node = self
-        node.children = list()              # List of children *Node*'s
+        node.xchildren = list()             # List of children *Node*'s
         node.collection = collection        # Parent *Collection* for *node* (if it makes sense)
         node.name = name                    # Base name for associated file (i.e. no `.xml`)
         node.parent = parent                # Parent *Node* (*None* for *Collections*)
@@ -4454,12 +4368,27 @@ class Node:
 
         # Force *node* to be a child of *parent*:
         if parent is not None:
-            parent.children.append(node)
+            parent.child_append(node)
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
             print(f"{tracing}<=Node.__init__('{name}', '{relative_path}', '{title}', "
                   f"'{parent_name}', '{collection_name}')")
+
+    # Node.child():
+    def child(self, row):
+        # Verify argument types:
+        assert isinstance(row, int)
+
+        node = self
+        children = node.xchildren
+        result = children[row] if 0 <= row < len(children) else None
+        return result
+
+    # Node.children_get():
+    def children_get(self):
+        node = self
+        return node.xchildren
 
     # Node.child_append():
     def child_append(self, child):
@@ -4468,23 +4397,14 @@ class Node:
 
         # Append *child* to the *node* (i.e. *self*) children list:
         node = self
-        node.children.append(child)
+        children = node.xchildren
+        children.append(child)
         child.parent = node
-
-    # Node.child():
-    def child(self, row):
-        # Verify argument types:
-        assert isinstance(row, int)
-
-        node = self
-        children = node.children
-        result = children[row] if 0 <= row < len(children) else None
-        return result
 
     # Node.child_count():
     def child_count(self):
         node = self
-        count = len(node.children)
+        count = len(node.xchildren)
         return count
 
     # Node.clicked():
@@ -4543,7 +4463,7 @@ class Node:
 
         node = self
         found = False
-        for child in node.children:
+        for child in node.xchildren:
             if sub_node is child:
                 found = True
                 break
@@ -4556,7 +4476,9 @@ class Node:
         assert isinstance(child, Node)
 
         node = self
-        children = node.children
+        children = node.xchildren
+        if isinstance(node, Node) and len(children) >= 1:
+            assert False
         inserted = 0 <= position <= len(children)
         if inserted:
             children.insert(position, child)
@@ -4569,7 +4491,7 @@ class Node:
         assert isinstance(remove_node, Node)
 
         node = self
-        children = node.children
+        children = node.xchildren
         for child_index, child_node in enumerate(children):
             if child_node is remove_node:
                 del children[child_index]
@@ -4602,7 +4524,7 @@ class Node:
     def row(self):
         node = self
         parent = node.parent
-        result = 0 if parent is None else parent.children.index(node)
+        result = 0 if parent is None else parent.xchildren.index(node)
         return result
 
 
@@ -4638,9 +4560,15 @@ class Directory(Node):
 
     # Directory.append():
     def append(self, node):
-        assert isinstance(node, Node)
+        assert isinstance(node, Directory) or isinstance(node, Table)
         directory = self
-        directory.children.append(node)
+        directory.child_append(node)
+
+    # Directory.can_fetch_more():
+    def can_fetch_more(self):
+        # The call to *Directiory.partial_load*, pre-loaded all of the sub-directories and
+        # tables for *directory* (i.e. *self*).  That means there is nothing more to fetch.
+        return False
 
     # Directory.clicked():
     def clicked(self, tables_editor, model_index, tracing=None):
@@ -4718,10 +4646,18 @@ class Directory(Node):
             print(f"{tracing}<=Directory.partial_load('{directory.name}')")
 
     # Directory.title_get():
-    def title_get(self):
+    def title_get(self, tracing=None):
+        # Verify argument types:
+        assert isinstance(tracing, str) or tracing is None
+        
+        # Perform any requested *tracing* for *directory* (i.e. *self*):
         directory = self
         title = directory.title
-        # print("Directory.title='{0}'".format(title))
+        if tracing is not None:
+            print(f"{tracing}=>Directory.title_get('{title}')")
+            print(f"{tracing}<=Directory.title_get('{title}')=>'{title}'")
+
+        # Return *title*:
         return title
 
     # Directory.type_letter_get():
@@ -4768,10 +4704,12 @@ class Collection(Node):
             print(f"{tracing}=>Collection.__init__('{name}', '{collections.name}', '{title}', " +
                   f"'{collection_root}', '{search_root}')")
 
-    # Collection.type_leter_get()
-    def type_letter_get(self):
-        # print("Collection.type_letter_get(): name='{0}'".format(self.name))
-        return 'C'
+    # Collection.can_fetch_more():
+    def can_fetch_more(self):
+        # All of the directores for *collection* (i.e. *self*) have be previously found
+        # using using *Collection.partial_load*().  So, there are no more *Directory*'s
+        # to be loaded.
+        return False
 
     # Collection.partial_load():
     def partial_load(self, tracing=None):
@@ -4813,6 +4751,11 @@ class Collection(Node):
         if tracing is not None:
             print(f"{tracing}<=Collection.partial_load()")
 
+    # Collection.type_leter_get()
+    def type_letter_get(self):
+        # print("Collection.type_letter_get(): name='{0}'".format(self.name))
+        return 'C'
+
 
 # Collections:
 class Collections(Node):
@@ -4835,6 +4778,12 @@ class Collections(Node):
 
         # Ensure that *type_letter_get()* returns 'R' is for collections Root:
         assert collections.type_letter_get() == 'R'
+
+    # Collections.can_fetch_more():
+    def can_fetch_more(self):
+        # The children of *collections* (i.e. self*) have already be preloade by
+        # *Collections.partial_load*().  There is nothing more to fetch:
+        return False
 
     # Collections.partial_load():
     def partial_load(self, tracing=None):
@@ -4943,12 +4892,17 @@ class Search(Node):
         search_full_file_name = search.full_file_name_get()
         if tracing is not None:
             print(f"{tracing}search_full_file_name='{search_full_file_name}'")
-        #assert os.path.exists(search_full_file_name)
+        # assert os.path.exists(search_full_file_name)
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
             print(f"{tracing}<=Search.__init__('{name}', '{relative_path}', '{title}',"
                   f" {table_name}, '{collection_name}')")
+
+    # Search.can_fetch_more():
+    def can_fetch_more(self):
+        # Currently, all *Search* objects never have any childre.  Hence, there is nothing fetch:
+        return False
 
     # Search.clicked()
     def clicked(self, tables_editor, model_index, tracing=None):
@@ -5014,17 +4968,27 @@ class Search(Node):
         assert isinstance(tracing, str) or tracing is None
 
         # Perform any required *tracing*:
+        search = self
+        title = search.title
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
-            print(f"{tracing}=>Search.file_load()")
-
+            print(f"{tracing}=>Search.file_load('{title}')")
+            
+        # Grab some informtation from parent *table* of *search*:
+        table = search.parent
+        assert isinstance(table, Table)
+        table_title = table.title
+        searches = table.children_get()
+        searches_size = len(searches)
         # Only load *search* (i.e. *self*) if it is not already *loaded*:
-        search = self
-        if not search.loaded:
+        loaded = search.loaded
+        if tracing is not None:
+            print(f"{tracing}loaded={loaded} table='{table_title}' searches_size={searches_size}")
+        if not loaded:
             # Grab some values from *search*:
             search_full_file_name = search.full_file_name_get()
             if tracing is not None:
-                print(f"search_full_file_name={search_full_file_name}")
+                print(f"{tracing}search_full_file_name={search_full_file_name}")
             with open(search_full_file_name, "r") as search_file:
                 # Read in *search_xml_text* from *search_file*:
                 search_xml_text = search_file.read()
@@ -5046,7 +5010,7 @@ class Search(Node):
 
         # Wrap up any required *tracing*:
         if tracing is not None:
-            print(f"{tracing}=>Search.file_load()")
+            print(f"{tracing}<=Search.file_load('{title}')")
 
     # Search.filters_refresh()
     def filters_refresh(self, tracing=None):
@@ -5121,7 +5085,7 @@ class Search(Node):
         search_title = search.title
 
         # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
+        # next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
             print(f"{tracing}=>is_deletable('{search_title}')")
 
@@ -5129,7 +5093,7 @@ class Search(Node):
         # a parent of any *sibling_search* object:
         table = search.parent
         assert isinstance(table, Table)
-        sibling_searches = table.children
+        sibling_searches = table.children_get()
 
         # Make sure that there are now *sibling_search*'s that depend upon *search*:
         deletable = True
@@ -5140,7 +5104,7 @@ class Search(Node):
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
-            print(f"{tracing0}<=is_deletable('{search_title}')=>{deletable}")
+            print(f"{tracing}<=is_deletable('{search_title}')=>{deletable}")
         return deletable
 
     # Search.key():
@@ -5210,15 +5174,19 @@ class Search(Node):
         rest = search_name if number_end_index < 0 else search_name[number_end_index:]
         return (depth, number, rest)
 
-    # Search.save():
-    def save(self, tracing=None):
-        # Perform any requested *tracing*:
+    # Search.file_save():
+    def file_save(self, tracing=None):
+        # Verify argument types:
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested *tracing* for *search* (i.e. *self*):
+        search = self
+        search_title = search.title
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
-            print("{0}=>Search.save()".format(tracing))
+            print(f"{tracing}=>Search.file_save('{search_title}')")
 
         # Grab the *search_directory* associated with *table*:
-        search = self
         table = search.parent
         assert isinstance(table, Table)
         search_directory = table.search_directory_get(tracing=next_tracing)
@@ -5238,9 +5206,12 @@ class Search(Node):
         with open(search_full_file_name, "w") as search_file:
             search_file.write(search_xml_content)
 
+        # Mark *search* as *loaded* since we just wrote out the contents:
+        search.loaded = True
+
         # Wrap up any requested *tracing*:
         if tracing is not None:
-            print("{0}<=Search.save()".format(tracing))
+            print(f"{tracing}<=Search.file_save('{search_title}')")
 
     # Search.partial_load():
     # def partial_load(self, tracing=None):
@@ -5311,6 +5282,7 @@ class Search(Node):
 
         # Perform any requested *tracing*:
         search = self
+        tracing = "Stg:" if tracing is None else tracing   # Enable *tracing* for now:
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
             print(f"{tracing}=>Search.title_get('{search.name}')")
@@ -5436,8 +5408,7 @@ class Search(Node):
         assert isinstance(table, Table)
         search_parent = search.search_parent
         search_name = search.name
-        search_url = search.url
-        
+
         # Figure out *search_parent_title* which is empty only for the `@ALL` *Search* object:
         search_parent_title = ""
         if search_name == "@ALL":
@@ -5511,30 +5482,19 @@ class Table(Node):
         super().__init__(name, relative_path, title, parent, collection, tracing=next_tracing)
 
         # Load additional values into *table*:
+        table.comments = list()
+        table.csv_file_name = None
+        table.id = -1
         table.is_sorted = False
         table.loaded = False
-        table.comments = list()
         table.parameters = list()
         table.searches_table = dict()
+        table.url = None
 
-        # Old stuff most of which needs to be deleted:
-        # base = None
-        # id = -1
-        # title = None
-        # assert url is not None
-        # items = -1
-        # table.base = base
-        # table.comments = comments
-        # table.csv_file_name = None
-        # table.file_name = file_name
-        # table.id = id
-        # table.items = items
+        # Old stuff for import:
         # table.import_column_triples = None
         # table.import_headers = None
         # table.import_rows = None
-        # table.parameters = parameters
-        # table.title = title
-        # table.url = url
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
@@ -5601,6 +5561,15 @@ class Table(Node):
         # Wrap up any requested *tracing*:
         if tracing is not None:
             print("{0}<=Tables.bind_parameters_from_imports()".format(tracing))
+
+    # Table.can_fetch_more():
+    def can_fetch_more(self):
+        # Conceptually, every table as a default `@ALL` search.  We return true if
+        # the `@ALL` search has not actually be created yet for *table* (i.e. *self*):
+        table = self
+        searches = table.children_get()
+        can_fetch_more = (len(searches) == 0)
+        return can_fetch_more
 
     # Table.clicked():
     def clicked(self, tables_editor, model_index, tracing=None):
@@ -5767,12 +5736,61 @@ class Table(Node):
 
         if bind:
             table.bind_parameters_from_imports(tracing=next_tracing)
-        table.save(tracing=None)
+        table.file_save(tracing=None)
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
             print("{0}<=Table.csv_read_process('{1}', bind={2})".
                   format(tracing, csv_directory, bind))
+
+    # Table.fetch_more():
+    def fetch_more(self, tracing=None):
+        # Verify argument types:
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested *tracing*:
+        table = self
+        table_title = table.title
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}=>Table.fetch_more('{table_title}')")
+
+        # Create *all_search* if it does not already exist (i.e. *searches_size* is 0):
+        searches = table.children_get()
+        searches_size = len(searches)
+        if tracing is not None:
+            print(f"{tracing}1:searches_size={searches_size}")
+        if searches_size == 0:
+            # Note that the call to the *Search*() has the side-effect of appending
+            # *all_search* to the children of *table*:
+            search_relative_path = os.path.join(table.relative_path, table.name)
+            all_search = Search("@ALL", search_relative_path, "@ALL", table, table.collection,
+                                tracing=next_tracing)
+            assert table.has_child(all_search)
+            assert len(searches) == 1
+
+            # Make sure that *table* is fully loaded so we can grab the *url*:
+            table.file_load(tracing=next_tracing)
+            searches_size = len(searches)
+            if tracing is not None:
+                print(f"{tracing}2:searches_size={searches_size}")
+            assert searches_size == 1
+            url = table.url
+
+            # Fill in the rest of *all_search* from *table*:
+            comment = SearchComment(language="EN", lines=list())
+            all_search.comments.append(comment)
+            all_search.url = url
+
+            # Force *all_search* out to the file system:
+            all_search.file_save(tracing=next_tracing)
+            if tracing is not None:
+                searches_size = len(searches)
+                print(f"{tracing}3:searches_size={searches_size}")
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}<=Table.fetch_more('{table_title}')")
 
     # Table.file_load():
     def file_load(self, tracing=None):
@@ -5783,10 +5801,15 @@ class Table(Node):
         table = self
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
-            table_name = table.name
-            print(f"{tracing}=>Table.file_load('{table_name}')")
+            table_title = table.title
+            print(f"{tracing}=>Table.file_load('{table_title}')")
 
         # Only load *table* if it is not already *loaded*:
+        loaded = table.loaded
+        searches = table.children_get()
+        searches_size = len(searches)
+        if tracing is not None:
+            print(f"{tracing}loaded={loaded} searches_size={searches_size}")
         if not table.loaded:
             # Get *table_file_name* for *table*:
             table_file_name = table.full_file_name_get()
@@ -5810,7 +5833,7 @@ class Table(Node):
         # Wrap up any requested *tracing*:
         if tracing is not None:
             next_tracing = tracing + " "
-            print(f"{tracing}<=Table.file_load('{table_name}')")
+            print(f"{tracing}<=Table.file_load('{table_title}')")
 
     # Table.full_file_name_get():
     def full_file_name_get(self):
@@ -5896,15 +5919,22 @@ class Table(Node):
         # Verify argument types:
         assert isinstance(tracing, str) or tracing is None
 
-        # Perform any requested *tracing*:
-        if tracing is not None:
-            print("{0}=>Table.sort(*)".format(tracing))
-
-        # Only sort *table* if it is not *sorted*:
+        # Perform any requested *tracing* for *table*:
         table = self
-        if not table.is_sorted:
+        table_title = table.title
+        if tracing is not None:
+            print(f"{tracing}=>Table.sort('{table_title}')")
+
+        # Only sort *table* if it is not *is_sorted*:
+        is_sorted = table.is_sorted
+        if tracing is not None:
+            print(f"{tracing}is_sorted={is_sorted}")
+        if not is_sorted:
             # Grab *searches* list from *table* (i.e. *self*):
-            searches = table.children
+            searches = table.children_get()
+            searches_size = len(searches)
+            if tracing is not None:
+                print(f"{tracing}searches_size={searches_size}")
 
             # Create a new *searches_table* that contains every *search* keyed by *search_name*:
             searches_table = dict()
@@ -5915,7 +5945,13 @@ class Table(Node):
                 else:
                     searches_table[search_title] = search
                 # print(f"Search[{index}]:'{search_name}'=>'{search_key}'")
-            assert len(searches) == len(searches_table), f"{len(searches)} != {len(searches_table)}"
+            if len(searches) != len(searches_table):
+                # tracing = "TS:" if tracing is None else tracing
+                if tracing is not None:
+                    searches_titles = [search.title for search in searches]
+                    print(f"{tracing}searches_titles={searches_titles}")
+                    print(f"{tracing}searches_table={searches_table}")
+                assert False, f"{len(searches)} != {len(searches_table)}"
 
             # Sweep through *searches* and ensure that the *search_parent* field is set:
             for index, search in enumerate(searches):
@@ -5938,7 +5974,7 @@ class Table(Node):
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
-            print("{0}<=Table.sort(*)".format(tracing))
+            print(f"{tracing}<=Table.sort('{table_title}')")
 
     # Table.hasChildren():
     def hasChildren(self, index):
@@ -6054,7 +6090,6 @@ class Table(Node):
         search = self
         node = search
         while node is not None:
-            node_name = node.name
             directories.append(node.name)
             # if tracing is not None:
             #    print("{0}directories={1}".format(tracing, directories))
@@ -6086,16 +6121,16 @@ class Table(Node):
         assert isinstance(tracing, str) or tracing is None
 
         # Perform an requested *tracing*:
+        table = self
+        title = table.title
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
-            print(f"{tracing}=>Table.title_get()")
+            print(f"{tracing}=>Table.title_get('{title}')")
 
         # Force *table* (i.e. *self*) *load* if it has not already been loaded:
-        table = self
         table.file_load(tracing=next_tracing)
 
         # Grab the *title* from *table*:
-        title = table.title
         if title is None:
             title = table.name
 
@@ -9097,7 +9132,7 @@ class TablesEditor(QMainWindow):
                 table.sort()
 
                 # Only attempt to delete *current_search* if it is in *searches*:
-                searches = table.children
+                searches = table.children_get()
                 if current_search in searches:
                     # Sweep through *searches* to get the *search_index* needed to obtain
                     # *search_parent_model_index*:
@@ -9206,7 +9241,7 @@ class TablesEditor(QMainWindow):
             collections_line = main_window.collections_line
             new_search_title = collections_line.text()
 
-            # searches = table.children
+            # searches = table.children_get()
             # if tracing is not None:
             #    print("{0}1:len(searches)={1}".format(tracing, len(searches)))
             comment = SearchComment(language="EN", lines=list())
@@ -9294,7 +9329,7 @@ class TablesEditor(QMainWindow):
         assert isinstance(tracing, str) or tracing is None
 
         # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
+        # next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
             print(f"{tracing}=>TablesEditor.collections_update()")
 
@@ -9314,8 +9349,11 @@ class TablesEditor(QMainWindow):
         # Grab the *search_tile* from the *collections_line* widget*:
         search_title = collections_line.text()
 
-        # We can only create a search if 1) is a non-empty name, 2) there is a preexisting
-        # *current_search* to depend upon, and 3) the search name is 
+        # We can only create a search if:
+        # * the search name not empty,
+        # * the search is not named "@ALL",
+        # * there is a preexisting *current_search* to depend upon
+        # * the search name is not a duplicate:
         new_button_enable = False
         new_button_why = "Default off"
         if search_title == "":
@@ -9334,7 +9372,7 @@ class TablesEditor(QMainWindow):
             # Search *table* for a match of *search_title*:
             table = current_search.parent
             assert isinstance(table, Table)
-            existing_searches = table.children
+            existing_searches = table.children_get()
             for search in existing_searches:
                 if search.title == search_title:
                     # We already have a *search* named *search_title*:
@@ -10993,6 +11031,7 @@ class TablesEditor(QMainWindow):
                 assert isinstance(search_tree, etree._Element)
                 search = Search(search_tree=search_tree,
                                 tables=tables_editor.tables, tracing=next_tracing)
+                assert False, "Old code"
                 searches.append(search)
 
             # Set *current_search*
@@ -11431,19 +11470,20 @@ class TreeModel(QAbstractItemModel):
 
     FLAG_DEFAULT = Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
-    # FIXME: *TreeModel* should not have a directory!!!
     # TreeModel.__init__():
-    def __init__(self, collections_node):
+    def __init__(self, collections):
         # Verify argument types:
-        assert isinstance(collections_node, Node)
+        assert isinstance(collections, Collections)
 
         # Initialize the parent *QAbstraceItemModel*:
         super().__init__()
 
-        # Stuff *collections_node* into *tree_model* (i.e. *self*):
+        # Stuff *collections* into *tree_model* (i.e. *self*):
         tree_model = self
         tree_model.headers = {0: "Type", 1: "Name"}
-        tree_model.collections_node = collections_node
+        tree_model.collections = collections
+        tree_model.tracing = None
+        tree_model.tracing = "TM:"
 
     # check if the node has data that has not been loaded yet
     # TreeModel.canFetchMore():
@@ -11451,12 +11491,21 @@ class TreeModel(QAbstractItemModel):
         # Verify argument types:
         assert isinstance(model_index, QModelIndex)
 
-        # tree_model = self
-        # node = tree_model.getNode(model_index)
-        # can_fetch_more = node.is_dir and not node.is_traversed
-        # can_fetch_more = isinstance(node, Table)
-        # return can_fetch_more
-        return False
+        # Perform any *tracing* requested by *tree_model* (i.e.*self*):
+        tree_model = self
+        tracing = tree_model.tracing
+        if tracing is not None:
+            print(f"{tracing}=>TreeModel.canFetchMore()")
+
+        # We delegate the decision of whether we can fetch more stuff to the *node*
+        # associated with *model_index*:
+        node = tree_model.getNode(model_index)
+        can_fetch_more = node.can_fetch_more()
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}<=TreeModel.canFetchMore()=>{can_fetch_more}")
+        return can_fetch_more
 
     # TreeModel.columnCount():
     def columnCount(self, model_index):
@@ -11470,6 +11519,14 @@ class TreeModel(QAbstractItemModel):
         assert isinstance(model_index, QModelIndex)
         assert isinstance(role, int)
 
+        # Perform any *tracing* requested by *tree_model* (i.e. *self*):
+        tree_model = self
+        tracing = tree_model.tracing
+        tracing = None   # Disable *tracing* for now:
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}=>Tree_model.data(*, *, {role}')")
+
         value = None
         if model_index.isValid():
             # row = model_index.row()
@@ -11479,15 +11536,25 @@ class TreeModel(QAbstractItemModel):
                 if column == 0:
                     value = node.type_letter_get()
                 elif column == 1:
-                    value = node.title_get()
+                    value = node.title_get(tracing=next_tracing)
         assert isinstance(value, str) or value is None
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}<=Tree_model.data(*, *, {role}')=>{value}")
         return value
 
+    # TreeModel.delete():
     def delete(self, child_model_index):
         # Verify argument types:
         assert isinstance(child_model_index, QModelIndex)
         tree_model = self
         assert child_model_index.model() is tree_model
+
+        # Perform an *tracing* requested by *tree_model*:
+        tracing = tree_model.tracing
+        if tracing is not None:
+            print(f"{tracing}=>TreeModel.delete(*, *)")
 
         # Fetch the *child_node* and its associated *parent_node*:
         child_node = tree_model.getNode(child_model_index)
@@ -11498,19 +11565,22 @@ class TreeModel(QAbstractItemModel):
         assert isinstance(parent_node, Node)
 
         # Make sure *child_node* is actual one of the children of *parent_node*:
-        children_nodes = parent_node.children
+        children_nodes = parent_node.children_get()
         for sub_node_index, sub_node in enumerate(children_nodes):
             if sub_node is child_node:
                 # We have a match and now e can carefully delete *child_node* from the
                 # *children_nodes* of *parent_node*:
                 # print("match")
                 tree_model.beginRemoveRows(parent_model_index, sub_node_index, sub_node_index)
-                del children_nodes[sub_node_index]
+                parent_node.remove(sub_node_index)
                 tree_model.endRemoveRows()
                 break
         else:
             assert False, ("Child '{0}' is not in parent '{1}'".
                            format(child_node.name, parent_node.name))
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}<=TreeModel.delete(*, *)")
 
     # called if canFetchMore returns True, then dynamically inserts nodes required for
     # directory contents
@@ -11520,96 +11590,21 @@ class TreeModel(QAbstractItemModel):
         # Verify argument types:
         assert isinstance(model_index, QModelIndex)
 
-        print("=>TreeModel.fetchMore()")
+        # Perform any *tracing* requested by *tree_model* (i.e. *self*):
         tree_model = self
-        parent_node = tree_model.getNode(model_index)
-        # print("fetchMore: parent_node.name='{0}' len(parent_node.children)={1}".
-        #      format(parent_node.name, len(parent_node.children)))
-        nodes = []
-        if isinstance(parent_node, Table):
-            # To improve readability, use *table* variable instead of less generic *parent_node*:
-            table = parent_node
-            searches = table.children
-            # print("1:len(searches)={0}".format(len(searches)))
+        tracing = tree_model.tracing
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}=>TreeModel.fetchMore(*, *)")
 
-            # Make sure *serach_directory* exists:
-            search_directory = table.search_directory_get()
-            if not os.path.isdir(search_directory):
-                os.makedirs(search_directory)
-            assert os.path.isdir(search_directory)
+        # Delegate fetching to the *node* associated with *model_index*:
+        tree_model = self
+        node = tree_model.getNode(model_index)
+        node.fetch_more(tracing=next_tracing)
+        tree_model.insertNodes(0, node.children_get(), model_index)
 
-            # Read in the `.xml` files from *search_directory* and add to a *searches* list:
-            unsorted_base_names = os.listdir(search_directory)
-            for base_name_index, base_name in enumerate(unsorted_base_names):
-                # print("Base_Name[{0}]:'{1}'".format(base_name_index, base_name))
-                if base_name.endswith(".xml"):
-                    # We have an `.xml` file, read the contents into *search_xml_text*:
-                    search_xml_file_name = os.path.join(search_directory, base_name)
-                    with open(search_xml_file_name) as search_file:
-                        search_xml_text = search_file.read()
-
-                    # Convert *Search_xml_text* into *search* and tack onto *searches*:
-                    search_tree = etree.fromstring(search_xml_text)
-                    # Note: The *Search* initializer appends the new *Search* object to the
-                    # *children* list of *table*:
-                    Search(search_tree=search_tree, table=table)
-            # print("2:len(searches)={0}".format(len(searches)))
-
-            # Make sure we have the `@ALL` search in *searches*:
-            if len(searches) == 0:
-                all_search_name = "@ALL"
-                comment = SearchComment(language="EN", lines=list())
-                comments = [comment]
-                # Note: The *Search* initializer appends the new *Search* object to the
-                # *children* list of *table*:
-                Search(name=all_search_name, comments=comments, table=table,
-                       parent_name="", url=parent_node.url, tracing="fetchMore:")
-
-            # Fix up and sort all of the *searches* in *table*:
-            table.fix_up(tracing=" ")
-        else:
-            sorted_file_names = sorted(os.listdir(parent_node.path))
-            for file_name_index, file_name in enumerate(sorted_file_names):
-                # print("File_Name[{0}]:'{1}'".format(file_name_index, file_name))
-                file_path = os.path.join(parent_node.path, file_name)
-                node = None
-                if file_path.endswith(".xml"):
-                    with open(file_path) as table_read_file:
-                        table_input_text = table_read_file.read()
-                        table_tree = etree.fromstring(table_input_text)
-                    table = Table(file_name=file_path, table_tree=table_tree)
-                    # print("table_input_text")
-                    # print(table_input_text)
-                    # print("table='{0}'".format(type(table)))
-                    # print("table.title='{0}'".format(table.title))
-                    # Fix make sure *table* is in *tables*:
-                    # tables.append(table)
-                    node = table
-                elif os.path.isdir(file_path):
-                    slash_index = file_path.rfind(file_path)
-                    if file_name[0] != '.' and (slash_index >= 0 and
-                                                file_path[slash_index+1:] != '.'):
-                        title = parent_node.file_name2title(file_name)
-                        # Note: Adding *parent_node* to Directory causes the top level of
-                        # the *Collection* object to be entered twice.  Very strange!!!
-                        node = Directory(file_name, file_path, title)
-                if node is not None:
-                    nodes.append(node)
-
-        # for node_index, node in enumerate(nodes):
-        #    print("Node[{0}]: name='{1}'".format(node_index, node.name))
-
-        tree_model.insertNodes(0, nodes, model_index)
-        if isinstance(parent_node, Table):
-            searches_table = table.searches_table
-            for node in nodes:
-                assert isinstance(node, Search)
-                node_name = node.name
-                assert node_name not in searches_table
-                searches_table[node_name] = node
-
-        parent_node.is_traversed = True
-        print("<=TreeModle.fetchMore()\n")
+        if tracing is not None:
+            print(f"{tracing}<=TreeModel.fetchMore(*, *)\n")
 
     # takes a model index and returns the related Python node
 
@@ -11620,7 +11615,7 @@ class TreeModel(QAbstractItemModel):
 
         tree_model = self
         node = (model_index.internalPointer() if model_index.isValid()
-                else tree_model.collections_node)
+                else tree_model.collections)
         assert isinstance(node, Node)
         return node
 
@@ -11639,7 +11634,7 @@ class TreeModel(QAbstractItemModel):
         # This is a bit obscure.  A *Table* always returns *True* becuase there is
         # a virtual *Search* named `@ALL`.  Elsewhere in the code, the `@ALL` node
         # is created when a "second" search is added to the *Table*:
-        has_children = True if isinstance(node, Table) else len(node.children) >= 1
+        has_children = True if isinstance(node, Table) else len(node.children_get()) >= 1
         return has_children
 
     # TreeModel.headerData():
@@ -11733,7 +11728,7 @@ class TreeModel(QAbstractItemModel):
         node = tree_model.getNode(model_index)
 
         parent = node.parent
-        parent_model_index = (QModelIndex() if parent is tree_model.collections_node else
+        parent_model_index = (QModelIndex() if parent is tree_model.collections else
                               tree_model.createIndex(parent.row(), 0, parent))
         assert isinstance(model_index, QModelIndex)
         return parent_model_index
