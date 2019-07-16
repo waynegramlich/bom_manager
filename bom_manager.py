@@ -5933,12 +5933,18 @@ class Table(Node):
         # Scan through *searches_path* looking for `.xml` files:
         if os.path.isdir(search_path):
             # *searches_path* is a directory so we scan it:
-            for index, search_file_name in enumerate(sorted(list(os.listdir(search_path)))):
+            for index, file_name in enumerate(sorted(list(os.listdir(search_path)))):
+                # Preform requested *tracing*:
                 if tracing is not None:
-                    print(f"{tracing}Search[{index}]:'{search_file_name}'")
-                if search_file_name.endswith(".xml"):
-                    name = search_file_name[:-4]
+                    print(f"{tracing}Search[{index}]:'{file_name}'")
+
+                # Skip over any files that do not end with `.xml` suffix:
+                if file_name.endswith(".xml"):
+                    # Extract *name* and *title* from *file_name* (ignoring the `.xml` suffix):
+                    name = file_name[:-4]
                     title = Encode.from_file_name(name)
+
+                    # Create *search* and then save it out to the file system:
                     search = Search(name, search_relative_path, title, table, collection,
                                     tracing=next_tracing)
                     assert table.has_child(search)
@@ -6093,9 +6099,11 @@ class Table(Node):
         # Force *table* (i.e. *self*) *load* if it has not already been loaded:
         table.file_load(tracing=next_tracing)
 
-        # Grab the *title* from *table*:
-        if title is None:
-            title = table.name
+        # Augment *title* with the *searches_size*:
+        searches = table.children_get()
+        searches_size = len(searches)
+        if len(searches) >= 2:
+            title += f" ({searches_size})"
 
         # Wrap up an requested *tracing*:
         if tracing is not None:
@@ -9246,6 +9254,7 @@ class TablesEditor(QMainWindow):
         # Perform any requested *tracing*:
         tables_editor = self
         tracing = "" if tables_editor.trace_signals else None
+        # tracing = "TEcnc:" if tracing is None else tracing   # Uncomment to trace
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
             print(f"{tracing}=>TablesEditor.collections_new_clicked()")
@@ -9303,7 +9312,7 @@ class TablesEditor(QMainWindow):
             # if tracing is not None:
             #    print("{0}1:len(searches)={1}".format(tracing, len(searches)))
             table.sort(tracing=next_tracing)
-            new_search.save(tracing=next_tracing)
+            new_search.file_save(tracing=next_tracing)
 
             model_index = tables_editor.current_model_index
             if model_index is not None:
@@ -9320,7 +9329,7 @@ class TablesEditor(QMainWindow):
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
-            print("{tracing}<=TablesEditor.collections_new_clicked()\n")
+            print(f"{tracing}<=TablesEditor.collections_new_clicked()\n")
 
     # TablesEditor.collections_tree_clicked():
     def collections_tree_clicked(self, model_index):
@@ -11678,14 +11687,14 @@ class TreeModel(QAbstractItemModel):
         # Grab the *parent_node* using *parent_model_index* and *tree_model* (i.e. *self*):
         tree_model = self
         parent_node = tree_model.getNode(parent_model_index)
-        children_nodes = parent_node.children
-        children_nodes_size = len(children_nodes)
+        children = parent_node.children_get()
+        children_size = len(children)
 
         # For now delete everything and reinsert it:
-        if children_nodes_size >= 1:
-            tree_model.beginRemoveRows(parent_model_index, 0, children_nodes_size - 1)
+        if children_size >= 1:
+            tree_model.beginRemoveRows(parent_model_index, 0, children_size - 1)
             tree_model.endRemoveRows()
-        tree_model.beginInsertRows(parent_model_index, 0, children_nodes_size - 1)
+        tree_model.beginInsertRows(parent_model_index, 0, children_size - 1)
         tree_model.endInsertRows()
 
         # Wrap up any requested *tracing*:
