@@ -4390,7 +4390,7 @@ class Node:
         # Verify argument types:
         assert isinstance(child, Node)
 
-        #FIXME: This should just call *child_insert*() with a position of 0!!!
+        # FIXME: This should just call *child_insert*() with a position of 0!!!
 
         # Grab *children* from *node* (i.e. *self*):
         node = self
@@ -4670,7 +4670,7 @@ class Directory(Node):
     def title_get(self, tracing=None):
         # Verify argument types:
         assert isinstance(tracing, str) or tracing is None
-        
+
         # Perform any requested *tracing* for *directory* (i.e. *self*):
         directory = self
         title = directory.title
@@ -4717,6 +4717,7 @@ class Collection(Node):
 
         # Stuff some additional values into *collection*:
         collection.collection_root = collection_root
+        collection.global_searches_table = dict()
         collection.search_root = search_root
         collection.tree_model = tree_model
 
@@ -4898,6 +4899,12 @@ class Search(Node):
             print(f"{tracing}=>Search.__init__('{name}', '{relative_path}', '{title}',"
                   f" {table_name}, '{collection_name}')")
 
+        # Ensure sure that non-template *title* is not already in *global_searches_table*:
+        is_template = title.startswith('@')
+        global_searches_table = collection.global_searches_table
+        if not is_template:
+            assert title not in global_searches_table, "Attempty to duplicate search '{title}'"
+
         # Initialize the *Node* super class of *search* (i.e. *self*):
         search = self
         super().__init__(name, relative_path, title, table, collection, tracing=next_tracing)
@@ -4915,11 +4922,9 @@ class Search(Node):
         search.search_parent_title = ""
         search.url = None
 
-        # Valid at that *search_full_file_name* exists:
-        search_full_file_name = search.full_file_name_get()
-        if tracing is not None:
-            print(f"{tracing}search_full_file_name='{search_full_file_name}'")
-        # assert os.path.exists(search_full_file_name)
+        # Stuff *search* into *global_searches_table* if is not *is_template*:
+        if not is_template:
+            global_searches_table[title] = search
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
@@ -5000,7 +5005,7 @@ class Search(Node):
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
             print(f"{tracing}=>Search.file_load('{title}')")
-            
+
         # Grab some informtation from parent *table* of *search*:
         table = search.parent
         assert isinstance(table, Table)
@@ -9194,6 +9199,7 @@ class TablesEditor(QMainWindow):
 
                     # Delete the *search* associated with *search_model_index*:
                     tree_model.delete(search_model_index)
+                    del collection.global_searches_table[current_search_title]
 
                     # If a *parent_search* as found, set it up as the next selected one:
                     if search_parent is None:
@@ -9394,10 +9400,10 @@ class TablesEditor(QMainWindow):
         search_title = collections_line.text()
 
         # We can only create a search if:
-        # * the search name not empty,
-        # * the search is not named "@ALL",
+        # * the search *search_title* not empty,
+        # * the search *search_title* is not named "@ALL",
         # * there is a preexisting *current_search* to depend upon
-        # * the search name is not a duplicate:
+        # * the *search_title* is not a duplicate:
         new_button_enable = False
         new_button_why = "Default off"
         if search_title == "":
@@ -9416,13 +9422,13 @@ class TablesEditor(QMainWindow):
             # Search *table* for a match of *search_title*:
             table = current_search.parent
             assert isinstance(table, Table)
-            existing_searches = table.children_get()
-            for search in existing_searches:
-                if search.title == search_title:
-                    # We already have a *search* named *search_title*:
-                    new_button_enable = False
-                    new_button_why = "Search already exists"
-                    break
+            collection = table.collection
+            assert isinstance(collection, Collection)
+            global_searches_table = collection.global_searches_table
+            if search_title in global_searches_table:
+                # We already have a *search* named *search_title*:
+                new_button_enable = False
+                new_button_why = "Search already exists"
             else:
                 # Nothing matched, so this must be a new and unique search name:
                 new_button_enable = True
@@ -11552,7 +11558,7 @@ class TreeModel(QAbstractItemModel):
     def collections_set(self, collections):
         # Verify argument types:
         assert isinstance(collections, Collections)
-        
+
         # Stuff *collections* into *tree_model* (i.e. *self*):
         tree_model = self
         tree_model.collections = collections
