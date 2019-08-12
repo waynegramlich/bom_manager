@@ -3,8 +3,36 @@
 # <------------------------------------------- 100 characters -----------------------------------> #
 
 # Coding standards:
-# * In general, the coding guidelines for PEP 8 are used.
-# * All code and docmenation lines must be on lines of 100 characters or less.  No exceptions!
+#
+# * General:
+#   * Python 3.6 or greater is used.
+#   * The PEP 8 coding standards are generally adhered to.
+#   * All code and docmenation lines must be on lines of 100 characters or less.  No exceptions!
+#   * Indentation levels are multiples of 4 spaces.
+#   * Use `flake8 --max-line-length=100 PROGRAM.py` to check for issues.
+# * Class/Function standards:
+#   * Classes:
+#     * Classes are named in CamelCase as per Python recommendation.
+#     * Classes are listed alphabetically with sub-classes are listed alphabetically
+#       immediately after their base class definition.
+#     * Each Class definition has a comment of the form `# ClassName:` immediately before the
+#       class defitinion.
+#   * Methods:
+#     * All methods are in lower case.  If mutliple words, the words are separated by underscores.
+#       The words are order as Adjectives, Noun, Adverbs, Verb.  Thus, *xml_file_load* instead of
+#       *load_xml_file*.
+#     * All methods are listed alphabetically, where an underscore is treated as a space.
+#     * All methods check their argument types (i.e. no duck typing!!!)
+#     * Inside a method, *self* is almost always replaced with more descriptive variable name.
+#     * To aid debugging, many functions have an optional *tracing* argument of the form
+#       `tracing=None`.  If this argument is `str`, the tracing information is enabled.
+#   * Fucntions:
+#     * The top-level main() function occurs first.
+#     * The standards for top-level fuctions are adhered to.
+#   * Variables:
+#     * Variables are lower case with underscores between words.
+#     * No single letter variables except for standard mathematical concepts such as X, Y, Z.
+#       Use `index` instead of `i`.
 # * Comments:
 #   * All code comments are written in [Markdown](https://en.wikipedia.org/wiki/Markdown).
 #   * Code is organized into blocks are preceeded by comment that explains the code block.
@@ -12,22 +40,13 @@
 #     aid for editor searching.
 #   * For methods, a comment of the form `# CLASS_NAME.METHOD_NAME():` is before each method
 #     definition as an aid for editor searching.
-# * Class/Function standards:
-#   * Indentation levels are multiples of 4 spaces.
-#   * Continuation lines adhere to PEP 8 standards.
-#   * The top-level main() function occurs first.
-#   * All other top-level functions are listed alphabetically next.
-#   * In general, classes are listed alphabetically.  Sub-classes are listed alphabetically
-#     immediately after their base class definition.
-#   * All methods within a class are listed alphabetically.
-#   * No duck typing!  All function/method arguments are checked for compatibale types.
-#   * Inside a method, *self* is usually replaced with more descriptive variable name.
+#   * Print statements that were used for debugging are left commented out rather than deleted.
+# * Misc:
+#   * The relatively new formatted string style `f"..."` is heavily used.
 #   * Generally, single character strings are in single quotes (`'`) and multi characters in double
 #     quotes (`"`).  Empty strings are represented as `""`.  Strings with multiple double quotes
-#     can be enclosed in single quotes.
-#   * Lint with:
+#     can be enclosed in single quotes (e.g. `  f'<Tag foo="{foo}" bar="{bar}"/>'  `.)
 #
-#       flake8 --max-line-length=100 bom_manager.py
 #
 # Install Notes:
 #
@@ -385,7 +404,8 @@ def main():
     if True:
         # Read in each *table_file_name* in *arguments* and append result to *tables*:
         tables = list()
-        for table_file_name in arguments:
+        #for table_file_name in arguments:
+        if False:
             # Verify that *table_file_name* exists and has a `.xml` suffix:
             assert os.path.isfile(table_file_name), "'{0}' does not exist".format(table_file_name)
             assert table_file_name.endswith(".xml"), (
@@ -411,7 +431,8 @@ def main():
                     table_write_file.write(table_write_text)
 
         # Now create the *tables_editor* graphical user interface (GUI) and run it:
-        tables_editor = TablesEditor(tables, tracing="")
+        searches_path = arguments[0] if arguments else "searches"
+        tables_editor = TablesEditor(tables, searches_path, tracing="")
 
         # Start up the GUI:
         tables_editor.run()
@@ -8824,9 +8845,10 @@ class FractionalPart(ProjectPart):
 class TablesEditor(QMainWindow):
 
     # TablesEditor.__init__()
-    def __init__(self, tables, tracing=None):
+    def __init__(self, tables, searches_path, tracing=None):
         # Verify argument types:
         assert isinstance(tables, list)
+        assert isinstance(searches_path, str)
         for table in tables:
             assert isinstance(table, Table)
 
@@ -9070,7 +9092,21 @@ class TablesEditor(QMainWindow):
         # Create *collections_root* and *searches_root*:
         collections_root = os.path.join(working_directory_path, "collections")
         assert os.path.isdir(collections_root)
-        searches_root = os.path.join(working_directory_path, "searches")
+
+        if os.path.isdir(searches_path):
+            # *searches_path* already exists:
+            print(f"Using '{searches_path}' directory to store searches into.")
+            searches_root = searches_path
+        else:
+            # Create directory *searches_path*:
+            print(f"Attempting to create directory '{searches_path}' to store searches into...")
+            try:
+                os.mkdir(searches_path)
+                searches_root = searches_path
+            except PermissionError:
+                print(f"...failed to create `{searches_path}' directory.")
+                searches_root = os.path.join(working_directory_path, "searches")
+                print(f"Using '{searches_root}' (which is a really bad idea!!!!)")
         assert os.path.isdir(searches_root)
 
         # Create the *tree_model* needed for *collections* and stuff into *tables_editor*:

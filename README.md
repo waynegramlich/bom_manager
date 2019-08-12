@@ -315,11 +315,40 @@ The software does the following:
 
 ## Installation Issues
 
-All the code lives in one file -- `bom_manager.py`.  However, you have
-to install a bunch of libraries:
+Eventually, there will be `setup.py` file, but for now everything is done manually.
 
-    sudo pip install bs4 requests sexpdata
+The *bom_manager* software is currently only installable in source code format.
+Currently, it is spread across two repositories -- `bom_manager` and `digikey_tables`.
 
+        cd someplace....
+        mkdir projects
+        cd projects
+        git clone https://github.com/waynegramlich/digikey_tables.git
+        git clone https://github.com/waynegramlich/bom_manager.git
+
+In addition, you will have to install a bunch of python modules (i.e. libraries).
+This the list below is probabably incomplete:
+
+        sudo pip3 -H install bs4
+        sudo pip3 -H install currencyconverter
+        sudo pip3 -H install pyperclip
+        sudo pip3 -H install pyside2
+        sudo pip3 -H install requests
+        sudo pip3 -H install sexpdata
+
+If everything is properly installed, you should be able to bring up the `bom_manager` GUI:
+
+        cd someplace/projects/bom_manager
+        ./bom_manager /tmp/my_searches
+
+This will create the `/tmp/my_searches` directory to store your part search information into.
+
+Note: There is a currently a bug that needs to be fixed, so instead try:
+
+        ./bom_mangager ./searches
+
+This will work, but you really want me to fix the bug since this will start storing
+your searches into `.../bom_manager/searches`, which is a really bad idea.
 
 ## Random Comment
 
