@@ -317,7 +317,7 @@ The software does the following:
 
 Eventually, there will be `setup.py` file, but for now everything is done manually.
 
-The *bom_manager* software is currently only installable in source code format.
+The *bom_manager* software is currently only installable as Python3 source code format.
 Currently, it is spread across two repositories -- `bom_manager` and `digikey_tables`.
 
         cd someplace....
@@ -343,12 +343,74 @@ If everything is properly installed, you should be able to bring up the `bom_man
 
 This will create the `/tmp/my_searches` directory to store your part search information into.
 
-Note: There is a currently a bug that needs to be fixed, so instead try:
+## Data organization
 
-        ./bom_mangager ./searches
+The data is split into collections and searches:
 
-This will work, but you really want me to fix the bug since this will start storing
-your searches into `.../bom_manager/searches`, which is a really bad idea.
+* Collections: In the `bom_manager` root directory, there is a directory named
+  `collections`.  Conceptually, this lists all of the collections/catalogs you
+  can search.
+
+  At the moment, only the Digi-Key collection is supported.  The Digi-Key collection
+  is located over in the `digikey_tables` repository.  Thus, there is a single symbolic
+  link named `Digi-Key` that uses a relative symbolic link to `../../digikey_tables`.
+  Since Window has never support Unix/Linux style symbolic links, this means that
+ `bom_manager` will not run under Windows.  This issue will be dealt with in the future.
+
+  If you dig around in the `digikey_tables` directory, you will see a nested set of
+  directories. with `.xml` files in them.  These `.xml` files specify the information
+  about a class of search (e.g. chip resistors, rectangular connectors, IC's, etc.)
+
+  The `bom_manager` GUI (Graphical User Interface) has a tree browser that lets you
+  browse collections until you find a part category you are interested.
+
+  The collections directories are read only and are **NEVER** modified by `bom_manager`.
+
+* Searches:
+
+  The `searches` directory is currently specified on the command line and specifies
+  the root of where you will store your searches.  It is expected the eventually
+  it will point into are `git` repository somewhere.  As you create, modify, and
+  delete searches, the requisite information is added/modified/deleted down in
+  the searches directory.  The searches directory is basically a mirror of the
+  collections directory, but it is only partially populated since sub-directories
+  only created as needed to store new searches.
+
+  The `searches` directory is read and written by `bom_manager` and it is organized
+  to be very friendly with regards to parallel development via `git`.  Since each
+  search is stored in a separate file, people can easily merge searches without
+  conflicts unless both branches created a search with the exact same name.
+
+  Searches that start with an `@` character are considered to be templates that
+  other searches rely on.  The every search sub-directory conceptually has an
+  `@ALL` search that matches everything in the parent table.
+
+  {Talk about hierarchical templates here.}
+
+## Operation:
+
+The `bom_manager` is operated in conjunction with a web browser (only
+Chrome has been tested so far.)  When you click on an `@ALL` search,
+the web browser will instructed to visit Digi-Key and bring up the
+search for the catagory.
+
+You can now refine the search using the Digi-Key web interfaces to
+your heart's content.  When you are ready to save a search do the following:
+
+1. Go to the web browser and select the entire Digi-Key URL.  This URL
+   encodes all of the information about your part search in it.
+
+2. Go to the `bom_manager` GUI, and type in a new search name.  If it is
+   meant to be used as a template, place an `@` as the first character.
+
+3. Click on the [New Search] button.
+
+After you have created a few searches, go to the GUI and click on them
+and you will see that each time you click on one, the web browser switches
+over to that search.
+
+{More documenation later.}
+
 
 ## Random Comment
 
