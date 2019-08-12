@@ -3950,6 +3950,7 @@ class Encode:
 
     @staticmethod
     def to_attribute(text):
+        assert isinstance(text, str)
         characters = list()
         ord_space = ord(' ')
         ord_tilde = ord('~')
@@ -4382,7 +4383,7 @@ class Node:
         node.title = title                  # Human readable version of *Node*
 
         # To construct a path to the file/directory associated with a *node*:
-        # 1. Start with either *node.collection.collection_root* or *node.collection.search_root*.
+        # 1. Start with either *node.collection.collection_root* or *node.collection.searches_root*.
         # 2. Append *node.relative_path*.
         # 3. Append *node.name*.
         # 4. If appropriate, append `.xml`.
@@ -4533,6 +4534,18 @@ class Node:
         else:
             assert False, ("Node '{0}' not in '{1}' remove failed".
                            format(remove_node.name, node.name))
+
+    # Node.searches_root_get():
+    def searches_root_get(self):
+        # Ensure that we have a *parent* Node:
+        node = self
+        parent = node.parent
+        assert isinstance(parent, Node)
+        
+        # Recursively go up the tree until we get a *searches_root*:
+        searches_root = parent.searches_root_get()
+
+        return searches_root
 
     # Node.title_get():
     def title_get(self, tracing=None):
@@ -4713,14 +4726,14 @@ class Directory(Node):
 class Collection(Node):
 
     # Collection.__init__():
-    def __init__(self, name, collections, title, collection_root, search_root, tree_model,
+    def __init__(self, name, collections, title, collection_root, searches_root, tree_model,
                  tracing=None):
         # Verify argument types:
         assert isinstance(name, str)
         assert isinstance(collections, Collections)
         assert isinstance(title, str)
         assert isinstance(collection_root, str)
-        assert isinstance(search_root, str)
+        assert isinstance(searches_root, str)
         assert isinstance(tree_model, TreeModel) or tree_model is None
         assert isinstance(tracing, str) or tracing is None
 
@@ -4729,7 +4742,7 @@ class Collection(Node):
         if tracing is not None:
             collections_name = collections.name
             print(f"{tracing}=>Collection.__init__('{name}', '{collections_name}', '{title}', "
-                  f"'{collection_root}', '{search_root}')")
+                  f"'{collection_root}', '{searches_root}')")
 
         # Intialize the *Node* super class of *collection* (i.e. *self*).
         collection = self
@@ -4739,7 +4752,7 @@ class Collection(Node):
         # Stuff some additional values into *collection*:
         collection.collection_root = collection_root
         collection.global_searches_table = dict()
-        collection.search_root = search_root
+        collection.searches_root = searches_root
         collection.tree_model = tree_model
 
         # Ensure that *type_letter_get()* returns 'C' for Collection:
@@ -4748,7 +4761,7 @@ class Collection(Node):
         # Wrap up any requested *tracing*:
         if tracing is not None:
             print(f"{tracing}=>Collection.__init__('{name}', '{collections.name}', '{title}', " +
-                  f"'{collection_root}', '{search_root}')")
+                  f"'{collection_root}', '{searches_root}')")
 
     # Collection.can_fetch_more():
     def can_fetch_more(self):
@@ -4863,17 +4876,17 @@ class Collections(Node):
                 # Create the *collection_title* from *directory_name*:
                 title = Encode.from_file_name(directory_name)
 
-                # Create *collection_root_path* and *search_root_path*:
-                collection_root_path = os.path.join(collections_root, directory_name)
-                searches_root_path = os.path.join(searches_root, directory_name)
+                # Create *collection_root_path* and *searches_root*:
+                collection_full_path = os.path.join(collections_root, directory_name)
+                searches_full_path = os.path.join(searches_root, directory_name)
                 if tracing is not None:
                     print(f"{tracing}title='{title}'")
-                    print(f"{tracing}collection_root_path='{collection_root_path}'")
-                    print(f"{tracing}searches_root_path='{searches_root_path}'")
+                    print(f"{tracing}collection_root_path='{collection_full_path}'")
+                    print(f"{tracing}searches_root_path='{searches_full_path}'")
 
                 # Create *collection*:
                 collection = Collection(directory_name, collections, title,
-                                        collection_root_path, searches_root_path, tree_model)
+                                        collection_full_path, searches_full_path, tree_model)
                 assert collections.has_child(collection)
 
                 # Recursively perfrom *partial_load*'s down from *collection*:
@@ -4882,6 +4895,12 @@ class Collections(Node):
         # Wrap any requested *tracing*:
         if tracing is not None:
             print(f"{tracing}<=Collections.partial_load()")
+
+    # Collections.searches_root_get():
+    def searches_root_get(self):
+        collections = self
+        searches_root = collections.searches_root
+        return searches_root
 
     # Collections.type_leter_get():
     def type_letter_get(self):
@@ -4941,11 +4960,14 @@ class Search(Node):
         search.loaded = False
         search.search_parent = None
         search.search_parent_title = ""
-        search.url = None
+        search.url = None # table.url if name == "@ALL" else None
 
         # Stuff *search* into *global_searches_table* if is not *is_template*:
         if not is_template:
             global_searches_table[title] = search
+
+        # For now, force it out:
+        # search.file_save(tracing=next_tracing)
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
@@ -5124,8 +5146,8 @@ class Search(Node):
         relative_path = search.relative_path
 
         # Compute *full_file_name*:
-        search_root = collection.search_root
-        full_file_name = os.path.join(search_root, relative_path, name + ".xml")
+        searches_root = collection.searches_root
+        full_file_name = os.path.join(searches_root, relative_path, name + ".xml")
         return full_file_name
 
     # Search.is_deletable():
@@ -5617,8 +5639,8 @@ class Table(Node):
 
     # Table.can_fetch_more():
     def can_fetch_more(self):
-        # Conceptually, every table as a default `@ALL` search.  We return true if
-        # the `@ALL` search has not actually be created yet for *table* (i.e. *self*):
+        # Conceptually, every table as a default `@ALL` search.  We return *True* if
+        # the `@ALL` search has not actually been created yet for *table* (i.e. *self*):
         table = self
         searches = table.children_get()
         can_fetch_more = (len(searches) == 0)
@@ -5947,12 +5969,12 @@ class Table(Node):
 
         # Compute *searches_path* which is the directory that contains the *Search* `.xml` files:
         collection_root = collection.collection_root
-        search_root = collection.search_root
+        searches_root = collection.searches_root
         search_relative_path = os.path.join(relative_path, name)
-        search_path = os.path.join(search_root, search_relative_path)
+        search_path = os.path.join(searches_root, search_relative_path)
         if tracing is not None:
             print(f"{tracing}collection_root='{collection_root}'")
-            print(f"{tracing}search_root=    '{search_root}'")
+            print(f"{tracing}searches_root=    '{searches_root}'")
             print(f"{tracing}relative_path=  '{relative_path}'")
             print(f"{tracing}search_path=    '{search_path}'")
 
@@ -6068,22 +6090,22 @@ class Table(Node):
         assert isinstance(tracing, str) or tracing is None
 
         # Preform any requested *tracing*:
-        # next_tracing = None if tracing is None else tracing + " "
+        next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
             print("{0}=>Table.search_directory_get()".format(tracing))
 
-        # Verify that *search_directory* exits:
-        search_root_directory = TablesEditor.search_root_directory_get()
-        if not os.path.isdir(search_root_directory):
-            os.mkdir(search_root_directory)
+        # Verify that *search_directory* exits for *table* (i.e. *self*):
+        table = self
+        searches_root = table.searches_root_get()
+        if not os.path.isdir(searches_root):
+            os.mkdir(searches_root)
         # if tracing is not None:
         #    print("{0}search_directory='{1}".format(tracing, search_directory))
 
         # Compute the *directories* list of directory names that while lead to *search*
         # (i.e. *self*) XML file:
         directories = list()
-        search = self
-        node = search
+        node = table
         while node is not None:
             directories.append(node.name)
             # if tracing is not None:
@@ -6092,9 +6114,9 @@ class Table(Node):
         directories.reverse()
         directories = directories[1:]
 
-        # Compute the *directory_path* to span from the *search_root_directory* down the
+        # Compute the *directory_path* to span from the *searches_root* down the
         # place where the directory where the *search* XML file will be stored:
-        directory_path = os.path.join(search_root_directory, *directories)
+        directory_path = os.path.join(searches_root, *directories)
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
@@ -8845,10 +8867,10 @@ class FractionalPart(ProjectPart):
 class TablesEditor(QMainWindow):
 
     # TablesEditor.__init__()
-    def __init__(self, tables, searches_path, tracing=None):
+    def __init__(self, tables, searches_root, tracing=None):
         # Verify argument types:
         assert isinstance(tables, list)
-        assert isinstance(searches_path, str)
+        assert isinstance(searches_root, str)
         for table in tables:
             assert isinstance(table, Table)
 
@@ -8912,6 +8934,31 @@ class TablesEditor(QMainWindow):
         # file_open_button.clicked.connect(
         #  partial(TablesEditor.file_open_button_clicked, tables_editor))
 
+        # Get *working_directory_path*:
+        working_directory_path = os.getcwd()
+        assert isinstance(working_directory_path, str)
+        assert os.path.isdir(working_directory_path)
+
+        # Figure out *searches_root* and make sure it exists:
+        if os.path.isdir(searches_root):
+            # *searches_path* already exists:
+            print(f"Using '{searches_root}' directory to store searches into.")
+        else:
+            # Create directory *searches_path*:
+            print(f"Attempting to create directory '{searches_root}' to store searches into...")
+            try:
+                os.mkdir(searches_root)
+            except PermissionError:
+                print(f"...failed to create `{searches_root}' directory.")
+                searches_root = os.path.join(working_directory_path, "searches")
+                print(f"Using '{searches_root}' for searches directory "
+                      "(which is a really bad idea!!!!)")
+        assert os.path.isdir(searches_root)
+
+        # Create *collections_root*:
+        collections_root = os.path.join(working_directory_path, "collections")
+        assert os.path.isdir(collections_root)
+
         # Load all values into *tables_editor* before creating *combo_edit*.
         # The *ComboEdit* initializer needs to access *tables_editor.main_window*:
         current_table = tables[0] if len(tables) >= 1 else None
@@ -8930,6 +8977,7 @@ class TablesEditor(QMainWindow):
         tables_editor.main_window = main_window
         tables_editor.original_tables = copy.deepcopy(tables)
         tables_editor.re_table = TablesEditor.re_table_get()
+        tables_editor.searches_root = searches_root
         tables_editor.searches = list()
         tables_editor.xsearches = None
         tables_editor.tab_unload = None
@@ -9083,31 +9131,6 @@ class TablesEditor(QMainWindow):
         # file_names = glob.glob("../digikey_tables/**", recursive=True)
         # file_names.sort()
         # print("file_names=", file_names)
-
-        # Get *working_directory_path*:
-        working_directory_path = os.getcwd()
-        assert isinstance(working_directory_path, str)
-        assert os.path.isdir(working_directory_path)
-
-        # Create *collections_root* and *searches_root*:
-        collections_root = os.path.join(working_directory_path, "collections")
-        assert os.path.isdir(collections_root)
-
-        if os.path.isdir(searches_path):
-            # *searches_path* already exists:
-            print(f"Using '{searches_path}' directory to store searches into.")
-            searches_root = searches_path
-        else:
-            # Create directory *searches_path*:
-            print(f"Attempting to create directory '{searches_path}' to store searches into...")
-            try:
-                os.mkdir(searches_path)
-                searches_root = searches_path
-            except PermissionError:
-                print(f"...failed to create `{searches_path}' directory.")
-                searches_root = os.path.join(working_directory_path, "searches")
-                print(f"Using '{searches_root}' (which is a really bad idea!!!!)")
-        assert os.path.isdir(searches_root)
 
         # Create the *tree_model* needed for *collections* and stuff into *tables_editor*:
         tree_model = TreeModel()
@@ -10984,11 +11007,6 @@ class TablesEditor(QMainWindow):
         # Wrap up any requested *tracing*:
         if tracing is not None:
             print("{0}=>TablesEditor.schema_update()".format(tracing))
-
-    @staticmethod
-    # TablesEditor.search_root_directory_get():
-    def search_root_directory_get():
-        return os.path.join(os.getcwd(), "searches")
 
     # TablesEditor.searches_comment_get():
     def searches_comment_get(self, search, tracing=None):
