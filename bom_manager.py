@@ -398,12 +398,52 @@ def main():
 
     Encode.test()
 
+    database = Database()
+    order = Order(database)
+
     # Deal with command line *arguments*:
+    searches_path = "searches"
     arguments = sys.argv[1:]
+    for argument_index, argument in enumerate(arguments):
+        # print(f"Argument[{argument_index}]:'{argument}'")
+        if argument.endswith(".net"):
+            # We have a `.net` file to process.  The format is `N:path/name.net` where
+            # * *N*: The number of the project to order.  If `N:` is not present,
+            #   quantity 1 is assumed.
+            # * *path*: The path to the directory containing the `.new` file.  If no `path/`
+            #   is present, the current directory is assumed.
+            # * *name*: The base name for the `.net` file.
+            
+            colon_index = argument.find(':')
+            # print(f"colon_index={colon_index}")
+            count = 1
+            if colon_index >= 0:
+                count = int(argument[:colon_index])
+                argument = argument[colon_index:]
+            # print(f"count={count}")
+            file_name = argument
+            assert os.path.isfile(file_name), f"'{file_name}' does not exist."
+            paths = os.path.split(file_name)
+            # print(f"paths={paths}")
+            base_name = paths[-1]
+            # print(f"base_name='{base_name}'")
+            name = base_name[:-4]
+            # print(f"name='{name}'")
+            revision_letter = 'A'
+            if len(paths) >= 2:
+                revision_letter = paths[-2][-1].upper()
+            # print(f"revision_letter='{revision_letter}'")
+
+            # Create an order project:
+            order.project(name, revision_letter, file_name, count)
+        else:
+            # For now treat everything else as a *searches_path*:
+            searches_path = argument
+
     # print("arguments=", arguments)
-    if True:
+    tables = list()
+    if False:
         # Read in each *table_file_name* in *arguments* and append result to *tables*:
-        tables = list()
         #for table_file_name in arguments:
         if False:
             # Verify that *table_file_name* exists and has a `.xml` suffix:
@@ -430,12 +470,14 @@ def main():
                 with open("/tmp/" + table_file_name, "w") as table_write_file:
                     table_write_file.write(table_write_text)
 
-        # Now create the *tables_editor* graphical user interface (GUI) and run it:
-        searches_path = arguments[0] if arguments else "searches"
-        tables_editor = TablesEditor(tables, searches_path, tracing="")
+    # Now create the *tables_editor* graphical user interface (GUI) and run it:
+    # searches_path = arguments[0] if arguments else "searches"
+    tracing = None
+    # tracing = ""
+    tables_editor = TablesEditor(tables, searches_path, order, tracing=tracing)
 
-        # Start up the GUI:
-        tables_editor.run()
+    # Start up the GUI:
+    tables_editor.run()
 
     # When we get here, *tables_editor* has stopped running and we can return.
     return 0
@@ -4846,6 +4888,36 @@ class Collections(Node):
         # *Collections.partial_load*().  There is nothing more to fetch:
         return False
 
+    # Collections.check():
+    def check(self, search_name, project_name, reference, tracing=None):
+        # Verify argument types:
+        assert isinstance(search_name, str)
+        assert isinstance(project_name, str)
+        assert isinstance(reference, str)
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}=>Collections.check('{search_name}', '{project_name}', '{reference}')")
+
+        # Find all *matching_searches* that matach *search_name* from *collections* (i.e. *self*):
+        collections = self
+        matching_searches = list()
+        for collection in collections.children_get():
+            global_searches_table = collection.global_searches_table
+            if search_name in global_searches_table:
+                matching_search = global_searches_table[search_name]
+                matching_searches.append(matching_search)
+
+        # Output error if nothing is found:
+        if not matching_searches:
+            print(f"{project_name}: {reference} {search_name} not found")
+
+        # Wrap up any reqested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}<=Collections.check('{search_name}', '{project_name}', '{reference}')")
+        
+
     # Collections.partial_load():
     def partial_load(self, tracing=None):
         # Verify argument types:
@@ -6408,6 +6480,25 @@ class Order:
         bom_file.write("Total: ${0:.2f}\n".format(total_cost))
         bom_file.close()
 
+    def check(self, collections, tracing=None):
+        # Verify argument types:
+        assert isinstance(collections, Collections)
+        
+        # Perform any requested *tracing*:
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}=>Order.check()")
+
+        # Check each of the *projects* in *order* (i.e. *self*):
+        order= self
+        projects = order.projects
+        for project in projects:
+            project.check(collections, tracing=next_tracing)
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}<=Order.check()")
+
     # Order.csv_write():
     def csv_write(self):
         """ *Order*: Write out the *Order* object (i.e. *self) BOM (Bill Of Materials)
@@ -7325,7 +7416,7 @@ class Parameter:
 # PosePart:
 class PosePart:
     # A PosePart basically specifies the binding of a ProjectPart
-    # and is associated schemtatic reference.  Reference strings must
+    # and its associated schemtatic reference.  Reference strings must
     # be unique for a given project.
 
     # PosePart.__init__():
@@ -7348,6 +7439,30 @@ class PosePart:
         pose_part.comment = comment
         pose_part.install = (comment != "DNI")
 
+
+    # PosePart.check():
+    def check(self, collections, tracing=None):
+        # Verify argument types:
+        assert isinstance(collections, Collections)
+        assert isinstance(tracing, str) or tracing == None
+
+        # Perform any requested *tracing* for *pose_part* (i.e. *self*):
+        pose_part = self    
+        reference = pose_part.reference
+        project = pose_part.project
+        project_name = project.name
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}=>PosePart.check('{project_name}', '{reference}')")
+
+        # Check the underlying *project_part*:
+        project_part = pose_part.project_part
+        search_name = project_part.project_part_name
+        collections.check(search_name, project_name, reference, tracing=next_tracing)
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}<=PosePart.check('{project_name}', '{reference}')")
 
 # PositionRow:
 class PositionRow:
@@ -7872,6 +7987,27 @@ class Project:
         else:
             project.uninstalled_pose_parts.append(pose_part)
 
+    # Project.check():
+    def check(self, collections, tracing=None):
+        # Verify argument types:
+        assert isinstance(collections, Collections)
+
+        # Perform an requested *tracing* for *project* (i.e. *self*):
+        project = self
+        name = project.name
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}=>Project_check('{name}')")
+
+        # Check *all_pose_parts*:
+        all_pose_parts = project.all_pose_parts
+        for pose_part in all_pose_parts:
+            pose_part.check(collections, tracing=next_tracing)
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}<=Project_check('{name}')")
+
     # Project.new_file_read():
     def net_file_read(self):
         """ Read in net file for the *Project* object (i.e. *self*).
@@ -7890,6 +8026,7 @@ class Project:
             with open(net_file_name, "r") as net_stream:
                 # Read contents of *net_file_name* in as a string *net_text*:
                 net_text = net_stream.read()
+                print(f"Read in file '{net_file_name}'")
 
             # Parse *net_text* into *net_se* (i.e. net S-expression):
             net_se = sexpdata.loads(net_text)
@@ -7937,8 +8074,6 @@ class Project:
                 else:
                     assert False, "strange part_name: {0}". \
                       format(part_name_se[1])
-
-                # print(reference, part_name, footprint)
 
                 # Strip *comment* out of *part_name* if it exists:
                 comment = ""
@@ -8867,10 +9002,11 @@ class FractionalPart(ProjectPart):
 class TablesEditor(QMainWindow):
 
     # TablesEditor.__init__()
-    def __init__(self, tables, searches_root, tracing=None):
+    def __init__(self, tables, searches_root, order, tracing=None):
         # Verify argument types:
         assert isinstance(tables, list)
         assert isinstance(searches_root, str)
+        assert isinstance(order, Order)
         for table in tables:
             assert isinstance(table, Table)
 
@@ -8975,6 +9111,7 @@ class TablesEditor(QMainWindow):
         tables_editor.in_signal = True
         tables_editor.languages = ["English", "Spanish", "Chinese"]
         tables_editor.main_window = main_window
+        tables_editor.order = order
         tables_editor.original_tables = copy.deepcopy(tables)
         tables_editor.re_table = TablesEditor.re_table_get()
         tables_editor.searches_root = searches_root
@@ -9110,6 +9247,8 @@ class TablesEditor(QMainWindow):
         mw.find_tabs.currentChanged.connect(tables_editor.tab_changed)
         mw.filters_down.clicked.connect(tables_editor.filters_down_button_clicked)
         mw.filters_up.clicked.connect(tables_editor.filters_up_button_clicked)
+        mw.collections_check.clicked.connect(tables_editor.collections_check_clicked)
+        mw.collections_process.clicked.connect(tables_editor.collections_process_clicked)
         mw.parameters_csv_line.textChanged.connect(tables_editor.parameter_csv_changed)
         mw.parameters_default_line.textChanged.connect(tables_editor.parameter_default_changed)
         mw.parameters_long_line.textChanged.connect(tables_editor.parameter_long_changed)
@@ -9395,6 +9534,36 @@ class TablesEditor(QMainWindow):
         # Wrap up any requested *tracing*:
         if tracing is not None:
             print(f"{tracing}<=TablesEditor.collections_new_clicked()\n")
+
+    # TablesEditor.collections_check_clicked():
+    def collections_check_clicked(self):
+        # Perform any tracing requested by *tables_editor* (i.e. *self*):
+        tables_editor = self
+        tracing = "" if tables_editor.trace_signals else None
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}=>TablesEditor.collections_check_clicked()")
+
+        # Delegate checking to *order* object:
+        collections = tables_editor.collections
+        order = tables_editor.order
+        order.check(collections, tracing=next_tracing)
+
+        # Wrap any requested by *tracing*:
+        if tracing is not None:
+            print(f"{tracing}<=TablesEditor.collections_check_clicked()\n")
+
+    # TablesEditor.collections_process_clicked():
+    def collections_process_clicked(self):
+        # Perform any tracing requested by *tables_editor* (i.e. *self*):
+        tables_editor = self
+        tracing = "" if tables_editor.trace_signals else None
+        if tracing is not None:
+            print(f"{tracing}=>TablesEditor.collections_process_clicked()")
+
+        # Wrap any requested by *tracing*:
+        if tracing is not None:
+            print(f"{tracing}<=TablesEditor.collections_process_clicked()\n")
 
     # TablesEditor.collections_tree_clicked():
     def collections_tree_clicked(self, model_index):

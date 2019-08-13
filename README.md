@@ -103,7 +103,7 @@ Now that we have described parts in greater detail, it is time to introduce
 the over all architecture of BOM manager:
 
 * Project: The BOM manager orders parts for one or more projects.  A project is
-  basically one-to-one with a CAD "file".  Note, CAD systems do not reduce a
+  basically one-to-one with a CAD "file".  Note: some CAD systems do not reduce a
   project down to a single file, but instead to a collection of files in one
   or more directories/folders.
 
@@ -336,12 +336,26 @@ This the list below is probabably incomplete:
         sudo pip3 -H install requests
         sudo pip3 -H install sexpdata
 
-If everything is properly installed, you should be able to bring up the `bom_manager` GUI:
+If everything is properly installed, you should be able to bring up the `bom_manager` GUI.
+The command line arguments for `bom_manager` are:
+
+        ./bom_manager [search_directory] [KiCad .net files...]
+    
+If you do not have any `.net` files lying around:
 
         cd someplace/projects/bom_manager
         ./bom_manager /tmp/my_searches
 
 This will create the `/tmp/my_searches` directory to store your part search information into.
+
+If you do have some KiCAD `.net` files lying around:
+
+        cd someplace/projects/bom_manager
+        ./bom_manager /tmp/my_searches  my_kicad.net 
+
+Feel free to click on the `[Order Check]` button to scan your searches database
+for searches that match symbols in your `my_kicad.net` file.  All non-matched
+symbols are printed as an error.
 
 ## Data organization
 
