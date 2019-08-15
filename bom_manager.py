@@ -202,6 +202,7 @@
 # software community.
 
 # Import some libraries (alphabetical order):
+import argparse
 from bs4 import BeautifulSoup     # HTML/XML data structucure searching
 import copy                       # Is this used any more?
 import csv
@@ -398,32 +399,32 @@ def main():
 
     Encode.test()
 
+    parser = argparse.ArgumentParser(description="Bill of Materials (BOM) Manager.")
+    parser.add_argument("-c", "--collection", action="append", default=["collections/Digi-Key"],
+                        help="BOM Manager Collection Directory.")
+    parser.add_argument("-n", "--net", action="append", default=[],
+                        help="KiCAD .net file. Preceed with 'NUMBER:' to increase count. ")
+    parser.add_argument("-s", "--search", default="searches",
+                        help="BOM Manager Searches Directory.")
+    parsed_arguments = vars(parser.parse_args())
+
     database = Database()
     order = Order(database)
 
-    # Deal with command line *arguments*:
-    searches_path = "searches"
-    arguments = sys.argv[1:]
-    for argument_index, argument in enumerate(arguments):
-        # print(f"Argument[{argument_index}]:'{argument}'")
-        if argument.endswith(".net"):
-            # We have a `.net` file to process.  The format is `N:path/name.net` where
-            # * *N*: The number of the project to order.  If `N:` is not present,
-            #   quantity 1 is assumed.
-            # * *path*: The path to the directory containing the `.new` file.  If no `path/`
-            #   is present, the current directory is assumed.
-            # * *name*: The base name for the `.net` file.
-            
-            colon_index = argument.find(':')
+    # Deal with *net_file_names*:
+    net_file_names = parsed_arguments["net"]
+    for net_file_name in net_file_names:
+        if net_file_name.endswith(".net"):
+            # We have a `.net` file name:
+            colon_index = net_file_name.find(':')
             # print(f"colon_index={colon_index}")
             count = 1
             if colon_index >= 0:
-                count = int(argument[:colon_index])
-                argument = argument[colon_index:]
+                count = int(net_file_name[:colon_index])
+                net_file_name = net_file_name[colon_index:]
             # print(f"count={count}")
-            file_name = argument
-            assert os.path.isfile(file_name), f"'{file_name}' does not exist."
-            paths = os.path.split(file_name)
+            assert os.path.isfile(net_file_name), f"'{net_file_name}' does not exist."
+            paths = os.path.split(net_file_name)
             # print(f"paths={paths}")
             base_name = paths[-1]
             # print(f"base_name='{base_name}'")
@@ -435,10 +436,18 @@ def main():
             # print(f"revision_letter='{revision_letter}'")
 
             # Create an order project:
-            order.project(name, revision_letter, file_name, count)
+            order.project(name, revision_letter, net_file_name, count)
         else:
-            # For now treat everything else as a *searches_path*:
-            searches_path = argument
+            print(f"Ignoring .net '{net_file_name}' does not with '.net` suffix.")
+
+    # Deal with *collection_diriectories*:
+    collection_directories = parsed_arguments["collection"]
+    if len(collection_directories) == 0:
+        collection_directories = ["collections/Digi-Key"]
+    for collection_directory in collection_directories:
+        if not os.path.isdir(collection_directory):
+            print(f"Collection '{collection_directory}' is not a directory!")
+            return
 
     # print("arguments=", arguments)
     tables = list()
@@ -470,11 +479,15 @@ def main():
                 with open("/tmp/" + table_file_name, "w") as table_write_file:
                     table_write_file.write(table_write_text)
 
+    searches_root = os.path.abspath(parsed_arguments["search"])
+
     # Now create the *tables_editor* graphical user interface (GUI) and run it:
     # searches_path = arguments[0] if arguments else "searches"
     tracing = None
     # tracing = ""
-    tables_editor = TablesEditor(tables, searches_path, order, tracing=tracing)
+    # print(f"searches_root='{searches_root}'")
+    tables_editor = TablesEditor(tables,
+                                 collection_directories, searches_root, order, tracing=tracing)
 
     # Start up the GUI:
     tables_editor.run()
@@ -3868,6 +3881,7 @@ class Database:
 # Encode:
 class Encode:
 
+    # Encode.from_attribute():
     @staticmethod
     def from_attribute(attribute):
         characters = list()
@@ -3927,6 +3941,7 @@ class Encode:
         text = "".join(characters)
         return text
 
+    # Encode.from_file_name():
     @staticmethod
     def from_file_name(file_name):
         # Verify argument types:
@@ -3990,6 +4005,7 @@ class Encode:
         text = "".join(characters)
         return text
 
+    # Encode.to_attribute():
     @staticmethod
     def to_attribute(text):
         assert isinstance(text, str)
@@ -4019,6 +4035,7 @@ class Encode:
         attribute = "".join(characters)
         return attribute
 
+    # Encode.to_file_name():
     @staticmethod
     def to_file_name(text):
         characters = list()
@@ -4053,6 +4070,7 @@ class Encode:
         file_name = "".join(characters)
         return file_name
 
+    # Encode.test():
     @staticmethod
     def test():
         printable_ascii = "".join([chr(index) for index in range(ord(' '), ord('~')+1)])
@@ -4062,6 +4080,7 @@ class Encode:
         unicode_characters = "\u03a9Ω\u03bcμ"
         Encode.test_both(unicode_characters)
 
+    # Encode.test_attribute():
     @staticmethod
     def test_attribute(before_attribute):
         assert isinstance(before_attribute, str)
@@ -4072,12 +4091,14 @@ class Encode:
         # print(f"after_attribute='{after_attribute}'")
         Encode.test_compare(before_attribute, after_attribute)
 
+    # Encode.test_both():
     @staticmethod
     def test_both(text):
         assert isinstance(text, str)
         Encode.test_attribute(text)
         Encode.test_file_name(text)
 
+    # Encode.test_compare():
     @staticmethod
     def test_compare(text1, text2):
         # Verify argument types:
@@ -4096,6 +4117,7 @@ class Encode:
                                                   f" text1='{text1}' text2='{text2}'")
             assert text1_size == text2_size
 
+    # Encode.test_file_name():
     @staticmethod
     def test_file_name(before_text):
         assert isinstance(before_text, str)
@@ -4862,10 +4884,10 @@ class Collection(Node):
 class Collections(Node):
 
     # Collections.__init__():
-    def __init__(self, name, collections_root, title, searches_root, tree_model):
+    def __init__(self, name, collection_directories, title, searches_root, tree_model):
         # Verify argument types:
         assert isinstance(name, str)
-        assert isinstance(collections_root, str)
+        assert isinstance(collection_directories, list)
         assert isinstance(title, str)
         assert isinstance(searches_root, str)
         assert isinstance(tree_model, TreeModel) or tree_model is None
@@ -4875,7 +4897,7 @@ class Collections(Node):
         super().__init__(name, None, title, None, None)
 
         # Stuff some values into *collections*:
-        collections.collections_root = collections_root
+        collections.collection_directories = collection_directories
         collections.searches_root = searches_root
         collections.tree_model = tree_model
 
@@ -4930,34 +4952,35 @@ class Collections(Node):
 
         # Extract some values from *collections*:
         collections = self
-        collections_root = collections.collections_root
+        collection_directories = collections.collection_directories
         searches_root = collections.searches_root
         tree_model = collections.tree_model
         if tracing is not None:
-            print(f"{tracing}collections_root='{collections_root}'")
+            print(f"{tracing}collection_directories='{collection_directories}'")
             print(f"{tracing}searches_root='{searches_root}'")
 
         # Sweep through *path* finding directories (technically symbolic links):
-        for index, directory_name in enumerate(sorted(os.listdir(collections_root))):
+        for index, collection_directory in enumerate(sorted(collection_directories)):
             # Perform requested *tracing*:
             if tracing is not None:
-                print(f"{tracing}Collection[{index}]:'{directory_name}'")
+                print(f"{tracing}Collection[{index}]:'{collection_directory}'")
 
-            # Skip over Unix/Linux *directory_names*'s that start with a '.':
-            if not directory_name.startswith('.'):
+            # Skip over Unix/Linux *collection_directory*'s that start with a '.':
+            if not collection_directory.startswith('.'):
                 # Create the *collection_title* from *directory_name*:
-                title = Encode.from_file_name(directory_name)
+                base_name = os.path.basename(collection_directory)
+                title = Encode.from_file_name(base_name)
 
                 # Create *collection_root_path* and *searches_root*:
-                collection_full_path = os.path.join(collections_root, directory_name)
-                searches_full_path = os.path.join(searches_root, directory_name)
+                collection_full_path = os.path.abspath(collection_directory)
+                searches_full_path = os.path.join(searches_root, base_name)
                 if tracing is not None:
                     print(f"{tracing}title='{title}'")
                     print(f"{tracing}collection_root_path='{collection_full_path}'")
                     print(f"{tracing}searches_root_path='{searches_full_path}'")
 
                 # Create *collection*:
-                collection = Collection(directory_name, collections, title,
+                collection = Collection(title, collections, title,
                                         collection_full_path, searches_full_path, tree_model)
                 assert collections.has_child(collection)
 
@@ -5219,7 +5242,11 @@ class Search(Node):
 
         # Compute *full_file_name*:
         searches_root = collection.searches_root
-        full_file_name = os.path.join(searches_root, relative_path, name + ".xml")
+        xml_name = name + ".xml"
+        # print(f"searches_root='{searches_root}' "
+        #       f"relative_path='{relative_path}; "
+        #       f"xml_name='{xml_name}'")
+        full_file_name = os.path.join(searches_root, relative_path, xml_name)
         return full_file_name
 
     # Search.is_deletable():
@@ -9002,9 +9029,10 @@ class FractionalPart(ProjectPart):
 class TablesEditor(QMainWindow):
 
     # TablesEditor.__init__()
-    def __init__(self, tables, searches_root, order, tracing=None):
+    def __init__(self, tables, collection_directories, searches_root, order, tracing=None):
         # Verify argument types:
         assert isinstance(tables, list)
+        assert isinstance(collection_directories, list)
         assert isinstance(searches_root, str)
         assert isinstance(order, Order)
         for table in tables:
@@ -9100,6 +9128,7 @@ class TablesEditor(QMainWindow):
         current_table = tables[0] if len(tables) >= 1 else None
         tables_editor = self
         tables_editor.application = application
+        tables_editor.collection_directories = collection_directories
         tables_editor.collections = None  # Filled in below
         tables_editor.current_comment = None
         tables_editor.current_enumeration = None
@@ -9276,7 +9305,7 @@ class TablesEditor(QMainWindow):
         tables_editor.model = tree_model
 
         # Create the *collections* and stuff into *tables_editor*:
-        collections = Collections("Collections", collections_root,
+        collections = Collections("Collections", collection_directories,
                                   "Collections", searches_root, tree_model)
         tables_editor.collections = collections
 
@@ -9285,7 +9314,7 @@ class TablesEditor(QMainWindow):
 
         # Now that both *collections* and *tree_mode* refer to one another we can safely
         # call *partial_load*():
-        collections.partial_load()  # tracing="")
+        collections.partial_load()
 
         # Now bind *tree_model* to the *collections_tree* widget:
         collections_tree = mw.collections_tree

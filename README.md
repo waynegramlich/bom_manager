@@ -329,47 +329,55 @@ Currently, it is spread across two repositories -- `bom_manager` and `digikey_ta
 In addition, you will have to install a bunch of python modules (i.e. libraries).
 This the list below is probabably incomplete:
 
-        sudo pip3 -H install bs4
-        sudo pip3 -H install currencyconverter
-        sudo pip3 -H install pyperclip
-        sudo pip3 -H install pyside2
-        sudo pip3 -H install requests
-        sudo pip3 -H install sexpdata
+        sudo -H pip3 install -r bom_manager.rec
 
 If everything is properly installed, you should be able to bring up the `bom_manager` GUI.
-The command line arguments for `bom_manager` are:
 
-        ./bom_manager [search_directory] [KiCad .net files...]
-    
-If you do not have any `.net` files lying around:
+The command line arguments are listed with:
 
-        cd someplace/projects/bom_manager
-        ./bom_manager /tmp/my_searches
+        python3 bom_manager.py -h
 
-This will create the `/tmp/my_searches` directory to store your part search information into.
+The current help message is reproduced below:
 
-If you do have some KiCAD `.net` files lying around:
+        usage: bom_manager.py [-h] [-c COLLECTION] [-n NET] [-s SEARCH]
+        
+        Bill of Materials (BOM) Manager.
+        
+        optional arguments:
+          -h, --help            show this help message and exit
+          -c COLLECTION, --collection COLLECTION
+                                BOM Manager Collection Directory.
+          -n NET, --net NET     KiCAD .net file. Preceed with 'NUMBER:' to increase
+                                count.
+          -s SEARCH, --search SEARCH
+                                BOM Manager Searches Directory.
 
-        cd someplace/projects/bom_manager
-        ./bom_manager /tmp/my_searches  my_kicad.net 
+You need to specify at least one collection using the `-c` option.
+You should also specify some place to store your searches with the
+`-s` option.  Example:
 
-Feel free to click on the `[Order Check]` button to scan your searches database
-for searches that match symbols in your `my_kicad.net` file.  All non-matched
-symbols are printed as an error.
+        python3 bom_manager.py -c ../digikey_tables -s /tmp/mysearches
+
+If you want to point at some KiCAD `.net` files, use one or more `-n` options.
+The `.net` file can be preceeded with `N:` where `N` is the count of the number
+of the specified to order for.  Thus, `-n 5:my_board.net` means order parts for
+5 `my_board.net` boards.
+
+If you do specify one or more `-n` options, you can click on `[Order Check]`
+to scan the `.net` files to see which parts do not have corresponding searches
+in the `bom_manager`.
 
 ## Data organization
 
 The data is split into collections and searches:
 
-* Collections: In the `bom_manager` root directory, there is a directory named
-  `collections`.  Conceptually, this lists all of the collections/catalogs you
-  can search.
+* Collections:
 
-  At the moment, only the Digi-Key collection is supported.  The Digi-Key collection
-  is located over in the `digikey_tables` repository.  Thus, there is a single symbolic
-  link named `Digi-Key` that uses a relative symbolic link to `../../digikey_tables`.
-  Since Window has never support Unix/Linux style symbolic links, this means that
- `bom_manager` will not run under Windows.  This issue will be dealt with in the future.
+  Each collection lives in its own directory tree.
+  At the moment, only the collection is the Digi-Key collection that is located
+  over in the `digikey_tables` repository.  You will need to specify something like
+  `-c ../digikey_tables` on the command line to point `bom_manager` at the Digi-Key
+  collection.
 
   If you dig around in the `digikey_tables` directory, you will see a nested set of
   directories. with `.xml` files in them.  These `.xml` files specify the information
@@ -382,13 +390,14 @@ The data is split into collections and searches:
 
 * Searches:
 
-  The `searches` directory is currently specified on the command line and specifies
-  the root of where you will store your searches.  It is expected the eventually
-  it will point into are `git` repository somewhere.  As you create, modify, and
-  delete searches, the requisite information is added/modified/deleted down in
-  the searches directory.  The searches directory is basically a mirror of the
-  collections directory, but it is only partially populated since sub-directories
-  only created as needed to store new searches.
+  The `searches` directory is currently specified on the command line with the `-s`
+  option and specifies the root directory of where you will store your searches.
+  It is expected the eventually it will point into are `git` repository somewhere.
+  As you create, modify, and delete searches, the requisite information is
+  added/modified/deleted down in the searches directory.  The searches directory
+  is basically a mirror of the each collection listed by a `-c` option, but it is
+  only partially populated since sub-directories only created as needed to store
+  new searches.
 
   The `searches` directory is read and written by `bom_manager` and it is organized
   to be very friendly with regards to parallel development via `git`.  Since each
