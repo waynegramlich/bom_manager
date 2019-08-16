@@ -203,7 +203,8 @@
 
 # Import some libraries (alphabetical order):
 import argparse
-from bs4 import BeautifulSoup     # HTML/XML data structucure searching
+#from bs4 import BeautifulSoup     # HTML/XML data structucure searching
+import bs4
 import copy                       # Is this used any more?
 import csv
 import currency_converter         # Currency converter
@@ -223,6 +224,7 @@ import re                         # Regular expressions
 import requests                   # HTML Requests
 import sexpdata                   # (LISP) S_EXpresson Data
 from sexpdata import Symbol       # (LISP) S-EXpression Symbol
+import subprocess
 import sys
 import time                       # Time package
 import webbrowser
@@ -369,6 +371,70 @@ import webbrowser
 # as a .csv file.
 
 
+def fred(html_full_file):
+    print("=>fred()")
+    with open(html_full_file) as html_file:
+        html_text = html_file.read()
+        soup = bs4.BeautifulSoup(html_text, features="lxml")
+        assert soup is not None
+        #print("type(soup)=", type(soup))
+        pairs = []
+        for form_tag in soup.find_all("form"):
+            assert isinstance(form_tag, bs4.element.Tag)
+            name = form_tag.get("name")
+            if name == "downloadform":
+                # We found it:
+                print(form_tag)
+                for index, input_tag in enumerate(form_tag.children):
+                    if isinstance(input_tag, bs4.element.Tag):
+                        print(input_tag)
+                        assert input_tag.name.lower() == "input"
+                        input_name = input_tag.get("name")
+                        print(f"input_name='{input_name}'")
+                        input_value = input_tag.get("value")
+                        print(f"input_value='{input_value}'")
+                        input_value = input_value.replace(",", "%2C")
+                        input_value = input_value.replace('|', "%7C")
+                        input_value = input_value.replace(' ', "+")
+                        pair = f"{input_name}={input_value}"
+                        print(f"pair='{pair}'")
+                        pairs.append(pair)
+                pairs_text = '&'.join(pairs)
+                print(f"pairs_text='{pairs_text}'")
+    print("<=fred()")
+
+xdef fred(html_full_file):
+    print("=>fred()")
+    with open(html_full_file) as html_file:
+        html_text = html_file.read()
+        soup = bs4.BeautifulSoup(html_text, features="lxml")
+        assert soup is not None
+        #print("type(soup)=", type(soup))
+        pairs = []
+        for form_tag in soup.find_all("form"):
+            assert isinstance(form_tag, bs4.element.Tag)
+            name = form_tag.get("name")
+            if name == "downloadform":
+                # We found it:
+                print(form_tag)
+                for index, input_tag in enumerate(form_tag.children):
+                    if isinstance(input_tag, bs4.element.Tag):
+                        print(input_tag)
+                        assert input_tag.name.lower() == "input"
+                        input_name = input_tag.get("name")
+                        print(f"input_name='{input_name}'")
+                        input_value = input_tag.get("value")
+                        print(f"input_value='{input_value}'")
+                        input_value = input_value.replace(",", "%2C")
+                        input_value = input_value.replace('|', "%7C")
+                        input_value = input_value.replace(' ', "+")
+                        pair = f"{input_name}={input_value}"
+                        print(f"pair='{pair}'")
+                        pairs.append(pair)
+                pairs_text = '&'.join(pairs)
+                print(f"pairs_text='{pairs_text}'")
+    print("<=fred()")
+
 def main():
     # table_file_name = "drills_table.xml"
     # assert os.path.isfile(table_file_name)
@@ -399,6 +465,7 @@ def main():
 
     Encode.test()
 
+    # Set up command line *parser* and parse it into *parsed_arguments* dict:
     parser = argparse.ArgumentParser(description="Bill of Materials (BOM) Manager.")
     parser.add_argument("-c", "--collection", action="append", default=["collections/Digi-Key"],
                         help="BOM Manager Collection Directory.")
@@ -411,7 +478,7 @@ def main():
     database = Database()
     order = Order(database)
 
-    # Deal with *net_file_names*:
+    # Deal with *net_file_names* from *parsed_arguments*:
     net_file_names = parsed_arguments["net"]
     for net_file_name in net_file_names:
         if net_file_name.endswith(".net"):
@@ -440,16 +507,16 @@ def main():
         else:
             print(f"Ignoring .net '{net_file_name}' does not with '.net` suffix.")
 
-    # Deal with *collection_diriectories*:
+    # Deal with *collection_diriectories* from *parsed_arguments*:
     collection_directories = parsed_arguments["collection"]
     if len(collection_directories) == 0:
         collection_directories = ["collections/Digi-Key"]
+    # Verify each *collection_directory* is actually a directory:
     for collection_directory in collection_directories:
         if not os.path.isdir(collection_directory):
             print(f"Collection '{collection_directory}' is not a directory!")
             return
 
-    # print("arguments=", arguments)
     tables = list()
     if False:
         # Read in each *table_file_name* in *arguments* and append result to *tables*:
@@ -484,7 +551,7 @@ def main():
     # Now create the *tables_editor* graphical user interface (GUI) and run it:
     # searches_path = arguments[0] if arguments else "searches"
     tracing = None
-    # tracing = ""
+    tracing = ""
     # print(f"searches_root='{searches_root}'")
     tables_editor = TablesEditor(tables,
                                  collection_directories, searches_root, order, tracing=tracing)
@@ -4827,6 +4894,197 @@ class Collection(Node):
             print(f"{tracing}=>Collection.__init__('{name}', '{collections.name}', '{title}', " +
                   f"'{collection_root}', '{searches_root}')")
 
+    # Collection.actual_parts_lookup():
+    def actual_parts_lookup(self, search_name, tracing=None):
+        # Verify argument types:
+        assert isinstance(search_name, str)
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested *tracing*:
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}=>Collection.actual_parts_lookup(*, '{search_name})")
+        
+        # Grab some values from *collection* (i.e. *self*):
+        collection = self
+        global_searches_table = collection.global_searches_table
+        searches_root = collection.searches_root
+
+        # Get some time values:
+        stale_time = 2 * 24 * 60 * 60  # 2 days in seconds
+        now = time.time()
+
+        # FIXME: This code should be in Search.actual_parts_lookup()!!!
+
+        actual_parts = []
+        # Build up *actual_parts* from *collection* (i.e. *self*):
+        if search_name in global_searches_table:
+            # We have a *search* that matches *search_name*:
+            search = global_searches_table[search_name]
+
+            # Force *search* to read in all of its information from its associated `.xml` file:
+            search.file_load(tracing=next_tracing)
+
+            # Grab some values from *search*:
+            search.name = search.name
+            relative_path = search.relative_path
+            search_url = search.url
+
+            # Compute the *csv_full_full_file*  and *html_full_file* where search results
+            # are stored:
+            encoded_search_name = Encode.to_file_name(search_name)
+            csv_base_name =  encoded_search_name + ".csv"
+            html_base_name = encoded_search_name + ".html"
+            csv_full_file = os.path.join(searches_root, relative_path, csv_base_name)
+            html_full_file = os.path.join(searches_root, relative_path, html_base_name)
+            if tracing is not None:
+                print(f"{tracing}csv_full_file='{csv_full_file}'")
+                print(f"{tracing}html_full_file='{html_full_file}'")
+                print(f"{tracing}search_url='{search_url}'")
+
+            if not os.path.isfile(html_full_file):
+                arguments = []
+                aa = arguments.append
+                aa("curl")
+                aa(search_url)
+                aa("-H")
+                aa("authority: www.digikey.com")
+                aa("-H")
+                aa("accept: text/html,application/xhtml+xml,application/xml;"
+                   "q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3")
+                aa("-H")
+                aa("accept-encoding: gzip, deflate, br")
+                aa("-H")
+                aa("cookie: "
+                   "i10c.bdddb=c2-f0103ZLNqAeI3BH6yYOfG7TZlRtCrMwzKDQfPMtvESnCuVjBtyWjJ1l"
+                   "kqXtKsvswxDrjRHdkESNCtx04RiOfGqfIlRUHqt1qPnlkPolfJSiIRsomx0RhMqeKlRtT3"
+                   "jxvKEOjKMDfJSvUoxo6uXWaGVZkqoAhloxqQlofPwYkJcS6fhQ6tzOgotZkQMtHDyjnA4lk"
+                   "PHeIKNnroxoY8XJKBvefrzwFru4qPnlkPglfJSiIRvjBTuTfbEZkqMupstsvz8qkl7wWr3i"
+                   "HtspjsuTFBve9SHoHqjyTKIPfPM3uiiAioxo6uXOfGvdfq4tFloxqPnlkPcxyESnCuVjBt1"
+                   "VmBvHmsYoHqjxVKDq3fhvfJSiIRsoBsxOftucfqRoMRjxVKDq3BuEMuNnHoyM9oz3aGv4ul"
+                   "RtCrMsvP8tJOPeoESNGw2q6tZSiN2ZkQQxHxjxVOHukKMDjOQlCtXnGt4OfqujoqMtrpt3y"
+                   "KDQjVMffM3iHtsolozT7WqeklSRGloXqPDHZHCUfJSiIRvjBTuTfQeKKYMtHlpVtKDQfPM2"
+                   "uESnCuVm6tZOfGK1fqRoIOjxvKDrfQvYkvNnuJsojozTaLW")
+                aa("--compressed")
+                aa("-s")
+                aa("-o")
+                aa(html_full_file)
+                if tracing is not None:
+                    print(f"{tracing}Retieve '{html_base_name}' ")
+                subprocess.call(arguments)
+
+            # Now procecess *html_full_file*:
+            pairs_text = None
+            assert os.path.isfile(html_full_file)
+            with open(html_full_file) as html_file:
+                html_text = html_file.read()
+                soup = bs4.BeautifulSoup(html_text, features="lxml")
+                assert soup is not None
+                #print("type(soup)=", type(soup))
+                pairs = []
+                pairs_text = None
+                print("here 2b")
+                for form_tag in soup.find_all("form"):
+                    assert isinstance(form_tag, bs4.element.Tag)
+                    name = form_tag.get("name")
+                    if name == "downloadform":
+                        # We found it:
+                        #print(form_tag)
+                        for index, input_tag in enumerate(form_tag.children):
+                            if isinstance(input_tag, bs4.element.Tag):
+                                #print(input_tag)
+                                assert input_tag.name.lower() == "input"
+                                input_name = input_tag.get("name")
+                                #print(f"input_name='{input_name}'")
+                                input_value = input_tag.get("value")
+                                #print(f"input_value='{input_value}'")
+                                input_value = input_value.replace(",", "%2C")
+                                input_value = input_value.replace('|', "%7C")
+                                input_value = input_value.replace(' ', "+")
+                                pair = f"{input_name}={input_value}"
+                                #print(f"pair='{pair}'")
+                                pairs.append(pair)
+                        pairs_text = '&'.join(pairs)
+                        #print(f"pairs_text='{pairs_text}'")
+            assert isinstance(pairs_text, str)
+
+            # Construct the *csv_fetch_url*:
+            csv_fetch_url = "https://www.digikey.com/product-search/download.csv?" + pairs_text
+            if tracing is not None:
+                print(f"{tracing}csv_fetch_url='{csv_fetch_url}'")
+
+            # Fetch `.csv` file if it does not exist or it is stale:
+            modification_time = (os.path.getmtime(csv_full_file) if os.path.isfile(csv_full_file)
+                                 else 0)
+            if modification_time + stale_time < now:
+                # Create a list of arguments to pass to *curl*:
+                arguments = list()
+                arguments.append("curl")
+                arguments.append(csv_fetch_url)
+                arguments.append("-H")
+                arguments.append("authority: www.digikey.com")
+                arguments.append("-H")
+                arguments.append("accept-encoding: gzip, deflate, br")
+                arguments.append("-H")
+                arguments.append("cookie: i10c.bdddb="
+                                 "c2-94990ugmJW7kVZcVNxn4faE4FqDhn8MKnfIFvs7GjpBeKHE8KVv5aK34FQDgF"
+                                 "PFsXXF9jma8opCeDMnVIOKCaK34GOHjEJSFoCA9oxF4ir7hqL8asJs4nXy9FlJEI"
+                                 "8MujcFW5Bx9imDEGHDADOsEK9ptrlIgAEuIjcp4olPJUjxXDMDVJwtzfuy9FDXE5"
+                                 "sHKoXGhrj3FpmCGDMDuQJs4aLb7AqsbFDhdjcF4pJ4EdrmbIMZLbAQfaK34GOHbF"
+                                 "nHKo1rzjl24jP7lrHDaiYHK2ly9FlJEADMKpXFmomx9imCGDMDqccn4fF4hAqIgF"
+                                 "JHKRcFFjl24iR7gIfTvaJs4aLb4FqHfADzJnXF9jqd4iR7gIfz8t0TzfKyAnpDgp"
+                                 "8MKEmA9og3hdrCbLvCdJSn4FJ6EFlIGEHKOjcp8sm14iRBkMT8asNwBmF3jEvJfA"
+                                 "DwJtgD4oL1Eps7gsLJaKJvfaK34FQDgFfcFocAAMr27pmCGDMD17GivaK34GOGbF"
+                                 "nHKomypOTx9imDEGHDADOsTpF39ArqeADwFoceWjl24jP7gIHDbDPRzfwy9JlIlA"
+                                 "DTFocAEP")
+                arguments.append("--compressed")
+                arguments.append("-s")
+                arguments.append("-o")
+                arguments.append(csv_full_file)
+                if tracing is not None:
+                    print(f"{tracing}A:Fetching '{html_base_name}' for '{search_name}'")
+                subprocess.call(arguments)
+            assert os.path.isfile(csv_full_file)
+
+            # Read in the *csv_file_file*:
+            data_rows = []
+            column_names = None
+            with open(csv_full_file) as csv_file:
+                csv_reader = csv.reader(csv_file, delimiter=',', quotechar='"')
+                for row_index, row in enumerate(csv_reader):
+                    #print(f"[{index}]: {row}")
+                    if row_index == 0:
+                        column_names = row
+                    else:
+                        data_rows.append(row)
+
+            print("column_names=", column_names)
+            manufacturer_part_number_index = column_names.index("Manufacturer Part Number")
+            assert manufacturer_part_number_index >= 0
+            manufacturer_index = column_names.index("Manufacturer")
+            assert manufacturer_index >= 0
+            duplicate_removal_table = dict()
+            for index, data_row in enumerate(data_rows):
+                manufacturer = data_row[manufacturer_index]
+                manufacturer_part_number = data_row[manufacturer_part_number_index]
+                pair = (manufacturer, manufacturer_part_number)
+                duplicate_removal_table[pair] = pair
+                #print(f"Row[{index}]: '{manufacturer} : '{manufacturer_part_number}'")
+            pairs = list(duplicate_removal_table.keys())
+
+            for index, pair in enumerate(pairs):
+                manufacturer, part_number = pair
+                print(f"[{index}]: '{manufacturer}' : '{part_number}'")
+                actual_part = ActualPart(manufacturer, part_number)
+                actual_parts.append(actual_part)
+
+        # Wrap up any requested *tracing* and return *actual_parts*:
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}<=Collection.actual_parts_lookup(*, '{search_name})"
+                  f" => len([...])={len(actual_parts)}")
+        return actual_parts
+
     # Collection.can_fetch_more():
     def can_fetch_more(self):
         # All of the directores for *collection* (i.e. *self*) have be previously found
@@ -4903,6 +5161,34 @@ class Collections(Node):
 
         # Ensure that *type_letter_get()* returns 'R' is for collections Root:
         assert collections.type_letter_get() == 'R'
+
+    # Collections.actual_parts_lookup():
+    def actual_parts_lookup(self, search_name, tracing=None):
+        # Verify argument types:
+        assert isinstance(search_name, str)
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested *tracing*:
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}=>Collections.actual_parts_lookup('{search_name}')")
+
+        # Visit each *collection* in *collections* (i.e. *self*) and find any
+        # *ActualPart*'s that match *search_name*:
+        collections = self
+        actual_parts = []
+        for index, collection in enumerate(collections.children_get()):
+            if tracing is not None:
+                print(f"{tracing}Collection[{index}]:{collection.name}")
+            actual_parts += collection.actual_parts_lookup(search_name, tracing=next_tracing)
+
+        #FIXME: Cull out duplicate acutal parts (i.e. for the same manufacturer.):
+        pass
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}<=Collections.actual_parts_lookup('{search_name}') => [...]")
+        return actual_parts
 
     # Collections.can_fetch_more():
     def can_fetch_more(self):
@@ -6765,15 +7051,21 @@ class Order:
                   format(vendor_name, vendor_total_cost, vendor_minimum_cost))
 
     # Order.final_choice_parts_compute():
-    def final_choice_parts_compute(self):
+    def final_choice_parts_compute(self, collections, tracing=None):
         """ *Order*: Return a list of final *ChoicePart* objects to order
             for the the *Order* object (i.e. *self*).  This routine also
             has the side effect of looking up the vendor information for
             each selected *ChoicePart* object.
         """
 
-        # Set *trace* to *True* to enable tracing:
-        trace = True
+        # Verify argument types:
+        assert isinstance(collections, Collections)
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested *tracing*:
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}=>Order.final_choice_parts_compute(*)")
 
         # Grab the *projects* and *database*:
         projects = self.projects
@@ -6788,8 +7080,8 @@ class Order:
         # eliminate duplicates.
         choice_parts_table = {}
         for project_index, project in enumerate(projects):
-            if trace:
-                print("Project[{0}]:'{1}'".format(project_index, project.name))
+            if tracing is not None:
+                print(f"{tracing}Project[{project_index}]:'{project.name}'")
 
             # Sort *pose_parts* by reference.  A reference is a sequence
             # letters followed by an integer (e.g. SW1, U12, D123...)
@@ -6802,7 +7094,8 @@ class Order:
 
             # Visit each *pose_part* in *pose_parts*:
             for pose_part_index, pose_part in enumerate(pose_parts):
-                print("  Pose_Part[{0}]:'{1}'".format(pose_part_index, pose_part.reference))
+                if tracing is not None:
+                    print(f"{tracing} Pose_Part[{pose_part_index}]:'{pose_part.reference}'")
 
                 project_part = pose_part.project_part
                 # project_part_name = project_part.project_part_name
@@ -6816,10 +7109,10 @@ class Order:
                 for choice_part_index, choice_part in enumerate(choice_parts):
                     # Do some consistency checking:
                     choice_part_name = choice_part.project_part_name
-                    assert isinstance(choice_part, ChoicePart), ("Not a choice part '{0}'".format(
-                                                                  choice_part_name))
-                    if trace:
-                        print("    ChoicePart[{0}]:'{1}'".format(choice_part, choice_part_name))
+                    assert isinstance(choice_part, ChoicePart), ("Not a choice part "
+                                                                 f"'{choice_part_name}'")
+                    if tracing is not None:
+                        print(f"{tracing}  ChoicePart[{choice_part_index}]:'{choice_part_name}'")
 
                     # Make sure *choice_part* is in *choice_parts_table*
                     # exactly once:
@@ -6836,14 +7129,16 @@ class Order:
                     choice_part.pose_part_append(pose_part)
 
                     # Refresh the vendor part cache for each *actual_part*:
-                    vendor_parts_cache = database.vendor_parts_cache
-                    actual_parts = choice_part.actual_parts
+                    actual_parts = collections.actual_parts_lookup(choice_part_name,
+                                                                   tracing=next_tracing)
+                    #vendor_parts_cache = database.vendor_parts_cache
+                    #actual_parts = choice_part.actual_parts
                     for actual_part_index, actual_part in enumerate(actual_parts):
                         # Check for errors:
                         assert isinstance(actual_part, ActualPart)
-                        if trace:
-                            print("      Actual_Part[{0}]:'{1}'".format(
-                                  actual_part_index, actual_part.manufacturer_part_name))
+                        if tracing is not None:
+                            print(f"{tracing}   Actual_Part[{actual_part_index}]:"
+                                  f"'{actual_part.manufacturer_part_name}'")
 
                         # Get *vendor_parts* from the cache or from
                         # a screen scrape:
@@ -6884,11 +7179,15 @@ class Order:
             choice_part.pose_parts_sort()
 
         for choice_part_index, choice_part in enumerate(final_choice_parts):
-            if trace:
-                print("Final_Choice_Part[{0}]:'{1}".format(
-                      choice_part_index, choice_part.project_part_name))
+            if tracing is not None:
+                print(f"{tracing}Final_Choice_Part[{choice_part_index}]:"
+                      f"'{choice_part.project_part_name}")
             # print("End_Order.final_choice_parts_compute(): project:{0}".format(choice_part))
 
+        # Perform any requested *tracing*:
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}<=Order.final_choice_parts_compute(*) => [...]")
         return final_choice_parts
 
     # Order.footprints_check():
@@ -6957,8 +7256,16 @@ class Order:
             project.positions_process(database)
 
     # Order.process():
-    def process(self):
+    def process(self, collections, tracing=None):
         """ *Order*: Process the *Order* object (i.e. *self*.) """
+        # Verify argument types:
+        assert isinstance(collections, Collections)
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested *tracing*:
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}=>Order.process(*)")
 
         # Use *order instead of *self*:
         order = self
@@ -6976,7 +7283,7 @@ class Order:
         # converted to *ChoicePart* objects.  Once we have
         # *final_choice_parts* it can be sorted various different ways
         # (by vendor, by cost, by part_name, etc.)
-        final_choice_parts = order.final_choice_parts_compute()
+        final_choice_parts = order.final_choice_parts_compute(collections, tracing=next_tracing)
 
         excluded_vendor_names = order.excluded_vendor_names
         selected_vendor_names = order.selected_vendor_names
@@ -7101,7 +7408,9 @@ class Order:
             for csv_file in vendor_files.values():
                 csv_file.close()
 
-        # print("<=Order.process()")
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}<=Order.process(*)")
 
     # Order.quad_compute():
     def quad_compute(self, choice_parts, excluded_vendor_names,
@@ -9587,8 +9896,16 @@ class TablesEditor(QMainWindow):
         # Perform any tracing requested by *tables_editor* (i.e. *self*):
         tables_editor = self
         tracing = "" if tables_editor.trace_signals else None
+        next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
             print(f"{tracing}=>TablesEditor.collections_process_clicked()")
+
+        # Grab some values from *tables_editor*:
+        collections = tables_editor.collections
+        order = tables_editor.order
+
+        # Now process *order* using *collections*:
+        order.process(collections, tracing=next_tracing)
 
         # Wrap any requested by *tracing*:
         if tracing is not None:
