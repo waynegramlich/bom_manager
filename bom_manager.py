@@ -403,38 +403,6 @@ def fred(html_full_file):
                 print(f"pairs_text='{pairs_text}'")
     print("<=fred()")
 
-xdef fred(html_full_file):
-    print("=>fred()")
-    with open(html_full_file) as html_file:
-        html_text = html_file.read()
-        soup = bs4.BeautifulSoup(html_text, features="lxml")
-        assert soup is not None
-        #print("type(soup)=", type(soup))
-        pairs = []
-        for form_tag in soup.find_all("form"):
-            assert isinstance(form_tag, bs4.element.Tag)
-            name = form_tag.get("name")
-            if name == "downloadform":
-                # We found it:
-                print(form_tag)
-                for index, input_tag in enumerate(form_tag.children):
-                    if isinstance(input_tag, bs4.element.Tag):
-                        print(input_tag)
-                        assert input_tag.name.lower() == "input"
-                        input_name = input_tag.get("name")
-                        print(f"input_name='{input_name}'")
-                        input_value = input_tag.get("value")
-                        print(f"input_value='{input_value}'")
-                        input_value = input_value.replace(",", "%2C")
-                        input_value = input_value.replace('|', "%7C")
-                        input_value = input_value.replace(' ', "+")
-                        pair = f"{input_name}={input_value}"
-                        print(f"pair='{pair}'")
-                        pairs.append(pair)
-                pairs_text = '&'.join(pairs)
-                print(f"pairs_text='{pairs_text}'")
-    print("<=fred()")
-
 def main():
     # table_file_name = "drills_table.xml"
     # assert os.path.isfile(table_file_name)
