@@ -370,39 +370,6 @@ import webbrowser
 # sorting by cost, etc.  The final BOM's for each project is generated
 # as a .csv file.
 
-
-def fred(html_full_file):
-    print("=>fred()")
-    with open(html_full_file) as html_file:
-        html_text = html_file.read()
-        soup = bs4.BeautifulSoup(html_text, features="lxml")
-        assert soup is not None
-        #print("type(soup)=", type(soup))
-        pairs = []
-        for form_tag in soup.find_all("form"):
-            assert isinstance(form_tag, bs4.element.Tag)
-            name = form_tag.get("name")
-            if name == "downloadform":
-                # We found it:
-                print(form_tag)
-                for index, input_tag in enumerate(form_tag.children):
-                    if isinstance(input_tag, bs4.element.Tag):
-                        print(input_tag)
-                        assert input_tag.name.lower() == "input"
-                        input_name = input_tag.get("name")
-                        print(f"input_name='{input_name}'")
-                        input_value = input_tag.get("value")
-                        print(f"input_value='{input_value}'")
-                        input_value = input_value.replace(",", "%2C")
-                        input_value = input_value.replace('|', "%7C")
-                        input_value = input_value.replace(' ', "+")
-                        pair = f"{input_name}={input_value}"
-                        print(f"pair='{pair}'")
-                        pairs.append(pair)
-                pairs_text = '&'.join(pairs)
-                print(f"pairs_text='{pairs_text}'")
-    print("<=fred()")
-
 def main():
     # table_file_name = "drills_table.xml"
     # assert os.path.isfile(table_file_name)
@@ -441,10 +408,13 @@ def main():
                         help="KiCAD .net file. Preceed with 'NUMBER:' to increase count. ")
     parser.add_argument("-s", "--search", default="searches",
                         help="BOM Manager Searches Directory.")
+    parser.add_argument("-o", "--order", default="order",
+                        help="Order Information Directory")
     parsed_arguments = vars(parser.parse_args())
 
     database = Database()
-    order = Order(database)
+    order_root = parsed_arguments["order"]
+    order = Order(database, order_root)
 
     # Deal with *net_file_names* from *parsed_arguments*:
     net_file_names = parsed_arguments["net"]
@@ -598,6 +568,8 @@ class ActualPart:
     # An *ActualPart* represents a single manufacturer part.
     # A list of vendor parts specifies where the part can be ordered from.
 
+    ACTUAL_PART_EXCHANGE_RATES = dict()
+
     # ActualPart.__init__():
     def __init__(self, manufacturer_name, manufacturer_part_name):
         """ *ActualPart*: Initialize *self* to contain *manufacturer* and
@@ -607,33 +579,251 @@ class ActualPart:
         assert isinstance(manufacturer_name, str)
         assert isinstance(manufacturer_part_name, str)
 
+        # Create the *key* for *actual_part* (i.e. *self*):
+        actual_part = self
         key = (manufacturer_name, manufacturer_part_name)
 
         # Load up *self*:
-        self.manufacturer_name = manufacturer_name
-        self.manufacturer_part_name = manufacturer_part_name
-        self.key = key
+        actual_part.manufacturer_name = manufacturer_name
+        actual_part.manufacturer_part_name = manufacturer_part_name
+        actual_part.key = key
         # Fields used by algorithm:
-        self.quantity_needed = 0
-        self.vendor_parts = []
-        self.selected_vendor_part = None
+        actual_part.quantity_needed = 0
+        actual_part.vendor_parts = []
+        actual_part.selected_vendor_part = None
 
-    # ActualPart.vendor_part_append():
-    def vendor_part_append(self, vendor_part):
-        """ *ActualPart: Append *vendor_part* to the vendor parts
-            of *self*. """
+    # ActualPart.findchips_scrape():
+    def findchips_scrape(self, tracing=None):
+        """ Find the *VendorParts* associated with
+            *actual_part* scraped from the findchips.com web page.
+        """
+        # Verify argument types:
+        assert isinstance(tracing, str) or tracing is None
 
+        # Perform any requested *tracing*:
         actual_part = self
-        tracing = False
-        tracing = (actual_part.manufacturer_name == "Pololu" and
-                   actual_part.manufacturer_part_name == "S18V20F6)")
-        if tracing:
-            print("appending part")
-            assert False
-        assert isinstance(vendor_part, VendorPart)
-        self.vendor_parts.append(vendor_part)
+        if tracing is not None:
+            print(f"{tracing}=>ActualPart.findchips('{actual_part.manufacturer_part_name}')")
 
-    # ActualPart.vendor_names_load():
+        # Grab some values from *actual_part* (i.e. *self*):
+        manufacturer_name = actual_part.manufacturer_name
+        manufacturer_part_name = actual_part.manufacturer_part_name
+        original_manufacturer_part_name = manufacturer_part_name
+
+        # Trace every time we send a message to findchips:
+        print(f"Find '{manufacturer_name}:{manufacturer_part_name}'")
+
+        # Generate *url_part_name* which is a %XX encoded version of
+        # *manufactuerer_part_name*:
+        ok = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" + "0123456789" + "-.:;" + \
+             "abcdefghijklmnopqrstuvwxyz"
+        characters = []
+        for character in manufacturer_part_name:
+            if ok.find(character) >= 0:
+                # Let this *character* through unchanged:
+                characters.append(character)
+            else:
+                # Convert *character* to %XX:
+                characters.append(format("%{0:02x}".format(ord(character))))
+        url_part_name = "".join(characters)
+
+        # Grab a page of information about *part_name* using *findchips_url*:
+        findchips_url = "http://www.findchips.com/search/" + url_part_name
+        if tracing is not None:
+            print(f"{tracing}findchips_url='findchips_url'")
+        findchips_response = requests.get(findchips_url)
+        findchips_text = findchips_response.text.encode("ascii", "ignore")
+
+        # Parse the *findchips_text* into *find_chips_tree*:
+        findchips_tree = bs4.BeautifulSoup(findchips_text, "html.parser")
+
+        # if trace:
+        #    print(findchips_tree.prettify())
+
+        # We use regular expressions to strip out unnecessary characters
+        # in numbrers:
+        digits_only_re = re.compile("\\D")
+
+        # Result is returned in *vendor_parts*:
+        vendor_parts = []
+
+        # Currently, there is a <div class="distributor_results"> tag for
+        # each distributor:
+        for distributor_tree in findchips_tree.find_all("div", class_="distributor-results"):
+            # if trace:
+            #        print("**************************************************")
+            #        print(distributor_tree.prettify())
+
+            # The vendor name is burried in:
+            #   <h3 class="distributor-title"><a ...>vendor name</a></h3>:
+            vendor_name = None
+            for h3_tree in distributor_tree.find_all(
+              "h3", class_="distributor-title"):
+                # print("&&&&&&&&&&&&&&&&&&&&&&&")
+                # print(h3_tree.prettify())
+                for a_tree in h3_tree.find_all("a"):
+                    vendor_name = a_tree.get_text().strip()
+
+            # If we can not extact a valid *vendor_name* there is no
+            # point in continuing to work on this *distributor_tree*:
+            if vendor_name is None:
+                continue
+
+            # This code is in the *VendorPart* initialize now:
+            # Strip some boring stuff off the end of *vendor_name*:
+            # vendor_name = text_filter(vendor_name, str.isprintable)
+            # if vendor_name.endswith("Authorized Distributor"):
+            #    # Remove "Authorized Distributor" from end
+            #    # of *vendor_name*:
+            #    if vendor_name.endswith("Authorized Distributor"):
+            #        vendor_name = vendor_name[:-22].strip(" ")
+            #    if vendor_name.endswith("Member"):
+            #        # Remove "Member" from end of *vendor_name*:
+            #        vendor_name = vendor_name[:-6].strip(" ")
+            #    if vendor_name.endswith("ECIA (NEDA)"):
+            #        # Remove "ECIA (NEDA)" from end of *vendor_name*:
+            #        vendor_name = vendor_name[:-11].strip(" ")
+
+            # Extract *currency* from *distributor_tree*:
+            currency = "USD"
+            try:
+                currency = distributor_tree["data-currencycode"]
+            except ValueError:
+                pass
+
+            # All of the remaining information is found in <table>...</table>:
+            for table_tree in distributor_tree.find_all("table"):
+                # print(table_tree.prettify())
+
+                # There two rows per table.  The first row has the headings
+                # and the second row has the data.  The one with the data
+                # has a class of "row" -- <row clase="row"...> ... </row>:
+                for row_tree in table_tree.find_all("tr", class_="row"):
+                    # Now we grab the *vendor_part_name*.  Some vendors
+                    # (like Arrow) use the *manufacturer_part_name* as their
+                    # *vendor_part_name*.  The data is in:
+                    #     <span class="additional-value"> ... </span>:
+                    vendor_part_name = manufacturer_part_name
+                    for span1_tree in row_tree.find_all(
+                      "span", class_="td-desc-distributor"):
+                        # print(span1_tree.prettify())
+                        for span2_tree in span1_tree.find_all(
+                          "span", class_="additional-value"):
+                            # Found it; grab it, encode it, and strip it:
+                            vendor_part_name = span2_tree.get_text()
+
+                    # The *stock* count is found as:
+                    #    <td class="td-stock">stock</td>
+                    stock = 0
+                    stock_tree = row_tree.find("td", class_="td-stock")
+                    if stock_tree is not None:
+                        # Strip out commas, space, etc.:
+                        stock_text = \
+                          digits_only_re.sub("", stock_tree.get_text())
+                        # Some sites do not report stock, and leave them
+                        # empty.  We just leave *stock* as zero in this case:
+                        if len(stock_text) != 0:
+                            stock = min(int(stock_text), 1000000)
+
+                    # The *manufacturer_name* is found as:
+                    #    <td class="td-mfg"><span>manufacturer_name</span></td>
+                    manufacturer_name = ""
+                    for mfg_name_tree in row_tree.find_all(
+                      "td", class_="td-mfg"):
+                        for span_tree in mfg_name_tree.find_all("span"):
+                            # Found it; grab it, encode it, and strip it:
+                            manufacturer_name = span_tree.get_text().strip()
+
+                    # The *manufacturer_part_name* is found as:
+                    #    <td class="td_part"><a ...>mfg_part_name</a></td>
+                    manufacturer_part_name = ""
+                    for mfg_part_tree in row_tree.find_all(
+                      "td", class_="td-part"):
+                        for a_tree in mfg_part_tree.find_all("a"):
+                            # Found it; grab it, encode it, and strip it:
+                            manufacturer_part_name = a_tree.get_text()
+
+                    # The price breaks are encoded in a <ul> tree as follows:
+                    #    <td class="td_price">
+                    #       <ul>
+                    #          <li>
+                    #            <span class="label">quantity</span>
+                    #            <span class="value">price</span>
+                    #          </li>
+                    #          ...
+                    #       </ul>
+                    #    </td>
+                    price_breaks = []
+                    price_list_tree = row_tree.find("td", class_="td-price")
+                    if price_list_tree is not None:
+                        for li_tree in price_list_tree.find_all("li"):
+                            quantity_tree = li_tree.find("span", class_="label")
+                            price_tree = li_tree.find("span", class_="value")
+                            if quantity_tree is not None and price_tree is not None:
+                                # We extract *quantity*:
+                                quantity_text = digits_only_re.sub("", quantity_tree.get_text())
+                                quantity = 1
+                                if quantity_text != "":
+                                    quantity = int(quantity_text)
+
+                                # Extract *price* using only digits and '.':
+                                price_text = ""
+                                for character in price_tree.get_text():
+                                    if character.isdigit() or character == ".":
+                                        price_text += character
+                                price = float(price_text)
+
+                                # Look up the *exchange_rate* for *currency*:
+                                exchange_rates = ActualPart.ACTUAL_PART_EXCHANGE_RATES
+                                if currency in exchange_rates:
+                                    exchange_rate = exchange_rates[currency]
+                                else:
+                                    converter = currency_converter.CurrencyConverter()
+                                    exchange_rate = converter.convert(1.0, currency, "USD")
+                                    exchange_rates[currency] = exchange_rate
+
+                                # Sometimes we get a bogus price of 0.0 and
+                                # we just need to ignore the whole record:
+                                if price > 0.0:
+                                    price_break = PriceBreak(
+                                      quantity, price * exchange_rate)
+                                    price_breaks.append(price_break)
+
+                    # Now if we have an exact match on the *manufacturer_name*
+                    # we can construct the *vendor_part* and append it to
+                    # *vendor_parts*:
+                    if original_manufacturer_part_name == manufacturer_part_name:
+                        now = time.time()
+                        vendor_part = VendorPart(actual_part, vendor_name, vendor_part_name,
+                                                 stock, price_breaks, now)
+                        vendor_parts.append(vendor_part)
+
+                        # Print stuff out if *trace* in enabled:
+                        if tracing is not None:
+                            # Print everything out:
+                            print(f"{tracing}vendor_name='{vendor_name}'")
+                            print(f"{tracing}vendor_part_name='{vendor_part_name}'")
+                            print(f"{tracing}manufacturer_part_name='{manufacturer_part_name}'")
+                            print(f"{tracing}manufacturer_name='{manufacturer_name}'")
+                            print(f"{tracing}stock={stock}")
+                            price_breaks.sort()
+                            for price_break in price_breaks:
+                                print(f"{tracing}{0}: {1:.6f} ({2})".
+                                      format(price_break.quantity, price_break.price, currency))
+
+        # For debugging, let the user now that we are looking for a
+        # part and not finding it at all:
+        if len(vendor_parts) == 0:
+            print("**********Find '{0}:{1}': {2} matches".format(
+                  actual_part.manufacturer_name,
+                  actual_part.manufacturer_part_name, len(vendor_parts)))
+
+        # Wrap up any requested *tracing* and return the *vendor_parts*:
+        if tracing is not None:
+            print(f"{tracing}=>ActualPart.findchips('{actual_part.manufacturer_part_name}')=>[...]")
+        return vendor_parts
+
+    # ActualPart.vendor_names_restore():
     def vendor_names_load(self, vendor_names_table, excluded_vendor_names):
         """ *ActualPart*:*: Add each possible to vendor name for the
             *ActualPart* object (i.e. *self*) to *vendor_names_table*:
@@ -650,6 +840,92 @@ class ActualPart:
             if vendor_name not in excluded_vendor_names:
                 vendor_names_table[vendor_name] = None
 
+    # ActualPart.vendor_part_append():
+    def vendor_part_append(self, vendor_part):
+        """ *ActualPart: Append *vendor_part* to the vendor parts of *self*. """
+
+        actual_part = self
+        tracing = False
+        tracing = (actual_part.manufacturer_name == "Pololu" and
+                   actual_part.manufacturer_part_name == "S18V20F6)")
+        if tracing:
+            print("appending part")
+            assert False
+        assert isinstance(vendor_part, VendorPart)
+        actual_part.vendor_parts.append(vendor_part)
+
+
+    # ActualPart.vendor_parts_restore():
+    def vendor_parts_restore(self, order, tracing=None):
+        # Verify argument types:
+        assert isinstance(order, Order)
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}ActualPart.vendor_parts_restore(*)")
+
+        actual_part = self
+        result = False
+        order_root = order.root
+        vendor_searches_root = order.vendor_searches_root
+        xml_base_name = actual_part.name + ".xml"
+        xml_file_name = os.path.join(vendor_searches_root, xml_base_name)
+        
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}ActualPart.vendor_parts_restore(*)=>{result}")
+        return result
+
+    # ActualPart.xml_lines_append():
+    def xml_lines_append(self, xml_lines, indent):
+        # Verify argument types:
+        assert isinstance(xml_lines, list)
+        assert isinstance(indent, str)
+
+        # Grab some values from *actual_part* (i.e. *self*):
+        actual_part = self
+        manufacturer_name = actual_part.manufacturer_name
+        manufacturer_part_name = actual_part.manufacturer_part_name
+        vendor_parts = actual_part.vendor_parts
+        
+
+        # Output the `<ActualPart ...>` tag first:
+        xml_lines.append(f'{indent}<ActualPart '
+                         f'manufacturer_name="{Encode.to_attribute(manufacturer_name)}" '
+                         f'manufacturer_part_name="{Encode.to_attribute(manufacturer_part_name)}">')
+
+        # Output the nested `<VendorPart ...>` tags:
+        next_indent = indent + " "
+        for vendor_part in vendor_parts:
+            vendor_part.xml_lines_append(xml_lines, next_indent)
+
+        # Close out with the `</ActualPart>` tag:
+        xml_lines.append(f"{indent}</ActualPart>")
+
+    # ActualPart.xml_parse():
+    @staticmethod
+    def xml_parse(actual_part_tree):
+        # Verify argument types:
+        assert isinstance(actual_part_tree, etree._Element)
+
+        # Grab the attribute information out of *actual_part_tree*:
+        assert actual_part_tree.tag == "ActualPart"
+        attributes_table = actual_part_tree.attrib
+        manufacturer_name = attributes_table["manufacturer_name"]
+        manufacturer_part_name = attributes_table["manufacturer_part_name"]
+        vendor_part_trees = list(actual_part_tree)
+
+        # Create *actual_part* with empty *vendor_parts*:
+        actual_part = ActualPart(manufacturer_name, manufacturer_part_name)
+        vendor_parts = actual_part.vendor_parts
+
+        # Process all of the `<VendorPart ...>` tags:
+        for vendor_part_tree in vendor_part_trees:
+            vendor_part = VendorPart.xml_parse(vendor_part_tree, actual_part)
+            vendor_parts.append(vendor_part)
+        return actual_part
 
 # ComboEdit:
 class ComboEdit:
@@ -3342,7 +3618,7 @@ class Database:
         # vendor_parts = self.vendor_parts
         for project_part in self.project_parts.values():
             # print("project_part: {0}".
-            #  format(project_part.project_part_name))
+            #  format(project_part.name))
             if isinstance(project_part, ChoicePart):
                 choice_part = project_part
                 for actual_part in choice_part.actual_parts:
@@ -3398,17 +3674,17 @@ class Database:
         #  ".074/10 .04/50 .02295/200 .01566/1000")
 
     # Database.aliase_part():
-    def alias_part(self, project_part_name, alias_part_names,
+    def alias_part(self, name, alias_part_names,
                    kicad_footprint="", feeder_name=None, rotation=None, part_height=None):
-        """ *Database*: Create *AliasPart* named *project_part_name* and containing
+        """ *Database*: Create *AliasPart* named *name* and containing
             *alias_names* and stuff it into the *Database* object (i.e. *self*).
             Each item in *alias_part_names* can be either a simple string or a tuple.
-            A tuple has the form of (count, "project_part_name") and means that we need *count*
-            instances of "project_part_name*".
+            A tuple has the form of (count, "name") and means that we need *count*
+            instances of "name*".
         """
 
         # Verify argument types:
-        assert isinstance(project_part_name, str)
+        assert isinstance(name, str)
         assert isinstance(alias_part_names, list)
         assert isinstance(feeder_name, str) or feeder_name is None
         assert isinstance(part_height, float) or part_height is None
@@ -3446,23 +3722,23 @@ class Database:
                 alias_parts.append(project_part)
             else:
                 print("Part '{0}' not found for for alias '{1}'".
-                      format(alias_part_name, project_part_name))
+                      format(alias_part_name, name))
 
         # Create and return the new *alias_part*:
         # assert len(alias_parts) == 1, "alias_parts={0}".format(alias_parts)
         # if isinstance(feeder_name, str):
         #    footprint = database.footprint(feeder_name, rotation)
-        alias_part = AliasPart(project_part_name,
+        alias_part = AliasPart(name,
                                alias_parts, kicad_footprint, feeder_name, part_height)
         return database.insert(alias_part)
 
     # Database.choice_part():
-    def choice_part(self, project_part_name, kicad_footprint, location, description,
+    def choice_part(self, name, kicad_footprint, location, description,
                     rotation=None, pick_dx=0.0, pick_dy=0.0, feeder_name=None, part_height=None):
         """ *Database*: Add a *ChoicePart* to *self*. """
 
         # Verify argument types:
-        assert isinstance(project_part_name, str)
+        assert isinstance(name, str)
         assert isinstance(kicad_footprint, str)
         assert isinstance(location, str)
         assert isinstance(description, str)
@@ -3474,17 +3750,17 @@ class Database:
 
         # Make sure we do not have a duplicate:
         project_parts = self.project_parts
-        if project_part_name in project_parts:
-            print("'{0}' is duplicated".format(project_part_name))
+        if name in project_parts:
+            print("'{0}' is duplicated".format(name))
 
         # if kicad_footprint.find(':') < 0:
         #    print("part '{0}' has no associated library in footprint '{1}'".
-        #      format(project_part_name, kicad_footprint))
+        #      format(name, kicad_footprint))
 
         database = self
         # if isinstance(feeder_name, str):
         #    footprint = database.footprint(feeder_name, rotation)
-        choice_part = ChoicePart(project_part_name, kicad_footprint, location, description,
+        choice_part = ChoicePart(name, kicad_footprint, location, description,
                                  rotation, pick_dx, pick_dy, feeder_name, part_height)
 
         return database.insert(choice_part)
@@ -3525,7 +3801,6 @@ class Database:
         """ *Database*: Return a list of *VendorParts* associated with
             *actual_part* scraped from the findchips.com web page.
         """
-
         # Verify argument types:
         assert isinstance(actual_part, ActualPart)
 
@@ -3800,15 +4075,15 @@ class Database:
         return footprint
 
     # Database.fractional_part():
-    def fractional_part(self, project_part_name, kicad_footprint,
+    def fractional_part(self, name, kicad_footprint,
                         whole_part_name, numerator, denominator, description):
         """ *Database*: Insert a new *FractionalPart* named
-            *project_part_name* and containing *whole_part_name*,
+            *name* and containing *whole_part_name*,
             *numerator*, *denominator*, and *description* in to the
             *Database* object (i.e. *self*.) """
 
         # Verify argument types:
-        assert isinstance(project_part_name, str)
+        assert isinstance(name, str)
         assert isinstance(kicad_footprint, str)
         assert isinstance(whole_part_name, str)
         assert isinstance(numerator, int)
@@ -3820,24 +4095,24 @@ class Database:
             whole_part = project_parts[whole_part_name]
 
             # Verify argument types:
-            fractional_part = FractionalPart(project_part_name, kicad_footprint,
+            fractional_part = FractionalPart(name, kicad_footprint,
                                              whole_part, numerator, denominator, description)
             self.insert(fractional_part)
         else:
             print("Whole part '{0}' not found for fractional part '{1}'!".
-                  format(whole_part_name, project_part_name))
+                  format(whole_part_name, name))
 
     # Database.lookup():
-    def lookup(self, project_part_name):
+    def lookup(self, name):
         """ *Database*: Return the *ProjectPart* associated with
-            *project_part_name*. """
+            *name*. """
 
-        assert isinstance(project_part_name, str)
+        assert isinstance(name, str)
 
         project_part = None
         project_parts = self.project_parts
-        if project_part_name in project_parts:
-            project_part = project_parts[project_part_name]
+        if name in project_parts:
+            project_part = project_parts[name]
         return project_part
 
     # Database.insert():
@@ -3847,12 +4122,12 @@ class Database:
         # Verify argument_types:
         assert isinstance(project_part, ProjectPart)
 
-        project_part_name = project_part.project_part_name
+        name = project_part.name
         project_parts = self.project_parts
-        if project_part_name in project_parts:
-            print("{0} is being inserted into database more than once".format(project_part_name))
+        if name in project_parts:
+            print("{0} is being inserted into database more than once".format(name))
         else:
-            project_parts[project_part_name] = project_part
+            project_parts[name] = project_part
         return project_part
 
     # Database.save():
@@ -4863,12 +5138,13 @@ class Collection(Node):
                   f"'{collection_root}', '{searches_root}')")
 
     # Collection.actual_parts_lookup():
-    def actual_parts_lookup(self, search_name, tracing=None):
+    def actual_parts_lookup(self, choice_part, tracing=None):
         # Verify argument types:
-        assert isinstance(search_name, str)
+        assert isinstance(choice_part, ChoicePart)
         assert isinstance(tracing, str) or tracing is None
 
         # Perform any requested *tracing*:
+        search_name = choice_part.name
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
             print(f"{tracing}=>Collection.actual_parts_lookup(*, '{search_name})")
@@ -5026,7 +5302,7 @@ class Collection(Node):
                     else:
                         data_rows.append(row)
 
-            print("column_names=", column_names)
+            # print("column_names=", column_names)
             manufacturer_part_number_index = column_names.index("Manufacturer Part Number")
             assert manufacturer_part_number_index >= 0
             manufacturer_index = column_names.index("Manufacturer")
@@ -5042,7 +5318,8 @@ class Collection(Node):
 
             for index, pair in enumerate(pairs):
                 manufacturer, part_number = pair
-                print(f"[{index}]: '{manufacturer}' : '{part_number}'")
+                if tracing is not None:
+                    print(f"{tracing}Actual_Part[{index}]: '{manufacturer}' : '{part_number}'")
                 actual_part = ActualPart(manufacturer, part_number)
                 actual_parts.append(actual_part)
 
@@ -5131,15 +5408,15 @@ class Collections(Node):
         assert collections.type_letter_get() == 'R'
 
     # Collections.actual_parts_lookup():
-    def actual_parts_lookup(self, search_name, tracing=None):
+    def actual_parts_lookup(self, choice_part, tracing=None):
         # Verify argument types:
-        assert isinstance(search_name, str)
+        assert isinstance(choice_part, ChoicePart)
         assert isinstance(tracing, str) or tracing is None
 
         # Perform any requested *tracing*:
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
-            print(f"{tracing}=>Collections.actual_parts_lookup('{search_name}')")
+            print(f"{tracing}=>Collections.actual_parts_lookup('{choice_part.name}')")
 
         # Visit each *collection* in *collections* (i.e. *self*) and find any
         # *ActualPart*'s that match *search_name*:
@@ -5148,14 +5425,14 @@ class Collections(Node):
         for index, collection in enumerate(collections.children_get()):
             if tracing is not None:
                 print(f"{tracing}Collection[{index}]:{collection.name}")
-            actual_parts += collection.actual_parts_lookup(search_name, tracing=next_tracing)
+            actual_parts += collection.actual_parts_lookup(choice_part, tracing=next_tracing)
 
         #FIXME: Cull out duplicate acutal parts (i.e. for the same manufacturer.):
         pass
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
-            print(f"{tracing}<=Collections.actual_parts_lookup('{search_name}') => [...]")
+            print(f"{tracing}<=Collections.actual_parts_lookup('{choice_part.name}') => [...]")
         return actual_parts
 
     # Collections.can_fetch_more():
@@ -6636,17 +6913,30 @@ class Order:
     # as well.  Sometimes, you have previous inventory, so that is
     # listed as well.
 
-    def __init__(self, database):
+    def __init__(self, database, order_root):
         """ *Order*: Initialize *self* for an order. """
-
+        # Verify argument types:
         assert isinstance(database, Database)
+        assert isinstance(order_root, str)
 
-        self.projects = []                 # List[Project]: Projects
-        self.excluded_vendor_names = {}  # Dict[String]: Excluded vendors
-        self.selected_vendor_names = None
-        self.requests = []               # List[Request]: Additional requested parts
-        self.inventories = []            # List[Inventory]: Existing inventoried parts
-        self.database = database
+        # Ensure that *order_root* exists:
+        if not os.path.isdir(order_root):
+            print(f"Creating order directory '{order_root}'...")
+            os.makedirs(order_root)
+        vendor_searches_root = os.path.join(order_root, "vendor_searches")
+        if not os.path.isdir(vendor_searches_root):
+            os.mkdir(vendor_searches_root)
+
+        # Stuff values into *order* (i.e. *self*):
+        order = self
+        order.projects = []                 # List[Project]: Projects
+        order.excluded_vendor_names = {}  # Dict[String, List[str]]: Excluded vendors
+        order.selected_vendor_names = None
+        order.requests = []               # List[Request]: Additional requested parts
+        order.inventories = []            # List[Inventory]: Existing inventoried parts
+        order.database = database
+        order.order_root = order_root
+        order.vendor_searches_root = vendor_searches_root
 
     # Order.project():
     def project(self, name, revision, net_file_name, count, positions_file_name=None):
@@ -6705,7 +6995,7 @@ class Order:
 
             # Write the first line out to *bom_file*:
             bom_file.write("  {0}:{1};{2} {3}:{4}\n".format(
-                           choice_part.project_part_name,
+                           choice_part.name,
                            choice_part.kicad_footprint, choice_part.description,
                            choice_part.count_get(), choice_part.references_text_get()))
 
@@ -6795,7 +7085,7 @@ class Order:
         final_choice_parts.sort(key=lambda choice_part:
                                 (choice_part.selected_vendor_name,
                                  choice_part.selected_total_cost,
-                                 choice_part.project_part_name))
+                                 choice_part.name))
 
         vendor_boms = {}
         for choice_part in final_choice_parts:
@@ -6830,7 +7120,7 @@ class Order:
                         selected_vendor_part.vendor_part_name,
                         selected_actual_part.manufacturer_name,
                         selected_actual_part.manufacturer_part_name,
-                        choice_part.project_part_name))
+                        choice_part.name))
                 lines.append(line)
 
         # Wrap up the *bom_file*:
@@ -7019,7 +7309,7 @@ class Order:
                   format(vendor_name, vendor_total_cost, vendor_minimum_cost))
 
     # Order.final_choice_parts_compute():
-    def final_choice_parts_compute(self, collections, tracing=None):
+    def final_choice_parts_compute(self, collections, order, tracing=None):
         """ *Order*: Return a list of final *ChoicePart* objects to order
             for the the *Order* object (i.e. *self*).  This routine also
             has the side effect of looking up the vendor information for
@@ -7028,6 +7318,7 @@ class Order:
 
         # Verify argument types:
         assert isinstance(collections, Collections)
+        assert isinstance(order, Order)
         assert isinstance(tracing, str) or tracing is None
 
         # Perform any requested *tracing*:
@@ -7036,8 +7327,9 @@ class Order:
             print(f"{tracing}=>Order.final_choice_parts_compute(*)")
 
         # Grab the *projects* and *database*:
-        projects = self.projects
-        database = self.database
+        order = self
+        projects = order.projects
+        database = order.database
 
         # Sort *projects* by name (not really needed, but why not?):
         projects.sort(key=lambda project: project.name)
@@ -7066,9 +7358,9 @@ class Order:
                     print(f"{tracing} Pose_Part[{pose_part_index}]:'{pose_part.reference}'")
 
                 project_part = pose_part.project_part
-                # project_part_name = project_part.project_part_name
+                # name = project_part.name
                 # print("Order.final_choice_parts_compute():  {0}: {1}".
-                #  format(pose_part.reference, project_part_name))
+                #  format(pose_part.reference, name))
 
                 # Only *choice_parts* can be ordered from a vendor:
                 # Visit each *choice_part* in *choice_parts* and
@@ -7076,7 +7368,7 @@ class Order:
                 choice_parts = project_part.choice_parts()
                 for choice_part_index, choice_part in enumerate(choice_parts):
                     # Do some consistency checking:
-                    choice_part_name = choice_part.project_part_name
+                    choice_part_name = choice_part.name
                     assert isinstance(choice_part, ChoicePart), ("Not a choice part "
                                                                  f"'{choice_part_name}'")
                     if tracing is not None:
@@ -7097,47 +7389,22 @@ class Order:
                     choice_part.pose_part_append(pose_part)
 
                     # Refresh the vendor part cache for each *actual_part*:
-                    actual_parts = collections.actual_parts_lookup(choice_part_name,
-                                                                   tracing=next_tracing)
-                    #vendor_parts_cache = database.vendor_parts_cache
-                    #actual_parts = choice_part.actual_parts
-                    for actual_part_index, actual_part in enumerate(actual_parts):
-                        # Check for errors:
-                        assert isinstance(actual_part, ActualPart)
-                        if tracing is not None:
-                            print(f"{tracing}   Actual_Part[{actual_part_index}]:"
-                                  f"'{actual_part.manufacturer_part_name}'")
+                    new_actual_parts = collections.actual_parts_lookup(choice_part,
+                                                                       tracing=next_tracing)
 
-                        # Get *vendor_parts* from the cache or from
-                        # a screen scrape:
-                        actual_key = actual_part.key
-                        if actual_key in vendor_parts_cache:
-                            # Reuse cached *vendor_parts*:
-                            vendor_parts = vendor_parts_cache[actual_key]
-                        else:
-                            # Grab the *vendor* parts via a screen scrape:
-                            vendor_parts = \
-                              database.findchips_scrape(actual_part)
-                            vendor_parts_cache[actual_key] = vendor_parts
-                            database.save()
-
-                        for vendor_part_index, vendor_part in enumerate(vendor_parts):
-                            # vendor_name = vendor_part.vendor_name
-                            # space_index = vendor_name.find(' ')
-                            # if space_index >= 0:
-                            #     vendor_name = vendor_name[:space_index]
-                            # print("        Vendor_Part[{0}]:'{1}:{2}'".format(
-                            #       vendor_part_index, vendor_name, vendor_part.vendor_part_name))
-                            actual_part.vendor_part_append(vendor_part)
+                    # Get reasonably up-to-date pricing and availability information about
+                    # each *ActualPart* in actual_parts.  *order* is needed to loccate where
+                    # the cached information is:
+                    choice_part.vendor_parts_refresh(new_actual_parts, order, tracing=next_tracing)
 
         # Save the *database* because we've loaded all of the *vendor_parts*'s:
-        database.save()
+        #database.save()
 
         # Sort by *final_choice_parts* by schematic part name:
         final_choice_parts = list(choice_parts_table.values())
         final_choice_parts.sort(
-          key=lambda choice_part: choice_part.project_part_name)
-        self.final_choice_parts = final_choice_parts
+          key=lambda choice_part: choice_part.name)
+        order.final_choice_parts = final_choice_parts
 
         # Sweep through *final_choice_parts* and force the associated
         # *PosePart*'s to be in a reasonable order:
@@ -7146,15 +7413,11 @@ class Order:
             assert isinstance(choice_part, ChoicePart)
             choice_part.pose_parts_sort()
 
-        for choice_part_index, choice_part in enumerate(final_choice_parts):
-            if tracing is not None:
-                print(f"{tracing}Final_Choice_Part[{choice_part_index}]:"
-                      f"'{choice_part.project_part_name}")
-            # print("End_Order.final_choice_parts_compute(): project:{0}".format(choice_part))
-
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
+        # Wrap up any requested *tracing* and return *final_choice_parts*:
         if tracing is not None:
+            for choice_part_index, choice_part in enumerate(final_choice_parts):
+                print(f"{tracing}Final_Choice_Part[{choice_part_index}]:"
+                      f"'{choice_part.name}")
             print(f"{tracing}<=Order.final_choice_parts_compute(*) => [...]")
         return final_choice_parts
 
@@ -7194,12 +7457,12 @@ class Order:
                 #    # print("{0} is fractional {1}".
                 #    #  format(fractional_part.base_name, fractional_part.kicad_footprint))
                 #    kicad_footprints[fractional_part.kicad_footprint] = \
-                #      project_part.project_part_name
+                #      project_part.name
                 # elif isinstance(project_part, ChoicePart):
                 #    choice_part = project_part
                 #    # print("{0} is choice".format(choice_part.base_name))
                 #    kicad_footprint = choice_part.kicad_footprint
-                #    kicad_footprints[kicad_footprint] = project_part.project_part_name
+                #    kicad_footprints[kicad_footprint] = project_part.name
                 # else:
                 #    print("{0} is ??".format(project_part.base_name))
                 #    assert False
@@ -7251,7 +7514,8 @@ class Order:
         # converted to *ChoicePart* objects.  Once we have
         # *final_choice_parts* it can be sorted various different ways
         # (by vendor, by cost, by part_name, etc.)
-        final_choice_parts = order.final_choice_parts_compute(collections, tracing=next_tracing)
+        final_choice_parts = order.final_choice_parts_compute(collections,
+                                                              order, tracing=next_tracing)
 
         excluded_vendor_names = order.excluded_vendor_names
         selected_vendor_names = order.selected_vendor_names
@@ -7293,13 +7557,13 @@ class Order:
         order.bom_write("bom_by_price.txt", lambda choice_part:
                         (choice_part.selected_total_cost,
                          choice_part.selected_vendor_name,
-                         choice_part.project_part_name))
+                         choice_part.name))
         order.bom_write("bom_by_vendor.txt", lambda choice_part:
                         (choice_part.selected_vendor_name,
                          choice_part.selected_total_cost,
-                         choice_part.project_part_name))
+                         choice_part.name))
         order.bom_write("bom_by_name.txt", lambda choice_part:
-                        (choice_part.project_part_name,
+                        (choice_part.name,
                          choice_part.selected_vendor_name,
                          choice_part.selected_total_cost))
         order.csv_write()
@@ -7370,7 +7634,7 @@ class Order:
                 csv_file.write("{0},{1},{2}\n".format(
                   selected_order_quantity,
                   selected_vendor_part.vendor_part_name,
-                  choice_part.project_part_name))
+                  choice_part.name))
 
             # Close all the vendor files:
             for csv_file in vendor_files.values():
@@ -7405,7 +7669,7 @@ class Order:
         # *trace* is set to *True* to debug stuff:
         if trace:
             print("=>quad_compute({0}, {1}, '{2}')".format(
-              [choice_part.project_part_name for choice_part in choice_parts],
+              [choice_part.name for choice_part in choice_parts],
               excluded_vendor_names.keys(), excluded_vendor_name))
 
         # Verify argument types:
@@ -7449,7 +7713,7 @@ class Order:
         # *trace* for debugging:
         if trace:
             print("<=quad_compute({0}, {1}, '{2}')=>{3}".format(
-              [choice_part.project_part_name for choice_part in choice_parts],
+              [choice_part.name for choice_part in choice_parts],
               excluded_vendor_names.keys(), excluded_vendor_name, quad))
 
         return quad
@@ -7761,7 +8025,7 @@ class PosePart:
 
         # Check the underlying *project_part*:
         project_part = pose_part.project_part
-        search_name = project_part.project_part_name
+        search_name = project_part.name
         collections.check(search_name, project_name, reference, tracing=next_tracing)
 
         # Wrap up any requested *tracing*:
@@ -8226,11 +8490,12 @@ class PriceBreak:
         """ *PriceBreak*: Return the *PriceBreak* object as a human redable string.
         """
 
+        # Grab some values from *price_break* (i.e. *self*):
         price_break = self
         quantity = price_break.quantity
-        price = price_break
+        price = price_break.price
         result = "{0}/{1}".format(quantity, price)
-        print("Result='{0}'".format(result))
+        # print("Result='{0}'".format(result))
         return result
 
     # PriceBreak.compute():
@@ -8242,6 +8507,44 @@ class PriceBreak:
         self.order_quantity = order_quantity = max(needed, self.quantity)
         self.order_price = order_quantity * self.price
 
+    # PriceBreak.__lt__():
+    def __lt__(self, price_break2):
+        # Verify argument types:
+        assert isinstance(price_break2, PriceBreak)
+
+        price_break1 = self
+        return price_break1.price < price_break2.price
+
+    # PriceBreak.xml_lines_append():
+    def xml_lines_append(self, xml_lines, indent):
+        # Verify argument types:
+        assert isinstance(xml_lines, list)
+        assert isinstance(indent, str)
+
+        # Grab some values from *price_break* (i.e. *self*):
+        price_break = self
+        quantity = price_break.quantity
+        price = price_break.price
+
+        # Output `<PriceBreak ...>` tag:
+        xml_lines.append('{0}<PriceBreak quantity="{1}" price="{2:.6f}"/>'.
+                         format(indent, quantity, price))
+
+    # PriceBreak.xml_parse():
+    @staticmethod
+    def xml_parse(price_break_tree):
+        # Verify argument types:
+        assert isinstance(price_break_tree, etree._Element)
+        assert price_break_tree.tag == "PriceBreak"
+
+        # Grab some the attribute values from *price_break_tree*:
+        attributes_table = price_break_tree.attrib
+        quantity = int(attributes_table["quantity"])
+        price = float(attributes_table["price"])
+
+        # Create and return the new *PriceBreak* object:
+        price_break = PriceBreak(quantity, price)
+        return price_break
 
 # Project:
 class Project:
@@ -8739,42 +9042,48 @@ class ProjectPart:
     # sub-classed by one of *ChoicePart*, *AliasPart*, or *FractionalPart*.
 
     # ProjectPart.__init__():
-    def __init__(self, project_part_name, kicad_footprint):
+    def __init__(self, name, kicad_footprint):
         """ *ProjectPart*: Initialize *self* to contain
-            *project_part_name*, and *kicad_footprint*. """
+            *name*, and *kicad_footprint*. """
 
         # Verify argument types:
-        assert isinstance(project_part_name, str)
+        assert isinstance(name, str)
         assert isinstance(kicad_footprint, str)
-        assert kicad_footprint != "", "Empty Footprint for {0}".format(project_part_name)
+        assert kicad_footprint != "", "Empty Footprint for {0}".format(name)
 
-        # Split *project_part_name" into *base_name* and *short_footprint*:
-        base_name_short_footprint = project_part_name.split(';')
+        # Split *name" into *base_name* and *short_footprint*:
+        project_part = self
+        base_name_short_footprint = name.split(';')
         if len(base_name_short_footprint) == 2:
             base_name = base_name_short_footprint[0]
             short_footprint = base_name_short_footprint[1]
 
             # Load up *self*:
-            self.project_part_name = project_part_name
-            self.base_name = base_name
-            self.short_footprint = short_footprint
-            self.kicad_footprint = kicad_footprint
-            self.pose_parts = []
+            project_part.name = name
+            project_part.base_name = base_name
+            project_part.short_footprint = short_footprint
+            project_part.kicad_footprint = kicad_footprint
+            project_part.pose_parts = []
         else:
-            self.project_part_name = project_part_name
-            print("Schematic Part Name '{0}' has no ';' separator!".
-                  format(project_part_name))
+            project_part.name = name
+            print(f"Schematic Part Name '{name}' has no ';' separator!")
 
     # Project.__format__():
     def __format__(self, format):
         """ *ProjectPart*: Format the *ProjectPart* object (i.e. *self*) using *format***. """
+        # Verify aregument types:
+        assert isinstance(format, str)
 
+        # Compute *result*'ing formatted string based on *format* for *project_part* (i.e. *self*):
+        project_part = self
         if format == "s":
             # Short format:
-            return "{0};{1}".format(self.base_name, self.short_footprint)
+            result = f"{project_part.base_name};{project_part.short_footprint}"
         else:
             # Long format:
-            return "{0};{1}::{2}".format(self.base_name, self.short_footprint, self.kicad_footprint)
+            result = (f"{project_part.base_name};{project_part.short_footprint}"
+                      f"::{project_part.kicad_footprint2}")
+        return result
 
     # Project.footprints_check():
     def footprints_check(self, kicad_footprints):
@@ -8790,13 +9099,13 @@ class AliasPart(ProjectPart):
     # An *AliasPart* specifies one or more *ProjectParts* to use.
 
     # AliasPart.__init__():
-    def __init__(self, project_part_name, project_parts, kicad_footprint,
+    def __init__(self, name, project_parts, kicad_footprint,
                  feeder_name=None, part_height=None, pick_dx=0.0, pick_dy=0.0):
-        """ *AliasPart*: Initialize *self* to contain *project_part_name*,
+        """ *AliasPart*: Initialize *self* to contain *name*,
             *kicad_footprint*, and *project_parts*. """
 
         # Verify argument types:
-        assert isinstance(project_part_name, str)
+        assert isinstance(name, str)
         assert isinstance(project_parts, list)
         assert isinstance(feeder_name, str) or feeder_name is None
         assert isinstance(part_height, float) or part_height is None
@@ -8809,7 +9118,7 @@ class AliasPart(ProjectPart):
 
         # Load up *alias_part* (i.e *self*):
         alias_part = self
-        super().__init__(project_part_name, kicad_footprint)
+        super().__init__(name, kicad_footprint)
         alias_part.project_parts = project_parts
         alias_part.feeder_name = feeder_name
         alias_part.part_height = part_height
@@ -8827,7 +9136,7 @@ class AliasPart(ProjectPart):
             choice_parts += project_part.choice_parts()
 
         # assert False, \
-        #  "No choice parts for '{0}'".format(self.project_part_name)
+        #  "No choice parts for '{0}'".format(self.name)
         return choice_parts
 
     # AliasPart.footprints_check():
@@ -8853,16 +9162,16 @@ class ChoicePart(ProjectPart):
     # A *ChoicePart* specifies a list of *ActualPart*'s to choose from.
 
     # ChoicePart.__init__():
-    def __init__(self, project_part_name, kicad_footprint,
+    def __init__(self, name, kicad_footprint,
                  location, description, rotation, pick_dx, pick_dy, feeder_name, part_height):
-        """ *ChoicePart*: Initiailize *self* to contain *project_part_name*
+        """ *ChoicePart*: Initiailize *self* to contain *name*
             *kicad_footprint* and *actual_parts*. """
 
         # Use *choice_part* instead of *self*:
         choice_part = self
 
         # Verify argument types:
-        assert isinstance(project_part_name, str)
+        assert isinstance(name, str)  # I.e. search name
         assert isinstance(kicad_footprint, str)
         assert isinstance(location, str)
         assert isinstance(description, str)
@@ -8873,7 +9182,7 @@ class ChoicePart(ProjectPart):
         assert isinstance(part_height, float) or part_height is None
 
         # Load up *choice_part* (i.e. *self*):
-        super().__init__(project_part_name, kicad_footprint)
+        super().__init__(name, kicad_footprint)
         choice_part.actual_parts = []
         choice_part.description = description
         choice_part.feeder_name = feeder_name
@@ -9008,7 +9317,7 @@ class ChoicePart(ProjectPart):
                          int(text_filter(pose_part.reference, str.isdigit))))
 
         # print("  {0}:{1};{2} {3}:{4}".\
-        #  format(choice_part.project_part_name,
+        #  format(choice_part.name,
         # choice_part.kicad_footprint, choice_part.description,
         #  choice_part.count_get(), choice_part.references_text_get()))
 
@@ -9024,7 +9333,7 @@ class ChoicePart(ProjectPart):
                 count += pose_part.project.count
         else:
             # for fractional_part in fractional_parts:
-            #        print("{0}".format(fractional_part.project_part_name))
+            #        print("{0}".format(fractional_part.name))
 
             # This code is not quite right:
             first_fractional_part = fractional_parts[0]
@@ -9032,16 +9341,16 @@ class ChoicePart(ProjectPart):
             for fractional_part in fractional_parts[1:]:
                 assert denominator == fractional_part.denominator, \
                   "'{0}' has a denominator of {1} and '{2}' has one of {3}". \
-                  format(first_fractional_part.project_part_name,
+                  format(first_fractional_part.name,
                          first_fractional_part.denominator,
-                         fractional_part.project_part_name,
+                         fractional_part.name,
                          fractional_part.denominator)
 
             # Compute the *count*:
             numerator = 0
             for pose_part in self.pose_parts:
                 project_part = pose_part.project_part
-                # print("'{0}'".format(project_part.project_part_name))
+                # print("'{0}'".format(project_part.name))
                 if isinstance(project_part, AliasPart):
                     alias_parts = project_part
                     for project_part in alias_parts.project_parts:
@@ -9086,7 +9395,7 @@ class ChoicePart(ProjectPart):
 
         kicad_footprint = choice_part.kicad_footprint
         if kicad_footprint != "-":
-            kicad_footprints[kicad_footprint] = choice_part.project_part_name
+            kicad_footprints[kicad_footprint] = choice_part.name
             # rotation = choice_part.rotation
 
     # ChoicePart.references_text_get():
@@ -9127,10 +9436,10 @@ class ChoicePart(ProjectPart):
         # off the head of the list.
 
         tracing = False
-        # tracing = self.project_part_name == "S18V20F6;S18V20Fx"
+        # tracing = self.name == "S18V20F6;S18V20Fx"
         if tracing:
             print("=>ChoicePart.select()")
-            print(" Choice_part:{0}".format(self.project_part_name))
+            print(" Choice_part:{0}".format(self.name))
 
         quints = []
         required_quantity = self.count_get()
@@ -9177,7 +9486,7 @@ class ChoicePart(ProjectPart):
                             print("    quint={0}".format(quint))
 
         if len(quints) == 0:
-            choice_part_name = self.project_part_name
+            choice_part_name = self.name
             if announce:
                 print("No vendor parts found for Part '{0}'".format(choice_part_name))
         else:
@@ -9249,6 +9558,149 @@ class ChoicePart(ProjectPart):
             actual_part.vendor_names_load(
               vendor_names_table, excluded_vendor_names)
 
+    # ChoicePart.vendor_parts_refresh():
+    def vendor_parts_refresh(self, new_actual_parts, order, tracing=None):
+        # Verify argument types:
+        assert isinstance(new_actual_parts, list)
+        assert isinstance(order, Order)
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested_tracing:
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}=>ChoicePart.vendor_parts_refresh([...], *)")
+
+        # Grab some values from *choice_part* (i.e. *self*):
+        choice_part = self
+        choice_part_name = choice_part.name
+
+        # Grab some values from *order*:
+        vendor_searches_root = order.vendor_searches_root
+
+        # Construct the file path for the `.xml` file associated *choice_part*:
+        xml_base_name = Encode.to_file_name(choice_part_name + ".xml")
+        xml_full_name = os.path.join(vendor_searches_root, xml_base_name)
+        if tracing is not None:
+            print(f"{tracing}xml_full_name='{xml_full_name}'")
+
+        # Open *xml_full_name* update *choice_part* from its contents:
+        xml_save_required = False
+        previous_actual_parts_table = dict()
+        if os.path.isfile(xml_full_name):
+            # Read in and parse the *xml_full_name* file:
+            with open(xml_full_name) as xml_read_file:
+                choice_part_xml_text = xml_read_file.read()
+                choice_part_tree = etree.fromstring(choice_part_xml_text)
+                previous_choice_part = ChoicePart.xml_parse(choice_part_tree)
+                if tracing is not None:
+                    print(f"{tracing}Read in '{xml_full_name}'")
+
+                # Sweep through *previous_actual_parts* and enter them into
+                # *previous_actual_parts_table*:
+                previous_actual_parts = previous_choice_part.actual_parts
+                for previous_actual_part in previous_actual_parts:
+                    previous_actual_part_key = previous_actual_part.key
+                    previous_actual_parts_table[previous_actual_part_key] = previous_actual_part
+        else:
+             xml_save_required = True       
+
+        # Now sweep through *new_actual_parts* and refresh any missing or out of date vendor parts
+        # from the contents of *previous_actual_parts_table*:
+        now = int(time.time())
+        for new_actual_part in new_actual_parts:
+            actual_part_key = new_actual_part.key
+            if actual_part_key in previous_actual_parts_table:
+                # We have a *previous_actual_part* that matches *new_actual_part*.
+                # Now we see if can simply copy *previous_vendor_parts* over or
+                # whether we must trigger a vendor parts lookup:
+                previous_actual_part = previous_actual_parts_table[actual_part_key]
+                previous_vendor_parts = previous_actual_part.vendor_parts
+
+                # Compute the *minimum_time_stamp* across all *previous_vendor_parts*:
+                minimum_timestamp = now
+                for previous_vendor_part in previous_vendor_parts:
+                    minimum_timestamp = min(minimum_timestamp,  previous_vendor_part.timestamp)
+
+                # If the *minimum_time_stamp* is too stale, force a refresh:
+                if minimum_timestamp + 2 * 24 * 60 * 60 < now:
+                    new_actual_part.findchips_scrape(tracing=next_tracing)
+                    xml_save_required
+                else:
+                    new_actual_part.vendor_parts = previous_vendor_parts
+            else:
+                # There is no matching *previous_actual_part*, so we need to go
+                # find any appropriate vendor parts:
+                new_actual_part.findchips_scrape(tracing=next_tracing)
+                xml_save_required = True
+
+        # Load *new_actual_parts* into *choice_part*:
+        choice_part.actual_parts = new_actual_parts
+
+        # Write *choice_part* out to the file named *xml_full_name* if a *scrape_occurred*:
+        if xml_save_required:
+            if tracing is not None:
+                print(f"{tracing}Writing out '{xml_full_name}'")
+            xml_lines = []
+            xml_lines.append('<?xml version="1.0"?>')
+            choice_part.xml_lines_append(xml_lines, "")
+            xml_lines.append("")
+            xml_text = "\n".join(xml_lines)
+            with open(xml_full_name, "w") as xml_write_file:
+                xml_write_file.write(xml_text)
+
+        # Wrap up any requested_tracing:
+        if tracing is not None:
+            print(f"{tracing}<=ChoicePart.vendor_parts_refresh([...], *)")
+
+    # ChoicePart.xml_lines_append():
+    def xml_lines_append(self, xml_lines, indent):
+        # Verify argument types:
+        assert isinstance(xml_lines, list)
+        assert isinstance(indent, str)
+
+        # Grab some values from *choice_part* (i.e. *self*):
+        choice_part = self
+        actual_parts = choice_part.actual_parts
+        name = choice_part.name
+
+        # Output the `<ChoicePart ... >` tag:
+        xml_lines.append(f'{indent}<ChoicePart name="{Encode.to_attribute(name)}">')
+
+        # Output the `<ActualPart ... >` tags:
+        next_indent = indent + " "
+        for actual_part in actual_parts:
+            actual_part.xml_lines_append(xml_lines, next_indent)
+
+        # Output the closing `</ChoicePart>` tag:
+        xml_lines.append(f'{indent}</ChoicePart>')
+
+    # ChoicePart.xml_parse():
+    @staticmethod
+    def xml_parse(choice_part_tree):
+        # Verify argument types:
+        assert isinstance(choice_part_tree, etree._Element)
+
+        # Create *choice_part* (most of the values are no longer used...):
+        assert choice_part_tree.tag == "ChoicePart"
+        attributes_table = choice_part_tree.attrib
+        name = attributes_table["name"]
+        kicad_footprint = "foo"
+        location = ""
+        description = ""
+        rotation = 0.0
+        pick_dx = 0.0
+        pick_dy = 0.0
+        feeder_name = ""
+        part_height = 0.0
+        choice_part = ChoicePart(name, kicad_footprint, location,
+                                 description, rotation, pick_dx, pick_dy, feeder_name, part_height)
+        
+        # Read in the *actual_parts* from *choice_part_tree* and return the resulting *choice_part*:
+        actual_parts = choice_part.actual_parts
+        for actual_part_tree in list(choice_part_tree):
+            actual_part = ActualPart.xml_parse(actual_part_tree)
+            actual_parts.append(actual_part)
+        return choice_part
 
 # FractionalPart:
 class FractionalPart(ProjectPart):
@@ -9256,19 +9708,19 @@ class FractionalPart(ProjectPart):
     # using a portion of another *ProjectPart*.
 
     # FractionalPart.__init__():
-    def __init__(self, project_part_name, kicad_footprint,
+    def __init__(self, name, kicad_footprint,
                  choice_part, numerator, denominator, description):
         """ *FractionalPart*: Initialize *self* to contain
-            *project_part_name*, *kicad_footprint*, *choie_part*,
+            *name*, *kicad_footprint*, *choie_part*,
             *numerator*, *denomoniator*, and *description*. """
 
         # Verify argument types:
-        assert isinstance(project_part_name, str)
+        assert isinstance(name, str)
         assert isinstance(kicad_footprint, str)
         assert isinstance(choice_part, ChoicePart)
 
         # Load up *self*:
-        super().__init__(project_part_name, kicad_footprint)
+        super().__init__(name, kicad_footprint)
         self.choice_part = choice_part
         self.numerator = numerator
         self.denominator = denominator
@@ -9299,7 +9751,7 @@ class FractionalPart(ProjectPart):
         # Record *kicad_footprint* into *kicad_footprints*:
         kicad_footprint = fractional_part.kicad_footprint
         if kicad_footprint != "-":
-            kicad_footprints[kicad_footprint] = fractional_part.project_part_name
+            kicad_footprints[kicad_footprint] = fractional_part.name
 
 
 # TablesEditor:
@@ -12345,7 +12797,7 @@ class VendorPart:
 
     # VendorPart.__init__():
     def __init__(self, actual_part, vendor_name, vendor_part_name,
-                 quantity_available, price_breaks, timestamp=0.0):
+                 quantity_available, price_breaks, timestamp=0):
         """ *VendorPart*: Initialize *self* to contain *actual_part"""
 
         # print("vendor_part_name=", vendor_part_name)
@@ -12357,7 +12809,7 @@ class VendorPart:
         assert isinstance(quantity_available, int), ("quantity_available={0}".format(
                                                      quantity_available))
         assert isinstance(price_breaks, list)
-        assert isinstance(timestamp, float)
+        assert isinstance(timestamp, int)
         for price_break in price_breaks:
             assert isinstance(price_break, PriceBreak)
 
@@ -12376,12 +12828,12 @@ class VendorPart:
 
         # Load up *self*:
         self.actual_part_key = actual_part.key
-        self.vendor_key = (vendor_name, vendor_part_name)
-        self.vendor_name = vendor_name
-        self.vendor_part_name = vendor_part_name
         self.quantity_available = quantity_available
         self.price_breaks = price_breaks
         self.timestamp = timestamp
+        self.vendor_key = (vendor_name, vendor_part_name)
+        self.vendor_name = vendor_name
+        self.vendor_part_name = vendor_part_name
 
         # Append *self* to the vendor parts of *actual_part*:
         actual_part.vendor_part_append(self)
@@ -12433,6 +12885,60 @@ class VendorPart:
               price_break.quantity, price_break.price)
         return price_breaks_text
 
+
+    # VendorPart.xml_lines_append():
+    def xml_lines_append(self, xml_lines, indent):
+        # Verify argument types:
+        assert isinstance(xml_lines, list)
+        assert isinstance(indent, str)
+
+        # Grab some values from *vendor_part* (i.e. *self*):
+        vendor_part = self
+        quantity_available = vendor_part.quantity_available
+        price_breaks = vendor_part.price_breaks
+        vendor_name = vendor_part.vendor_name
+        vendor_part_name = vendor_part.vendor_part_name
+        timestamp = vendor_part.timestamp
+
+        # Output the `<VendorPart ...>` tag first:
+        xml_lines.append(f'{indent}<VendorPart '
+                         f'quantity_available="{quantity_available}\" '
+                         f'timestamp="{timestamp}" '
+                         f'vendor_name="{Encode.to_attribute(vendor_name)}\" '
+                         f'vendor_part_name="{Encode.to_attribute(vendor_part_name)}">')
+
+        # Output the nested `<PriceBreak ...>` tags:
+        next_indent = indent + " "
+        for price_break in price_breaks:
+            price_break.xml_lines_append(xml_lines, next_indent)
+
+        # Close out with the `</VendorPart>` tag:
+        xml_lines.append(f"{indent}</VendorPart>")
+
+    # VendorPart.xml_parse():
+    @staticmethod
+    def xml_parse(vendor_part_tree, actual_part):
+        # Verify argument types:
+        assert isinstance(vendor_part_tree, etree._Element)
+        assert isinstance(actual_part, ActualPart)
+        assert vendor_part_tree.tag == "VendorPart"
+        
+        # Pull out the attribute values:
+        attributes_table = vendor_part_tree.attrib
+        timestamp = int(float(attributes_table["timestamp"]))
+        vendor_name = attributes_table["vendor_name"]
+        vendor_part_name = attributes_table["vendor_part_name"]
+
+        price_breaks = []
+        price_break_trees = list(vendor_part_tree)
+        for price_break_tree in price_break_trees:
+            price_break = PriceBreak.xml_parse(price_break_tree)
+            price_breaks.append(price_break)
+
+        quantity_available = 0  # Old inventory stuff...
+        vendor_part = VendorPart(actual_part, vendor_name, vendor_part_name,
+                                 quantity_available, price_breaks, timestamp)
+        return vendor_part
 
 # class XXXAttribute:
 #    def __init__(self, name, type, default, optional, documentations, enumerates):
