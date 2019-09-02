@@ -323,7 +323,7 @@ Currently, it is spread across two repositories -- `bom_manager` and `digikey_ta
         cd someplace....
         mkdir projects
         cd projects
-        git clone https://github.com/waynegramlich/digikey_tables.git
+        git clone https://github.com/waynegramlich/bom_digikey_plugin.git
         git clone https://github.com/waynegramlich/bom_manager.git
 
 In addition, you will have to install a bunch of python modules (i.e. libraries).
