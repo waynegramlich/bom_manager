@@ -23,13 +23,12 @@
 #
 #       flake8 --max-line-length=100 digikey.py | fgrep -v :3:1:
 #
+import bom_manager as bom
 import bs4
-import os
-xoimport glob
-import subprocess
+import glob
+import requests
 import time
-import bom_manager as bm
-
+import os
 
 # Digikey:
 class Digikey:
@@ -37,14 +36,17 @@ class Digikey:
     # Digikey.__init__():
     def __init__(self):
         digikey = self
-        digikey.products_html_file_name = "www.digikey.com_products_en.html"
-        digikey.root_directory = "/home/wayne/public_html/projects/bom_digikey_plugin/ROOT"
-        digikey.csvs_directory = "/home/wayne/public_html/projects/digikey_csvs"
+        top_directory = "/home/wayne/public_html/projects/bom_digikey_plugin"
+        digikey.top_directory = top_directory
+        digikey.products_html_file_name = os.path.join(top_directory,
+                                                       "www.digikey.com_products_en.html")
+        digikey.root_directory = os.path.join(top_directory, "ROOT")
+        digikey.csvs_directory = os.path.join(top_directory, "CSVS")
 
     # Digikey.collection_extract():
     def collection_extract(self, hrefs_table, tracing=None):
-        # Now we construct *collection* which is a *bm.Collection* that contains a list of
-        # *DigkeyDirectory*'s (which are sub-classed from *bm.Directory*.  Each of those
+        # Now we construct *collection* which is a *bom.Collection* that contains a list of
+        # *DigkeyDirectory*'s (which are sub-classed from *bom.Directory*.  Each of those
         # nested *DigikeyDirectory*'s contains a further list of *DigikeyTable*'s.
         #
 
@@ -121,8 +123,8 @@ class Digikey:
         root_directory = digikey.root_directory
 
         # Create the *collection* (*collections* is temporary and is not really used):
-        collections = bm.Collections("Collections", [], "", None)
-        collection = bm.Collection("Digi-Key", collections, root_directory, "", None)
+        collections = bom.Collections("Collections", [], "", None)
+        collection = bom.Collection("Digi-Key", collections, root_directory, "", None)
         parent = collection
         assert collections.has_child(collection)
 
@@ -184,7 +186,7 @@ class Digikey:
     # Digikey.collection_reorganize():
     def collection_reorganize(self, collection, tracing=None):
         # Verify argument types:
-        assert isinstance(collection, bm.Collection)
+        assert isinstance(collection, bom.Collection)
         assert isinstance(tracing, str) or tracing is None
 
         # Perform any requested *tracing*:
@@ -210,7 +212,7 @@ class Digikey:
     # Digikey.collection_verify():
     def collection_verify(self, digikey_collection, hrefs_table, tracing=None):
         # Verify argument types:
-        assert isinstance(digikey_collection, bm.Collection)
+        assert isinstance(digikey_collection, bom.Collection)
         assert isinstance(hrefs_table, dict)
         assert isinstance(tracing, str) or tracing is None
     
@@ -270,7 +272,7 @@ class Digikey:
     # Digikey.csvs_download():
     def csvs_download(self, collection, tracing=None):
         # Verify argument types:
-        assert isinstance(collection, bm.Collection)
+        assert isinstance(collection, bom.Collection)
         assert isinstance(tracing, str) or tracing is not None
 
         # Perform any requested *tracing*:
@@ -283,18 +285,22 @@ class Digikey:
         csvs_directory = digikey.csvs_directory
 
         # Fetch example `.csv` files for each table in *collection*:
+        downloads_count = 0
         for directory in collection.children_get():
-            directory.csvs_download(csvs_directory, tracing=next_tracing)
+            downloads_count = directory.csvs_download(csvs_directory, downloads_count,
+                                                      tracing=next_tracing)
 
         # Wrap up any requested *tracing*:
+        result = downloads_count
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
-            print(f"{tracing}<=Digikey.csvs_download(*, '{collection.name}')")
+            print(f"{tracing}<=Digikey.csvs_download(*, *, '{collection.name}')=>{downloads_count}")
+        return downloads_count
 
     # Digikey.read_and_process():
     def csvs_read_and_process(self, collection, tracing=None):
         # Verify argument types:
-        assert isinstance(collection, bm.Collection)
+        assert isinstance(collection, bom.Collection)
         assert isinstance(tracing, str) or tracing is not None
 
         # Perform any requested *tracing*:
@@ -373,13 +379,15 @@ class Digikey:
         # Extract the *digikey_collection* structure using *hrefs_table*:
         collection = digikey.collection_extract(hrefs_table, tracing=next_tracing)
         digikey.collection_verify(collection, hrefs_table, tracing=next_tracing)
-        assert isinstance(collection, bm.Collection)
+        assert isinstance(collection, bom.Collection)
 
         # Reorganize and verify *collection*:
         digikey.collection_reorganize(collection, tracing=next_tracing)
 
         # Make sure we have an example `.csv` file for each table in *collection*:
-        digikey.csvs_download(collection, tracing=next_tracing)
+        downloads_count = digikey.csvs_download(collection, tracing=next_tracing)
+        if tracing is not None:
+            print(f"{tracing}downloads_count={downloads_count}")
 
         # Clear out the root directory and repoulate it with updated tables:
         digikey.root_directory_clear(tracing=next_tracing)
@@ -608,14 +616,14 @@ class Digikey:
         return soup
 
 # DigikeyDirectory:
-class DigikeyDirectory(bm.Directory):
+class DigikeyDirectory(bom.Directory):
 
     # DigikeyDirectory.__init__():
     def __init__(self, name, parent, id, url, tracing=None):
         # Verify argument types:
         assert isinstance(name, str)
-        assert (isinstance(parent, bm.Collection) or
-                isinstance(parent, bm.Directory)), f"type(parent)={type(parent)}"
+        assert (isinstance(parent, bom.Collection) or
+                isinstance(parent, bom.Directory)), f"type(parent)={type(parent)}"
         assert isinstance(id, int)
         assert isinstance(url, str)
         assert isinstance(tracing, str) or tracing is None
@@ -638,9 +646,10 @@ class DigikeyDirectory(bm.Directory):
             print(f"{tracing}<=DigikeyDirectory.__init__('{name}', '{parent.name}', {id})")
 
     # DigikeyDirectory.csvs_download():
-    def csvs_download(self, csvs_directory, tracing=None):
+    def csvs_download(self, csvs_directory, downloads_count, tracing=None):
         # Verify argument types:
         assert isinstance(csvs_directory, str)
+        assert isinstance(downloads_count, int)
         assert isinstance(tracing, str) or tracing is None
 
         # Perform any requested *tracing* for *digikey_directory* (i.e. *self*):
@@ -648,16 +657,20 @@ class DigikeyDirectory(bm.Directory):
         name = digikey_directory.name
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
-            print(f"{tracing}=>DigikeyDirectory.csvs_download('{name}', '{csvs_directory}')")
+            print(f"{tracing}=>DigikeyDirectory.csvs_download('{name}', '{csvs_directory}', "
+                  f"{downloads_count})")
 
         digikey_directory = self
         children = digikey_directory.children_get()
         for sub_node in children:
-            sub_node.csvs_download(csvs_directory, tracing=next_tracing)
+            downloads_count = sub_node.csvs_download(csvs_directory, downloads_count,
+                                                     tracing=next_tracing)
 
         # Wrap up any requested *tracing*":
         if tracing is not None:
-            print(f"{tracing}<=DigkikeyDirectory.csvs_download('{name}', '{csvs_directory}')")
+            print(f"{tracing}<=DigkikeyDirectory.csvs_download('{name}', "
+                  f"'{csvs_directory}', *)=>{downloads_count}")
+        return downloads_count
 
     # DigikeyDirectory.csv_read_and_process():
     def csv_read_and_process(self, csvs_directory, bind=False, tracing=None):
@@ -674,7 +687,7 @@ class DigikeyDirectory(bm.Directory):
         # Process each *sub_node* of *digikey_directory* (i.e. *self*):
         digikey_directory = self
         for sub_node in digikey_directory.children_get():
-            assert isinstance(sub_node, bm.Node)
+            assert isinstance(sub_node, bom.Node)
             sub_node.csv_read_and_process(csvs_directory, bind=bind, tracing=next_tracing)
 
         # Wrap up any requested *tracing*:
@@ -853,11 +866,11 @@ class DigikeyDirectory(bm.Directory):
         assert isinstance(indent, str)
 
         digikey_directory = self
-        assert isinstance(digikey_directory, bm.Node)
+        assert isinstance(digikey_directory, bom.Node)
         children = digikey_directory.children
         assert isinstance(children, list)
         for node_index, node in enumerate(children):
-            assert isinstance(node, bm.Node)
+            assert isinstance(node, bom.Node)
             if isinstance(node, DigikeyDirectory):
                 print(f"{0}[{1:02d}] D:'{3}' '{2}'".
                       format(indent, node_index, node.title, node.path))
@@ -875,7 +888,7 @@ class DigikeyDirectory(bm.Directory):
 
 
 # DigikeyTable:
-class DigikeyTable(bm.Table):
+class DigikeyTable(bom.Table):
 
     # DigikeyTable.__init__():
     def __init__(self, name, parent, base, id, href, url, tracing=None):
@@ -895,7 +908,7 @@ class DigikeyTable(bm.Table):
                   f"'{base}', {id}, '{url}')")
 
 
-        # Initialize the parent *bm.Table* class for *digikey_table* (i.e. *self*):
+        # Initialize the parent *bom.Table* class for *digikey_table* (i.e. *self*):
         digikey_table = self
         super().__init__(name, parent, url)
 
@@ -911,9 +924,10 @@ class DigikeyTable(bm.Table):
                   f"'{base}', {id}, '{url}')")
 
     # DigikeyTable.csvs_download():
-    def csvs_download(self, csvs_directory, tracing=None):
+    def csvs_download(self, csvs_directory, downloads_count, tracing=None):
         # Verify argument types:
         assert isinstance(csvs_directory, str)
+        assert isinstance(downloads_count, int)
         assert isinstance(tracing, str) or tracing is None
 
         # Perform any requested *tracing* for *digikey_table* (i.e. *self*):
@@ -921,48 +935,60 @@ class DigikeyTable(bm.Table):
         name = digikey_table.name
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
-            print(f"{tracing}=>DigikeyTable.cvss_download('{name}', '{csvs_directory}'")
+            print(f"{tracing}=>DigikeyTable.csvs_download('{name}', '{csvs_directory}',"
+                  f" {downloads_count})")
 
         base = digikey_table.base
         id = digikey_table.id
         csv_file_name = csvs_directory + "/" + base + ".csv"
         if not os.path.isfile(csv_file_name):
-            # Now we read in a chunk of each table and store it into *digikey_csvs_directory*.
-            # We want to be semi-polite and avoid throttling by only performing one fetch per
-            # minute.  This this step will take a while:
+            # The first download happens immediately and the subsequent ones are delayed by
+            # 60 seconds:
+            if downloads_count >= 1:
+                print("Waiting 60 seconds....")
+                time.sleep(60)
+
+            # Compute the *url*, *parameters*, and *headers* needed for the *request*:
+            url = "https://www.digikey.com/product-search/download.csv"
+            parameters = {
+                "FV": "ffe{0:05x}".format(id),
+                "quantity": 0,
+                "ColumnSort": 0,
+                "page": 1,
+                "pageSize": 500
+            }
+            headers = {
+                "authority": "www.digikey.com",
+                "accept-encoding": "gzip, deflate, br",
+                "cookie": ("i10c.bdddb="
+                  "c2-94990ugmJW7kVZcVNxn4faE4FqDhn8MKnfIFvs7GjpBeKHE8KVv5aK34FQDgF"
+                  "PFsXXF9jma8opCeDMnVIOKCaK34GOHjEJSFoCA9oxF4ir7hqL8asJs4nXy9FlJEI"
+                  "8MujcFW5Bx9imDEGHDADOsEK9ptrlIgAEuIjcp4olPJUjxXDMDVJwtzfuy9FDXE5"
+                  "sHKoXGhrj3FpmCGDMDuQJs4aLb7AqsbFDhdjcF4pJ4EdrmbIMZLbAQfaK34GOHbF"
+                  "nHKo1rzjl24jP7lrHDaiYHK2ly9FlJEADMKpXFmomx9imCGDMDqccn4fF4hAqIgF"
+                  "JHKRcFFjl24iR7gIfTvaJs4aLb4FqHfADzJnXF9jqd4iR7gIfz8t0TzfKyAnpDgp"
+                  "8MKEmA9og3hdrCbLvCdJSn4FJ6EFlIGEHKOjcp8sm14iRBkMT8asNwBmF3jEvJfA"
+                  "DwJtgD4oL1Eps7gsLJaKJvfaK34FQDgFfcFocAAMr27pmCGDMD17GivaK34GOGbF"
+                  "nHKomypOTx9imDEGHDADOsTpF39ArqeADwFoceWjl24jP7gIHDbDPRzfwy9JlIlA"
+                  "DTFocAEP")
+                }
+
+            # Perform the download:
             print("DigikeyTable.csvs_download: '{0}':{1}".format(csv_file_name, id))
-            curl_arguments = list()
-            curl_arguments.append("curl")
-            curl_arguments.append("https://www.digikey.com/product-search/download.csv?"
-                                  "FV=ffe{0:05x}&quantity=0&ColumnSort=0&page=1&pageSize=500".
-                                  format(id))
-            curl_arguments.append("-H")
-            curl_arguments.append("authority: www.digikey.com")
-            curl_arguments.append("-H")
-            curl_arguments.append("accept-encoding: gzip, deflate, br")
-            curl_arguments.append("-H")
-            curl_arguments.append("cookie: i10c.bdddb="
-                                  "c2-94990ugmJW7kVZcVNxn4faE4FqDhn8MKnfIFvs7GjpBeKHE8KVv5aK34FQDgF"
-                                  "PFsXXF9jma8opCeDMnVIOKCaK34GOHjEJSFoCA9oxF4ir7hqL8asJs4nXy9FlJEI"
-                                  "8MujcFW5Bx9imDEGHDADOsEK9ptrlIgAEuIjcp4olPJUjxXDMDVJwtzfuy9FDXE5"
-                                  "sHKoXGhrj3FpmCGDMDuQJs4aLb7AqsbFDhdjcF4pJ4EdrmbIMZLbAQfaK34GOHbF"
-                                  "nHKo1rzjl24jP7lrHDaiYHK2ly9FlJEADMKpXFmomx9imCGDMDqccn4fF4hAqIgF"
-                                  "JHKRcFFjl24iR7gIfTvaJs4aLb4FqHfADzJnXF9jqd4iR7gIfz8t0TzfKyAnpDgp"
-                                  "8MKEmA9og3hdrCbLvCdJSn4FJ6EFlIGEHKOjcp8sm14iRBkMT8asNwBmF3jEvJfA"
-                                  "DwJtgD4oL1Eps7gsLJaKJvfaK34FQDgFfcFocAAMr27pmCGDMD17GivaK34GOGbF"
-                                  "nHKomypOTx9imDEGHDADOsTpF39ArqeADwFoceWjl24jP7gIHDbDPRzfwy9JlIlA"
-                                  "DTFocAEP")
-            curl_arguments.append("--compressed")
-            curl_arguments.append("-s")
-            curl_arguments.append("-o")
-            curl_arguments.append(csv_file_name)
-            # print(curl_arguments)
-            subprocess.call(curl_arguments)
-            time.sleep(60)
+            response = requests.get(url, params=parameters, headers=headers)
+            #print(f"response.headers={response.headers}")
+            #print(f"rsponse.content='{response.content}")
+
+            # Write the content out to *csv_file_name*:
+            with open(csv_file_name, "wb") as csv_file:
+                csv_file.write(response.content)
+            downloads_count += 1
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
-            print(f"{tracing}<=DigikeyTable.cvss_download('{name}', '{csvs_directory}'")
+            print(f"{tracing}<=DigikeyTable.csvs_download('{name}', '{csvs_directory}', *)"
+                  f"=>{downloads_count}")
+        return downloads_count
 
     # DigikeyTable.csv_full_name_get():
     def csv_full_name_get(self, tracing=None):
@@ -975,12 +1001,12 @@ class DigikeyTable(bm.Table):
         if tracing is not None:
             print(f"{tracing}=>DigikeyTable.csv_full_name_get('{name}')")
 
-        # Grab some values from *digikey_table*:
+        # Compute the *csv_full_name*:
         base = digikey_table.base
-
-        # Construct *csv_full_name* using a total *kludge*:
-        kludge = "/home/wayne/public_html/projects/digikey_csvs"
-        csv_full_name = os.path.join(kludge, base + ".csv")
+        collection = digikey_table.collection
+        collection_root = collection.collection_root
+        csvs_root = os.path.join(collection_root, os.path.join("..", "CSVS"))
+        csv_full_name = os.path.join(csvs_root, base + ".csv")
 
         # Wrap up any requested *tracing* and return *csv_full_name*:
         if tracing is not None:
@@ -1044,8 +1070,8 @@ class DigikeyTable(bm.Table):
 
         # Start with the `<DigikeyTable ... >` tag:
         xml_lines.append(f'{indent}<DigikeyTable '
-                         f'name="{bm.Encode.to_attribute(name)}"'
-                         f'url="{bm.Encode.to_attribute(url)}"'
+                         f'name="{bom.Encode.to_attribute(name)}"'
+                         f'url="{bom.Encode.to_attribute(url)}"'
                          f'>')
 
         # Append the *parameters*:
