@@ -1,7 +1,6 @@
 bs4
 currencyconverter
 lxml
-pyperclip
 pyside2
 requests
 sexpdata

@@ -212,6 +212,7 @@ from functools import partial
 import fnmatch                    # File Name Matching
 import glob                       # Unix/Linux style command line file name pattern matching
 import io                         # I/O stuff
+import importlib
 import lxml.etree as etree
 import pickle                     # Python data structure pickle/unpickle
 from PySide2.QtUiTools import QUiLoader
@@ -221,14 +222,13 @@ from PySide2.QtWidgets import (QApplication, QComboBox, QLineEdit, QMainWindow,
 from PySide2.QtCore import (QAbstractItemModel, QFile, QItemSelectionModel,
                             QModelIndex, Qt)
 from PySide2.QtGui import (QClipboard,)
-
-import pyperclip
+import pkgutil
 import os
 import re                         # Regular expressions
 import requests                   # HTML Requests
 import sexpdata                   # (LISP) S_EXpresson Data
 from sexpdata import Symbol       # (LISP) S-EXpression Symbol
-import subprocess
+# import subprocess
 import sys
 import time                       # Time package
 import webbrowser
@@ -405,6 +405,9 @@ def main():
     tracing = None
     tracing = ""
 
+    if tracing is not None:
+        print(f"{tracing}=>main()")
+
     Encode.from_file_name
     Encode.test()
     title = "TEST_POINT;M1X1"
@@ -412,19 +415,23 @@ def main():
 
     # Set up command line *parser* and parse it into *parsed_arguments* dict:
     parser = argparse.ArgumentParser(description="Bill of Materials (BOM) Manager.")
-    parser.add_argument("-c", "--collection", action="append", default=["collections/Digi-Key"],
+    parser.add_argument("-c", "--collection", action="append", default=[],
                         help="BOM Manager Collection Directory.")
     parser.add_argument("-n", "--net", action="append", default=[],
                         help="KiCAD .net file. Preceed with 'NUMBER:' to increase count. ")
     parser.add_argument("-s", "--search", default="searches",
                         help="BOM Manager Searches Directory.")
-    parser.add_argument("-o", "--order", default=os.getcwd(),
+    parser.add_argument("-o", "--order", default=os.path.join(os.getcwd(), "order"),
                         help="Order Information Directory")
     parsed_arguments = vars(parser.parse_args())
+    if tracing is not None:
+        print(f"{tracing}Arguments Parsed")
 
     # database = Database()
     order_root = parsed_arguments["order"]
     order = Order(order_root)
+    if tracing is not None:
+        print(f"{tracing}order_created")
 
     # Deal with *net_file_names* from *parsed_arguments*:
     net_file_names = parsed_arguments["net"]
@@ -454,14 +461,48 @@ def main():
             order.project_create(name, revision_letter, net_file_name, count, tracing=tracing)
         else:
             print(f"Ignoring .net '{net_file_name}' does not with '.net` suffix.")
+    if tracing is not None:
+        print(f"{tracing}nets processed")
 
     # Deal with *collection_diriectories* from *parsed_arguments*:
     collections_directories = parsed_arguments["collection"]
-    if len(collections_directories) == 0:
-        file_names = glob.glob("collections/**", recursive=True) 
-        for file_name in file_names:
-            if os.path.isdir(file_name):
-                collections_directories.append(file_name)
+    collections_directories_size = len(collections_directories)
+    if tracing is not None:
+        print(f"{tracing}collections_directories_size={collections_directories_size}")
+    if collections_directories_size == 0:
+        for index, module_info in enumerate(pkgutil.iter_modules()):
+            assert isinstance(module_info, pkgutil.ModuleInfo)
+            name = module_info.name
+            # if tracing is not None:
+            #    print(f"{tracing}Module[{index}]:'{name}'")
+            if name.startswith("bom_") and name.endswith("_plugin"):
+                if tracing is not None:
+                    print(f"{tracing}package_name='{name}'")
+                module = importlib.import_module(name)
+                module_init_file = module.__file__
+                if tracing is not None:
+                    print(f"{tracing}module_init_file='{module_init_file}'")
+                assert module_init_file.endswith("__init__.py")
+                package_directory = os.path.split(module_init_file)[0]
+                collection_root = os.path.join(package_directory, "ROOT")
+                if tracing is not None:
+                    print(f"{tracing}package_directory='{package_directory}'")
+                    print(f"{tracing}collection_root='{collection_root}'")
+                assert os.path.isdir(collection_root), f"collection_root='{collection_root}'"
+                if os.path.isdir(collection_root):
+                    # collection_root_files = list(glob.glob(collection_root))
+                    # if len(collection_root_iles) == 1:
+                    #     collection_name = Encode.to_file_name(collection_root_files[0])
+                    #     collection = Collection(collection_name, collections,
+                    #                             collection_root, searches_root)
+                    collections_directories.append(package_directory)
+
+        # file_names = glob.glob("collections/**", recursive=True) 
+        # for file_name in file_names:
+        #     if os.path.isdir(file_name):
+        #         collections_directories.append(file_name)
+    if tracing is not None:
+        print(f"{tracing}collections processed")
 
     # Verify each *collection_directory* is actually a directory:
     for collection_directory in collections_directories:
@@ -508,6 +549,9 @@ def main():
     tables_editor.run()
 
     # When we get here, *tables_editor* has stopped running and we can return.
+    if tracing is not None:
+        print(f"{tracing}<=main()")
+
     return 0
 
 
@@ -5294,50 +5338,63 @@ class Collection(Node):
 
             # Compute the *csv_full_full_file*  and *html_full_file* where search results
             # are stored:
-            encoded_search_name = Encode.to_file_name(search_name)
-            csv_base_name =  encoded_search_name + ".csv"
-            html_base_name = encoded_search_name + ".html"
-            csv_full_file = os.path.join(searches_root, relative_path, csv_base_name)
-            html_full_file = os.path.join(searches_root, relative_path, html_base_name)
+            csv_full_file = os.path.join(searches_root, relative_path + ".csv")
+            html_full_file = os.path.join(searches_root, relative_path + ".html")
             if tracing is not None:
                 print(f"{tracing}csv_full_file='{csv_full_file}'")
                 print(f"{tracing}html_full_file='{html_full_file}'")
                 print(f"{tracing}search_url='{search_url}'")
 
             if not os.path.isfile(html_full_file):
-                arguments = []
-                aa = arguments.append
-                aa("curl")
-                aa(search_url)
-                aa("-H")
-                aa("authority: www.digikey.com")
-                aa("-H")
-                aa("accept: text/html,application/xhtml+xml,application/xml;"
-                   "q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3")
-                aa("-H")
-                aa("accept-encoding: gzip, deflate, br")
-                aa("-H")
-                aa("cookie: "
-                   "i10c.bdddb=c2-f0103ZLNqAeI3BH6yYOfG7TZlRtCrMwzKDQfPMtvESnCuVjBtyWjJ1l"
-                   "kqXtKsvswxDrjRHdkESNCtx04RiOfGqfIlRUHqt1qPnlkPolfJSiIRsomx0RhMqeKlRtT3"
-                   "jxvKEOjKMDfJSvUoxo6uXWaGVZkqoAhloxqQlofPwYkJcS6fhQ6tzOgotZkQMtHDyjnA4lk"
-                   "PHeIKNnroxoY8XJKBvefrzwFru4qPnlkPglfJSiIRvjBTuTfbEZkqMupstsvz8qkl7wWr3i"
-                   "HtspjsuTFBve9SHoHqjyTKIPfPM3uiiAioxo6uXOfGvdfq4tFloxqPnlkPcxyESnCuVjBt1"
-                   "VmBvHmsYoHqjxVKDq3fhvfJSiIRsoBsxOftucfqRoMRjxVKDq3BuEMuNnHoyM9oz3aGv4ul"
-                   "RtCrMsvP8tJOPeoESNGw2q6tZSiN2ZkQQxHxjxVOHukKMDjOQlCtXnGt4OfqujoqMtrpt3y"
-                   "KDQjVMffM3iHtsolozT7WqeklSRGloXqPDHZHCUfJSiIRvjBTuTfQeKKYMtHlpVtKDQfPM2"
-                   "uESnCuVm6tZOfGK1fqRoIOjxvKDrfQvYkvNnuJsojozTaLW")
-                aa("--compressed")
-                aa("-s")
-                aa("-o")
-                aa(html_full_file)
-                if tracing is not None:
-                    print(f"{tracing}Retieve '{html_base_name}' ")
-                subprocess.call(arguments)
+                # Construct the header values that need to be sent with the *url*:
+                authority_text = "www.digikey.com"
+                accept_text = (
+                    "text/html,application/xhtml+xml,application/xml;"
+                    "q=0.9,image/webp,image/apng,*/*;"
+                    "q=0.8,application/signed-exchange;"
+                    "v=b3"
+                )
+                accept_encoding_text = "gzip, deflate, br"
+                cookie_text = (
+                    "i10c.bdddb=c2-f0103ZLNqAeI3BH6yYOfG7TZlRtCrMwzKDQfPMtvESnCuVjBtyWjJ1l"
+                    "kqXtKsvswxDrjRHdkESNCtx04RiOfGqfIlRUHqt1qPnlkPolfJSiIRsomx0RhMqeKlRtT3"
+                    "jxvKEOjKMDfJSvUoxo6uXWaGVZkqoAhloxqQlofPwYkJcS6fhQ6tzOgotZkQMtHDyjnA4lk"
+                    "PHeIKNnroxoY8XJKBvefrzwFru4qPnlkPglfJSiIRvjBTuTfbEZkqMupstsvz8qkl7wWr3i"
+                    "HtspjsuTFBve9SHoHqjyTKIPfPM3uiiAioxo6uXOfGvdfq4tFloxqPnlkPcxyESnCuVjBt1"
+                    "VmBvHmsYoHqjxVKDq3fhvfJSiIRsoBsxOftucfqRoMRjxVKDq3BuEMuNnHoyM9oz3aGv4ul"
+                    "RtCrMsvP8tJOPeoESNGw2q6tZSiN2ZkQQxHxjxVOHukKMDjOQlCtXnGt4OfqujoqMtrpt3y"
+                    "KDQjVMffM3iHtsolozT7WqeklSRGloXqPDHZHCUfJSiIRvjBTuTfQeKKYMtHlpVtKDQfPM2"
+                    "uESnCuVm6tZOfGK1fqRoIOjxvKDrfQvYkvNnuJsojozTaLW"
+                )
+
+                # Construct *headers* 
+                headers = {
+                    "authority": authority_text,
+                    "accept": accept_text,
+                    "accept-encoding": accept_encoding_text,
+                    "cookie": cookie_text
+                }
+
+                # Attempt the fetch the contents of *search_url* using *headers*:
+                try:
+                    response = requests.get(search_url, headers=headers)
+                    response.raise_for_status()
+                except HTTPError as http_error:
+                    assert False, f"HTTP error occurred '{http_error}'"
+                except Exception as error:
+                    assert False, f"Other exception occurred: '{error}'"
+                    
+                # Now write *content* out to *html_full_file* so that it is cached:
+                content = response.content
+                with open(html_full_file, "wb") as html_file:
+                    html_file.write(content)
+                    if tracing is not None:
+                        print(f"{tracing}Wrote out '{html_full_file}'")
 
             # Now procecess *html_full_file*:
             pairs_text = None
             assert os.path.isfile(html_full_file)
+            print(f"html_full_file='{html_full_file}")
             with open(html_full_file) as html_file:
                 html_text = html_file.read()
                 soup = bs4.BeautifulSoup(html_text, features="lxml")
@@ -5351,23 +5408,23 @@ class Collection(Node):
                     name = form_tag.get("name")
                     if name == "downloadform":
                         # We found it:
-                        #print(form_tag)
+                        print(f"form_tag={form_tag}")
                         for index, input_tag in enumerate(form_tag.children):
                             if isinstance(input_tag, bs4.element.Tag):
-                                #print(input_tag)
+                                print(input_tag)
                                 assert input_tag.name.lower() == "input"
                                 input_name = input_tag.get("name")
-                                #print(f"input_name='{input_name}'")
+                                print(f"input_name='{input_name}'")
                                 input_value = input_tag.get("value")
-                                #print(f"input_value='{input_value}'")
+                                print(f"input_value='{input_value}'")
                                 input_value = input_value.replace(",", "%2C")
                                 input_value = input_value.replace('|', "%7C")
                                 input_value = input_value.replace(' ', "+")
                                 pair = f"{input_name}={input_value}"
-                                #print(f"pair='{pair}'")
+                                print(f"pair='{pair}'")
                                 pairs.append(pair)
                         pairs_text = '&'.join(pairs)
-                        #print(f"pairs_text='{pairs_text}'")
+                        print(f"pairs_text='{pairs_text}'")
             assert isinstance(pairs_text, str)
 
             # Construct the *csv_fetch_url*:
@@ -5379,36 +5436,57 @@ class Collection(Node):
             modification_time = (os.path.getmtime(csv_full_file) if os.path.isfile(csv_full_file)
                                  else 0)
             if modification_time + stale_time < now:
-                # Create a list of arguments to pass to *curl*:
-                arguments = list()
-                arguments.append("curl")
-                arguments.append(csv_fetch_url)
-                arguments.append("-H")
-                arguments.append("authority: www.digikey.com")
-                arguments.append("-H")
-                arguments.append("accept-encoding: gzip, deflate, br")
-                arguments.append("-H")
-                arguments.append("cookie: i10c.bdddb="
-                                 "c2-94990ugmJW7kVZcVNxn4faE4FqDhn8MKnfIFvs7GjpBeKHE8KVv5aK34FQDgF"
-                                 "PFsXXF9jma8opCeDMnVIOKCaK34GOHjEJSFoCA9oxF4ir7hqL8asJs4nXy9FlJEI"
-                                 "8MujcFW5Bx9imDEGHDADOsEK9ptrlIgAEuIjcp4olPJUjxXDMDVJwtzfuy9FDXE5"
-                                 "sHKoXGhrj3FpmCGDMDuQJs4aLb7AqsbFDhdjcF4pJ4EdrmbIMZLbAQfaK34GOHbF"
-                                 "nHKo1rzjl24jP7lrHDaiYHK2ly9FlJEADMKpXFmomx9imCGDMDqccn4fF4hAqIgF"
-                                 "JHKRcFFjl24iR7gIfTvaJs4aLb4FqHfADzJnXF9jqd4iR7gIfz8t0TzfKyAnpDgp"
-                                 "8MKEmA9og3hdrCbLvCdJSn4FJ6EFlIGEHKOjcp8sm14iRBkMT8asNwBmF3jEvJfA"
-                                 "DwJtgD4oL1Eps7gsLJaKJvfaK34FQDgFfcFocAAMr27pmCGDMD17GivaK34GOGbF"
-                                 "nHKomypOTx9imDEGHDADOsTpF39ArqeADwFoceWjl24jP7gIHDbDPRzfwy9JlIlA"
-                                 "DTFocAEP")
-                arguments.append("--compressed")
-                arguments.append("-s")
-                arguments.append("-o")
-                arguments.append(csv_full_file)
+                # Construct the text strings fort the *headers*:
+                authority_text = "www.digikey.com"
+                accept_text = (
+                    "text/html,application/xhtml+xml,application/xml;"
+                    "q=0.9,image/webp,image/apng,*/*;"
+                    "q=0.8,application/signed-exchange;"
+                    "v=b3"
+                )
+                accept_encoding_text = "gzip, deflate, br"
+                cookie_text = (
+                    "i10c.bdddb="
+                    "c2-94990ugmJW7kVZcVNxn4faE4FqDhn8MKnfIFvs7GjpBeKHE8KVv5aK34FQDgF"
+                    "PFsXXF9jma8opCeDMnVIOKCaK34GOHjEJSFoCA9oxF4ir7hqL8asJs4nXy9FlJEI"
+                    "8MujcFW5Bx9imDEGHDADOsEK9ptrlIgAEuIjcp4olPJUjxXDMDVJwtzfuy9FDXE5"
+                    "sHKoXGhrj3FpmCGDMDuQJs4aLb7AqsbFDhdjcF4pJ4EdrmbIMZLbAQfaK34GOHbF"
+                    "nHKo1rzjl24jP7lrHDaiYHK2ly9FlJEADMKpXFmomx9imCGDMDqccn4fF4hAqIgF"
+                    "JHKRcFFjl24iR7gIfTvaJs4aLb4FqHfADzJnXF9jqd4iR7gIfz8t0TzfKyAnpDgp"
+                    "8MKEmA9og3hdrCbLvCdJSn4FJ6EFlIGEHKOjcp8sm14iRBkMT8asNwBmF3jEvJfA"
+                    "DwJtgD4oL1Eps7gsLJaKJvfaK34FQDgFfcFocAAMr27pmCGDMD17GivaK34GOGbF"
+                    "nHKomypOTx9imDEGHDADOsTpF39ArqeADwFoceWjl24jP7gIHDbDPRzfwy9JlIlA"
+                    "DTFocAEP"
+                )
+
+                # Construct *headers*:
+                headers = {
+                    "authority": authority_text,
+                    "accept": accept_text,
+                    "accept-encoding": accept_encoding_text,
+                    "cookie": cookie_text
+                }
+
+                # Attempt the fetch the contents of *csv_fetch_url* using *headers*:
                 if tracing is not None:
-                    print(f"{tracing}A:Fetching '{html_base_name}' for '{search_name}'")
-                subprocess.call(arguments)
-            assert os.path.isfile(csv_full_file)
+                    print(f"{tracing}A:Fetching '{csv_fetch_url}' for '{search_name}'")
+                try:
+                    response = requests.get(csv_fetch_url, headers=headers)
+                    response.raise_for_status()
+                except HTTPError as http_error:
+                    assert False, f"HTTP error occurred '{http_error}'"
+                except Exception as error:
+                    assert False, f"Other exception occurred: '{error}'"
+                    
+                # Now write *content* out to *html_full_file* so that it is cached:
+                content = response.content
+                with open(csv_full_file, "wb") as csv_file:
+                    csv_file.write(content)
+                    if tracing is not None:
+                        print(f"{tracing}Wrote out '{csv_full_file}'")
 
             # Read in the *csv_file_file*:
+            assert os.path.isfile(csv_full_file)
             data_rows = []
             column_names = None
             with open(csv_full_file) as csv_file:
@@ -5677,7 +5755,7 @@ class Collections(Node):
 
                 # Now find the directory under `ROOT`:
                 sub_directories = list(glob.glob(os.path.join(collection_directory_root, "*")))
-                assert len(sub_directories) == 1
+                assert len(sub_directories) == 1, f"sub_directories={sub_directories}"
                 base_name = os.path.basename(sub_directories[0])
                 name = Encode.from_file_name(base_name)
                 # collection_root = os.path.join(collection_directory_root, base_name)
@@ -10286,8 +10364,8 @@ class TablesEditor(QMainWindow):
         assert os.path.isdir(searches_root)
 
         # Create *collections_root*:
-        collections_root = os.path.join(working_directory_path, "collections")
-        assert os.path.isdir(collections_root)
+        #collections_root = os.path.join(working_directory_path, "collections")
+        #assert os.path.isdir(collections_root)
 
         # Load all values into *tables_editor* before creating *combo_edit*.
         # The *ComboEdit* initializer needs to access *tables_editor.main_window*:
@@ -13804,6 +13882,45 @@ class VendorPart:
 
 # PySide2 TableView Video: https://www.youtube.com/watch?v=4PkPezdpO90
 # Associatied repo: https://github.com/vfxpipeline/filebrowser
+
+# [Python Virtual Environments](https://realpython.com/python-virtual-environments-a-primer/)
+#
+# * Use [Virtual Environment Wrapper](https://virtualenvwrapper.readthedocs.io/en/latest/)
+#   to make life easier.
+#
+# * Add to `~/.bashrc`:
+#
+#        # Setup for Python virtual enviroments:
+#        export WORKON_HOME=$HOME/.virtualenvs             # Standard place to store virtual env.'s
+#        export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3  # Make sure you point to correct Python
+#        export VIRTUALENVWRAPPER_WORKON_CD=1              # Forces `workon` to cd to project dir.
+#        source /usr/local/bin/virtualenvwrapper.sh        # Actually `which virtualenvwrapper.sh`
+#
+# * Run the following commands in your shell:
+#        
+#        sudo -H pip3 install virtualenv                   # Should already be installed
+#        sudo -H pip3 install virtualenvwrapper            # This makes life easier.
+#        source ~/.bashrc
+#
+# * The following shell commands now exist:
+#   * mkvirtualenv -a *project_directory* *env_name*: Create new virtual environment named
+#     *env_name* with *project_directory* as the home directory to go to when initially
+#     activated.  (Requires `export VIRTUALENVWRAPPER_WORKON_CD=1` to be set in `~/.bashrc`.
+#   * workon: List all available virtual environments.
+#   * workon *env_name*: Switch over to virtual environment *env_name*.
+#   * lssitepackages: List the packages installed in the current virtual environment.
+#   * Read the documentation for more commands.
+#
+# * There is a section about "Using Different Versions of Python" that looks interesting.
+#       
+# Python Packaging Tutorial (2.x):
+#     https://python-packaging.readthedocs.io/en/latest/
+# [Python Packaging](https://packaging.python.org/tutorials/packaging-projects/)
+#   *
+# Another URL (talks about PyPlace accounts -- dated 2009, Python 2.6):
+#     https://pythonhosted.org/an_example_pypi_project/setuptools.html
+
+
 
 if __name__ == "__main__":
     main()
