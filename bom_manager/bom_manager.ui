@@ -1,0 +1,798 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>846</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+    <horstretch>1</horstretch>
+    <verstretch>1</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+     <horstretch>1</horstretch>
+     <verstretch>1</verstretch>
+    </sizepolicy>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_9" columnstretch="0">
+    <item row="0" column="0">
+     <widget class="QTabWidget" name="root_tabs">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>1</horstretch>
+        <verstretch>1</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <widget class="QWidget" name="collections_tab">
+       <attribute name="title">
+        <string>Collections</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_12">
+        <item row="0" column="0">
+         <widget class="QPushButton" name="collections_new">
+          <property name="text">
+           <string>New Search</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLineEdit" name="collections_line"/>
+        </item>
+        <item row="0" column="2">
+         <widget class="QPushButton" name="collections_delete">
+          <property name="text">
+           <string>Delete</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0" colspan="3">
+         <widget class="QTreeView" name="collections_tree"/>
+        </item>
+        <item row="2" column="0">
+         <widget class="QPushButton" name="collections_check">
+          <property name="text">
+           <string>Order Check</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="2">
+         <widget class="QPushButton" name="collections_process">
+          <property name="text">
+           <string>Order Process</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="edit_tab">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>1</horstretch>
+         <verstretch>1</verstretch>
+        </sizepolicy>
+       </property>
+       <attribute name="title">
+        <string>Edit</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_2">
+        <item row="1" column="0">
+         <widget class="QPushButton" name="common_save_button">
+          <property name="text">
+           <string>Save</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QPushButton" name="common_quit_button">
+          <property name="text">
+           <string>Quit</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0" colspan="2">
+         <widget class="QTabWidget" name="schema_tabs">
+          <property name="currentIndex">
+           <number>1</number>
+          </property>
+          <widget class="QWidget" name="tables_tab">
+           <attribute name="title">
+            <string>Tables</string>
+           </attribute>
+           <layout class="QGridLayout" name="tables_grid">
+            <item row="3" column="0">
+             <widget class="QPushButton" name="tables_first">
+              <property name="text">
+               <string>First</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QPushButton" name="tables_new">
+              <property name="text">
+               <string>New</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="0">
+             <widget class="QLabel" name="tables_name_label">
+              <property name="text">
+               <string>Table Name:</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="3">
+             <widget class="QPushButton" name="tables_last">
+              <property name="text">
+               <string>Last</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QPushButton" name="tables_rename">
+              <property name="text">
+               <string>Rename</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="2">
+             <widget class="QPushButton" name="tables_delete">
+              <property name="text">
+               <string>Delete</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0" colspan="4">
+             <widget class="QLineEdit" name="tables_line"/>
+            </item>
+            <item row="3" column="1">
+             <widget class="QPushButton" name="tables_next">
+              <property name="text">
+               <string>Next</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="3">
+             <widget class="QPushButton" name="tables_save">
+              <property name="text">
+               <string>Save</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="1" colspan="3">
+             <widget class="QComboBox" name="tables_combo"/>
+            </item>
+            <item row="6" column="0" colspan="4">
+             <widget class="QLabel" name="tables_comment_label">
+              <property name="text">
+               <string>Comment</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="2">
+             <widget class="QPushButton" name="tables_previous">
+              <property name="text">
+               <string>Previous</string>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="0" colspan="4">
+             <widget class="QPlainTextEdit" name="tables_comment_text"/>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="old_parameters_tab">
+           <attribute name="title">
+            <string>Parameters</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_6">
+            <item row="0" column="0">
+             <layout class="QGridLayout" name="gridLayout">
+              <item row="0" column="1" colspan="3">
+               <widget class="QLabel" name="parameters_table_name">
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="1" colspan="3">
+               <widget class="QComboBox" name="parameters_combo"/>
+              </item>
+              <item row="3" column="0" colspan="4">
+               <widget class="QLineEdit" name="parameters_line"/>
+              </item>
+              <item row="6" column="0">
+               <widget class="QLabel" name="parameters_long_label">
+                <property name="text">
+                 <string>Long Heading:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
+               <widget class="QLabel" name="parameters_name_label">
+                <property name="text">
+                 <string>Parameter Name:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QPushButton" name="parameters_new">
+                <property name="text">
+                 <string>New</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="3">
+               <widget class="QPushButton" name="parameters_last">
+                <property name="text">
+                 <string>Last</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="1" colspan="3">
+               <widget class="QLineEdit" name="parameters_long_line"/>
+              </item>
+              <item row="4" column="0">
+               <widget class="QPushButton" name="parameters_first">
+                <property name="text">
+                 <string>First</string>
+                </property>
+               </widget>
+              </item>
+              <item row="10" column="0">
+               <widget class="QLabel" name="parameters_optional_label">
+                <property name="text">
+                 <string>Optional:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="1">
+               <widget class="QPushButton" name="parameters_next">
+                <property name="text">
+                 <string>Next</string>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="1" colspan="3">
+               <widget class="QLineEdit" name="parameters_short_line"/>
+              </item>
+              <item row="10" column="1" colspan="3">
+               <widget class="QCheckBox" name="parameters_optional_check">
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+              <item row="9" column="0">
+               <widget class="QLabel" name="parameters_type_label">
+                <property name="text">
+                 <string>Type:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="11" column="0">
+               <widget class="QLabel" name="parameters_default_label">
+                <property name="text">
+                 <string>Default:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="11" column="1" colspan="3">
+               <widget class="QLineEdit" name="parameters_default_line"/>
+              </item>
+              <item row="2" column="3">
+               <widget class="QPushButton" name="parameters_save">
+                <property name="text">
+                 <string>Save</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="2">
+               <widget class="QPushButton" name="parameters_delete">
+                <property name="text">
+                 <string>Delete</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QPushButton" name="parameters_rename">
+                <property name="text">
+                 <string>Rename</string>
+                </property>
+               </widget>
+              </item>
+              <item row="9" column="1" colspan="3">
+               <widget class="QComboBox" name="parameters_type_combo">
+                <item>
+                 <property name="text">
+                  <string>Boolean</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Empty</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Enumeration</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Float</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>FUnits</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Integer</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>IUnits</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>List</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Range</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>String</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>URL</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="4" column="2">
+               <widget class="QPushButton" name="parameters_previous">
+                <property name="text">
+                 <string>Previous</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QLabel" name="parameters_table_label">
+                <property name="text">
+                 <string>Table Name:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="0">
+               <widget class="QLabel" name="parameters_short_label">
+                <property name="text">
+                 <string>Short Heading:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="12" column="0" colspan="4">
+               <widget class="QLabel" name="parameters_comment_label">
+                <property name="text">
+                 <string>Comment</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0" colspan="4">
+               <widget class="Line" name="parameters_horizontal_line">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item row="13" column="0" colspan="4">
+               <widget class="QPlainTextEdit" name="parameters_comment_text"/>
+              </item>
+              <item row="8" column="0">
+               <widget class="QLabel" name="parameters_csv_label">
+                <property name="text">
+                 <string>CSV Heading:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="1" colspan="3">
+               <widget class="QLineEdit" name="parameters_csv_line"/>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="enumerations_tab">
+           <attribute name="title">
+            <string>Enumerations</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_7">
+            <item row="0" column="0">
+             <layout class="QGridLayout" name="enumerations_grid">
+              <item row="3" column="3">
+               <widget class="QPushButton" name="enumerations_save">
+                <property name="text">
+                 <string>Save</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="0">
+               <widget class="QLabel" name="enuermations_name_label">
+                <property name="text">
+                 <string>Enumeration Name:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0" colspan="4">
+               <widget class="QLineEdit" name="enumerations_line"/>
+              </item>
+              <item row="5" column="1">
+               <widget class="QPushButton" name="enumerations_next">
+                <property name="text">
+                 <string>Next</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1" colspan="3">
+               <widget class="QLabel" name="enumerations_table_name">
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QLabel" name="enumerations_table_label">
+                <property name="text">
+                 <string>Table Name:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="enumerations_parameter_label">
+                <property name="text">
+                 <string>Parameter Name:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QPushButton" name="enumerations_new">
+                <property name="text">
+                 <string>New</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="1" colspan="3">
+               <widget class="QComboBox" name="enumerations_combo"/>
+              </item>
+              <item row="5" column="2">
+               <widget class="QPushButton" name="enumerations_previous">
+                <property name="text">
+                 <string>Previous</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1" colspan="3">
+               <widget class="QLabel" name="enumerations_parameter_name">
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="2">
+               <widget class="QPushButton" name="enumerations_delete">
+                <property name="text">
+                 <string>Delete</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="3">
+               <widget class="QPushButton" name="enumerations_last">
+                <property name="text">
+                 <string>Last</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1">
+               <widget class="QPushButton" name="enumerations_rename">
+                <property name="text">
+                 <string>Rename</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
+               <widget class="QPushButton" name="enumerations_first">
+                <property name="text">
+                 <string>First</string>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="0" colspan="4">
+               <widget class="QLabel" name="enumerations_comment_label">
+                <property name="text">
+                 <string>Comment</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0" colspan="4">
+               <widget class="Line" name="enumerations_horiziontal">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="0" colspan="4">
+               <widget class="QPlainTextEdit" name="enumerations_comment_text"/>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="parameters_tab">
+       <attribute name="title">
+        <string>Params</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_11">
+        <item row="0" column="0">
+         <widget class="QTableWidget" name="parameters_table"/>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="find_tab">
+       <attribute name="title">
+        <string>Find</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_5">
+        <item row="0" column="0">
+         <widget class="QTabWidget" name="find_tabs">
+          <property name="currentIndex">
+           <number>0</number>
+          </property>
+          <widget class="QWidget" name="searches_tab">
+           <attribute name="title">
+            <string>Searches</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_10">
+            <item row="0" column="0">
+             <layout class="QGridLayout" name="searches_grid">
+              <item row="1" column="0" colspan="4">
+               <widget class="QLineEdit" name="searches_line"/>
+              </item>
+              <item row="2" column="2">
+               <widget class="QPushButton" name="searches_previous">
+                <property name="text">
+                 <string>Previous</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QLabel" name="searches_name_label">
+                <property name="text">
+                 <string>Search Name:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="3">
+               <widget class="QPushButton" name="searches_last">
+                <property name="text">
+                 <string>Last</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QPushButton" name="searches_new">
+                <property name="text">
+                 <string>New</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QPushButton" name="searches_rename">
+                <property name="text">
+                 <string>Rename</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QPushButton" name="searches_delete">
+                <property name="text">
+                 <string>Delete</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="3">
+               <widget class="QPushButton" name="searches_save">
+                <property name="text">
+                 <string>Save</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1" colspan="3">
+               <widget class="QComboBox" name="searches_combo"/>
+              </item>
+              <item row="2" column="0">
+               <widget class="QPushButton" name="searches_first">
+                <property name="text">
+                 <string>First</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QPushButton" name="searches_next">
+                <property name="text">
+                 <string>Next</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="0" colspan="4">
+               <widget class="QLabel" name="searches_comment_label">
+                <property name="text">
+                 <string>Comment</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="0" colspan="4">
+               <widget class="QPlainTextEdit" name="searches_comment_text"/>
+              </item>
+              <item row="4" column="0">
+               <widget class="QLabel" name="searches_table_name">
+                <property name="text">
+                 <string>Table Name:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
+               <widget class="QLabel" name="searches_parent_label">
+                <property name="text">
+                 <string>Parent Search Name:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="1" colspan="3">
+               <widget class="QComboBox" name="searches_parent_combo"/>
+              </item>
+              <item row="4" column="1" colspan="3">
+               <widget class="QComboBox" name="searches_table_combo"/>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="filters_tab">
+           <attribute name="title">
+            <string>Filters</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_4">
+            <item row="0" column="0">
+             <widget class="QPushButton" name="filters_up">
+              <property name="text">
+               <string>Up</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QPushButton" name="filters_down">
+              <property name="text">
+               <string>Down</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0" colspan="2">
+             <widget class="QTableWidget" name="filters_table"/>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="results_tab">
+           <attribute name="title">
+            <string>Results</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_8">
+            <item row="0" column="0">
+             <widget class="QTableWidget" name="results_table"/>
+            </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>800</width>
+     <height>38</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

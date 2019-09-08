@@ -1,0 +1,2 @@
+include bom_manager/bom_manager.ui
+include bom_manager/bom_manager.rec

@@ -207,7 +207,7 @@ import argparse
 import bs4
 import copy                       # Is this used any more?
 import csv
-import currency_converter         # Currency converter
+from currency_converter import CurrencyConverter         # Currency converter
 from functools import partial
 import fnmatch                    # File Name Matching
 import glob                       # Unix/Linux style command line file name pattern matching
@@ -554,7 +554,6 @@ def main():
 
     return 0
 
-
 # "se" stands for "S Expression":
 def se_find(se, base_name, key_name):
     """ {}: Find *key_name* in *se* and return its value. """
@@ -832,7 +831,7 @@ class ActualPart:
                                 if currency in exchange_rates:
                                     exchange_rate = exchange_rates[currency]
                                 else:
-                                    converter = currency_converter.CurrencyConverter()
+                                    converter = CurrencyConverter()
                                     exchange_rate = converter.convert(1.0, currency, "USD")
                                     exchange_rates[currency] = exchange_rate
 
@@ -5283,6 +5282,7 @@ class Collection(Node):
         
         # Stuff some additional values into *collection*:
         collection.collection_root = collection_root
+        collection.plugin = None
         collection.searches_root = searches_root
         collection.searches_table = dict()
         collection.tree_model = collections.tree_model
@@ -5478,6 +5478,10 @@ class Collection(Node):
                 except Exception as error:
                     assert False, f"Other exception occurred: '{error}'"
                     
+                collection = search.collection
+                assert isinstance(collection, Collection)
+                collection.url_load(search_url, html_full_file, tracing=next_tracing)
+
                 # Now write *content* out to *html_full_file* so that it is cached:
                 content = response.content
                 with open(csv_full_file, "wb") as csv_file:
@@ -5613,6 +5617,42 @@ class Collection(Node):
         # print("Collection.type_letter_get(): name='{0}'".format(self.name))
         return 'C'
 
+    # Collection.url_load():
+    def url_load(self, url, output_file_name, tracing=None):
+        # Verify argument types:
+        assert isinstance(url, str)
+        assert isinstance(output_file_name, str)
+
+        # Perform any requested *tracing*:
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}=>Collection.url_load('{url}', '{output_file_name}')")
+
+        collection = self
+        plugin = collection.plugin
+        if plugin is None:
+            collection_root = collection.collection_root
+            if tracing is not None:
+                print(f"{tracing}collection_root='{collection_root}'")
+            assert collection_root.endswith("ROOT")
+            package_directory = os.path.split(collection_root)[0]
+            if tracing is not None:
+                print(f"{tracing}package_directory='{package_directory}'")
+            package_name = os.path.split(package_directory)[1]
+            if tracing is not None:
+                print(f"{tracing}package_name='{package_name}'")
+            plugin_name = f"{package_name}.plugin"
+            if tracing is not None:
+                print(f"{tracing}plug_name='{plugin_name}'")
+            plugin_module = importlib.import_module(plugin_name)
+            url_load = getattr(plugin_module, "url_load")
+            assert callable(url_load)
+            url_load(url, output_file_name, tracing=next_tracing)
+            #assert False
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}<=Collection.url_load('{url}', '{output_file_name}')")
 
 # Collections:
 class Collections(Node):
@@ -10290,8 +10330,20 @@ class TablesEditor(QMainWindow):
         # Create the *application* first:
         application = QApplication(sys.argv)
 
+        # Obtain the UI file:
+        module_file_name = __file__
+        if tracing is not None:
+            print(f"module_file_name='{module_file_name}'")
+        module_directory = os.path.split(module_file_name)[0]
+        if tracing is not None:
+            print(f"module_directory='{module_directory}'")        
+        ui_file_name = os.path.join(module_directory, "bom_manager.ui")
+        if tracing is not None:
+            print(f"ui_file_name='{ui_file_name}'")        
+
         # Create *main_window* from thie `.ui` file:
-        ui_qfile = QFile("bom_manager.ui")
+        #ui_qfile = QFile("bom_manager.ui")
+        ui_qfile = QFile(ui_file_name)
         ui_qfile.open(QFile.ReadOnly)
         loader = QUiLoader()
         main_window = loader.load(ui_qfile)
@@ -10774,8 +10826,8 @@ class TablesEditor(QMainWindow):
         url = None
         if selection.startswith("http"):
             url = selection
-        elif clip_board.startswith("http"):
-            url = clip_board
+        elif clipboard.startswith("http"):
+            url = clipboard
         if tracing is not None:
             print(f"{tracing}clipbboard='{clipboard}'")
             print(f"{tracing}selection='{selection}'")
@@ -13919,7 +13971,7 @@ class VendorPart:
 #   *
 # Another URL (talks about PyPlace accounts -- dated 2009, Python 2.6):
 #     https://pythonhosted.org/an_example_pypi_project/setuptools.html
-
+# [Configuring `~/.pypirc`](https://truveris.github.io/articles/configuring-pypirc/)
 
 
 if __name__ == "__main__":

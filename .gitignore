@@ -4,6 +4,9 @@ bom_by_*.txt
 *.pkl
 *.pyc
 *.bak
+*.egg-info/
+build/
+dist/
 order/
 searches/
 
