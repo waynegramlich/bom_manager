@@ -1,13 +1,39 @@
-#!/usr/bin/env python3
-
+# # BOM Manager
+#
+# ## License
+#
+# MIT License
+# 
+# Copyright (c) 2019 Wayne C. Gramlich
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
 # <------------------------------------------- 100 characters -----------------------------------> #
-
-# Coding standards:
+#
+# ## Coding standards:
 #
 # * General:
 #   * Python 3.6 or greater is used.
 #   * The PEP 8 coding standards are generally adhered to.
-#   * All code and docmenation lines must be on lines of 100 characters or less.  No exceptions!
+#   * All code and docmenation lines must be on lines of 100 characters or less.  No exceptions.
+#     The comment labeled "100 characters" above is 100 characters long for editor width resizing
+#     purposes.
 #   * Indentation levels are multiples of 4 spaces.
 #   * Use `flake8 --max-line-length=100 PROGRAM.py` to check for issues.
 # * Class/Function standards:
@@ -15,9 +41,7 @@
 #     * Classes are named in CamelCase as per Python recommendation.
 #     * Classes are listed alphabetically with sub-classes are listed alphabetically
 #       immediately after their base class definition.
-#     * Each Class definition has a comment of the form `# ClassName:` immediately before the
-#       class defitinion.
-#   * Methods:GG
+#   * Methods:
 #     * All methods are in lower case.  If mutliple words, the words are separated by underscores.
 #       The words are order as Adjectives, Noun, Adverbs, Verb.  Thus, *xml_file_load* instead of
 #       *load_xml_file*.
@@ -28,7 +52,7 @@
 #       `tracing=None`.  If this argument is `str`, the tracing information is enabled.
 #   * Functions:
 #     * The top-level main() function occurs first.
-#     * The standards for top-level fuctions are adhered to.
+#     * Top-level fuctions use the same coding standards as methods (see above.)
 #   * Variables:
 #     * Variables are lower case with underscores between words.
 #     * No single letter variables except for standard mathematical concepts such as X, Y, Z.
@@ -47,21 +71,20 @@
 #     quotes (`"`).  Empty strings are represented as `""`.  Strings with multiple double quotes
 #     can be enclosed in single quotes (e.g. `  f'<Tag foo="{foo}" bar="{bar}"/>'  `.)
 #
+# ## Install Notes:
 #
-# Install Notes:
+# ## Tasks:
 #
-#       sudo apt-get install xclip xsel # More here ...
+# The following tasks are outstanding:
 #
-# Tasks:
 # * Decode Digi-Key parametric search URL's.
+# * Refactor the code to separate the GUI from the bom engine.
 # * Start providing ordering operations.
 # * Reorder tables/parameters/enumerations/searches.
 # * Footprint hooks
 # * Better parametric search
 #
-# # bom_manager
-#
-# ## Overview:
+# ## Software Overview:
 #
 # This program is called *bom_manager* (i.e. Bill of Materials Manager.)
 # The program fundamentally deals with the task of binding parts in a
@@ -610,7 +633,7 @@ class ActualPart:
         # Perform any requested *tracing*:
         actual_part = self
         if tracing is not None:
-            print(f"{tracing}=>ActualPart.findchips('{actual_part.manufacturer_part_name}')")
+            print(f"{tracing}=>ActualPart.findchips_scrape('{actual_part.manufacturer_part_name}')")
 
         # Grab some values from *actual_part* (i.e. *self*):
         manufacturer_name = actual_part.manufacturer_name
@@ -827,7 +850,8 @@ class ActualPart:
 
         # Wrap up any requested *tracing* and return the *vendor_parts*:
         if tracing is not None:
-            print(f"{tracing}=>ActualPart.findchips('{actual_part.manufacturer_part_name}')=>[...]")
+            print(f"{tracing}<=ActualPart.findchips_scrape("
+                  f"'{actual_part.manufacturer_part_name}')=>[...]")
         return vendor_parts
 
     # ActualPart.vendor_names_restore():
@@ -5240,13 +5264,12 @@ class Directory(Node):
 class Collection(Node):
 
     # Collection.__init__():
-    def __init__(self, name, parent, collection_root, searches_root, url_load, tracing=None):
+    def __init__(self, name, parent, collection_root, searches_root, tracing=None):
         # Verify argument types:
         assert isinstance(name, str)
         assert isinstance(parent, Collections)
         assert isinstance(collection_root, str)
         assert isinstance(searches_root, str)
-        assert callable(url_load)
         assert isinstance(tracing, str) or tracing is None
 
         # Perform any requested *tracing*:
@@ -5272,14 +5295,13 @@ class Collection(Node):
         collection.searches_root = searches_root
         collection.searches_table = dict()
         collection.tree_model = collections.tree_model
-        collection.url_load = url_load
 
         # Ensure that *type_letter_get()* returns 'C' for Collection:
         assert collection.type_letter_get() == 'C'
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
-            print(f"{tracing}=>Collection.__init__('{name}', '{parent.name}', "
+            print(f"{tracing}<=Collection.__init__('{name}', '{parent.name}', "
                   f"'{collection_root}', '{searches_root}')")
 
     # Collection.actual_parts_lookup():
@@ -5798,36 +5820,23 @@ class Collections(Node):
             print(f"{tracing}collection_directories='{collection_directories}'")
             print(f"{tracing}searches_root='{searches_root}'")
 
-        # Find all of the the *collections*:
-        entry_point_key = "bom_manager_collection_url_load"
+        # Find all of the the *collections* by searching through install Python packages
+        # for matching plugins:
+        entry_point_key = "bom_manager_collection_get"
         for index, entry_point in enumerate(pkg_resources.iter_entry_points(entry_point_key)):
             entry_point_name = entry_point.name
             if tracing is not None:
                 print(f"{tracing}Entry_Point[{index}]:'{entry_point_name}'")
-            assert entry_point_name == "url_load", f"'{entry_point_name}' is not 'url_load''"
-            url_load = entry_point.load()
-            url_load_module_name = url_load.__module__
-            if tracing is not None:
-                print(f"url_load_module_name='{url_load_module_name}'")
-            url_load_module = sys.modules[url_load_module_name]
-            if tracing is not None:
-                print(f"url_load_module={url_load_module}")
-            url_load_module_file_name = url_load_module.__file__
-            if tracing is not None:
-                print(f"url_load_module_file_name='{url_load_module_file_name}'")
-            collection_directory, base_name = os.path.split(url_load_module_file_name)
-            if tracing is not None:
-                print(f"collection_directory='{collection_directory}'")
-            assert os.path.isdir(collection_directory)
-            collection_root = os.path.join(collection_directory, "ROOT")
-            if tracing is not None:
-                print(f"collection_root='{collection_root}'")
-            assert os.path.isdir(collection_root)
+            assert entry_point_name == "collection_get", (f"'{entry_point_name}' is "
+                                                          "not 'collection_get''")
+            collection_get = entry_point.load()
 
             # Create *collection*:
             name = "Digi-Key"
-            collection = Collection(name, collections, collection_root, searches_root, url_load,
-                                    tracing=next_tracing)
+            collection = collection_get(collections, searches_root, tracing=next_tracing)
+            # collection = Collection(name, collections, collection_root, searches_root, url_load,
+            #                         tracing=next_tracing)
+            assert isinstance(collection, Collection)
             assert collections.has_child(collection)
 
             # Recursively perfrom *partial_load*'s down from *collection*:
@@ -10180,6 +10189,7 @@ class ChoicePart(ProjectPart):
         # Perform any requested_tracing:
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
+            print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
             print(f"{tracing}=>ChoicePart.vendor_parts_refresh([...], *)")
 
         # Grab some values from *choice_part* (i.e. *self*):
@@ -10242,7 +10252,7 @@ class ChoicePart(ProjectPart):
                 # If the *minimum_time_stamp* is too stale, force a refresh:
                 if minimum_timestamp + stale < now:
                     new_actual_part.findchips_scrape(tracing=next_tracing)
-                    xml_save_required
+                    xml_save_required = True
                 else:
                     new_actual_part.vendor_parts = previous_vendor_parts
             else:
@@ -10257,6 +10267,8 @@ class ChoicePart(ProjectPart):
         # Write *choice_part* out to the file named *xml_full_name* if a *scrape_occurred*:
         if xml_save_required:
             if tracing is not None:
+                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                print(f"{tracing}now={now}")
                 print(f"{tracing}Writing out '{xml_full_name}'")
             xml_lines = []
             xml_lines.append('<?xml version="1.0"?>')
@@ -10269,6 +10281,7 @@ class ChoicePart(ProjectPart):
         # Wrap up any requested_tracing:
         if tracing is not None:
             print(f"{tracing}<=ChoicePart.vendor_parts_refresh([...], *)")
+            print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
 
     # ChoicePart.xml_lines_append():
     def xml_lines_append(self, xml_lines, indent):
