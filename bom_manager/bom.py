@@ -212,9 +212,9 @@ from functools import partial
 import fnmatch                    # File Name Matching
 import glob                       # Unix/Linux style command line file name pattern matching
 import io                         # I/O stuff
-import importlib
 import lxml.etree as etree
 import pickle                     # Python data structure pickle/unpickle
+import pkg_resources              # Used to find plug-ins.
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtWidgets import (QApplication, QComboBox, QLineEdit, QMainWindow,
                                QPlainTextEdit, QPushButton,
@@ -404,19 +404,17 @@ def main():
 
     tracing = None
     tracing = ""
-
+    next_tracing = None if tracing is None else tracing + " "
     if tracing is not None:
         print(f"{tracing}=>main()")
 
     Encode.from_file_name
     Encode.test()
     title = "TEST_POINT;M1X1"
-    print(f"title='{title}' => encoded_title='{Encode.to_file_name(title)}'")
+    # print(f"title='{title}' => encoded_title='{Encode.to_file_name(title)}'")
 
     # Set up command line *parser* and parse it into *parsed_arguments* dict:
     parser = argparse.ArgumentParser(description="Bill of Materials (BOM) Manager.")
-    parser.add_argument("-c", "--collection", action="append", default=[],
-                        help="BOM Manager Collection Directory.")
     parser.add_argument("-n", "--net", action="append", default=[],
                         help="KiCAD .net file. Preceed with 'NUMBER:' to increase count. ")
     parser.add_argument("-s", "--search", default="searches",
@@ -464,51 +462,7 @@ def main():
     if tracing is not None:
         print(f"{tracing}nets processed")
 
-    # Deal with *collection_diriectories* from *parsed_arguments*:
-    collections_directories = parsed_arguments["collection"]
-    collections_directories_size = len(collections_directories)
-    if tracing is not None:
-        print(f"{tracing}collections_directories_size={collections_directories_size}")
-    if collections_directories_size == 0:
-        for index, module_info in enumerate(pkgutil.iter_modules()):
-            assert isinstance(module_info, pkgutil.ModuleInfo)
-            name = module_info.name
-            # if tracing is not None:
-            #    print(f"{tracing}Module[{index}]:'{name}'")
-            if name.startswith("bom_") and name.endswith("_plugin"):
-                if tracing is not None:
-                    print(f"{tracing}package_name='{name}'")
-                module = importlib.import_module(name)
-                module_init_file = module.__file__
-                if tracing is not None:
-                    print(f"{tracing}module_init_file='{module_init_file}'")
-                assert module_init_file.endswith("__init__.py")
-                package_directory = os.path.split(module_init_file)[0]
-                collection_root = os.path.join(package_directory, "ROOT")
-                if tracing is not None:
-                    print(f"{tracing}package_directory='{package_directory}'")
-                    print(f"{tracing}collection_root='{collection_root}'")
-                assert os.path.isdir(collection_root), f"collection_root='{collection_root}'"
-                if os.path.isdir(collection_root):
-                    # collection_root_files = list(glob.glob(collection_root))
-                    # if len(collection_root_iles) == 1:
-                    #     collection_name = Encode.to_file_name(collection_root_files[0])
-                    #     collection = Collection(collection_name, collections,
-                    #                             collection_root, searches_root)
-                    collections_directories.append(package_directory)
-
-        # file_names = glob.glob("collections/**", recursive=True) 
-        # for file_name in file_names:
-        #     if os.path.isdir(file_name):
-        #         collections_directories.append(file_name)
-    if tracing is not None:
-        print(f"{tracing}collections processed")
-
-    # Verify each *collection_directory* is actually a directory:
-    for collection_directory in collections_directories:
-        if not os.path.isdir(collection_directory):
-            print(f"Collection '{collection_directory}' is not a directory!")
-            return
+    collection_directories = list()    
 
     tables = list()
     if False:
@@ -543,7 +497,7 @@ def main():
     tracing = ""
     # print(f"searches_root='{searches_root}'")
     tables_editor = TablesEditor(tables,
-                                 collections_directories, searches_root, order, tracing=tracing)
+                                 collection_directories, searches_root, order, tracing=tracing)
 
     # Start up the GUI:
     tables_editor.run()
@@ -979,6 +933,21 @@ class ActualPart:
             vendor_part = VendorPart.xml_parse(vendor_part_tree, actual_part)
             vendor_parts.append(vendor_part)
         return actual_part
+
+
+# Cad:
+class Cad:
+    # Cad Stands for Computer Aided Design:
+
+    # Cad.__init__():
+    def __init__(self, name, tracing=None):
+        # Verify argument types:
+        if tracing is not None:
+            print(f"{tracing}=>Cad.__init__('{name}')")
+
+        # Wrap up any argument types:
+        if tracing is not None:
+            print(f"{tracing}<=Cad.__init__('{name}')")
 
 # ComboEdit:
 class ComboEdit:
@@ -1748,6 +1717,22 @@ class EnumerationComment(Comment):
             xml_lines.append('{0}  {1}'.format(indent, line))
         xml_lines.append('{0}</EnumerationComment>'.format(indent))
 
+
+
+
+# Panda:
+class Panda:
+    # Panda stands for Pricing AND Availability:
+
+    # Panda.__init__():
+    def __init__(self, name, tracing=None):
+        # Verify argument types:
+        if tracing is not None:
+            print(f"{tracing}=>Panda.__init__('{name}')")
+
+        # Wrap up any argument types:
+        if tracing is not None:
+            print(f"{tracing}<=Panda.__init__('{name}')")
 
 # ParameterComment:
 class ParameterComment(Comment):
@@ -5255,12 +5240,13 @@ class Directory(Node):
 class Collection(Node):
 
     # Collection.__init__():
-    def __init__(self, name, parent, collection_root, searches_root, tracing=None):
+    def __init__(self, name, parent, collection_root, searches_root, url_load, tracing=None):
         # Verify argument types:
         assert isinstance(name, str)
         assert isinstance(parent, Collections)
         assert isinstance(collection_root, str)
         assert isinstance(searches_root, str)
+        assert callable(url_load)
         assert isinstance(tracing, str) or tracing is None
 
         # Perform any requested *tracing*:
@@ -5286,6 +5272,7 @@ class Collection(Node):
         collection.searches_root = searches_root
         collection.searches_table = dict()
         collection.tree_model = collections.tree_model
+        collection.url_load = url_load
 
         # Ensure that *type_letter_get()* returns 'C' for Collection:
         assert collection.type_letter_get() == 'C'
@@ -5676,8 +5663,40 @@ class Collections(Node):
         collections = self
         super().__init__(name, None, tracing=next_tracing)
 
+        # Fill in the *pandas* list with *Panda* objects for doing pricing and availabity checking:
+        pandas = list()
+        entry_point_key = "bom_manager_panda_get"
+        for index, entry_point in enumerate(pkg_resources.iter_entry_points(entry_point_key)):
+            entry_point_name = entry_point.name
+            if tracing is not None:
+                print(f"Entry_Point[{index}]: '{entry_point_name}'")
+            assert entry_point_name == "panda_get"
+            panda_get = entry_point.load()
+            assert callable(panda_get)
+            panda = panda_get(tracing=next_tracing)
+            assert isinstance(panda, Panda)
+            pandas.append(panda)
+            #panda.lookup("xxx", tracing=next_tracing)
+
+        # Fill in the *cads* list with *CAD* objects for reading in :
+        cads = list()
+        entry_point_key = "bom_manager_cad_get"
+        for index, entry_point in enumerate(pkg_resources.iter_entry_points(entry_point_key)):
+            entry_point_name = entry_point.name
+            if tracing is not None:
+                print(f"Entry_Point[{index}]: '{entry_point_name}'")
+            assert entry_point_name == "cad_get"
+            cad_get = entry_point.load()
+            assert callable(cad_get)
+            cad = cad_get(tracing=next_tracing)
+            assert isinstance(cad, Cad)
+            cads.append(cad)
+            cad.load("xxx", tracing=next_tracing)
+
         # Stuff some values into *collections*:
+        collections.cads = cads
         collections.collection_directories = collection_directories
+        collections.pandas = pandas
         collections.searches_root = searches_root
         collections.tree_model = tree_model
 
@@ -5779,6 +5798,41 @@ class Collections(Node):
             print(f"{tracing}collection_directories='{collection_directories}'")
             print(f"{tracing}searches_root='{searches_root}'")
 
+        # Find all of the the *collections*:
+        entry_point_key = "bom_manager_collection_url_load"
+        for index, entry_point in enumerate(pkg_resources.iter_entry_points(entry_point_key)):
+            entry_point_name = entry_point.name
+            if tracing is not None:
+                print(f"{tracing}Entry_Point[{index}]:'{entry_point_name}'")
+            assert entry_point_name == "url_load", f"'{entry_point_name}' is not 'url_load''"
+            url_load = entry_point.load()
+            url_load_module_name = url_load.__module__
+            if tracing is not None:
+                print(f"url_load_module_name='{url_load_module_name}'")
+            url_load_module = sys.modules[url_load_module_name]
+            if tracing is not None:
+                print(f"url_load_module={url_load_module}")
+            url_load_module_file_name = url_load_module.__file__
+            if tracing is not None:
+                print(f"url_load_module_file_name='{url_load_module_file_name}'")
+            collection_directory, base_name = os.path.split(url_load_module_file_name)
+            if tracing is not None:
+                print(f"collection_directory='{collection_directory}'")
+            assert os.path.isdir(collection_directory)
+            collection_root = os.path.join(collection_directory, "ROOT")
+            if tracing is not None:
+                print(f"collection_root='{collection_root}'")
+            assert os.path.isdir(collection_root)
+
+            # Create *collection*:
+            name = "Digi-Key"
+            collection = Collection(name, collections, collection_root, searches_root, url_load,
+                                    tracing=next_tracing)
+            assert collections.has_child(collection)
+
+            # Recursively perfrom *partial_load*'s down from *collection*:
+            collection.partial_load(tracing=next_tracing)
+
         # Sweep through *path* finding directories (technically symbolic links):
         for index, collection_directory in enumerate(sorted(collection_directories)):
             # Perform requested *tracing*:
@@ -5806,9 +5860,9 @@ class Collections(Node):
                     print(f"{tracing}searches_root='{searches_root}'")
 
                 # Create *collection*:
-                collection = Collection(name, collections, collection_directory_root, searches_root,
-                                        tracing=next_tracing)
-                assert collections.has_child(collection)
+                #collection = Collection(name, collections, collection_directory_root,
+                #                        searches_root, url_load, tracing=next_tracing)
+                #assert collections.has_child(collection)
 
                 # Recursively perfrom *partial_load*'s down from *collection*:
                 collection.partial_load(tracing=next_tracing)
@@ -5896,7 +5950,7 @@ class Search(Node):
         searches_table = collection.searches_table
         # assert (search_parent is None) == (name == "@ALL"), "Search parent problem"
         if not is_template:
-            assert name not in searches_table, "Attempt to duplicate search '{name}'"
+            assert name not in searches_table, f"Attempt to duplicate search '{name}'"
 
         # Initialize the super class for *search* (i.e. *self*):
         search = self
@@ -13972,7 +14026,7 @@ class VendorPart:
 # Another URL (talks about PyPlace accounts -- dated 2009, Python 2.6):
 #     https://pythonhosted.org/an_example_pypi_project/setuptools.html
 # [Configuring `~/.pypirc`](https://truveris.github.io/articles/configuring-pypirc/)
-
-
+# [Python Plugins](https://packaging.python.org/guides/creating-and-discovering-plugins/)
+# [Python Plugins Tutorial](https://amir.rachum.com/blog/2017/07/28/python-entry-points/)
 if __name__ == "__main__":
     main()

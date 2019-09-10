@@ -1,7 +1,7 @@
 # BOM Manager
 
-The BOM Manager is a program for managing a project Bill Of Materials and
-generating vendor orders.
+The `bom_manager` is a program for managing a Bill Of Materials (i.e. a "BOM)
+and generating vendor orders for the associated parts.
 
 ## Introduction
 
@@ -13,6 +13,20 @@ and generates a list of vendor orders.  You send the order to each vendor and
 they fulfill your order by shipping the requested parts back to you.  Once all
 of the parts have arrived you can assemble your project.  In brief, the BOM manager
 is a program that assists you in generating vendor orders for a project.
+
+An example bill of materials might look like:
+
+        Quantity   Part Number    Description            Unit Cost
+        ========================================================
+        1          FL-2AA         LED Flashlight         $2.50
+        2          AK-AA          AA Alkaline Battery    $0.50
+
+The first thing to note about this is that the term "Part Number" is
+really a misnomer and it should really be "Part Name".  The reality is
+that people always talk about "Part Number" even though they can have
+letters, digits, and punctuation characters in the "Part Number".
+
+----
 
 The BOM manager program is meant to work in conjunction with a CAD (Computer Aided
 Design) program.  The initial CAD program supported is KiCAD which is an
