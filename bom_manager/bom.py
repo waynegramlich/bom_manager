@@ -7099,6 +7099,7 @@ class Order:
     # as well.  Sometimes, you have previous inventory, so that is
     # listed as well.
 
+    # Order.__init__():
     def __init__(self, order_root, cads, pandas):
         """ *Order*: Initialize *self* for an order. """
         # Verify argument types:
@@ -8876,7 +8877,7 @@ class Project:
         project.count = count
         project.positions_file_name = positions_file_name
         project.order = order
-        project.pose_parts_table = {}     # Dict[name, ProjectPart]
+        project.pose_parts_table = {}        # Dict[name, ProjectPart]
         project.project_parts = []           # List[ProjectPart]
         project.project_parts_table = {}     # Dict[name, ProjectPart]
         project.all_pose_parts = []          # List[PosePart] of all project parts
@@ -8904,21 +8905,143 @@ class Project:
         result = f"{name}.{revision}"
         return result
 
-    # Project.project_aprt_append():
-    def pose_part_append(self, pose_part):
-        """ Append *pose_part* onto the *Project* object (i.e. *self*).
+    # Project.assembly_summary_write():
+    def assembly_summary_write(self, final_choice_parts, order):
+        """ Write out an assembly summary .csv file for the *Project* object (i.e. *self*)
+            using *final_choice_parts*.
         """
 
         # Verify argument types:
-        assert isinstance(pose_part, PosePart)
+        assert isinstance(final_choice_parts, list)
+        assert isinstance(order, Order)
 
-        # Tack *pose_part* onto the appropriate lists inside of *project*:
+        # Open *project_file* (i.e. *self*):
         project = self
-        project.all_pose_parts.append(pose_part)
-        if pose_part.install:
-            project.installed_pose_parts.append(pose_part)
-        else:
-            project.uninstalled_pose_parts.append(pose_part)
+        order_root = order.order_root
+        project_file_name = os.path.join(order_root, f"{project.name}.csv")
+        with open(project_file_name, "w") as project_file:
+            # Write out the column headings:
+            project_file.write(
+              '"Quan.","Reference","Schematic Name","Description","Fractional",' +
+              '"Manufacturer","Manufacture PN","Vendor","Vendor PN"\n\n')
+
+            # Output the installed parts:
+            has_fractional_parts1 = project.assembly_summary_write_helper(True, final_choice_parts,
+                                                                          project_file)
+
+            # Output the uninstalled parts:
+            project_file.write("\nDo Not Install\n")
+
+            # Output the installed parts:
+            has_fractional_parts2 = project.assembly_summary_write_helper(False, final_choice_parts,
+                                                                          project_file)
+
+            # Explain what a fractional part is:
+            if has_fractional_parts1 or has_fractional_parts2:
+                project_file.write(
+                  '"","\nFractional parts are snipped off of 1xN or 2xN break-way headers"\n')
+
+            # Close *project_file* and print out a summary announcement:
+
+        # Write out a progress message:
+        print("Wrote out assembly file '{0}'".format(project_file_name))
+
+    # Project.assembly_summary_write_helper():
+    def assembly_summary_write_helper(self, install, final_choice_parts, project_file):
+        """ Write out an assembly summary .csv file for *Project* object (i.e. *self*)
+            out to *project_file*.  *install* is set *True* to list the installable parts from
+            *final_choice_parts* and *False* for an uninstallable parts listing.
+            This routine returns *True* if there are any fractional parts output to *project_file*.
+        """
+
+        # Verify argument types:
+        assert isinstance(install, bool)
+        assert isinstance(final_choice_parts, list)
+        assert isinstance(project_file, io.IOBase)
+
+        # Each *final_choice_part* that is part of the project (i.e. *self*) will wind up
+        # in a list in *pose_parts_table*.  The key is the *project_part_key*:
+        project = self
+        pose_parts_table = {}
+        for final_choice_part in final_choice_parts:
+            # Now figure out if final choice part is part of *pose_parts*:
+            pose_parts = final_choice_part.pose_parts
+            for pose_part in pose_parts:
+                # We only care care about *final_choice_part* if is used on *project* and
+                # it matches the *install* selector:
+                if pose_part.project is project and pose_part.install == install:
+                    # We are on the project; create *schemati_part_key*:
+                    project_part = pose_part.project_part
+                    project_part_key = "{0};{1}".format(
+                      project_part.base_name, project_part.short_footprint)
+
+                    # Create/append a list to *pose_parts_table*, keyed on *project_part_key*:
+                    if project_part_key not in pose_parts_table:
+                        pose_parts_table[project_part_key] = []
+                    pairs_list = pose_parts_table[project_part_key]
+
+                    # Append a pair of *pose_part* and *final_choice_part* onto *pairs_list*:
+                    project_final_pair = (pose_part, final_choice_part)
+                    pairs_list.append(project_final_pair)
+
+        # Now organize everything around the *reference_list*:
+        reference_pose_parts = {}
+        for pairs_list in pose_parts_table.values():
+            # We want to sort base on *reference_value* which is converted into *reference_text*:
+            reference_list = \
+              [project_final_pair[0].reference.upper() for project_final_pair in pairs_list]
+            reference_text = ", ".join(reference_list)
+            # print("reference_text='{0}'".format(reference_text))
+            pose_part = pairs_list[0]
+            reference_pose_parts[reference_text] = pose_part
+
+        # Sort the *reference_parts_keys*:
+        reference_pose_parts_keys = list(reference_pose_parts.keys())
+        reference_pose_parts_keys.sort()
+
+        # Now dig down until we have all the information we need for output the next
+        # `.csv` file line:
+        has_fractional_parts = False
+        for reference_pose_parts_key in reference_pose_parts_keys:
+            # Extract the *pose_part* and *final_choice_part*:
+            project_final_pair = reference_pose_parts[reference_pose_parts_key]
+            pose_part = project_final_pair[0]
+            final_choice_part = project_final_pair[1]
+            assert isinstance(final_choice_part, ChoicePart)
+
+            # Now get the corresponding *project_part*:
+            project_part = pose_part.project_part
+            project_part_key = "{0};{1}".format(
+              project_part.base_name, project_part.short_footprint)
+            assert isinstance(project_part, ProjectPart)
+
+            # Now get the *actual_part*:
+            actual_part = final_choice_part.selected_actual_part
+            if isinstance(actual_part, ActualPart):
+
+                # Now get the VendorPart:
+                manufacturer_name = actual_part.manufacturer_name
+                manufacturer_part_name = actual_part.manufacturer_part_name
+                vendor_part = final_choice_part.selected_vendor_part
+                assert isinstance(vendor_part, VendorPart)
+
+                # Output the line for the .csv file:
+                vendor_name = vendor_part.vendor_name
+                vendor_part_name = vendor_part.vendor_part_name
+                quantity = final_choice_part.count_get()
+                fractional = "No"
+                if len(final_choice_part.fractional_parts) > 0:
+                    fractional = "Yes"
+                    has_fractional_parts = True
+                project_file.write('"{0} x","{1}","{2}","{3}","{4}","{5}","{6}","{7}","{8}"\n'.
+                                   format(quantity, reference_pose_parts_key,
+                                          project_part_key, final_choice_part.description,
+                                          fractional, manufacturer_name, manufacturer_part_name,
+                                          vendor_name, vendor_part_name))
+            else:
+                print("Problems with actual_part", actual_part)
+
+        return has_fractional_parts
 
     # Project.check():
     def check(self, collections, tracing=None):
@@ -9217,6 +9340,22 @@ class Project:
             print(f"{tracing}<=Project.new_file_read()=>[...]")
         return errors
 
+    # Project.project_part_append():
+    def pose_part_append(self, pose_part):
+        """ Append *pose_part* onto the *Project* object (i.e. *self*).
+        """
+
+        # Verify argument types:
+        assert isinstance(pose_part, PosePart)
+
+        # Tack *pose_part* onto the appropriate lists inside of *project*:
+        project = self
+        project.all_pose_parts.append(pose_part)
+        if pose_part.install:
+            project.installed_pose_parts.append(pose_part)
+        else:
+            project.uninstalled_pose_parts.append(pose_part)
+
     # Project.pose_part_find():
     def pose_part_find(self, name, reference):
         # Verify argument types:
@@ -9241,7 +9380,18 @@ class Project:
             pose_parts.append(pose_part)
         return pose_part
 
-    # Project.find():
+    # Project.positions_process():
+    def positions_process(self, database):
+        """ Reorigin the the contents of the positions table.
+        """
+
+        project = self
+        positions_file_name = project.positions_file_name
+        positions_table = PositionsTable(positions_file_name, database)
+        positions_table.reorigin("FD1")
+        positions_table.footprints_rotate(database)
+
+    # Project.project_part_find():
     def project_part_find(self, project_part_name):
         # Verify argument types:
         assert isinstance(project_part_name, str)
@@ -9262,155 +9412,6 @@ class Project:
             project_parts_table[project_part_name] = project_part
         assert isinstance(project_part, ProjectPart)
         return project_part
-
-    # Project.assembly_summary_write():
-    def assembly_summary_write(self, final_choice_parts, order):
-        """ Write out an assembly summary .csv file for the *Project* object (i.e. *self*)
-            using *final_choice_parts*.
-        """
-
-        # Verify argument types:
-        assert isinstance(final_choice_parts, list)
-        assert isinstance(order, Order)
-
-        # Open *project_file* (i.e. *self*):
-        project = self
-        order_root = order.order_root
-        project_file_name = os.path.join(order_root, f"{project.name}.csv")
-        with open(project_file_name, "w") as project_file:
-            # Write out the column headings:
-            project_file.write(
-              '"Quan.","Reference","Schematic Name","Description","Fractional",' +
-              '"Manufacturer","Manufacture PN","Vendor","Vendor PN"\n\n')
-
-            # Output the installed parts:
-            has_fractional_parts1 = project.assembly_summary_write_helper(True, final_choice_parts,
-                                                                          project_file)
-
-            # Output the uninstalled parts:
-            project_file.write("\nDo Not Install\n")
-
-            # Output the installed parts:
-            has_fractional_parts2 = project.assembly_summary_write_helper(False, final_choice_parts,
-                                                                          project_file)
-
-            # Explain what a fractional part is:
-            if has_fractional_parts1 or has_fractional_parts2:
-                project_file.write(
-                  '"","\nFractional parts are snipped off of 1xN or 2xN break-way headers"\n')
-
-            # Close *project_file* and print out a summary announcement:
-
-        # Write out a progress message:
-        print("Wrote out assembly file '{0}'".format(project_file_name))
-
-    # Project.assembly_summary_write_helper():
-    def assembly_summary_write_helper(self, install, final_choice_parts, project_file):
-        """ Write out an assembly summary .csv file for *Project* object (i.e. *self*)
-            out to *project_file*.  *install* is set *True* to list the installable parts from
-            *final_choice_parts* and *False* for an uninstallable parts listing.
-            This routine returns *True* if there are any fractional parts output to *project_file*.
-        """
-
-        # Verify argument types:
-        assert isinstance(install, bool)
-        assert isinstance(final_choice_parts, list)
-        assert isinstance(project_file, io.IOBase)
-
-        # Each *final_choice_part* that is part of the project (i.e. *self*) will wind up
-        # in a list in *pose_parts_table*.  The key is the *project_part_key*:
-        project = self
-        pose_parts_table = {}
-        for final_choice_part in final_choice_parts:
-            # Now figure out if final choice part is part of *pose_parts*:
-            pose_parts = final_choice_part.pose_parts
-            for pose_part in pose_parts:
-                # We only care care about *final_choice_part* if is used on *project* and
-                # it matches the *install* selector:
-                if pose_part.project is project and pose_part.install == install:
-                    # We are on the project; create *schemati_part_key*:
-                    project_part = pose_part.project_part
-                    project_part_key = "{0};{1}".format(
-                      project_part.base_name, project_part.short_footprint)
-
-                    # Create/append a list to *pose_parts_table*, keyed on *project_part_key*:
-                    if project_part_key not in pose_parts_table:
-                        pose_parts_table[project_part_key] = []
-                    pairs_list = pose_parts_table[project_part_key]
-
-                    # Append a pair of *pose_part* and *final_choice_part* onto *pairs_list*:
-                    project_final_pair = (pose_part, final_choice_part)
-                    pairs_list.append(project_final_pair)
-
-        # Now organize everything around the *reference_list*:
-        reference_pose_parts = {}
-        for pairs_list in pose_parts_table.values():
-            # We want to sort base on *reference_value* which is converted into *reference_text*:
-            reference_list = \
-              [project_final_pair[0].reference.upper() for project_final_pair in pairs_list]
-            reference_text = ", ".join(reference_list)
-            # print("reference_text='{0}'".format(reference_text))
-            pose_part = pairs_list[0]
-            reference_pose_parts[reference_text] = pose_part
-
-        # Sort the *reference_parts_keys*:
-        reference_pose_parts_keys = list(reference_pose_parts.keys())
-        reference_pose_parts_keys.sort()
-
-        # Now dig down until we have all the information we need for output the next
-        # `.csv` file line:
-        has_fractional_parts = False
-        for reference_pose_parts_key in reference_pose_parts_keys:
-            # Extract the *pose_part* and *final_choice_part*:
-            project_final_pair = reference_pose_parts[reference_pose_parts_key]
-            pose_part = project_final_pair[0]
-            final_choice_part = project_final_pair[1]
-            assert isinstance(final_choice_part, ChoicePart)
-
-            # Now get the corresponding *project_part*:
-            project_part = pose_part.project_part
-            project_part_key = "{0};{1}".format(
-              project_part.base_name, project_part.short_footprint)
-            assert isinstance(project_part, ProjectPart)
-
-            # Now get the *actual_part*:
-            actual_part = final_choice_part.selected_actual_part
-            if isinstance(actual_part, ActualPart):
-
-                # Now get the VendorPart:
-                manufacturer_name = actual_part.manufacturer_name
-                manufacturer_part_name = actual_part.manufacturer_part_name
-                vendor_part = final_choice_part.selected_vendor_part
-                assert isinstance(vendor_part, VendorPart)
-
-                # Output the line for the .csv file:
-                vendor_name = vendor_part.vendor_name
-                vendor_part_name = vendor_part.vendor_part_name
-                quantity = final_choice_part.count_get()
-                fractional = "No"
-                if len(final_choice_part.fractional_parts) > 0:
-                    fractional = "Yes"
-                    has_fractional_parts = True
-                project_file.write('"{0} x","{1}","{2}","{3}","{4}","{5}","{6}","{7}","{8}"\n'.
-                                   format(quantity, reference_pose_parts_key,
-                                          project_part_key, final_choice_part.description,
-                                          fractional, manufacturer_name, manufacturer_part_name,
-                                          vendor_name, vendor_part_name))
-            else:
-                print("Problems with actual_part", actual_part)
-
-        return has_fractional_parts
-
-    # Project.positions_process():
-    def positions_process(self, database):
-        """ Reorigin the the contents of the positions table.
-        """
-
-        project = self
-        positions_file_name = project.positions_file_name
-        positions_table = PositionsTable(positions_file_name, database)
-        positions_table.reorigin("FD1")
-        positions_table.footprints_rotate(database)
 
 
 # ProjectPart:
