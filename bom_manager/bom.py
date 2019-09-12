@@ -440,8 +440,8 @@ def main():
 
     # Set up command line *parser* and parse it into *parsed_arguments* dict:
     parser = argparse.ArgumentParser(description="Bill of Materials (BOM) Manager.")
-    parser.add_argument("-n", "--net", action="append", default=[],
-                        help="KiCAD .net file. Preceed with 'NUMBER:' to increase count. ")
+    parser.add_argument("-b", "--bom", action="append", default=[],
+                        help="Bom file (.csv, .net). Preceed with 'NUMBER:' to increase count. ")
     parser.add_argument("-s", "--search", default="searches",
                         help="BOM Manager Searches Directory.")
     parser.add_argument("-o", "--order", default=os.path.join(os.getcwd(), "order"),
@@ -485,19 +485,19 @@ def main():
         print(f"{tracing}order_created")
 
     # Deal with *net_file_names* from *parsed_arguments*:
-    net_file_names = parsed_arguments["net"]
-    for net_file_name in net_file_names:
-        if net_file_name.endswith(".net"):
+    bom_file_names = parsed_arguments["bom"]
+    for bom_file_name in bom_file_names:
+        if bom_file_name.endswith(".net") or bom_file_name.endswith(".csv"):
             # We have a `.net` file name:
-            colon_index = net_file_name.find(':')
+            colon_index = bom_file_name.find(':')
             # print(f"colon_index={colon_index}")
             count = 1
             if colon_index >= 0:
-                count = int(net_file_name[:colon_index])
-                net_file_name = net_file_name[colon_index:]
+                count = int(bom_file_name[:colon_index])
+                bom_file_name = bom_file_name[colon_index:]
             # print(f"count={count}")
-            assert os.path.isfile(net_file_name), f"'{net_file_name}' does not exist."
-            paths = os.path.split(net_file_name)
+            assert os.path.isfile(bom_file_name), f"'{net_file_name}' does not exist."
+            paths = os.path.split(bom_file_name)
             # print(f"paths={paths}")
             base_name = paths[-1]
             # print(f"base_name='{base_name}'")
@@ -509,9 +509,9 @@ def main():
             # print(f"revision_letter='{revision_letter}'")
 
             # Create an order project:
-            order.project_create(name, revision_letter, net_file_name, count, tracing=tracing)
+            order.project_create(name, revision_letter, bom_file_name, count, tracing=tracing)
         else:
-            print(f"Ignoring .net '{net_file_name}' does not with '.net` suffix.")
+            print(f"Ignoring file '{net_file_name}' does not with '.net' or '.csv' suffix.")
     if tracing is not None:
         print(f"{tracing}nets processed")
 
