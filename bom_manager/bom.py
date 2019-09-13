@@ -399,44 +399,10 @@ import webbrowser
 # sorting by cost, etc.  The final BOM's for each project is generated
 # as a .csv file.
 
+# main():
 def main():
-    # table_file_name = "drills_table.xml"
-    # assert os.path.isfile(table_file_name)
-    # with open(table_file_name) as table_read_file:
-    #    table_input_text = table_read_file.read()
-    # table_tree = etree.fromstring(table_input_text)
-    # table = Table(file_name=table_file_name, table_tree=table_tree)
-    # table_write_text = table.to_xml_string()
-    # with open(os.path.join(order_root, table_file_name), "w") as table_write_file:
-    #    table_write_file.write(table_write_text)
-
-    # Partition the command line *arguments* into *xml_file_names* and *xsd_file_names*:
-    # arguments = sys.argv[1:]
-    # xml_file_names = list()
-    # xsd_file_names = list()
-    # for argument in arguments:
-    #    if argument.endswith(".xml"):
-    #        xml_file_names.append(argument)
-    #    elif argument.endswith(".xsd"):
-    #        xsd_file_names.append(argument)
-    #    else:
-    #        assert "File name '{0}' does not have a suffix of '.xml' or '.xsd'"
-    #
-    # # Verify that we have one '.xsd' file and and one or more '.xml' files:
-    # assert len(xsd_file_names) < 2, "Too many '.xsd` files specified"
-    # assert len(xsd_file_names) > 0, "No '.xsd' file specified"
-    # assert len(xml_file_names) > 0, "No '.xml' file specified"
-
-    tracing = None
-    tracing = ""
-    next_tracing = None if tracing is None else tracing + " "
-    if tracing is not None:
-        print(f"{tracing}=>main()")
-
-    Encode.from_file_name
+    # Run the *Encode* class unit tests:
     Encode.test()
-    title = "TEST_POINT;M1X1"
-    # print(f"title='{title}' => encoded_title='{Encode.to_file_name(title)}'")
 
     # Set up command line *parser* and parse it into *parsed_arguments* dict:
     parser = argparse.ArgumentParser(description="Bill of Materials (BOM) Manager.")
@@ -446,9 +412,25 @@ def main():
                         help="BOM Manager Searches Directory.")
     parser.add_argument("-o", "--order", default=os.path.join(os.getcwd(), "order"),
                         help="Order Information Directory")
+    parser.add_argument("-v", "--verbose", action="count",
+                        help="Set tracing level (defaults to 0 which is off).")
+
+    # Now parse the command line arguments:
     parsed_arguments = vars(parser.parse_args())
+
+    # Process the *tracing level* from *parsed_arguments*:
+    tracing_level = parsed_arguments["verbose"]
+    if tracing_level is None:
+        tracing_level = 0
+        tracing = None
+    else:
+        tracing = ""
+    next_tracing = None if tracing is None else tracing + " "
+
+    # Perform any requested *tracing*:
     if tracing is not None:
-        print(f"{tracing}Arguments Parsed")
+        print(f"{tracing}=>main()")
+        print(f"tracing_level={tracing_level}")
 
     # Fill in the *pandas* list with *Panda* objects for doing pricing and availabity checking:
     pandas = list()
@@ -456,7 +438,7 @@ def main():
     for index, entry_point in enumerate(pkg_resources.iter_entry_points(entry_point_key)):
         entry_point_name = entry_point.name
         if tracing is not None:
-            print(f"Entry_Point[{index}]: '{entry_point_name}'")
+            print(f"{tracing}Panda_Entry_Point[{index}]: '{entry_point_name}'")
         assert entry_point_name == "panda_get"
         panda_get = entry_point.load()
         assert callable(panda_get)
@@ -470,7 +452,7 @@ def main():
     for index, entry_point in enumerate(pkg_resources.iter_entry_points(entry_point_key)):
         entry_point_name = entry_point.name
         if tracing is not None:
-            print(f"Entry_Point[{index}]: '{entry_point_name}'")
+            print(f"{tracing}Cad_Entry_Point[{index}]: '{entry_point_name}'")
         assert entry_point_name == "cad_get"
         cad_get = entry_point.load()
         assert callable(cad_get)
@@ -478,13 +460,14 @@ def main():
         assert isinstance(cad, Cad)
         cads.append(cad)
 
-    # database = Database()
+    # Now create the *order* object.  It is created here because we need *order*
+    # for dealing with *bom_file_names* immediately below:
     order_root = parsed_arguments["order"]
     order = Order(order_root, cads, pandas)
     if tracing is not None:
         print(f"{tracing}order_created")
 
-    # Deal with *net_file_names* from *parsed_arguments*:
+    # Deal with *bom_file_names* from *parsed_arguments*:
     bom_file_names = parsed_arguments["bom"]
     for bom_file_name in bom_file_names:
         if bom_file_name.endswith(".net") or bom_file_name.endswith(".csv"):
@@ -549,8 +532,8 @@ def main():
     tracing = None
     tracing = ""
     # print(f"searches_root='{searches_root}'")
-    tables_editor = TablesEditor(tables,
-                                 collection_directories, searches_root, order, tracing=tracing)
+    tables_editor = TablesEditor(tables, collection_directories, searches_root, order,
+                                 tracing_level=tracing_level, tracing=next_tracing)
 
     # Start up the GUI:
     tables_editor.run()
@@ -646,11 +629,49 @@ class ActualPart:
         # Load up *self*:
         actual_part.manufacturer_name = manufacturer_name
         actual_part.manufacturer_part_name = manufacturer_part_name
+
         actual_part.key = key
         # Fields used by algorithm:
         actual_part.quantity_needed = 0
         actual_part.vendor_parts = []
         actual_part.selected_vendor_part = None
+
+    # ActualPart.__eq__():
+    def __eq__(self, actual_part2, tracing=None):
+        # Verify argument types:
+        assert isinstance(actual_part2, ActualPart)
+
+        # Perform any requested *tracing* for *actual_part1* (i.e. *self*):
+        actual_part1 = self
+        next_tracing = None if tracing is None else tracing + " "
+        if tracing is not None:
+            print(f"{tracing}=>ActualPart.__eq__({actual_part1.key}, {actual_part2.key})")
+        
+        equal = actual_part1.key == actual_part2.key
+        if equal:
+            # Extract *vendor_parts* making sure that they are sorted:
+            vendor_parts1 = actual_part1.sorted_vendor_parts_get()
+            vendor_parts2 = actual_part2.sorted_vendor_parts_get()
+            
+            equal &= len(vendor_parts1) == len(vendor_parts2)
+            if equal:
+                for index, vendor_part1 in enumerate(vendor_parts1):
+                    vendor_part2 = vendor_parts2[index]
+                    if vendor_part1 != vendor_part2:
+                        equal = False
+                        break
+
+        # Wrap up requested any *tracing* and return *equal*:
+        if tracing is not None:
+            print(f"{tracing}<=ActualPart.__eq__({actual_part1.key}, {actual_part2.key})=>{equal}")
+        return equal
+
+    # ActualPart.sorted_vendor_parts_get():
+    def sorted_vendor_parts_get(self):
+        actual_part = self
+        vendor_parts = actual_part.vendor_parts
+        vendor_parts.sort(key=lambda vendor_part: vendor_part.vendor_key)
+        return vendor_parts
 
     # ActualPart.vendor_names_restore():
     def vendor_names_load(self, vendor_names_table, excluded_vendor_names):
@@ -5141,172 +5162,181 @@ class Collection(Node):
             search.file_load(tracing=next_tracing)
 
             # Grab some values from *search*:
-            search.name = search.name
+            collection = search.collection
+            search_name = search.name
             search_url = search.url
             relative_path = search.relative_path
-
-            # Compute the fill path for ...
-            full_path = os.path.join(searches_root, relative_path)
-
-
-            # Compute the *csv_full_full_file*  and *html_full_file* where search results
-            # are stored:
-            csv_full_file = os.path.join(searches_root, relative_path + ".csv")
-            html_full_file = os.path.join(searches_root, relative_path + ".html")
             if tracing is not None:
-                print(f"{tracing}csv_full_file='{csv_full_file}'")
-                print(f"{tracing}html_full_file='{html_full_file}'")
+                print(f"{tracing}search_name='{search_name}'")
                 print(f"{tracing}search_url='{search_url}'")
+                print(f"{tracing}relative_path='relative_path'")
 
-            if not os.path.isfile(html_full_file):
-                # Construct the header values that need to be sent with the *url*:
-                authority_text = "www.digikey.com"
-                accept_text = (
-                    "text/html,application/xhtml+xml,application/xml;"
-                    "q=0.9,image/webp,image/apng,*/*;"
-                    "q=0.8,application/signed-exchange;"
-                    "v=b3"
-                )
-                accept_encoding_text = "gzip, deflate, br"
-                cookie_text = (
-                    "i10c.bdddb=c2-f0103ZLNqAeI3BH6yYOfG7TZlRtCrMwzKDQfPMtvESnCuVjBtyWjJ1l"
-                    "kqXtKsvswxDrjRHdkESNCtx04RiOfGqfIlRUHqt1qPnlkPolfJSiIRsomx0RhMqeKlRtT3"
-                    "jxvKEOjKMDfJSvUoxo6uXWaGVZkqoAhloxqQlofPwYkJcS6fhQ6tzOgotZkQMtHDyjnA4lk"
-                    "PHeIKNnroxoY8XJKBvefrzwFru4qPnlkPglfJSiIRvjBTuTfbEZkqMupstsvz8qkl7wWr3i"
-                    "HtspjsuTFBve9SHoHqjyTKIPfPM3uiiAioxo6uXOfGvdfq4tFloxqPnlkPcxyESnCuVjBt1"
-                    "VmBvHmsYoHqjxVKDq3fhvfJSiIRsoBsxOftucfqRoMRjxVKDq3BuEMuNnHoyM9oz3aGv4ul"
-                    "RtCrMsvP8tJOPeoESNGw2q6tZSiN2ZkQQxHxjxVOHukKMDjOQlCtXnGt4OfqujoqMtrpt3y"
-                    "KDQjVMffM3iHtsolozT7WqeklSRGloXqPDHZHCUfJSiIRvjBTuTfQeKKYMtHlpVtKDQfPM2"
-                    "uESnCuVm6tZOfGK1fqRoIOjxvKDrfQvYkvNnuJsojozTaLW"
-                )
-
-                # Construct *headers* 
-                headers = {
-                    "authority": authority_text,
-                    "accept": accept_text,
-                    "accept-encoding": accept_encoding_text,
-                    "cookie": cookie_text
-                }
-
-                # Attempt the fetch the contents of *search_url* using *headers*:
-                try:
-                    response = requests.get(search_url, headers=headers)
-                    response.raise_for_status()
-                except HTTPError as http_error:
-                    assert False, f"HTTP error occurred '{http_error}'"
-                except Exception as error:
-                    assert False, f"Other exception occurred: '{error}'"
-                    
-                # Now write *content* out to *html_full_file* so that it is cached:
-                content = response.content
-                with open(html_full_file, "wb") as html_file:
-                    html_file.write(content)
-                    if tracing is not None:
-                        print(f"{tracing}Wrote out '{html_full_file}'")
-
-            # Now procecess *html_full_file*:
-            pairs_text = None
-            assert os.path.isfile(html_full_file)
-            print(f"html_full_file='{html_full_file}")
-            with open(html_full_file) as html_file:
-                html_text = html_file.read()
-                soup = bs4.BeautifulSoup(html_text, features="lxml")
-                assert soup is not None
-                #print("type(soup)=", type(soup))
-                pairs = []
-                pairs_text = None
-                print("here 2b")
-                for form_tag in soup.find_all("form"):
-                    assert isinstance(form_tag, bs4.element.Tag)
-                    name = form_tag.get("name")
-                    if name == "downloadform":
-                        # We found it:
-                        print(f"form_tag={form_tag}")
-                        for index, input_tag in enumerate(form_tag.children):
-                            if isinstance(input_tag, bs4.element.Tag):
-                                print(input_tag)
-                                assert input_tag.name.lower() == "input"
-                                input_name = input_tag.get("name")
-                                print(f"input_name='{input_name}'")
-                                input_value = input_tag.get("value")
-                                print(f"input_value='{input_value}'")
-                                input_value = input_value.replace(",", "%2C")
-                                input_value = input_value.replace('|', "%7C")
-                                input_value = input_value.replace(' ', "+")
-                                pair = f"{input_name}={input_value}"
-                                print(f"pair='{pair}'")
-                                pairs.append(pair)
-                        pairs_text = '&'.join(pairs)
-                        print(f"pairs_text='{pairs_text}'")
-            assert isinstance(pairs_text, str)
-
-            # Construct the *csv_fetch_url*:
-            csv_fetch_url = "https://www.digikey.com/product-search/download.csv?" + pairs_text
+            # Compute the *csv_file_name* of where the `.csv` file associated with *search_url*
+            # is (or will be) stored:
+            csv_file_name = os.path.join(searches_root, relative_path + ".csv")
             if tracing is not None:
-                print(f"{tracing}csv_fetch_url='{csv_fetch_url}'")
-
-            # Fetch `.csv` file if it does not exist or it is stale:
-            modification_time = (os.path.getmtime(csv_full_file) if os.path.isfile(csv_full_file)
-                                 else 0)
-            if modification_time + stale_time < now:
-                # Construct the text strings fort the *headers*:
-                authority_text = "www.digikey.com"
-                accept_text = (
-                    "text/html,application/xhtml+xml,application/xml;"
-                    "q=0.9,image/webp,image/apng,*/*;"
-                    "q=0.8,application/signed-exchange;"
-                    "v=b3"
-                )
-                accept_encoding_text = "gzip, deflate, br"
-                cookie_text = (
-                    "i10c.bdddb="
-                    "c2-94990ugmJW7kVZcVNxn4faE4FqDhn8MKnfIFvs7GjpBeKHE8KVv5aK34FQDgF"
-                    "PFsXXF9jma8opCeDMnVIOKCaK34GOHjEJSFoCA9oxF4ir7hqL8asJs4nXy9FlJEI"
-                    "8MujcFW5Bx9imDEGHDADOsEK9ptrlIgAEuIjcp4olPJUjxXDMDVJwtzfuy9FDXE5"
-                    "sHKoXGhrj3FpmCGDMDuQJs4aLb7AqsbFDhdjcF4pJ4EdrmbIMZLbAQfaK34GOHbF"
-                    "nHKo1rzjl24jP7lrHDaiYHK2ly9FlJEADMKpXFmomx9imCGDMDqccn4fF4hAqIgF"
-                    "JHKRcFFjl24iR7gIfTvaJs4aLb4FqHfADzJnXF9jqd4iR7gIfz8t0TzfKyAnpDgp"
-                    "8MKEmA9og3hdrCbLvCdJSn4FJ6EFlIGEHKOjcp8sm14iRBkMT8asNwBmF3jEvJfA"
-                    "DwJtgD4oL1Eps7gsLJaKJvfaK34FQDgFfcFocAAMr27pmCGDMD17GivaK34GOGbF"
-                    "nHKomypOTx9imDEGHDADOsTpF39ArqeADwFoceWjl24jP7gIHDbDPRzfwy9JlIlA"
-                    "DTFocAEP"
-                )
-
-                # Construct *headers*:
-                headers = {
-                    "authority": authority_text,
-                    "accept": accept_text,
-                    "accept-encoding": accept_encoding_text,
-                    "cookie": cookie_text
-                }
-
-                # Attempt the fetch the contents of *csv_fetch_url* using *headers*:
-                if tracing is not None:
-                    print(f"{tracing}A:Fetching '{csv_fetch_url}' for '{search_name}'")
-                try:
-                    response = requests.get(csv_fetch_url, headers=headers)
-                    response.raise_for_status()
-                except HTTPError as http_error:
-                    assert False, f"HTTP error occurred '{http_error}'"
-                except Exception as error:
-                    assert False, f"Other exception occurred: '{error}'"
-                    
-                collection = search.collection
+                print(f"{tracing}csv_file_name='{csv_file_name}'")
+            
+            # Compute *the
+            csv_modification_time = (os.path.getmtime(csv_file_name)
+                                     if os.path.isfile(csv_file_name)
+                                     else 0)
+            now = time.time()
+            stale_time = 2 * 24 * 60 * 60  # 2 days in seconds
+            if csv_modification_time + stale_time < now:
                 assert isinstance(collection, Collection)
-                collection.url_load(search_url, html_full_file, tracing=next_tracing)
+                collection.csv_fetch(search_url, csv_file_name, tracing=next_tracing)
 
-                # Now write *content* out to *html_full_file* so that it is cached:
-                content = response.content
-                with open(csv_full_file, "wb") as csv_file:
-                    csv_file.write(content)
+            if False:
+                if not os.path.isfile(html_full_file):
+                    # Construct the header values that need to be sent with the *url*:
+                    authority_text = "www.digikey.com"
+                    accept_text = (
+                        "text/html,application/xhtml+xml,application/xml;"
+                        "q=0.9,image/webp,image/apng,*/*;"
+                        "q=0.8,application/signed-exchange;"
+                        "v=b3"
+                    )
+                    accept_encoding_text = "gzip, deflate, br"
+                    cookie_text = (
+                        "i10c.bdddb=c2-f0103ZLNqAeI3BH6yYOfG7TZlRtCrMwzKDQfPMtvESnCuVjBtyWjJ1l"
+                        "kqXtKsvswxDrjRHdkESNCtx04RiOfGqfIlRUHqt1qPnlkPolfJSiIRsomx0RhMqeKlRtT3"
+                        "jxvKEOjKMDfJSvUoxo6uXWaGVZkqoAhloxqQlofPwYkJcS6fhQ6tzOgotZkQMtHDyjnA4lk"
+                        "PHeIKNnroxoY8XJKBvefrzwFru4qPnlkPglfJSiIRvjBTuTfbEZkqMupstsvz8qkl7wWr3i"
+                        "HtspjsuTFBve9SHoHqjyTKIPfPM3uiiAioxo6uXOfGvdfq4tFloxqPnlkPcxyESnCuVjBt1"
+                        "VmBvHmsYoHqjxVKDq3fhvfJSiIRsoBsxOftucfqRoMRjxVKDq3BuEMuNnHoyM9oz3aGv4ul"
+                        "RtCrMsvP8tJOPeoESNGw2q6tZSiN2ZkQQxHxjxVOHukKMDjOQlCtXnGt4OfqujoqMtrpt3y"
+                        "KDQjVMffM3iHtsolozT7WqeklSRGloXqPDHZHCUfJSiIRvjBTuTfQeKKYMtHlpVtKDQfPM2"
+                        "uESnCuVm6tZOfGK1fqRoIOjxvKDrfQvYkvNnuJsojozTaLW"
+                    )
+
+                    # Construct *headers* 
+                    headers = {
+                        "authority": authority_text,
+                        "accept": accept_text,
+                        "accept-encoding": accept_encoding_text,
+                        "cookie": cookie_text
+                    }
+
+                    # Attempt the fetch the contents of *search_url* using *headers*:
+                    try:
+                        response = requests.get(search_url, headers=headers)
+                        response.raise_for_status()
+                    except HTTPError as http_error:
+                        assert False, f"HTTP error occurred '{http_error}'"
+                    except Exception as error:
+                        assert False, f"Other exception occurred: '{error}'"
+                        
+                    # Now write *content* out to *html_full_file* so that it is cached:
+                    content = response.content
+                    with open(html_full_file, "wb") as html_file:
+                        html_file.write(content)
+                        if tracing is not None:
+                            print(f"{tracing}Wrote out '{html_full_file}'")
+
+                # Now procecess *html_full_file*:
+                pairs_text = None
+                assert os.path.isfile(html_full_file)
+                print(f"html_full_file='{html_full_file}")
+                with open(html_full_file) as html_file:
+                    html_text = html_file.read()
+                    soup = bs4.BeautifulSoup(html_text, features="lxml")
+                    assert soup is not None
+                    #print("type(soup)=", type(soup))
+                    pairs = []
+                    pairs_text = None
+                    print("here 2b")
+                    for form_tag in soup.find_all("form"):
+                        assert isinstance(form_tag, bs4.element.Tag)
+                        name = form_tag.get("name")
+                        if name == "downloadform":
+                            # We found it:
+                            print(f"form_tag={form_tag}")
+                            for index, input_tag in enumerate(form_tag.children):
+                                if isinstance(input_tag, bs4.element.Tag):
+                                    print(input_tag)
+                                    assert input_tag.name.lower() == "input"
+                                    input_name = input_tag.get("name")
+                                    print(f"input_name='{input_name}'")
+                                    input_value = input_tag.get("value")
+                                    print(f"input_value='{input_value}'")
+                                    input_value = input_value.replace(",", "%2C")
+                                    input_value = input_value.replace('|', "%7C")
+                                    input_value = input_value.replace(' ', "+")
+                                    pair = f"{input_name}={input_value}"
+                                    print(f"pair='{pair}'")
+                                    pairs.append(pair)
+                            pairs_text = '&'.join(pairs)
+                            print(f"pairs_text='{pairs_text}'")
+                assert isinstance(pairs_text, str)
+
+                # Construct the *csv_fetch_url*:
+                csv_fetch_url = "https://www.digikey.com/product-search/download.csv?" + pairs_text
+                if tracing is not None:
+                    print(f"{tracing}csv_fetch_url='{csv_fetch_url}'")
+
+                # Fetch `.csv` file if it does not exist or it is stale:
+                modification_time = (os.path.getmtime(csv_full_file) if os.path.isfile(csv_full_file)
+                                     else 0)
+                if modification_time + stale_time < now:
+                    # Construct the text strings fort the *headers*:
+                    authority_text = "www.digikey.com"
+                    accept_text = (
+                        "text/html,application/xhtml+xml,application/xml;"
+                        "q=0.9,image/webp,image/apng,*/*;"
+                        "q=0.8,application/signed-exchange;"
+                        "v=b3"
+                    )
+                    accept_encoding_text = "gzip, deflate, br"
+                    cookie_text = (
+                        "i10c.bdddb="
+                        "c2-94990ugmJW7kVZcVNxn4faE4FqDhn8MKnfIFvs7GjpBeKHE8KVv5aK34FQDgF"
+                        "PFsXXF9jma8opCeDMnVIOKCaK34GOHjEJSFoCA9oxF4ir7hqL8asJs4nXy9FlJEI"
+                        "8MujcFW5Bx9imDEGHDADOsEK9ptrlIgAEuIjcp4olPJUjxXDMDVJwtzfuy9FDXE5"
+                        "sHKoXGhrj3FpmCGDMDuQJs4aLb7AqsbFDhdjcF4pJ4EdrmbIMZLbAQfaK34GOHbF"
+                        "nHKo1rzjl24jP7lrHDaiYHK2ly9FlJEADMKpXFmomx9imCGDMDqccn4fF4hAqIgF"
+                        "JHKRcFFjl24iR7gIfTvaJs4aLb4FqHfADzJnXF9jqd4iR7gIfz8t0TzfKyAnpDgp"
+                        "8MKEmA9og3hdrCbLvCdJSn4FJ6EFlIGEHKOjcp8sm14iRBkMT8asNwBmF3jEvJfA"
+                        "DwJtgD4oL1Eps7gsLJaKJvfaK34FQDgFfcFocAAMr27pmCGDMD17GivaK34GOGbF"
+                        "nHKomypOTx9imDEGHDADOsTpF39ArqeADwFoceWjl24jP7gIHDbDPRzfwy9JlIlA"
+                        "DTFocAEP"
+                    )
+
+                    # Construct *headers*:
+                    headers = {
+                        "authority": authority_text,
+                        "accept": accept_text,
+                        "accept-encoding": accept_encoding_text,
+                        "cookie": cookie_text
+                    }
+
+                    # Attempt the fetch the contents of *csv_fetch_url* using *headers*:
                     if tracing is not None:
-                        print(f"{tracing}Wrote out '{csv_full_file}'")
+                        print(f"{tracing}A:Fetching '{csv_fetch_url}' for '{search_name}'")
+                    try:
+                        response = requests.get(csv_fetch_url, headers=headers)
+                        response.raise_for_status()
+                    except HTTPError as http_error:
+                        assert False, f"HTTP error occurred '{http_error}'"
+                    except Exception as error:
+                        assert False, f"Other exception occurred: '{error}'"
+                        
+                    collection = search.collection
+                    assert isinstance(collection, Collection)
+                    collection.url_load(search_url, html_full_file, tracing=next_tracing)
 
-            # Read in the *csv_file_file*:
-            assert os.path.isfile(csv_full_file)
+                    # Now write *content* out to *html_full_file* so that it is cached:
+                    content = response.content
+                    with open(csv_full_file, "wb") as csv_file:
+                        csv_file.write(content)
+                        if tracing is not None:
+                            print(f"{tracing}Wrote out '{csv_full_file}'")
+
+            # Read in the *csv_file_name*:
+            assert os.path.isfile(csv_file_name)
             data_rows = []
             column_names = None
-            with open(csv_full_file) as csv_file:
+            with open(csv_file_name) as csv_file:
                 csv_reader = csv.reader(csv_file, delimiter=',', quotechar='"')
                 for row_index, row in enumerate(csv_reader):
                     #print(f"[{index}]: {row}")
@@ -5337,7 +5367,6 @@ class Collection(Node):
                 actual_parts.append(actual_part)
 
         # Wrap up any requested *tracing* and return *actual_parts*:
-        next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
             print(f"{tracing}<=Collection.actual_parts_lookup(*, '{search_name})"
                   f" => len([...])={len(actual_parts)}")
@@ -7151,16 +7180,16 @@ class Order:
         # Stuff values into *order* (i.e. *self*):
         order = self
         order.cads = cads
-        order.excluded_vendor_names = {}  # Dict[String, List[str]]: Excluded vendors
+        order.excluded_vendor_names = {}    # Dict[String, List[str]]: Excluded vendors
         order.final_choice_parts = []
-        order.inventories = []            # List[Inventory]: Existing inventoried parts
+        order.inventories = []              # List[Inventory]: Existing inventoried parts
         order.order_root = order_root
         order.pandas = pandas
-        order.projects = []               # List[Project]
-        order.projects_table = {}         # Dict[Net_File_Name, Project]
+        order.projects = []                 # List[Project]
+        order.projects_table = {}           # Dict[Net_File_Name, Project]
         order.selected_vendor_names = None
-        order.stale = 2 * 24 * 60 * 60
-        order.requests = []               # List[Request]: Additional requested parts
+        order.stale = 2 * 7 * 24 * 60 * 60  # 2 weeks
+        order.requests = []                 # List[Request]: Additional requested parts
         order.vendor_priorities = vendor_priorities
         order.vendor_priority = 10
         order.vendor_searches_root = vendor_searches_root
@@ -7642,7 +7671,9 @@ class Order:
             # Get reasonably up-to-date pricing and availability information about
             # each *ActualPart* in actual_parts.  *order* is needed to loccate where
             # the cached information is:
-            choice_part.vendor_parts_refresh(new_actual_parts, order, pandas, tracing=next_tracing)
+            choice_part_name = choice_part.name
+            choice_part.vendor_parts_refresh(new_actual_parts, order, choice_part_name,
+                                             tracing=next_tracing)
 
         # Wrap up any requested *tracing* and return *final_choice_parts*:
         if tracing is not None:
@@ -8796,14 +8827,15 @@ class PriceBreak:
         # print("Result='{0}'".format(result))
         return result
 
-    # PriceBreak.compute():
-    def compute(self, needed):
-        """ *PriceBreak*: """
+    # PriceBreak.__eq__():
+    def __eq__(self, price_break2):
+        # Verify argument types:
+        assert isinstance(price_break2, PriceBreak)
 
-        assert isinstance(needed, int)
-
-        self.order_quantity = order_quantity = max(needed, self.quantity)
-        self.order_price = order_quantity * self.price
+        price_break1 = self
+        price_breaks_equal = (price_break1.quantity == price_break2.quantity and
+                              price_break1.price == price_break2.price)
+        return price_breaks_equal
 
     # PriceBreak.__lt__():
     def __lt__(self, price_break2):
@@ -8812,6 +8844,15 @@ class PriceBreak:
 
         price_break1 = self
         return price_break1.price < price_break2.price
+
+    # PriceBreak.compute():
+    def compute(self, needed):
+        """ *PriceBreak*: """
+
+        assert isinstance(needed, int)
+
+        self.order_quantity = order_quantity = max(needed, self.quantity)
+        self.order_price = order_quantity * self.price
 
     # PriceBreak.xml_lines_append():
     def xml_lines_append(self, xml_lines, indent):
@@ -8865,8 +8906,8 @@ class Project:
 
         # Perform any requested *tracing*:
         next_tracing = None if tracing is None else tracing + " "
-        if tracing is None:
-            print(f"{tracing}=>Project.__init__(*, '{name}', '{revision}', '{net_file_name}', "
+        if tracing is not None:
+            print(f"{tracing}=>Project.__init__(*, '{name}', '{revision}', '{cad_file_name}', "
                   f"{count}, *, '{positions_file_name}'")
 
         # Load up *project* (i.e. *self*):
@@ -8895,8 +8936,8 @@ class Project:
         assert success, f"Could not successfully read and process file '{cad_file_name}'!"
 
         # Wrap-up any requested *tracing*:
-        if tracing is None:
-            print(f"{tracing}<=Project.__init__(*, '{name}', '{revision}', '{net_file_name}', "
+        if tracing is not None:
+            print(f"{tracing}<=Project.__init__(*, '{name}', '{revision}', '{cad_file_name}', "
                   f"*, '{positions_file_name}')")
 
     # Project.__format__():
@@ -9693,22 +9734,25 @@ class ChoicePart(ProjectPart):
               vendor_names_table, excluded_vendor_names)
 
     # ChoicePart.vendor_parts_refresh():
-    def vendor_parts_refresh(self, proposed_actual_parts, order, cads, tracing=None):
+    def vendor_parts_refresh(self, proposed_actual_parts, order, part_name, tracing=None):
         # Verify argument types:
         assert isinstance(proposed_actual_parts, list)
         assert isinstance(order, Order)
-        assert isinstance(cads, list)
+        assert isinstance(part_name, str)
         assert isinstance(tracing, str) or tracing is None
 
         # Perform any requested_tracing:
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
             print(f"{tracing}>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-            print(f"{tracing}=>ChoicePart.vendor_parts_refresh(*, *, *, *)")
+            print(f"{tracing}=>ChoicePart.vendor_parts_refresh(*, *, *, *, '{part_name})")
 
         # Grab some values from *choice_part* (i.e. *self*) and *order*:
         choice_part = self
         choice_part_name = choice_part.name
+        cads = order.cads
+        pandas = order.pandas
+        stale = order.stale
         vendor_searches_root = order.vendor_searches_root
 
         # Construct the file path for the `.xml` file associated *choice_part*:
@@ -9724,6 +9768,7 @@ class ChoicePart(ProjectPart):
         # the resulting *previous_actual_part* from the `.xml` file.  Mark *xml_save_required*
         # as *True* if *xml_full_file_name* does not exist:
         xml_save_required = False
+        previous_actual_parts = list()
         previous_actual_parts_table = dict()
         if os.path.isfile(xml_full_name):
             # Read in and parse the *xml_full_name* file:
@@ -9748,53 +9793,133 @@ class ChoicePart(ProjectPart):
             # *xml_full_name* does not exist, so we must write out a new one later one:
             xml_save_required = True
 
-        # We need to figure out when actual parts from the `.xml` are old *stale* and refresh them:
-        pandas = order.pandas
-        stale = order.stale
+        # For debugging show both the sorted *proposed_actual_parts* and *previous_actual_parts*
+        # side-by-side:
+        if tracing is not None:
+            # First sort *proposed_actual_parts* and *previous_actual_parts*:
+            proposed_actual_parts.sort(key=lambda proposed_actual_part: proposed_actual_part.key)
+            previous_actual_parts.sort(key=lambda previous_actual_part: previous_actual_part.key)
+
+            # Compute the *maximum_actual_parts_size*:
+            proposed_actual_parts_size = len(proposed_actual_parts)
+            previous_actual_parts_size = len(previous_actual_parts)
+            maximum_actual_parts_size = max(proposed_actual_parts_size, previous_actual_parts_size)
+            print(f"{tracing}proposed_actual_parts_size={proposed_actual_parts_size}")
+            print(f"{tracing}previous_actual_parts_size={previous_actual_parts_size}")
+            print(f"{tracing}maximum_actual_parts_size={maximum_actual_parts_size}")
+
+            # Now sweep across both *proposed_actual_parts* and *previous_actual_parts*
+            # printing out the key values side by side:
+            for index in range(maximum_actual_parts_size):
+                proposed_text = ("--------" if index >= proposed_actual_parts_size
+                                 else proposed_actual_parts[index].key)
+                previous_text = ("--------" if index >= previous_actual_parts_size
+                                 else previous_actual_parts[index].key)
+                print(f"{tracing}Actual_Parts[{index}]:'{previous_text}'\t{proposed_text}")
+
+        # We need to figure out when actual parts from the `.xml` are old (i.e. *stale*)
+        # and refresh them.
         now = int(time.time())
+        if tracing is not None:
+            print(f"{tracing}now={now} stale={stale} now-stale={now-stale}")
 
         # Now sweep through *proposed_actual_parts* and refresh any that are either missing or out
-        # of date:
+        # of date and construct the *final_actual_parts*:
         final_actual_parts = list()
-        for proposed_actual_part in proposed_actual_parts:
-            lookup_required = False
+        for index, proposed_actual_part in enumerate(proposed_actual_parts):
+            # Grab the *proposed_actual_part_key*:
             proposed_actual_part_key = proposed_actual_part.key
+            if tracing is not None:
+                print(f"{tracing}Proposed_Actual_Part[{index}]:'{proposed_actual_part.key}'")
+
+            # Start by assuming that *lookup_required* and set to *False* if we can avoid
+            # the lookup:
             lookup_required = True
             if proposed_actual_part_key in previous_actual_parts_table:
+                if tracing is not None:
+                    print(f"{tracing}'{proposed_actual_part_key} is in previous_actual_parts_table")
+
                 # We have a *previous_actual_part* that matches *proposed_actual_part*.
                 # Now we see if can simply copy *previous_vendor_parts* over or
                 # whether we must trigger a vendor parts lookup:
                 previous_actual_part = previous_actual_parts_table[proposed_actual_part_key]
                 previous_vendor_parts = previous_actual_part.vendor_parts
+                if tracing is not None:
+                    print(f"{tracing}previous_actual_part.name="
+                          f"'{previous_actual_part.manufacturer_part_name}'")
+                    print(f"len(previous_vendor_parts)={len(previous_vendor_parts)}")
 
                 # Compute the *minimum_time_stamp* across all *previous_vendor_parts*:
                 minimum_timestamp = now
                 for previous_vendor_part in previous_vendor_parts:
                     minimum_timestamp = min(minimum_timestamp, previous_vendor_part.timestamp)
+                if tracing is not None:
+                    print(f"{tracing}minimum_timestamp={minimum_timestamp}")
 
                 # If the *minimum_time_stamp* is too stale, force a refresh:
                 if minimum_timestamp + stale > now:
+                    if tracing is not None:
+                        print(f"{tracing}Not stale")
                     proposed_actual_part.vendor_parts = previous_vendor_parts
                     lookup_required = False
+            else:
+                if tracing is not None:
+                    print(f"{tracing}'{proposed_actual_part_key} is not"
+                          f" in previous_actual_parts_table")
+            if tracing is not None:
+                print(f"{tracing}lookup_required={lookup_required}")
 
-            # 
+            # If *lookup_required*, visit each *Panda* object in *pandas* and look up
+            # *VendorPart*'s.  Assemble them all in the *new_vendor_parts* list:
             if lookup_required:
                 new_vendor_parts = list()
                 for panda in pandas:
-                    new_vendor_parts.extend(panda.vendor_parts_lookup(proposed_actual_part,
-                                                                      tracing=next_tracing))
-                xml_save_required = True
-                if len(new_vendor_parts) >= 1:
+                    panda_vendor_parts = panda.vendor_parts_lookup(proposed_actual_part,
+                                                                   part_name, tracing=next_tracing)
+                    new_vendor_parts.extend(panda_vendor_parts)
+                    if tracing is not None:
+                        panda_vendor_parts_size = len(panda_vendor_parts)
+                        new_vendor_parts_size = len(new_vendor_parts)
+                        print(f"{tracing}panda_vendor_parts_size={panda_vendor_parts_size}")
+                        print(f"{tracing}new_vendor_parts_size={new_vendor_parts_size}")
+                if len(new_vendor_parts) >= 0:
                     final_actual_parts.append(proposed_actual_part)
+                xml_save_required = True
+            else:
+                final_actual_parts.append(proposed_actual_part)
+
+        # Figure out if we need to write out *final_actual_parts* by figuring out
+        # whether or not they match *previous_actual_parts*:
+        previous_actual_parts_table = {previous_actual_part.key: previous_actual_part
+                                       for previous_actual_part in previous_actual_parts}
+        final_actual_parts_table = {final_actual_part.key: final_actual_part
+                                    for final_actual_part in final_actual_parts}
+        xml_save_required &= len(previous_actual_parts_table) != len(final_actual_parts_table)
+        if not xml_save_required:
+            for final_actual_part_key, final_actual_part in final_actual_parts_table.items():
+                if final_actual_part_key not in previous_actual_parts_table:
+                    xml_save_required = True
+                    break
+                previous_actual_part = previous_actual_parts_table[final_actual_part_key]
+                if previous_actual_part != final_actual_part:
+                    xml_save_required = True
+                    break
+
+        # Do a little more *tracing*:
+        if tracing is not None:
+            final_actual_parts_size = len(final_actual_parts)
+            previous_actual_parts_size = len(previous_actual_parts)
+            proposed_actual_parts_size = len(proposed_actual_parts)
+            print(f"{tracing}final_actual_parts_size={final_actual_parts_size}")
+            print(f"{tracing}previous_actual_parts_size={previous_actual_parts_size}")
+            print(f"{tracing}proposed_actual_parts_size={proposed_actual_parts_size}")
 
         # Update *choice_part* with the new *final_actual_parts*:
         choice_part.actual_parts = final_actual_parts
 
-        # Write *choice_part* out to the file named *xml_full_name* if a *scrape_occurred*:
+        # Save *choice_part* out to *xml_file* if *xml_save_required* hase been set:
         if xml_save_required:
             if tracing is not None:
-                print(f"{tracing}+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-                print(f"{tracing}now={now}")
                 print(f"{tracing}Writing out '{xml_full_name}'")
             xml_lines = []
             xml_lines.append('<?xml version="1.0"?>')
@@ -9806,7 +9931,7 @@ class ChoicePart(ProjectPart):
 
         # Wrap up any requested_tracing:
         if tracing is not None:
-            print(f"{tracing}<=ChoicePart.vendor_parts_refresh([...], *)")
+            print(f"{tracing}<=ChoicePart.vendor_parts_refresh(*, *, *, *, '{part_name})")
             print(f"{tracing}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
 
     # ChoicePart.xml_lines_append():
@@ -9906,7 +10031,8 @@ class FractionalPart(ProjectPart):
 class TablesEditor(QMainWindow):
 
     # TablesEditor.__init__()
-    def __init__(self, tables, collection_directories, searches_root, order, tracing=None):
+    def __init__(self, tables, collection_directories, searches_root, order,
+                 tracing_level=0, tracing=None):
         # Verify argument types:
         assert isinstance(tables, list)
         assert isinstance(collection_directories, list)
@@ -9995,10 +10121,12 @@ class TablesEditor(QMainWindow):
         # Figure out *searches_root* and make sure it exists:
         if os.path.isdir(searches_root):
             # *searches_path* already exists:
-            print(f"Using '{searches_root}' directory to store searches into.")
+            if tracing is not None:
+                print(f"{tracing}Using '{searches_root}' directory to store searches into.")
         else:
             # Create directory *searches_path*:
-            print(f"Attempting to create directory '{searches_root}' to store searches into...")
+            if tracing is not None:
+                print(f"{tracing}Creating directory '{searches_root}' to store searches into...")
             try:
                 os.mkdir(searches_root)
             except PermissionError:
@@ -10037,7 +10165,8 @@ class TablesEditor(QMainWindow):
         tables_editor.xsearches = None
         tables_editor.tab_unload = None
         tables_editor.tables = tables
-        tables_editor.trace_signals = tracing is not None
+        tables_editor.tracing_level = tracing_level
+        tables_editor.trace_signals = tracing_level >= 1
 
         # Set up *tables* first, followed by *parameters*, followed by *enumerations*:
 
@@ -10190,7 +10319,8 @@ class TablesEditor(QMainWindow):
         # print("file_names=", file_names)
 
         # Create the *tree_model* needed for *collections* and stuff into *tables_editor*:
-        tree_model = TreeModel(tracing=next_tracing)
+        tree_model_tracing = None if tracing_level <= 1 else ""
+        tree_model = TreeModel(tracing=tree_model_tracing)
         tables_editor.model = tree_model
 
         # Create the *collections* and stuff into *tables_editor*:
@@ -12051,8 +12181,8 @@ class TablesEditor(QMainWindow):
         main_window = tables_editor.main_window
         application = tables_editor.application
         clipboard = application.clipboard()
-        print(f"type(clipboard)='{type(clipboard)}'")
-        assert isinstance(clipboard, QClipboard)
+        #print(f"type(clipboard)='{type(clipboard)}'")
+        #assert isinstance(clipboard, QClipboard)
 
         main_window.show()
 
@@ -12697,13 +12827,11 @@ class TreeModel(QAbstractItemModel):
         # Initialize the parent *QAbstraceItemModel*:
         super().__init__()
 
-    
-        # Stuff *collections* into *tree_model* (i.e. *self*):
+        # Stuff values into *tree_model* (i.e. *self*):
         tree_model = self
         tree_model.headers = {0: "Type", 1: "Name"}
         tree_model.collections = None
         tree_model.tracing = tracing
-        #tree_model.tracing = None  # Comment out to enable *TreeModel* *tracing*:
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
@@ -13041,6 +13169,10 @@ class VendorPart:
         # print("vendor_name='{0}'\t\toriginal_vendor_name='{1}'".format(
         #  vendor_name, original_vendor_name))
 
+        # Sort *price_breakes* and convert to a tuple:
+        price_breaks.sort(key=lambda price_break: (price_break.quantity, price_break.price))
+        price_breaks = tuple(price_breaks)
+
         # Load up *self*:
         self.actual_part_key = actual_part.key
         self.quantity_available = quantity_available
@@ -13052,6 +13184,36 @@ class VendorPart:
 
         # Append *self* to the vendor parts of *actual_part*:
         actual_part.vendor_part_append(self)
+
+    # VendorPart.__eq__():
+    def __eq__(self, vendor_part2):
+        # Verify argument types:
+        assert isinstance(vendor_part2, VendorPart)
+
+        # Compare *vendor_part1* to *vendor_part2*:
+        vendor_part1 = self
+        actual_part_key_equal = vendor_part1.actual_part_key == vendor_part2.actual_part_key
+        quantity_available_equal = (vendor_part1.quantity_available ==
+                                    vendor_part2.quantity_available)
+        timestamp_equal = vendor_part1.timestamp == vendor_part2.timestamp
+        vendor_key_equal = vendor_part1.vendor_key == vendor_part2.vendor_key
+
+        # Compute whether *price_breaks1* is equal to *price_breaks2*:
+        price_breaks1 = vendor_part1.price_breaks
+        price_breaks2 = vendor_part2.price_breaks
+        price_breaks1_size = len(price_breaks1)
+        price_breaks2_size = len(price_breaks2)
+        price_breaks_equal = price_breaks1_size == price_breaks2_size
+        if price_breaks_equal:
+            for index in range(price_breaks1_size):
+                price_break1 = price_breaks1[index]
+                price_break2 = price_breaks2[index]
+                price_breaks_equal = price_breaks_equal and (price_break1 == price_break2)
+
+        # Compute *vendor_parts_equal* which is only *True* if all the other fields are equal:
+        vendor_parts_equal = (actual_part_key_equal and quantity_available_equal and
+                              timestamp_equal and vendor_key_equal and price_breaks_equal)
+        return vendor_parts_equal
 
     # VendorPart.__format__():
     def __format__(self, format):

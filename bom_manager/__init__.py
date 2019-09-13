@@ -22,6 +22,8 @@
 
 from bom_manager import bom
 
+# main():
 def main():
-    print("main")
+    # Forward to *bom.main*:
     bom.main()
+    
