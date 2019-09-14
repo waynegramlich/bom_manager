@@ -31,6 +31,7 @@ def long_description_read():
 environment = os.environ
 assert "BOM_VERSION" in environment, "BOM_VERSION environment variable is not set"
 version = environment["BOM_VERSION"]
+is_test = version.startswith("0.0.")
 
 # Arguments to *setup*() are in alphabetical order:
 setuptools.setup(
@@ -46,23 +47,24 @@ setuptools.setup(
         "console_scripts": ["bom_manager=bom_manager:main"],
     },
     include_package_data=True,
-    install_requires = [
-        # "bom_digikey_plugin",
-        #"bs4",
-        #"currencyconverter",
-        #"lxml",
-        #"pyside2",
-        #"requests",
-        #"sexpdata",
-    ],
+    install_requires = [] if is_test else [
+        "bom_digikey_plugin",
+        "bom_findchips_plugin",
+        "bom_kicad_plugin",
+        "bs4",a
+        "lxml", 
+        "pkg_resources",
+        "pyside2",
+        # "setuptools", # Needed to get pkg_resources
+        ],
     license="MIT",
     long_description=long_description_read(),
     long_description_content_type="text/markdown",
-    name="bom_manager_waynegramlich",
+    name=("bom_manager_waynegramlich" if is_test else "bom_manager"),
     packages=[
         "bom_manager",
     ],
     python_requires=">=3.6",
     url="https://github.com/waynegramlich/bom_manager",
-    version=version
+    version=version,
 )

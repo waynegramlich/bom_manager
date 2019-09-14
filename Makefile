@@ -34,7 +34,7 @@ pkg_install:
 	(cd $(BOM_KICAD_PLUGIN);     pip install .)
 
 download:
-        pip install --no-cache-dir --index-url $(REPO_URL) bom_manager_waynegramlich
-        pip install --no-cache-dir --index-url $(REPO_URL) bom_digikey_plugin_waynegramlich
-        pip install --no-cache-dir --index-url $(REPO_URL) bom_findchips_plugin_waynegramlich
-        pip install --no-cache-dir --index-url $(REPO_URL) bom_kicad_plugin_waynegramlich
+	pip install --no-cache-dir --index-url $(REPO_URL) bom_manager_waynegramlich
+	pip install --no-cache-dir --index-url $(REPO_URL) bom_digikey_plugin_waynegramlich
+	pip install --no-cache-dir --index-url $(REPO_URL) bom_findchips_plugin_waynegramlich
+	pip install --no-cache-dir --index-url $(REPO_URL) bom_kicad_plugin_waynegramlich

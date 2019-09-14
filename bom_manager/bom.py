@@ -230,29 +230,29 @@
 import argparse
 #from bs4 import BeautifulSoup     # HTML/XML data structucure searching
 import bs4
-import copy                       # Is this used any more?
+#import copy                       # Used once 
 import csv
-from currency_converter import CurrencyConverter         # Currency converter
+#from currency_converter import CurrencyConverter         # Currency converter
 from functools import partial
 import fnmatch                    # File Name Matching
 import glob                       # Unix/Linux style command line file name pattern matching
 import io                         # I/O stuff
 import lxml.etree as etree
-import pickle                     # Python data structure pickle/unpickle
+#import pickle                     # Python data structure pickle/unpickle
 import pkg_resources              # Used to find plug-ins.
+import pkgutil
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtWidgets import (QApplication, QComboBox, QLineEdit, QMainWindow,
                                QPlainTextEdit, QPushButton,
                                QTableWidget, QTableWidgetItem, QWidget)  # QTreeView
-from PySide2.QtCore import (QAbstractItemModel, QFile, QItemSelectionModel,
+from PySide2.QtCore import (QAbstractItemModel, QCoreApplication, QFile, QItemSelectionModel,
                             QModelIndex, Qt)
 from PySide2.QtGui import (QClipboard,)
-import pkgutil
 import os
 import re                         # Regular expressions
-import requests                   # HTML Requests
-import sexpdata                   # (LISP) S_EXpresson Data
-from sexpdata import Symbol       # (LISP) S-EXpression Symbol
+#import requests                   # HTML Requests
+#import sexpdata                   # (LISP) S_EXpresson Data
+#from sexpdata import Symbol       # (LISP) S-EXpression Symbol
 # import subprocess
 import sys
 import time                       # Time package
@@ -479,7 +479,7 @@ def main():
                 count = int(bom_file_name[:colon_index])
                 bom_file_name = bom_file_name[colon_index:]
             # print(f"count={count}")
-            assert os.path.isfile(bom_file_name), f"'{net_file_name}' does not exist."
+            assert os.path.isfile(bom_file_name), f"'{bom_file_name}' does not exist."
             paths = os.path.split(bom_file_name)
             # print(f"paths={paths}")
             base_name = paths[-1]
@@ -3714,7 +3714,8 @@ class Database:
         findchips_url = "http://www.findchips.com/search/" + url_part_name
         if trace:
             print("findchips_url='{0}'".format(findchips_url))
-        findchips_response = requests.get(findchips_url)
+        assert False
+        # findchips_response = requests.get(findchips_url)
         findchips_text = findchips_response.text.encode("ascii", "ignore")
 
         # Parse the *findchips_text* into *find_chips_tree*:
@@ -5187,151 +5188,6 @@ class Collection(Node):
                 assert isinstance(collection, Collection)
                 collection.csv_fetch(search_url, csv_file_name, tracing=next_tracing)
 
-            if False:
-                if not os.path.isfile(html_full_file):
-                    # Construct the header values that need to be sent with the *url*:
-                    authority_text = "www.digikey.com"
-                    accept_text = (
-                        "text/html,application/xhtml+xml,application/xml;"
-                        "q=0.9,image/webp,image/apng,*/*;"
-                        "q=0.8,application/signed-exchange;"
-                        "v=b3"
-                    )
-                    accept_encoding_text = "gzip, deflate, br"
-                    cookie_text = (
-                        "i10c.bdddb=c2-f0103ZLNqAeI3BH6yYOfG7TZlRtCrMwzKDQfPMtvESnCuVjBtyWjJ1l"
-                        "kqXtKsvswxDrjRHdkESNCtx04RiOfGqfIlRUHqt1qPnlkPolfJSiIRsomx0RhMqeKlRtT3"
-                        "jxvKEOjKMDfJSvUoxo6uXWaGVZkqoAhloxqQlofPwYkJcS6fhQ6tzOgotZkQMtHDyjnA4lk"
-                        "PHeIKNnroxoY8XJKBvefrzwFru4qPnlkPglfJSiIRvjBTuTfbEZkqMupstsvz8qkl7wWr3i"
-                        "HtspjsuTFBve9SHoHqjyTKIPfPM3uiiAioxo6uXOfGvdfq4tFloxqPnlkPcxyESnCuVjBt1"
-                        "VmBvHmsYoHqjxVKDq3fhvfJSiIRsoBsxOftucfqRoMRjxVKDq3BuEMuNnHoyM9oz3aGv4ul"
-                        "RtCrMsvP8tJOPeoESNGw2q6tZSiN2ZkQQxHxjxVOHukKMDjOQlCtXnGt4OfqujoqMtrpt3y"
-                        "KDQjVMffM3iHtsolozT7WqeklSRGloXqPDHZHCUfJSiIRvjBTuTfQeKKYMtHlpVtKDQfPM2"
-                        "uESnCuVm6tZOfGK1fqRoIOjxvKDrfQvYkvNnuJsojozTaLW"
-                    )
-
-                    # Construct *headers* 
-                    headers = {
-                        "authority": authority_text,
-                        "accept": accept_text,
-                        "accept-encoding": accept_encoding_text,
-                        "cookie": cookie_text
-                    }
-
-                    # Attempt the fetch the contents of *search_url* using *headers*:
-                    try:
-                        response = requests.get(search_url, headers=headers)
-                        response.raise_for_status()
-                    except HTTPError as http_error:
-                        assert False, f"HTTP error occurred '{http_error}'"
-                    except Exception as error:
-                        assert False, f"Other exception occurred: '{error}'"
-                        
-                    # Now write *content* out to *html_full_file* so that it is cached:
-                    content = response.content
-                    with open(html_full_file, "wb") as html_file:
-                        html_file.write(content)
-                        if tracing is not None:
-                            print(f"{tracing}Wrote out '{html_full_file}'")
-
-                # Now procecess *html_full_file*:
-                pairs_text = None
-                assert os.path.isfile(html_full_file)
-                print(f"html_full_file='{html_full_file}")
-                with open(html_full_file) as html_file:
-                    html_text = html_file.read()
-                    soup = bs4.BeautifulSoup(html_text, features="lxml")
-                    assert soup is not None
-                    #print("type(soup)=", type(soup))
-                    pairs = []
-                    pairs_text = None
-                    print("here 2b")
-                    for form_tag in soup.find_all("form"):
-                        assert isinstance(form_tag, bs4.element.Tag)
-                        name = form_tag.get("name")
-                        if name == "downloadform":
-                            # We found it:
-                            print(f"form_tag={form_tag}")
-                            for index, input_tag in enumerate(form_tag.children):
-                                if isinstance(input_tag, bs4.element.Tag):
-                                    print(input_tag)
-                                    assert input_tag.name.lower() == "input"
-                                    input_name = input_tag.get("name")
-                                    print(f"input_name='{input_name}'")
-                                    input_value = input_tag.get("value")
-                                    print(f"input_value='{input_value}'")
-                                    input_value = input_value.replace(",", "%2C")
-                                    input_value = input_value.replace('|', "%7C")
-                                    input_value = input_value.replace(' ', "+")
-                                    pair = f"{input_name}={input_value}"
-                                    print(f"pair='{pair}'")
-                                    pairs.append(pair)
-                            pairs_text = '&'.join(pairs)
-                            print(f"pairs_text='{pairs_text}'")
-                assert isinstance(pairs_text, str)
-
-                # Construct the *csv_fetch_url*:
-                csv_fetch_url = "https://www.digikey.com/product-search/download.csv?" + pairs_text
-                if tracing is not None:
-                    print(f"{tracing}csv_fetch_url='{csv_fetch_url}'")
-
-                # Fetch `.csv` file if it does not exist or it is stale:
-                modification_time = (os.path.getmtime(csv_full_file) if os.path.isfile(csv_full_file)
-                                     else 0)
-                if modification_time + stale_time < now:
-                    # Construct the text strings fort the *headers*:
-                    authority_text = "www.digikey.com"
-                    accept_text = (
-                        "text/html,application/xhtml+xml,application/xml;"
-                        "q=0.9,image/webp,image/apng,*/*;"
-                        "q=0.8,application/signed-exchange;"
-                        "v=b3"
-                    )
-                    accept_encoding_text = "gzip, deflate, br"
-                    cookie_text = (
-                        "i10c.bdddb="
-                        "c2-94990ugmJW7kVZcVNxn4faE4FqDhn8MKnfIFvs7GjpBeKHE8KVv5aK34FQDgF"
-                        "PFsXXF9jma8opCeDMnVIOKCaK34GOHjEJSFoCA9oxF4ir7hqL8asJs4nXy9FlJEI"
-                        "8MujcFW5Bx9imDEGHDADOsEK9ptrlIgAEuIjcp4olPJUjxXDMDVJwtzfuy9FDXE5"
-                        "sHKoXGhrj3FpmCGDMDuQJs4aLb7AqsbFDhdjcF4pJ4EdrmbIMZLbAQfaK34GOHbF"
-                        "nHKo1rzjl24jP7lrHDaiYHK2ly9FlJEADMKpXFmomx9imCGDMDqccn4fF4hAqIgF"
-                        "JHKRcFFjl24iR7gIfTvaJs4aLb4FqHfADzJnXF9jqd4iR7gIfz8t0TzfKyAnpDgp"
-                        "8MKEmA9og3hdrCbLvCdJSn4FJ6EFlIGEHKOjcp8sm14iRBkMT8asNwBmF3jEvJfA"
-                        "DwJtgD4oL1Eps7gsLJaKJvfaK34FQDgFfcFocAAMr27pmCGDMD17GivaK34GOGbF"
-                        "nHKomypOTx9imDEGHDADOsTpF39ArqeADwFoceWjl24jP7gIHDbDPRzfwy9JlIlA"
-                        "DTFocAEP"
-                    )
-
-                    # Construct *headers*:
-                    headers = {
-                        "authority": authority_text,
-                        "accept": accept_text,
-                        "accept-encoding": accept_encoding_text,
-                        "cookie": cookie_text
-                    }
-
-                    # Attempt the fetch the contents of *csv_fetch_url* using *headers*:
-                    if tracing is not None:
-                        print(f"{tracing}A:Fetching '{csv_fetch_url}' for '{search_name}'")
-                    try:
-                        response = requests.get(csv_fetch_url, headers=headers)
-                        response.raise_for_status()
-                    except HTTPError as http_error:
-                        assert False, f"HTTP error occurred '{http_error}'"
-                    except Exception as error:
-                        assert False, f"Other exception occurred: '{error}'"
-                        
-                    collection = search.collection
-                    assert isinstance(collection, Collection)
-                    collection.url_load(search_url, html_full_file, tracing=next_tracing)
-
-                    # Now write *content* out to *html_full_file* so that it is cached:
-                    content = response.content
-                    with open(csv_full_file, "wb") as csv_file:
-                        csv_file.write(content)
-                        if tracing is not None:
-                            print(f"{tracing}Wrote out '{csv_full_file}'")
-
             # Read in the *csv_file_name*:
             assert os.path.isfile(csv_file_name)
             data_rows = []
@@ -5595,7 +5451,7 @@ class Collections(Node):
 
         # Output error if nothing is found:
         if not matching_searches:
-            print(f"{project_name}: {reference} {search_name} not found")
+            print(f"{project_name}: {reference} '{search_name}' not found")
 
         # Wrap up any reqested *tracing*:
         if tracing is not None:
@@ -10046,7 +9902,9 @@ class TablesEditor(QMainWindow):
         if tracing is not None:
             print(f"{tracing}=>TablesEditor.__init__(...)")
 
-        # Create the *application* first:
+        # Create the *application* first.  The set attribute makes a bogus warning message
+        # printout go away:
+        QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
         application = QApplication(sys.argv)
 
         # Obtain the UI file:
@@ -10158,7 +10016,7 @@ class TablesEditor(QMainWindow):
         tables_editor.languages = ["English", "Spanish", "Chinese"]
         tables_editor.main_window = main_window
         tables_editor.order = order
-        tables_editor.original_tables = copy.deepcopy(tables)
+        #tables_editor.original_tables = copy.deepcopy(tables)
         tables_editor.re_table = TablesEditor.re_table_get()
         tables_editor.searches_root = searches_root
         tables_editor.searches = list()
