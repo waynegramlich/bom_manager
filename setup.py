@@ -51,7 +51,7 @@ setuptools.setup(
         "bom_digikey_plugin",
         "bom_findchips_plugin",
         "bom_kicad_plugin",
-        "bs4",a
+        "bs4",
         "lxml", 
         "pkg_resources",
         "pyside2",
