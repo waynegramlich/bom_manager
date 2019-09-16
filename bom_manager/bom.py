@@ -5,19 +5,19 @@
 # ## License
 #
 # MIT License
-# 
+#
 # Copyright (c) 2019 Wayne C. Gramlich
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -228,19 +228,19 @@
 
 # Import some libraries (alphabetical order):
 import argparse
-#from bs4 import BeautifulSoup     # HTML/XML data structucure searching
-import bs4
-#import copy                       # Used once 
+# from bs4 import BeautifulSoup     # HTML/XML data structucure searching
+# import bs4
+# import copy                       # Used for the old pickle code...
 import csv
-#from currency_converter import CurrencyConverter         # Currency converter
+# from currency_converter import CurrencyConverter         # Currency converter
 from functools import partial
-import fnmatch                    # File Name Matching
+# import fnmatch                    # File Name Matching
 import glob                       # Unix/Linux style command line file name pattern matching
 import io                         # I/O stuff
 import lxml.etree as etree
-#import pickle                     # Python data structure pickle/unpickle
+# import pickle                     # Python data structure pickle/unpickle
 import pkg_resources              # Used to find plug-ins.
-import pkgutil
+# import pkgutil
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtWidgets import (QApplication, QComboBox, QLineEdit, QMainWindow,
                                QPlainTextEdit, QPushButton,
@@ -250,9 +250,9 @@ from PySide2.QtCore import (QAbstractItemModel, QCoreApplication, QFile, QItemSe
 from PySide2.QtGui import (QClipboard,)
 import os
 import re                         # Regular expressions
-#import requests                   # HTML Requests
-#import sexpdata                   # (LISP) S_EXpresson Data
-#from sexpdata import Symbol       # (LISP) S-EXpression Symbol
+# import requests                   # HTML Requests
+# import sexpdata                   # (LISP) S_EXpresson Data
+# from sexpdata import Symbol       # (LISP) S-EXpression Symbol
 # import subprocess
 import sys
 import time                       # Time package
@@ -399,6 +399,7 @@ import webbrowser
 # sorting by cost, etc.  The final BOM's for each project is generated
 # as a .csv file.
 
+
 # main():
 def main():
     # Run the *Encode* class unit tests:
@@ -494,18 +495,19 @@ def main():
             # Create an order project:
             order.project_create(name, revision_letter, bom_file_name, count, tracing=tracing)
         else:
-            print(f"Ignoring file '{net_file_name}' does not with '.net' or '.csv' suffix.")
+            print(f"Ignoring file '{bom_file_name}' does not with '.net' or '.csv' suffix.")
     if tracing is not None:
         print(f"{tracing}nets processed")
 
-    collection_directories = list()    
+    collection_directories = list()
 
     tables = list()
     if False:
         # Read in each *table_file_name* in *arguments* and append result to *tables*:
-        #for table_file_name in arguments:
+        # for table_file_name in arguments:
         if False:
             # Verify that *table_file_name* exists and has a `.xml` suffix:
+            table_file_name = None
             assert os.path.isfile(table_file_name), "'{0}' does not exist".format(table_file_name)
             assert table_file_name.endswith(".xml"), (
               "'{0}' does not have a .xml suffix".format(table_file_name))
@@ -544,6 +546,7 @@ def main():
 
     return 0
 
+
 # "se" stands for "S Expression":
 def se_find(se, base_name, key_name):
     """ {}: Find *key_name* in *se* and return its value. """
@@ -556,22 +559,22 @@ def se_find(se, base_name, key_name):
     # and returnts the *valueI* that corresponds to *key_name*.
 
     # Check argument types:
-    assert isinstance(se, list)
-    assert isinstance(base_name, str)
-    assert isinstance(key_name, str)
+    # assert isinstance(se, list)
+    # assert isinstance(base_name, str)
+    # assert isinstance(key_name, str)
 
     # Do some sanity checking:
-    size = len(se)
-    assert size > 0
-    assert se[0] == Symbol(base_name)
+    # size = len(se)
+    # assert size > 0
+    # assert se[0] == Symbol(base_name)
 
     result = None
-    key_symbol = Symbol(key_name)
-    for index in range(1, size):
-        sub_se = se[index]
-        if len(sub_se) > 0 and sub_se[0] == key_symbol:
-            result = sub_se
-            break
+    # key_symbol = Symbol(key_name)
+    # for index in range(1, size):
+    #     sub_se = se[index]
+    #     if len(sub_se) > 0 and sub_se[0] == key_symbol:
+    #         result = sub_se
+    #         break
     return result
 
 
@@ -643,16 +646,15 @@ class ActualPart:
 
         # Perform any requested *tracing* for *actual_part1* (i.e. *self*):
         actual_part1 = self
-        next_tracing = None if tracing is None else tracing + " "
+        # next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
             print(f"{tracing}=>ActualPart.__eq__({actual_part1.key}, {actual_part2.key})")
-        
+
         equal = actual_part1.key == actual_part2.key
         if equal:
             # Extract *vendor_parts* making sure that they are sorted:
             vendor_parts1 = actual_part1.sorted_vendor_parts_get()
             vendor_parts2 = actual_part2.sorted_vendor_parts_get()
-            
             equal &= len(vendor_parts1) == len(vendor_parts2)
             if equal:
                 for index, vendor_part1 in enumerate(vendor_parts1):
@@ -704,7 +706,6 @@ class ActualPart:
         assert isinstance(vendor_part, VendorPart)
         actual_part.vendor_parts.append(vendor_part)
 
-
     # ActualPart.vendor_parts_restore():
     def vendor_parts_restore(self, order, tracing=None):
         # Verify argument types:
@@ -715,13 +716,12 @@ class ActualPart:
         if tracing is not None:
             print(f"{tracing}ActualPart.vendor_parts_restore(*)")
 
-        actual_part = self
+        # actual_part = self
         result = False
-        order_root = order.root
-        vendor_searches_root = order.vendor_searches_root
-        xml_base_name = actual_part.name + ".xml"
-        xml_file_name = os.path.join(vendor_searches_root, xml_base_name)
-        
+        # order_root = order.root
+        # vendor_searches_root = order.vendor_searches_root
+        # xml_base_name = actual_part.name + ".xml"
+        # xml_file_name = os.path.join(vendor_searches_root, xml_base_name)
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
@@ -739,7 +739,6 @@ class ActualPart:
         manufacturer_name = actual_part.manufacturer_name
         manufacturer_part_name = actual_part.manufacturer_part_name
         vendor_parts = actual_part.vendor_parts
-        
 
         # Output the `<ActualPart ...>` tag first:
         xml_lines.append(f'{indent}<ActualPart '
@@ -791,6 +790,7 @@ class Cad:
         # Wrap up any argument types:
         if tracing is not None:
             print(f"{tracing}<=Cad.__init__('{name}')")
+
 
 # ComboEdit:
 class ComboEdit:
@@ -1561,8 +1561,6 @@ class EnumerationComment(Comment):
         xml_lines.append('{0}</EnumerationComment>'.format(indent))
 
 
-
-
 # Panda:
 class Panda:
     # Panda stands for Pricing AND Availability:
@@ -1576,6 +1574,7 @@ class Panda:
         # Wrap up any argument types:
         if tracing is not None:
             print(f"{tracing}<=Panda.__init__('{name}')")
+
 
 # ParameterComment:
 class ParameterComment(Comment):
@@ -2287,7 +2286,7 @@ class Node:
         node = self
         is_collection = isinstance(node, Collection)
         is_collections = isinstance(node, Collections)
-        is_either = is_collections or is_collection
+        # is_either = is_collections or is_collection
         assert (parent is None) == is_collections, f"Node '{name}' has bad parent"
 
         # Initilize the super class for *node*:
@@ -2368,7 +2367,7 @@ class Node:
     def child_delete(self, position):
         # Verify argument types:
         assert isinstance(position, int)
-    
+
         # Grab some values out of *node* (i.e. *self*):
         node = self
         children = node._children
@@ -2382,7 +2381,7 @@ class Node:
             if tree_model is not None:
                 model_index = tree_model.createIndex(0, 0, node)
                 tree_model.beginRemoveRows(model_index, position, position)
-            
+
             # Perform the actual deletion:
             del children[position]
             deleted = True
@@ -2569,7 +2568,7 @@ class Node:
         node = self
         parent = node.parent
         assert isinstance(parent, Node)
-        
+
         # Recursively go up the tree until we get a *searches_root*:
         searches_root = parent.searches_root_get()
 
@@ -2579,11 +2578,11 @@ class Node:
     def sort(self, key_function):
         # Verify argument types:
         assert isinstance(key_function, callable)
-        
+
         # Sort the *children* of *node* (i.e. *self*) using *key_function*:
         node = self
-        children = nede._children
-        children.sort(key=keyfunction)
+        children = node._children
+        children.sort(key=key_function)
 
     # Node.tree_model_get():
     def tree_model_get(self):
@@ -2782,7 +2781,7 @@ class Collection(Node):
         collections = parent
         assert isinstance(collections, Collections)
         assert collections.has_child(collection)
-        
+
         # Stuff some additional values into *collection*:
         collection.collection_root = collection_root
         collection.plugin = None
@@ -2809,7 +2808,7 @@ class Collection(Node):
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
             print(f"{tracing}=>Collection.actual_parts_lookup(*, '{search_name})")
-        
+
         # Grab some values from *collection* (i.e. *self*):
         collection = self
         searches_table = collection.searches_table
@@ -2845,7 +2844,7 @@ class Collection(Node):
             csv_file_name = os.path.join(searches_root, relative_path + ".csv")
             if tracing is not None:
                 print(f"{tracing}csv_file_name='{csv_file_name}'")
-            
+
             # Compute *the
             csv_modification_time = (os.path.getmtime(csv_file_name)
                                      if os.path.isfile(csv_file_name)
@@ -2863,7 +2862,7 @@ class Collection(Node):
             with open(csv_file_name) as csv_file:
                 csv_reader = csv.reader(csv_file, delimiter=',', quotechar='"')
                 for row_index, row in enumerate(csv_reader):
-                    #print(f"[{index}]: {row}")
+                    # print(f"[{index}]: {row}")
                     if row_index == 0:
                         column_names = row
                     else:
@@ -2880,7 +2879,7 @@ class Collection(Node):
                 manufacturer_part_number = data_row[manufacturer_part_number_index]
                 pair = (manufacturer, manufacturer_part_number)
                 duplicate_removal_table[pair] = pair
-                #print(f"Row[{index}]: '{manufacturer} : '{manufacturer_part_number}'")
+                # print(f"Row[{index}]: '{manufacturer} : '{manufacturer_part_number}'")
             pairs = list(duplicate_removal_table.keys())
 
             for index, pair in enumerate(pairs):
@@ -2937,7 +2936,7 @@ class Collection(Node):
                 print(f"{tracing}File_Name[{index}]:'{base_name}'")
 
             # Compute a *full_path* from *collection_root* and *base_name*:
-            full_path = os.path.join(directory_path, base_name) 
+            full_path = os.path.join(directory_path, base_name)
             if tracing is not None:
                 print(f"{tracing}full_path='{full_path}'")
             if not base_name.startswith('.'):
@@ -2990,10 +2989,11 @@ class Collection(Node):
         assert isinstance(output_file_name, str)
 
         # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
+        # next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
             print(f"{tracing}=>Collection.url_load('{url}', '{output_file_name}')")
 
+        assert False, "Old plugin code"
         collection = self
         plugin = collection.plugin
         if plugin is None:
@@ -3010,15 +3010,16 @@ class Collection(Node):
             plugin_name = f"{package_name}.plugin"
             if tracing is not None:
                 print(f"{tracing}plug_name='{plugin_name}'")
-            plugin_module = importlib.import_module(plugin_name)
-            url_load = getattr(plugin_module, "url_load")
-            assert callable(url_load)
-            url_load(url, output_file_name, tracing=next_tracing)
-            #assert False
+            # plugin_module = importlib.import_module(plugin_name)
+            # url_load = getattr(plugin_module, "url_load")
+            # assert callable(url_load)
+            # url_load(url, output_file_name, tracing=next_tracing)
+            # assert False
 
         # Wrap up any requested *tracing*:
         if tracing is not None:
             print(f"{tracing}<=Collection.url_load('{url}', '{output_file_name}')")
+
 
 # Collections:
 class Collections(Node):
@@ -3082,7 +3083,7 @@ class Collections(Node):
                 print(f"{tracing}Collection[{index}]:{collection.name}")
             actual_parts += collection.actual_parts_lookup(choice_part, tracing=next_tracing)
 
-        #FIXME: Cull out duplicate acutal parts (i.e. for the same manufacturer.):
+        # FIXME: Cull out duplicate acutal parts (i.e. for the same manufacturer.):
         pass
 
         # Wrap up any requested *tracing*:
@@ -3124,7 +3125,7 @@ class Collections(Node):
         # Wrap up any reqested *tracing*:
         if tracing is not None:
             print(f"{tracing}<=Collections.check('{search_name}', '{project_name}', '{reference}')")
-        
+
     # Collections.partial_load():
     def partial_load(self, tracing=None):
         # Verify argument types:
@@ -3140,7 +3141,7 @@ class Collections(Node):
         collections = self
         collection_directories = collections.collection_directories
         searches_root = collections.searches_root
-        tree_model = collections.tree_model
+        # tree_model = collections.tree_model
         if tracing is not None:
             print(f"{tracing}collection_directories='{collection_directories}'")
             print(f"{tracing}searches_root='{searches_root}'")
@@ -3194,9 +3195,9 @@ class Collections(Node):
                     print(f"{tracing}searches_root='{searches_root}'")
 
                 # Create *collection*:
-                #collection = Collection(name, collections, collection_directory_root,
+                # collection = Collection(name, collections, collection_directory_root,
                 #                        searches_root, url_load, tracing=next_tracing)
-                #assert collections.has_child(collection)
+                # assert collections.has_child(collection)
 
                 # Recursively perfrom *partial_load*'s down from *collection*:
                 collection.partial_load(tracing=next_tracing)
@@ -3217,7 +3218,7 @@ class Collections(Node):
         assert isinstance(search_name, str)
 
         # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
+        # next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
             print(f"{tracing}=>Collections.searches_find(*, '{search_name}')")
 
@@ -3609,7 +3610,6 @@ class Search(Node):
         if tracing is not None:
             print(f"{tracing}=>Search.file_save('{search_name}')")
 
-        
         # Create the *search_xml_text* from *search*:
         search_xml_lines = list()
         search.xml_lines_append(search_xml_lines, "", tracing=next_tracing)
@@ -3627,7 +3627,7 @@ class Search(Node):
             print(f"{tracing}search_file_name='{search_file_name}'")
 
         # Write *search_xml_text* out to *search_xml_file_name*:
-        search.directory_create(searches_root);
+        search.directory_create(searches_root)
         with open(search_file_name, "w") as search_file:
             search_file.write(search_xml_text)
 
@@ -3756,7 +3756,7 @@ class Search(Node):
         search = self
         table = search.parent
         assert isinstance(table, Table)
-        table_name = table.name
+        # table_name = table.name
 
         # Extract the attributes from *attributes_table* of the `<Search ...>` tag:
         attributes_table = search_tree.attrib
@@ -3823,7 +3823,7 @@ class Search(Node):
         assert isinstance(tracing, str) or tracing is None
 
         # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
+        # next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
             print(f"{tracing}=>Search.xml_lines_append()")
 
@@ -3884,7 +3884,7 @@ class Table(Node):
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
             parent_name = parent.name
-            print(f"{tracing}=>Table.__init__('{name}', '{parent.name}', 'url'")
+            print(f"{tracing}=>Table.__init__('{name}', '{parent_name}', 'url'")
 
         # Initialize the *Node* super-class for *table* (i.e. *self*)
         table = self
@@ -4164,7 +4164,7 @@ class Table(Node):
         if searches_size == 0:
             # Note that the call to the *Search*() has the side-effect of appending
             # *all_search* to the children of *table*:
-            #base_name = Encode.to_file_name(name)
+            # base_name = Encode.to_file_name(name)
             all_search = Search("@ALL", table, None, table.url, tracing=next_tracing)
             assert table.has_child(all_search)
             assert len(searches) == 1
@@ -4319,7 +4319,7 @@ class Table(Node):
 
         # Grab some values from *table* (i.e. *self*):
         table = self
-        name = table.name
+        # name = table.name
         relative_path = table.relative_path
         collection = table.collection
 
@@ -4448,7 +4448,7 @@ class Table(Node):
 
         # Preform any requested *tracing* for *table* (i.e. *self*):
         table = self
-        next_tracing = None if tracing is None else tracing + " "
+        # next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
             print(f"{tracing}=>Table.search_directory_get('{table.name}')")
 
@@ -4457,11 +4457,11 @@ class Table(Node):
         relative_path = table.relative_path
         table_name = table.name
         table_base_name = Encode.to_file_name(table_name)
-        search_directory  = os.path.join(searches_root, relative_path, table_base_name)
+        search_directory = os.path.join(searches_root, relative_path, table_base_name)
         if tracing is not None:
             print(f"{tracing}searches_root='{searches_root}'")
             print(f"{tracing}relative_path='{relative_path}'")
-            #print(f"{tracing}table__directory='{table_directory}'")
+            # print(f"{tracing}table__directory='{table_directory}'")
             print(f"{tracing}search_directory='{search_directory}'")
 
         # Make sure *search_directory* exists:
@@ -4742,7 +4742,7 @@ class Order:
         order = self
         projects = order.projects
         projects_table = order.projects_table
-    
+
         # Ignore duplicate *net_file_names*:
         if net_file_name in projects_table:
             print(f"Duplicate .net file '{net_file_name}' specified.")
@@ -4760,7 +4760,7 @@ class Order:
         return project
 
     # Order.bom_write():
-    def bom_write(self, bom_file_name, key_function):
+    def bom_write(self, bom_file_name, key_function, tracing=None):
         """ *Order*: Write out the BOM (Bill Of Materials) for the
             *Order* object (i.e. *self*) to *bom_file_name* ("" for stdout)
             using *key_function* to provide the sort key for each
@@ -4771,103 +4771,114 @@ class Order:
         assert isinstance(bom_file_name, str)
         assert callable(key_function)
 
+        # Perform any requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}=>Order.bom_write(*, '{bom_file_name}', *)")
+
+        # Grab some values from *order* (i.e. *self*):
         order = self
-
-        # Grab *database* and *vendors*:
-        # database = self.database
-        excluded_vendor_names = self.excluded_vendor_names
-
-        # Open *bom_file*
-        bom_file = sys.stdout
-        if bom_file_name != "":
-            bom_file = open(bom_file_name, "w")
+        excluded_vendor_names = order.excluded_vendor_names
+        final_choice_parts = order.final_choice_parts
+        if tracing is not None:
+            print(f"{tracing}len(final_choice_parts)={len(final_choice_parts)}")
 
         # Sort *final_choice_parts* using *key_function*.
-        final_choice_parts = order.final_choice_parts
         final_choice_parts.sort(key=key_function)
 
-        # Now generate a BOM summary:
-        total_cost = 0.0
-        for choice_part in final_choice_parts:
-            # Make sure that nonething nasty got into *final_choice_parts*:
-            assert isinstance(choice_part, ChoicePart)
+        # Open *bom_file*
+        with (sys.stdout if bom_file_name == "" else open(bom_file_name, "w")) as bom_file:
+            # Now generate a BOM summary:
+            total_cost = 0.0
+            for choice_part in final_choice_parts:
+                # Make sure that nonething nasty got into *final_choice_parts*:
+                assert isinstance(choice_part, ChoicePart)
 
-            # Sort the *pose_parts* by *project* followed by reference:
-            pose_parts = choice_part.pose_parts
-            pose_parts.sort(key=lambda pose_part:
-                            (pose_part.project.name, pose_part.reference.upper(),
-                             int(text_filter(pose_part.reference, str.isdigit))))
+                # Sort the *pose_parts* by *project* followed by reference:
+                pose_parts = choice_part.pose_parts
+                pose_parts.sort(key=lambda pose_part:
+                                (pose_part.project.name, pose_part.reference.upper(),
+                                 int(text_filter(pose_part.reference, str.isdigit))))
 
-            # Write the first line out to *bom_file*:
-            bom_file.write("  {0}:{1};{2} {3}:{4}\n".format(
-                           choice_part.name,
-                           choice_part.kicad_footprint, choice_part.description,
-                           choice_part.count_get(), choice_part.references_text_get()))
+                # Write the first line out to *bom_file*:
+                part_name = choice_part.name
+                part_footprint = "FOOTPRINT"  # choice_part.kicad_footprint,
+                part_description = "DESCRIPTION"  # choice_part.description
+                part_count = choice_part.count_get()
+                part_references_text = choice_part.references_text_get()
+                bom_file.write(f"  {part_name}:{part_footprint};{part_description}"
+                               f" {part_count}:{part_references_text}\n")
 
-            # Select the vendor_part and associated quantity/cost
-            choice_part.select(excluded_vendor_names, True)
-            # selected_actual_part = choice_part.selected_actual_part
-            selected_vendor_part = choice_part.selected_vendor_part
-            selected_order_quantity = choice_part.selected_order_quantity
-            selected_total_cost = choice_part.selected_total_cost
-            selected_price_break_index = choice_part.selected_price_break_index
+                # Select the vendor_part and associated quantity/cost
+                choice_part.select(excluded_vendor_names, True)
+                # selected_actual_part = choice_part.selected_actual_part
+                selected_vendor_part = choice_part.selected_vendor_part
+                selected_order_quantity = choice_part.selected_order_quantity
+                selected_total_cost = choice_part.selected_total_cost
+                selected_price_break_index = choice_part.selected_price_break_index
 
-            if isinstance(selected_vendor_part, VendorPart):
-                # Grab the *vendor_name*:
-                assert isinstance(selected_vendor_part, VendorPart)
-                # vendor_name = selected_vendor_part.vendor_name
+                # It should be impossible not to have a *VendorPart*:
+                if isinstance(selected_vendor_part, VendorPart):
+                    # Grab the *vendor_name*:
+                    assert isinstance(selected_vendor_part, VendorPart)
+                    # vendor_name = selected_vendor_part.vendor_name
 
-                # Show the *price breaks* on each side of the
-                # *selected_price_breaks_index*:
-                price_breaks = selected_vendor_part.price_breaks
-                # print("len(price_breaks)={0} selected_price_break_index={1}".
-                #  format(len(price_breaks), selected_price_break_index))
-                selected_price_break = price_breaks[selected_price_break_index]
-                minimum_index = max(selected_price_break_index - 1, 0)
-                maximum_index = min(selected_price_break_index + 2, len(price_breaks))
-                price_breaks = price_breaks[minimum_index: maximum_index]
+                    # Show the *price breaks* on each side of the
+                    # *selected_price_breaks_index*:
+                    price_breaks = selected_vendor_part.price_breaks
+                    # print("len(price_breaks)={0} selected_price_break_index={1}".
+                    #  format(len(price_breaks), selected_price_break_index))
+                    selected_price_break = price_breaks[selected_price_break_index]
+                    minimum_index = max(selected_price_break_index - 1, 0)
+                    maximum_index = min(selected_price_break_index + 2, len(price_breaks))
+                    price_breaks = price_breaks[minimum_index: maximum_index]
 
-                # Compute the *price_breaks_text*:
-                price_breaks_text = ""
-                for price_break in price_breaks[minimum_index: maximum_index]:
-                    price_breaks_text += "{0}/${1:.3f} ".format(
-                      price_break.quantity, price_break.price)
+                    # Compute the *price_breaks_text*:
+                    price_breaks_text = ""
+                    for price_break in price_breaks[minimum_index: maximum_index]:
+                        price_breaks_text += "{0}/${1:.3f} ".format(
+                          price_break.quantity, price_break.price)
 
-                # Print out the line:
-                selected_actual_key = selected_vendor_part.actual_part_key
-                selected_manufacturer_name = selected_actual_key[0]
-                selected_manufacturer_part_name = selected_actual_key[1]
-                bom_file.write("    {0}:{1} [{2}: {3}] {4}\n".format(
-                               selected_vendor_part.vendor_name,
-                               selected_vendor_part.vendor_part_name,
-                               selected_manufacturer_name,
-                               selected_manufacturer_part_name,
-                               price_breaks_text))
+                    # Print out the line:
+                    selected_actual_key = selected_vendor_part.actual_part_key
+                    selected_manufacturer_name = selected_actual_key[0]
+                    selected_manufacturer_part_name = selected_actual_key[1]
+                    bom_file.write("    {0}:{1} [{2}: {3}] {4}\n".format(
+                                   selected_vendor_part.vendor_name,
+                                   selected_vendor_part.vendor_part_name,
+                                   selected_manufacturer_name,
+                                   selected_manufacturer_part_name,
+                                   price_breaks_text))
 
-                # Print out the result:
-                bom_file.write("        {0}@({1}/${2:.3f})={3:.2f}\n".format(
-                  selected_order_quantity,
-                  selected_price_break.quantity, selected_price_break.price,
-                  selected_total_cost))
+                    # Print out the result:
+                    bom_file.write("        {0}@({1}/${2:.3f})={3:.2f}\n".format(
+                      selected_order_quantity,
+                      selected_price_break.quantity, selected_price_break.price,
+                      selected_total_cost))
 
-                total_cost += selected_total_cost
+                    total_cost += selected_total_cost
+                else:
+                    # It should be impossible to get here:
+                    print(f"type(selected_vendor_part)={type(selected_vendor_part)}")
 
-        # Wrap up the *bom_file*:
-        bom_file.write("Total: ${0:.2f}\n".format(total_cost))
-        bom_file.close()
+            # Wrap up the *bom_file*:
+            bom_file.write("Total: ${0:.2f}\n".format(total_cost))
+
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}<=Order.bom_write(*, '{bom_file_name}', *)")
 
     # Order.check():
     def check(self, collections, tracing=None):
         # Verify argument types:
         assert isinstance(collections, Collections)
-        
+
         # Perform any requested *tracing*:
         next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
             print(f"{tracing}=>Order.check()")
 
         # Check each of the *projects* in *order* (i.e. *self*):
-        order= self
+        order = self
         projects = order.projects
         for project in projects:
             project.check(collections, tracing=next_tracing)
@@ -4882,15 +4893,13 @@ class Order:
             for each vendor as a .csv (Comma Seperated Values).
         """
         # Verify argument types:
-        
 
-        # Grab *database* and *vendors*:
-        # database = self.database
-        excluded_vendor_names = self.excluded_vendor_names
-
-        # Sort *final_choice_parts* using *key_function*.
+        # Grab some values from *order* (i.e. *self*):
         order = self
+        excluded_vendor_names = order.excluded_vendor_names
         final_choice_parts = order.final_choice_parts
+
+        # Sort *final_choice_parts*:
         final_choice_parts.sort(key=lambda choice_part:
                                 (choice_part.selected_vendor_name,
                                  choice_part.selected_total_cost,
@@ -4948,21 +4957,20 @@ class Order:
                 vendor_file.write(vendor_text)
 
     # Order.exclude_vendors_to_reduce_shipping_costs():
-    def exclude_vendors_to_reduce_shipping_costs(self, choice_parts,
-                                                 excluded_vendor_names, reduced_vendor_messages):
+    def exclude_vendors_to_reduce_shipping_costs(self, choice_parts, excluded_vendor_names,
+                                                 reduced_vendor_messages, tracing=None):
         """ *Order*: Sweep through *choice_parts* and figure out which vendors
             to add to *excluded_vendor_names* to reduce shipping costs.
         """
-
-        tracing = False
-        # tracing = True
-        if tracing:
-            print("=>exclude_vendors_to_reduce_shipping_costs")
-
         # Verify argument types:
         assert isinstance(choice_parts, list)
         assert isinstance(excluded_vendor_names, dict)
         assert isinstance(reduced_vendor_messages, list)
+        assert isinstance(tracing, str) or tracing is None
+
+        # Perform any requested *tracing*:
+        if tracing:
+            print(f"{tracing}=>Order.exclude_vendors_to_reduce_shipping_costs(*, *, *, *)")
 
         # First figure out the total *missing_parts*.  We will stop if
         # excluding a vendor increases above the *missing_parts* number:
@@ -5074,8 +5082,9 @@ class Order:
                 # print("lowest_cost={0:.2f}".format(lowest_cost))
                 done = True
 
-        if tracing:
-            print("<=exclude_vendors_to_reduce_shipping_costs")
+        # Wrap up any requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}=>Order.exclude_vendors_to_reduce_shipping_costs(*, *, *, *)")
 
     # Order.exclude_vendors_with_high_minimums():
     def exclude_vendors_with_high_minimums(self, choice_parts, excluded_vendor_names,
@@ -5090,7 +5099,7 @@ class Order:
         assert isinstance(reduced_vendor_messages, list)
 
         # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
+        # next_tracing = None if tracing is None else tracing + " "
         if tracing is not None:
             print(f"{tracing}=>exclude_vendors_with_high_minimums(...)")
         assert False
@@ -5140,8 +5149,9 @@ class Order:
 
         # Grab the some values from *order* (i.e. *self*):
         order = self
-        pandas = order.pandas
+        # pandas = order.pandas
         projects = order.projects
+        excluded_vendor_names = order.excluded_vendor_names
 
         # Construct *project_parts_table* table (Dict[name, List[ProjectPart]]) so that every
         # we have a name to a List[ProjectPart] mapping.
@@ -5159,7 +5169,7 @@ class Order:
                 if tracing is not None:
                     print(f"{tracing}ProjectPart[{project_part_index}]:'{project_part.name}'")
                 project_part_name = project_part.name
-                if not project_part_name in project_parts_table:
+                if project_part_name not in project_parts_table:
                     project_parts_table[project_part_name] = [project_part]
                 else:
                     project_parts_table[project_part_name].append(project_part)
@@ -5199,12 +5209,12 @@ class Order:
             choice_part.vendor_parts_refresh(new_actual_parts, order, choice_part_name,
                                              tracing=next_tracing)
 
-        # Wrap up any requested *tracing* and return *final_choice_parts*:
-        if tracing is not None:
-            print(f"{tracing}<=Order.final_choice_parts_compute(*)"
-                  f"=>len([...])={len(final_choice_parts)}")
+        # Stuff *final_choice_parts* back into *order*:
+        final_choice_parts.sort(key=lambda final_choice_part: final_choice_part.name)
         order.final_choice_part = final_choice_parts
-        return final_choice_parts
+
+        for final_choice_part in final_choice_parts:
+            final_choice_part.select(excluded_vendor_names, True, tracing=next_tracing)
 
         if False:
             # Old code:
@@ -5213,19 +5223,22 @@ class Order:
             pose_parts = project.all_pose_parts
             project_parts = project.project_parts
             project_parts_table = project.project_parts_table
-            
+
             # Sort *pose_parts* by letters first followed by integers:
             pose_parts.sort(key=lambda pose_part: (
                              text_filter(pose_part.reference, str.isalpha).upper(),
                              int(text_filter(pose_part.reference, str.isdigit))))
 
+            choice_parts_table = None
+            assert False
             for project_part_index, project_part in enumerate(project_parts):
                 # Grab some values from *project_part*:
                 project_part_name = project_part.name
 
-                searches = collecton.searches_find(project_part_name)
+                collection = None
+                assert False
+                searches = collection.searches_find(project_part_name)
                 choice_part = ChoicePart()
-                    
                 choice_parts = project_part.choice_parts()
                 for choice_part_index, choice_part in enumerate(choice_parts):
                     # Do some consistency checking:
@@ -5247,17 +5260,12 @@ class Order:
                     #          choice_part_name))
 
                     # Remember *pose_part* in *choice_part*:
-                    choice_part.pose_part_append(pose_part)
+                    # choice_part.pose_part_append(pose_part)
 
-
-        # Save the *database* because we've loaded all of the *vendor_parts*'s:
-        #database.save()
-
-        # Sort by *final_choice_parts* by schematic part name:
-        final_choice_parts = list(choice_parts_table.values())
-        final_choice_parts.sort(
-          key=lambda choice_part: choice_part.name)
-        order.final_choice_parts = final_choice_parts
+        # Sort by *final_choice_parts* by name and stuff backinto *order*:
+        # final_choice_parts = list(choice_parts_table.values())
+        # final_choice_parts.sort(key=lambda choice_part: choice_part.name)
+        # order.final_choice_parts = final_choice_parts
 
         # Sweep through *final_choice_parts* and force the associated
         # *PosePart*'s to be in a reasonable order:
@@ -5266,6 +5274,7 @@ class Order:
             assert isinstance(choice_part, ChoicePart)
             choice_part.pose_parts_sort()
 
+        # Wrap up any requested *tracing* and return *final_choice_parts*:
         # Wrap up any requested *tracing* and return *final_choice_parts*:
         if tracing is not None:
             for choice_part_index, choice_part in enumerate(final_choice_parts):
@@ -5351,8 +5360,9 @@ class Order:
         if tracing is not None:
             print(f"{tracing}=>Order.process(*)")
 
-        # Use *order instead of *self*:
+        # Grab some values from *order* (i.e. *self*):
         order = self
+        excluded_vendor_names = order.excluded_vendor_names
 
         # print("=>Order.process()")
 
@@ -5368,27 +5378,38 @@ class Order:
         # *final_choice_parts* it can be sorted various different ways
         # (by vendor, by cost, by part_name, etc.)
         final_choice_parts = order.final_choice_parts_compute(collections, tracing=next_tracing)
+        if tracing is not None:
+            print(f"{tracing}A:len(final_choice_parts)={len(final_choice_parts)}")
 
-        excluded_vendor_names = order.excluded_vendor_names
-        selected_vendor_names = order.selected_vendor_names
-        if selected_vendor_names is not None:
-            all_vendor_names = order.vendor_names_get(final_choice_parts, excluded_vendor_names)
-            for vendor_name in all_vendor_names:
-                if vendor_name not in selected_vendor_names:
-                    excluded_vendor_names[vendor_name] = None
-        else:
-            # Now we winnow down the total number of vendors to order from
-            # to 1) minimize the number of orders that can be messed up
-            # (i.e. supply chain simplication) and to save shipping costs.
-            # There are two steps -- throw out vendors with excessive minimum
-            # order amounts followed by throwing out vendors where the savings
-            # do not exceed additional shipping costs.
-            #order.exclude_vendors_with_high_minimums(
-            #  final_choice_parts, excluded_vendor_names, reduced_vendor_messages)
-            pass
+        # excluded_vendor_names = order.excluded_vendor_names
+        # selected_vendor_names = order.selected_vendor_names
+        # if selected_vendor_names is not None:
+        #     all_vendor_names = order.vendor_names_get(final_choice_parts, excluded_vendor_names)
+        #     for vendor_name in all_vendor_names:
+        #        if vendor_name not in selected_vendor_names:
+        #                excluded_vendor_names[vendor_name] = None
+        # else:
+        #     # Now we winnow down the total number of vendors to order from
+        #     # to 1) minimize the number of orders that can be messed up
+        #     # (i.e. supply chain simplication) and to save shipping costs.
+        #     # There are two steps -- throw out vendors with excessive minimum
+        #     # order amounts followed by throwing out vendors where the savings
+        #     # do not exceed additional shipping costs.
+        #     #order.exclude_vendors_with_high_minimums(
+        #     #  final_choice_parts, excluded_vendor_names, reduced_vendor_messages)
+        #     pass
 
-        order.exclude_vendors_to_reduce_shipping_costs(
-          final_choice_parts, excluded_vendor_names, reduced_vendor_messages)
+        if tracing is not None:
+            print(f"{tracing}B:len(final_choice_parts)={len(final_choice_parts)}")
+
+        # order.exclude_vendors_with_high_minimums(final_choice_parts, excluded_vendor_names,
+        #                                          reduced_vendor_messages, tracing=next_tracing)
+        order.exclude_vendors_to_reduce_shipping_costs(final_choice_parts, excluded_vendor_names,
+                                                       reduced_vendor_messages,
+                                                       tracing=next_tracing)
+
+        if tracing is not None:
+            print(f"{tracing}C:len(final_choice_parts)={len(final_choice_parts)}")
 
         # Write out *reduced_vendor_messages* to a report file:
         order_root = order.order_root
@@ -5398,33 +5419,43 @@ class Order:
                 reduced_vendor_messages_file.write(reduced_vendor_message)
             reduced_vendor_messages_file.close()
 
+        if tracing is not None:
+            print(f"{tracing}D:len(final_choice_parts)={len(final_choice_parts)}")
+
         # Let the user know how many vendors were eliminated:
         reduced_vendor_messages_size = len(reduced_vendor_messages)
         if reduced_vendor_messages_size >= 1:
             print(f"{reduced_vendor_messages_size} vendors eliminated.  "
                   f"See '{reduced_vendor_messages_file_name}' file for why.")
 
+        if tracing is not None:
+            print(f"{tracing}E:len(final_choice_parts)={len(final_choice_parts)}")
+
         # Check for missing footprints:
         # order.footprints_check(final_choice_parts)
         # order.positions_process()
+
+        if tracing is not None:
+            print(f"{tracing}F:len(final_choice_parts)={len(final_choice_parts)}")
 
         # Print out the final selected vendor summary:
         order.summary_print(final_choice_parts, excluded_vendor_names)
 
         # Generate the bom file reports for *self.final_choice_parts*:
         order_root = order.order_root
+        order.final_choice_parts = final_choice_parts
         order.bom_write(os.path.join(order_root, "bom_by_price.txt"), lambda choice_part:
                         (choice_part.selected_total_cost,
                          choice_part.selected_vendor_name,
-                         choice_part.name))
+                         choice_part.name), tracing=next_tracing)
         order.bom_write(os.path.join(order_root, "bom_by_vendor.txt"), lambda choice_part:
                         (choice_part.selected_vendor_name,
                          choice_part.selected_total_cost,
-                         choice_part.name))
+                         choice_part.name), tracing=next_tracing)
         order.bom_write(os.path.join(order_root, "bom_by_name.txt"), lambda choice_part:
                         (choice_part.name,
                          choice_part.selected_vendor_name,
-                         choice_part.selected_total_cost))
+                         choice_part.selected_total_cost), tracing=next_tracing)
         order.csv_write()
 
         # Write a part summary file for each project:
@@ -5860,15 +5891,14 @@ class PosePart:
         pose_part.comment = comment
         pose_part.install = (comment != "DNI")
 
-
     # PosePart.check():
     def check(self, collections, tracing=None):
         # Verify argument types:
         assert isinstance(collections, Collections)
-        assert isinstance(tracing, str) or tracing == None
+        assert isinstance(tracing, str) or tracing is None
 
         # Perform any requested *tracing* for *pose_part* (i.e. *self*):
-        pose_part = self    
+        pose_part = self
         reference = pose_part.reference
         project = pose_part.project
         project_name = project.name
@@ -5884,6 +5914,7 @@ class PosePart:
         # Wrap up any requested *tracing*:
         if tracing is not None:
             print(f"{tracing}<=PosePart.check('{project_name}', '{reference}')")
+
 
 # PositionRow:
 class PositionRow:
@@ -5996,7 +6027,6 @@ class PositionsTable:
         # Verify argument types:
         assert isinstance(file_name, str) and (
           file_name.endswith(".csv") or file_name.endswith(".pos"))
-        assert isinstance(database, Database)
 
         #
         positions_table = self
@@ -6152,6 +6182,7 @@ class PositionsTable:
             quintuple = (feeder_name[0], int(feeder_name[1:]), key, part_height, rotation)
             quintuples.append(quintuple)
         quintuples.sort()
+        order_root = None
         feeders_file_name = os.path.join(order_root, "feeders.txt")
         with open(feeders_file_name, "w") as feeders_file:
             feeders_file.write("Feeder\tHeight\tRotate\tValue\n")
@@ -6181,6 +6212,7 @@ class PositionsTable:
     def footprints_rotate(self, database):
         """ *Positions_Table: ..."""
 
+        order_root = None
         positions_table = self
         file_name = positions_table.file_name
         footprints = database.footprints
@@ -6408,6 +6440,7 @@ class PriceBreak:
         # Create and return the new *PriceBreak* object:
         price_break = PriceBreak(quantity, price)
         return price_break
+
 
 # Project:
 class Project:
@@ -6673,7 +6706,7 @@ class Project:
         else:
             pose_part = PosePart(project_part, reference, "")
             pose_parts_table[reference] = pose_part
-            pose_parts.append(pose_part)
+            all_pose_parts.append(pose_part)
         return pose_part
 
     # Project.positions_process():
@@ -6731,25 +6764,25 @@ class ProjectPart:
             assert isinstance(project, Project)
 
         # Split *name" into *base_name* and *short_footprint*:
-        #base_name_short_footprint = name.split(';')
-        #if len(base_name_short_footprint) == 2:
-        #    base_name = base_name_short_footprint[0]
-        #    short_footprint = base_name_short_footprint[1]
+        # base_name_short_footprint = name.split(';')
+        # if len(base_name_short_footprint) == 2:
+        #     base_name = base_name_short_footprint[0]
+        #     short_footprint = base_name_short_footprint[1]
         #
-        #    # Load up *self*:
-        #    project_part.name = name
-        #    project_part.base_name = base_name
-        #    project_part.short_footprint = short_footprint
-        #    project_part.kicad_footprint = kicad_footprint
-        #    project_part.pose_parts = []
-        #else:
-        
+        #     # Load up *self*:
+        #     project_part.name = name
+        #     project_part.base_name = base_name
+        #     project_part.short_footprint = short_footprint
+        #     project_part.kicad_footprint = kicad_footprint
+        #     project_part.pose_parts = []
+        # else:
+
         # Stuff values into *project_part* (i.e. *self*):
         project_part = self
         project_part.name = name
         project_part.projects = projects
-        project_part.pose_parts = []       # List[PosePart]
-        project_part.pose_parts_table = {} # Dict[reference, PosePart]
+        project_part.pose_parts = []        # List[PosePart]
+        project_part.pose_parts_table = {}  # Dict[reference, PosePart]
 
     # ProjectPart.__format__():
     def __format__(self, format):
@@ -6773,6 +6806,7 @@ class ProjectPart:
         """
 
         assert False, "No footprints_check method for this Schematic Part"
+
 
 # AliasPart():
 class AliasPart(ProjectPart):
@@ -6855,14 +6889,14 @@ class ChoicePart(ProjectPart):
         for search in searches:
             assert search.name == name
 
-        #assert isinstance(kicad_footprint, str)
-        #assert isinstance(location, str)
-        #assert isinstance(description, str)
-        #assert isinstance(rotation, float) or rotation is None
-        #assert isinstance(pick_dx, float)
-        #assert isinstance(pick_dy, float)
-        #assert isinstance(feeder_name, str) or feeder_name is None
-        #assert isinstance(part_height, float) or part_height is None
+        # assert isinstance(kicad_footprint, str)
+        # assert isinstance(location, str)
+        # assert isinstance(description, str)
+        # assert isinstance(rotation, float) or rotation is None
+        # assert isinstance(pick_dx, float)
+        # assert isinstance(pick_dy, float)
+        # assert isinstance(feeder_name, str) or feeder_name is None
+        # assert isinstance(part_height, float) or part_height is None
 
         # Use *choice_part* instead of *self*:
         choice_part = self
@@ -6893,13 +6927,13 @@ class ChoicePart(ProjectPart):
         choice_part.selected_price_break_index = -1
         choice_part.selected_price_break = None
 
-        #choice_part.description = description
-        #choice_part.feeder_name = feeder_name
-        #choice_part.location = location
-        #choice_part.part_height = part_height
-        #choice_part.rotation = rotation
-        #choice_part.pick_dx = pick_dx
-        #choice_part.pick_dy = pick_dy
+        # choice_part.description = description
+        # choice_part.feeder_name = feeder_name
+        # choice_part.location = location
+        # choice_part.part_height = part_height
+        # choice_part.rotation = rotation
+        # choice_part.pick_dx = pick_dx
+        # choice_part.pick_dy = pick_dy
 
     # ChoicePart.__format__():
     def __format__(self, format):
@@ -7119,11 +7153,15 @@ class ChoicePart(ProjectPart):
         return references_text
 
     # ChoicePart.select():
-    def select(self, excluded_vendor_names, announce=False):
+    def select(self, excluded_vendor_names, announce=False, tracing=None):
         """ *ChoicePart*: Select and return the best priced *ActualPart*
             for the *ChoicePart* (i.e. *self*) excluding any vendors
             in the *excluded_vendor_names* dictionary.
         """
+        # Verify argument types:
+        assert isinstance(excluded_vendor_names, dict)
+        assert isinstance(announce, bool)
+        assert isinstance(tracing, str) or tracing is None
 
         # This lovely piece of code basically brute forces the decision
         # process of figuring out which *vendor_part* to select and the
@@ -7134,25 +7172,24 @@ class ChoicePart(ProjectPart):
         # When we are done, we sort *quints* and select the first one
         # off the head of the list.
 
-        tracing = False
-        # tracing = self.name == "S18V20F6;S18V20Fx"
-        if tracing:
-            print("=>ChoicePart.select()")
-            print(" Choice_part:{0}".format(self.name))
+        # Perform any requested *tracing* for *choice_part* (i.e. *self*):
+        choice_part = self
+        if tracing is not None:
+            print(f"{tracing}=>Choice_Part.select('{choice_part.name}', *, {announce})")
 
         quints = []
         required_quantity = self.count_get()
         actual_parts = self.actual_parts
         for actual_part_index in range(len(actual_parts)):
             actual_part = actual_parts[actual_part_index]
-            if tracing:
+            if tracing is not None:
                 print(" Manufacturer: {0} {1}".format(
                       actual_part.manufacturer_name, actual_part.manufacturer_part_name))
             vendor_parts = actual_part.vendor_parts
             for vendor_part_index, vendor_part in enumerate(vendor_parts):
                 if tracing:
-                    print("  Vendor: {0} {1}".
-                          format(vendor_part.vendor_name, vendor_part.vendor_part_name))
+                    print(f"{tracing}Vendor: {vendor_part.vendor_name}: "
+                          f"'{vendor_part.vendor_part_name}'")
                 price_breaks = vendor_part.price_breaks
                 for price_break_index, price_break in enumerate(price_breaks):
                     # if tracing:
@@ -7165,24 +7202,24 @@ class ChoicePart(ProjectPart):
                     quantity = price_break.quantity
                     order_quantity = max(required_quantity, quantity)
                     total_cost = order_quantity * price
-                    if tracing:
-                        print("   price={0:.2f} quant={1} order_quantity={2} total_cost={3:.2f}".
-                              format(price, quantity, order_quantity, total_cost))
+                    # if tracing:
+                    #     print("   price={0:.2f} quant={1} order_quantity={2} total_cost={3:.2f}".
+                    #           format(price, quantity, order_quantity, total_cost))
 
                     # Assemble the *quint* and append to *quints* if there
                     # enough parts available:
                     is_excluded = vendor_part.vendor_name in excluded_vendor_names
-                    if tracing:
-                        print("   Quantity Available: {0} Is excluded: {1}".
-                              format(vendor_part.quantity_available, is_excluded))
+                    if tracing is not None:
+                        print(f"{tracing}  Quantity Available: {vendor_part.quantity_available} "
+                              f"Is excluded: {1}")
                     if not is_excluded and vendor_part.quantity_available >= order_quantity:
                         assert price_break_index < len(price_breaks)
                         quint = (total_cost, order_quantity,
                                  actual_part_index, vendor_part_index,
                                  price_break_index, len(price_breaks))
                         quints.append(quint)
-                        if tracing:
-                            print("    quint={0}".format(quint))
+                        if tracing is not None:
+                            print(f"{tracing}    quint={quint}")
 
         if len(quints) == 0:
             choice_part_name = self.name
@@ -7236,8 +7273,10 @@ class ChoicePart(ProjectPart):
         if len(quints) == 0:
             missing_part = 1
 
-        if tracing:
-            print("<=ChoicePart.select()\n")
+        # Perform any requested *tracing*:
+        if tracing is not None:
+            print(f"{tracing}<=Choice_Part.select('{choice_part.name}', *, {announce})"
+                  f"=>{missing_part}")
         return missing_part
 
     # ChoicePart.vendor_names_load():
@@ -7274,7 +7313,6 @@ class ChoicePart(ProjectPart):
         # Grab some values from *choice_part* (i.e. *self*) and *order*:
         choice_part = self
         choice_part_name = choice_part.name
-        cads = order.cads
         pandas = order.pandas
         stale = order.stale
         vendor_searches_root = order.vendor_searches_root
@@ -7371,7 +7409,7 @@ class ChoicePart(ProjectPart):
                 if tracing is not None:
                     print(f"{tracing}previous_actual_part.name="
                           f"'{previous_actual_part.manufacturer_part_name}'")
-                    print(f"len(previous_vendor_parts)={len(previous_vendor_parts)}")
+                    print(f"{tracing}len(previous_vendor_parts)={len(previous_vendor_parts)}")
 
                 # Compute the *minimum_time_stamp* across all *previous_vendor_parts*:
                 minimum_timestamp = now
@@ -7499,6 +7537,7 @@ class ChoicePart(ProjectPart):
             actual_parts.append(actual_part)
         return choice_part
 
+
 # FractionalPart:
 class FractionalPart(ProjectPart):
     # A *FractionalPart* specifies a part that is constructed by
@@ -7581,13 +7620,13 @@ class TablesEditor(QMainWindow):
             print(f"module_file_name='{module_file_name}'")
         module_directory = os.path.split(module_file_name)[0]
         if tracing is not None:
-            print(f"module_directory='{module_directory}'")        
+            print(f"module_directory='{module_directory}'")
         ui_file_name = os.path.join(module_directory, "bom_manager.ui")
         if tracing is not None:
-            print(f"ui_file_name='{ui_file_name}'")        
+            print(f"ui_file_name='{ui_file_name}'")
 
         # Create *main_window* from thie `.ui` file:
-        #ui_qfile = QFile("bom_manager.ui")
+        # ui_qfile = QFile("bom_manager.ui")
         ui_qfile = QFile(ui_file_name)
         ui_qfile.open(QFile.ReadOnly)
         loader = QUiLoader()
@@ -7663,8 +7702,8 @@ class TablesEditor(QMainWindow):
         assert os.path.isdir(searches_root)
 
         # Create *collections_root*:
-        #collections_root = os.path.join(working_directory_path, "collections")
-        #assert os.path.isdir(collections_root)
+        # collections_root = os.path.join(working_directory_path, "collections")
+        # assert os.path.isdir(collections_root)
 
         # Load all values into *tables_editor* before creating *combo_edit*.
         # The *ComboEdit* initializer needs to access *tables_editor.main_window*:
@@ -7684,7 +7723,7 @@ class TablesEditor(QMainWindow):
         tables_editor.languages = ["English", "Spanish", "Chinese"]
         tables_editor.main_window = main_window
         tables_editor.order = order
-        #tables_editor.original_tables = copy.deepcopy(tables)
+        # tables_editor.original_tables = copy.deepcopy(tables)
         tables_editor.re_table = TablesEditor.re_table_get()
         tables_editor.searches_root = searches_root
         tables_editor.searches = list()
@@ -8064,9 +8103,8 @@ class TablesEditor(QMainWindow):
         # Make sure *current_search* exists (this button click should be disabled if not available):
         assert current_search is not None
 
-        #
-        #clip_board = pyperclip.paste()
-        #selection = os.popen("xsel").read()
+        # clip_board = pyperclip.paste()
+        # selection = os.popen("xsel").read()
         application = tables_editor.application
         application_clipboard = application.clipboard()
         selection = application_clipboard.text(QClipboard.Selection)
@@ -9706,9 +9744,9 @@ class TablesEditor(QMainWindow):
         tables_editor = self
         main_window = tables_editor.main_window
         application = tables_editor.application
-        clipboard = application.clipboard()
-        #print(f"type(clipboard)='{type(clipboard)}'")
-        #assert isinstance(clipboard, QClipboard)
+        # clipboard = application.clipboard()
+        # print(f"type(clipboard)='{type(clipboard)}'")
+        # assert isinstance(clipboard, QClipboard)
 
         main_window.show()
 
@@ -9736,10 +9774,11 @@ class TablesEditor(QMainWindow):
             search.xml_lines_append(xml_lines, "  ")
         xml_lines.append('</Searches>')
         xml_lines.append("")
-        xml_text = '\n'.join(xml_lines)
-        searches_xml_file_name = os.path.join(order_root, "searches.xml")
-        with open(searches_xml_file_name, "w") as searches_xml_file:
-            searches_xml_file.write(xml_text)
+        # xml_text = '\n'.join(xml_lines)
+        # searches_xml_file_name = os.path.join(order_root, "searches.xml")
+        # with open(searches_xml_file_name, "w") as searches_xml_file:
+        #     searches_xml_file.write(xml_text)
+        assert False
 
         # Wrap up any requested signal tracing:
         if trace_signals:
@@ -9951,13 +9990,14 @@ class TablesEditor(QMainWindow):
         # Peform an requested signal tracing:
         tables_editor = self
         tracing = " " if tables_editor.trace_signals else None
-        next_tracing = None if tracing is None else " "
+        # next_tracing = None if tracing is None else " "
         if tracing is not None:
             print("=>TablesEditor.searches_save_button_clicked()".format(tracing))
 
         # Write out the searches to *file_name*:
-        file_name = os.path.join(order_root, "searches.xml")
-        tables_editor.searches_file_save(file_name, tracing=next_tracing)
+        # file_name = os.path.join(order_root, "searches.xml")
+        # tables_editor.searches_file_save(file_name, tracing=next_tracing)
+        assert False
 
         if tracing is not None:
             print("<=TablesEditor.searches_save_button_clicked()\n".format(tracing))
@@ -10363,7 +10403,6 @@ class TreeModel(QAbstractItemModel):
         if tracing is not None:
             print(f"{tracing}<=TreeModel.__init__(*)")
 
-
     # check if the node has data that has not been loaded yet
     # TreeModel.canFetchMore():
     def canFetchMore(self, model_index):
@@ -10447,7 +10486,7 @@ class TreeModel(QAbstractItemModel):
 
         # Carefully delete the row associated with *model_index*:
         if model_index.isValid():
-            row = model_index.row()
+            # row = model_index.row()
             node = tree_model.getNode(model_index)
             assert isinstance(node, Node)
             parent = node.parent
@@ -10788,7 +10827,6 @@ class VendorPart:
               price_break.quantity, price_break.price)
         return price_breaks_text
 
-
     # VendorPart.xml_lines_append():
     def xml_lines_append(self, xml_lines, indent):
         # Verify argument types:
@@ -10825,7 +10863,7 @@ class VendorPart:
         assert isinstance(vendor_part_tree, etree._Element)
         assert isinstance(actual_part, ActualPart)
         assert vendor_part_tree.tag == "VendorPart"
-        
+
         # Pull out the attribute values:
         attributes_table = vendor_part_tree.attrib
         timestamp = int(float(attributes_table["timestamp"]))
@@ -11230,7 +11268,7 @@ class VendorPart:
 #        source /usr/local/bin/virtualenvwrapper.sh        # Actually `which virtualenvwrapper.sh`
 #
 # * Run the following commands in your shell:
-#        
+#
 #        sudo -H pip3 install virtualenv                   # Should already be installed
 #        sudo -H pip3 install virtualenvwrapper            # This makes life easier.
 #        source ~/.bashrc
@@ -11245,7 +11283,7 @@ class VendorPart:
 #   * Read the documentation for more commands.
 #
 # * There is a section about "Using Different Versions of Python" that looks interesting.
-#       
+#
 # Python Packaging Tutorial (2.x):
 #     https://python-packaging.readthedocs.io/en/latest/
 # [Python Packaging](https://packaging.python.org/tutorials/packaging-projects/)
@@ -11255,5 +11293,6 @@ class VendorPart:
 # [Configuring `~/.pypirc`](https://truveris.github.io/articles/configuring-pypirc/)
 # [Python Plugins](https://packaging.python.org/guides/creating-and-discovering-plugins/)
 # [Python Plugins Tutorial](https://amir.rachum.com/blog/2017/07/28/python-entry-points/)
+# [Python Tracing Decorator](https://cscheid.net/2017/12/11/minimal-tracing-decorator-python-3.html)
 if __name__ == "__main__":
     main()
