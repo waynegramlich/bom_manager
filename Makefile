@@ -34,9 +34,9 @@ lint:
 	flake8 --max-line-length=100 $(BOM_FINDCHIPS_PLUGIN)/bom_findchips_plugin/findchips.py
 	flake8 --max-line-length=100 $(BOM_FINDCHIPS_PLUGIN)/bom_findchips_plugin/__init__.py
 	flake8 --max-line-length=100 $(BOM_FINDCHIPS_PLUGIN)/setup.py
-	flake8 --max-line-length=100 $(BOM_DIGIKEY_PLUGIN)/bom_digikey_plugin/digikey.py
-	flake8 --max-line-length=100 $(BOM_DIGIKEY_PLUGIN)/bom_digikey_plugin/__init__.py
-	flake8 --max-line-length=100 $(BOM_DIGIKEY_PLUGIN)/setup.py
+	flake8 --max-line-length=100 $(BOM_KICAD_PLUGIN)/bom_kicad_plugin/kicad.py
+	flake8 --max-line-length=100 $(BOM_KICAD_PLUGIN)/bom_kicad_plugin/__init__.py
+	flake8 --max-line-length=100 $(BOM_KICAD_PLUGIN)/setup.py
 	flake8 --max-line-length=100 $(BOM_MANAGER)/bom_manager/bom.py
 	flake8 --max-line-length=100 $(BOM_MANAGER)/bom_manager/__init__.py
 	flake8 --max-line-length=100 $(BOM_MANAGER)/setup.py
