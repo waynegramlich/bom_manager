@@ -51,7 +51,8 @@
 #     * All methods check their argument types (i.e. no duck typing!!!)
 #     * Inside a method, *self* is almost always replaced with more descriptive variable name.
 #     * To aid debugging, many functions have an optional *tracing* argument of the form
-#       `tracing=None`.  If this argument is `str`, the tracing information is enabled.
+#       `tracing=""`.  If the @trace(LEVEL) decorator preceeds the function/method, the current
+#        indentation string is assigned to *tracing*.
 #   * Functions:
 #     * The top-level main() function occurs first.
 #     * Top-level fuctions use the same coding standards as methods (see above.)
@@ -227,6 +228,7 @@
 # software community.
 
 # Import some libraries (alphabetical order):
+
 import argparse
 # from bs4 import BeautifulSoup     # HTML/XML data structucure searching
 # import bs4
@@ -241,6 +243,7 @@ import lxml.etree as etree
 # import pickle                     # Python data structure pickle/unpickle
 import pkg_resources              # Used to find plug-ins.
 # import pkgutil
+from bom_manager.tracing import trace, trace_level_get, trace_level_set
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtWidgets import (QApplication, QComboBox, QLineEdit, QMainWindow,
                                QPlainTextEdit, QPushButton,
@@ -399,9 +402,12 @@ import webbrowser
 # sorting by cost, etc.  The final BOM's for each project is generated
 # as a .csv file.
 
-
 # main():
-def main():
+@trace(1)
+def main(tracing=""):
+    # Verify argument types:
+    assert isinstance(tracing, str)
+
     # Run the *Encode* class unit tests:
     Encode.test()
 
@@ -419,31 +425,19 @@ def main():
     # Now parse the command line arguments:
     parsed_arguments = vars(parser.parse_args())
 
-    # Process the *tracing level* from *parsed_arguments*:
-    tracing_level = parsed_arguments["verbose"]
-    if tracing_level is None:
-        tracing_level = 0
-        tracing = None
-    else:
-        tracing = ""
-    next_tracing = None if tracing is None else tracing + " "
-
-    # Perform any requested *tracing*:
-    if tracing is not None:
-        print(f"{tracing}=>main()")
-        print(f"tracing_level={tracing_level}")
+    trace_level_set(parsed_arguments["verbose"])
 
     # Fill in the *pandas* list with *Panda* objects for doing pricing and availabity checking:
     pandas = list()
     entry_point_key = "bom_manager_panda_get"
     for index, entry_point in enumerate(pkg_resources.iter_entry_points(entry_point_key)):
         entry_point_name = entry_point.name
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}Panda_Entry_Point[{index}]: '{entry_point_name}'")
         assert entry_point_name == "panda_get"
         panda_get = entry_point.load()
         assert callable(panda_get)
-        panda = panda_get(tracing=next_tracing)
+        panda = panda_get()
         assert isinstance(panda, Panda)
         pandas.append(panda)
 
@@ -452,12 +446,12 @@ def main():
     entry_point_key = "bom_manager_cad_get"
     for index, entry_point in enumerate(pkg_resources.iter_entry_points(entry_point_key)):
         entry_point_name = entry_point.name
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}Cad_Entry_Point[{index}]: '{entry_point_name}'")
         assert entry_point_name == "cad_get"
         cad_get = entry_point.load()
         assert callable(cad_get)
-        cad = cad_get(tracing=next_tracing)
+        cad = cad_get()
         assert isinstance(cad, Cad)
         cads.append(cad)
 
@@ -465,7 +459,7 @@ def main():
     # for dealing with *bom_file_names* immediately below:
     order_root = parsed_arguments["order"]
     order = Order(order_root, cads, pandas)
-    if tracing is not None:
+    if tracing:
         print(f"{tracing}order_created")
 
     # Deal with *bom_file_names* from *parsed_arguments*:
@@ -496,7 +490,7 @@ def main():
             order.project_create(name, revision_letter, bom_file_name, count, tracing=tracing)
         else:
             print(f"Ignoring file '{bom_file_name}' does not with '.net' or '.csv' suffix.")
-    if tracing is not None:
+    if tracing:
         print(f"{tracing}nets processed")
 
     collection_directories = list()
@@ -530,18 +524,15 @@ def main():
     searches_root = os.path.abspath(parsed_arguments["search"])
 
     # Now create the *tables_editor* graphical user interface (GUI) and run it:
-    # searches_path = arguments[0] if arguments else "searches"
-    tracing = None
-    tracing = ""
-    # print(f"searches_root='{searches_root}'")
-    tables_editor = TablesEditor(tables, collection_directories, searches_root, order,
-                                 tracing_level=tracing_level, tracing=next_tracing)
+    if tracing:
+        print(f"{tracing}searches_root='{searches_root}'")
+    tables_editor = TablesEditor(tables, collection_directories, searches_root, order)
 
     # Start up the GUI:
     tables_editor.run()
 
     # When we get here, *tables_editor* has stopped running and we can return.
-    if tracing is not None:
+    if tracing:
         print(f"{tracing}<=main()")
 
     return 0
@@ -640,16 +631,11 @@ class ActualPart:
         actual_part.selected_vendor_part = None
 
     # ActualPart.__eq__():
-    def __eq__(self, actual_part2, tracing=None):
+    def __eq__(self, actual_part2, tracing=""):
         # Verify argument types:
         assert isinstance(actual_part2, ActualPart)
 
-        # Perform any requested *tracing* for *actual_part1* (i.e. *self*):
         actual_part1 = self
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>ActualPart.__eq__({actual_part1.key}, {actual_part2.key})")
-
         equal = actual_part1.key == actual_part2.key
         if equal:
             # Extract *vendor_parts* making sure that they are sorted:
@@ -664,7 +650,7 @@ class ActualPart:
                         break
 
         # Wrap up requested any *tracing* and return *equal*:
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}<=ActualPart.__eq__({actual_part1.key}, {actual_part2.key})=>{equal}")
         return equal
 
@@ -707,14 +693,10 @@ class ActualPart:
         actual_part.vendor_parts.append(vendor_part)
 
     # ActualPart.vendor_parts_restore():
-    def vendor_parts_restore(self, order, tracing=None):
+    def vendor_parts_restore(self, order, tracing=""):
         # Verify argument types:
         assert isinstance(order, Order)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}ActualPart.vendor_parts_restore(*)")
+        assert isinstance(tracing, str)
 
         # actual_part = self
         result = False
@@ -724,7 +706,7 @@ class ActualPart:
         # xml_file_name = os.path.join(vendor_searches_root, xml_base_name)
 
         # Wrap up any requested *tracing*:
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}ActualPart.vendor_parts_restore(*)=>{result}")
         return result
 
@@ -782,13 +764,13 @@ class Cad:
     # Cad Stands for Computer Aided Design:
 
     # Cad.__init__():
-    def __init__(self, name, tracing=None):
+    def __init__(self, name, tracing=""):
         # Verify argument types:
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}=>Cad.__init__('{name}')")
 
         # Wrap up any argument types:
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}<=Cad.__init__('{name}')")
 
 
@@ -804,7 +786,7 @@ class ComboEdit:
     # ComboEdit.__init__():
     def __init__(self, name, tables_editor, items,
                  new_item_function, current_item_set_function, comment_get_function,
-                 comment_set_function, is_active_function, tracing=None, **widgets):
+                 comment_set_function, is_active_function, tracing="", **widgets):
         """ Initialize the *ComboEdit* object (i.e. *self*.)
 
         The arguments are:
@@ -839,7 +821,7 @@ class ComboEdit:
         assert callable(comment_get_function)
         assert callable(comment_set_function)
         assert callable(is_active_function)
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
         widget_callbacks = ComboEdit.WIDGET_CALLBACKS
         widget_names = list(widget_callbacks)
         for widget_name, widget in widgets.items():
@@ -847,11 +829,6 @@ class ComboEdit:
               "Invalid widget name '{0}'".format(widget_name))
             assert isinstance(widget, QWidget), (
               "'{0}' is not a QWidget {1}".format(widget_name, widget))
-
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>ComboEdit.__init__(*, {1}, ...)".format(tracing, name))
 
         # Load some values into *combo_edit* (i.e. *self*):
         combo_edit = self
@@ -866,7 +843,7 @@ class ComboEdit:
         combo_edit.tables_editor = tables_editor
 
         # Set the current item after *current_item_set_function* has been set.
-        combo_edit.current_item_set(items[0] if len(items) > 0 else None, tracing=next_tracing)
+        combo_edit.current_item_set(items[0] if len(items) > 0 else None)
 
         # Stuff each *widget* into *combo_edit* and connect the *widget* to the associated
         # callback routine from *widget_callbacks*:
@@ -898,7 +875,7 @@ class ComboEdit:
                 assert False, "'{0}' is not a valid widget".format(widget_name)
 
         # Wrap-up any requested *tracing*:
-        if tracing is not None:
+        if tracing:
             print("{0}<=ComboEdit.__init__(*, {1}, ...)".format(tracing, name))
 
     # ComboEdit.combo_box_changed():
@@ -920,7 +897,6 @@ class ComboEdit:
 
             # Perform any requested signal tracing:
             trace_signals = tables_editor.trace_signals
-            next_tracing = " " if trace_signals else None
             if trace_signals:
                 print("=>ComboEdit.combo_box_changed('{0}', '{1}')".
                       format(combo_edit.name, new_name))
@@ -931,11 +907,11 @@ class ComboEdit:
                     if item.name == new_name:
                         # We have found the new *current_item*:
                         print("  items[{0}] '{1}'".format(index, item.name))
-                        combo_edit.current_item_set(item, tracing=next_tracing)
+                        combo_edit.current_item_set(item)
                         break
 
             # Update the the GUI:
-            tables_editor.update(tracing=next_tracing)
+            tables_editor.update()
 
             # Wrap up any signal tracing:
             if trace_signals:
@@ -954,7 +930,6 @@ class ComboEdit:
 
             # Perform any requested signal tracing:
             trace_signals = tables_editor.trace_signals
-            next_tracing = " " if trace_signals else None
             if trace_signals:
                 print("=>ComboEdit.comment_text_changed()")
 
@@ -967,10 +942,10 @@ class ComboEdit:
             # Store *actual_text* into *current_comment* associated with *current_parameter*:
             item = combo_edit.current_item_get()
             if item is not None:
-                combo_edit.comment_set_function(item, actual_text, position, tracing=next_tracing)
+                combo_edit.comment_set_function(item, actual_text, position)
 
             # Force the GUI to be updated:
-            tables_editor.update(tracing=next_tracing)
+            tables_editor.update()
 
             # Wrap up any signal tracing:
             if trace_signals:
@@ -978,16 +953,12 @@ class ComboEdit:
             tables_editor.in_signal = False
 
     # ComboEdit.current_item_get():
-    def current_item_get(self, tracing=None):
+    def current_item_get(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Perform any requested tracing:
         combo_edit = self
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>ComboEdit.current_item_get".format(tracing, combo_edit.name))
-
         current_item = combo_edit.current_item
         items = combo_edit.items
 
@@ -1008,30 +979,22 @@ class ComboEdit:
 
         # If the *current_item* has changed, we let the parent know:
         if new_current_item is not current_item:
-            combo_edit.current_item_set(new_current_item, tracing=next_tracing)
+            combo_edit.current_item_set(new_current_item)
 
         # Wrap up any requested *tracing*:
-        if tracing is not None:
+        if tracing:
             print("{0}=>ComboEdit.current_item_get".format(tracing, combo_edit.name))
         return new_current_item
 
     # ComboEdit.current_item_set():
-    def current_item_set(self, current_item, tracing=None):
+    def current_item_set(self, current_item, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Perform any requested *tracing*:
         combo_edit = self
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>ComboEdit.current_item_set('{1}', *)".format(tracing, combo_edit.name))
-
         combo_edit.current_item = current_item
-        combo_edit.current_item_set_function(current_item, tracing=next_tracing)
-
-        # Wrap up any requested tracing:
-        if tracing is not None:
-            print("{0}<=ComboEdit.current_item_set('{1}', *)".format(tracing, combo_edit.name))
+        combo_edit.current_item_set_function(current_item)
 
     # ComboEdit.delete_button_clicked():
     def delete_button_clicked(self):
@@ -1039,7 +1002,6 @@ class ComboEdit:
         combo_edit = self
         tables_editor = combo_edit.tables_editor
         trace_signals = tables_editor.trace_signals
-        next_tracing = " " if trace_signals else None
         if trace_signals:
             print("=>ComboEdit.delete_button_clicked('{0}')".format(combo_edit.name))
 
@@ -1061,11 +1023,11 @@ class ComboEdit:
                     current_item = items[index - 1]
                 else:
                     current_item = None
-                combo_edit.current_item_set(current_item, tracing=next_tracing)
+                combo_edit.current_item_set(current_item)
                 break
 
         # Update the GUI:
-        tables_editor.update(tracing=next_tracing)
+        tables_editor.update()
 
         # Wrap up any requested tracing;
         if trace_signals:
@@ -1078,7 +1040,6 @@ class ComboEdit:
         combo_edit = self
         tables_editor = combo_edit.tables_editor
         trace_signals = tables_editor.trace_signals
-        next_tracing = " " if trace_signals else None
         if trace_signals:
             print("=>ComboEdit.first_button_clicked('{0}')".format(combo_edit.name))
 
@@ -1088,10 +1049,10 @@ class ComboEdit:
         items_size = len(items)
         if items_size > 0:
             first_item = items[0]
-            combo_edit.current_item_set(first_item, tracing=next_tracing)
+            combo_edit.current_item_set(first_item)
 
         # Update the user interface:
-        tables_editor.update(tracing=next_tracing)
+        tables_editor.update()
 
         # Wrap up any requested tracing:
         if trace_signals:
@@ -1099,15 +1060,12 @@ class ComboEdit:
         tables_editor.in_signal = False
 
     # ComboEdit.gui_update():
-    def gui_update(self, tracing=None):
+    def gui_update(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Perform any requested *tracing* of *combo_edit* (i.e. *self*):
         combo_edit = self
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>ComboEdit.gui_update('{1}')".format(tracing, combo_edit.name))
 
         # Grab the widgets from *combo_edit* (i.e. *self*):
         combo_box = combo_edit.combo_box
@@ -1126,7 +1084,7 @@ class ComboEdit:
         items_size = len(items)
         is_a_valid_item = current_item is not None
         combo_box.setEnabled(is_a_valid_item)
-        # if tracing is not None:
+        # if tracing:
         #    print("{0}current_item='{1}'".
         #      format(tracing, "None" if current_item is None else current_item.name))
 
@@ -1142,13 +1100,13 @@ class ComboEdit:
         current_item_index = -1
         for index, item in enumerate(items):
             combo_box.addItem(item.name)
-            # if tracing is not None:
+            # if tracing:
             #    print("{0}[{1}]: '{2}".format(tracing, index,
             #      "--" if item is None else item.name))
             if item is current_item:
                 combo_box.setCurrentIndex(index)
                 current_item_index = index
-                if tracing is not None:
+                if tracing:
                     print("{0}match".format(tracing))
                 break
         assert not is_a_valid_item or current_item_index >= 0
@@ -1161,7 +1119,7 @@ class ComboEdit:
             position = 0
         else:
             current_text, position = combo_edit.comment_get_function(
-              current_item, tracing=next_tracing)
+              current_item)
 
         # Make sure that *current_text* is being displayed by the *comment_text* widget:
         comment_text = combo_edit.comment_text
@@ -1202,7 +1160,7 @@ class ComboEdit:
         rename_button.setEnabled(no_name_conflict)
 
         # Wrap up any requeted *tracing*:
-        if tracing is not None:
+        if tracing:
             print("{0}<=ComboEdit.gui_update('{1}')".format(tracing, combo_edit.name))
 
     # ComboEdit.items_replace():
@@ -1238,7 +1196,6 @@ class ComboEdit:
         combo_edit = self
         tables_editor = combo_edit.tables_editor
         trace_signals = tables_editor.trace_signals
-        next_tracing = " " if trace_signals else None
         if trace_signals:
             print("=>ComboEdit.last_button_clicked('{0}')".format(combo_edit.name))
 
@@ -1248,10 +1205,10 @@ class ComboEdit:
         items_size = len(items)
         if items_size > 0:
             last_item = items[-1]
-            combo_edit.current_item_set(last_item, tracing=next_tracing)
+            combo_edit.current_item_set(last_item)
 
         # Update the user interface:
-        tables_editor.update(tracing=next_tracing)
+        tables_editor.update()
 
         # Wrap up any requested tracing:
         if trace_signals:
@@ -1271,9 +1228,6 @@ class ComboEdit:
 
             # Perform any requested siginal tracing:
             trace_signals = tables_editor.trace_signals
-            next_tracing = " " if trace_signals else None
-            if trace_signals:
-                print("=>ComboEditor.line_edit_changed('{0}')".format(text))
 
             # Make sure that the *combo_edit* *is_active*:
             is_active = combo_edit.is_active_function()
@@ -1283,7 +1237,7 @@ class ComboEdit:
                 line_edit.setText("")  # Erase whatever was just typed in!
 
             # Now just update *combo_edit*:
-            combo_edit.gui_update(tracing=next_tracing)
+            combo_edit.gui_update()
 
             # Wrap up any requested signal tracing:
             if trace_signals:
@@ -1291,24 +1245,17 @@ class ComboEdit:
             tables_editor.in_signal = False
 
     # ComboEdit.item_append():
-    def item_append(self, new_item, tracing=None):
+    def item_append(self, new_item, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>ComboEdit.item_append(*)".format(tracing))
 
         # Append *item* to *items* and make it current for *combo_edit* (i.e. *self*):
         combo_edit = self
         items = combo_edit.items
         items.append(new_item)
-        combo_edit.current_item_set(new_item, tracing=next_tracing)
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=ComboEdit.item_append(*)".format(tracing))
+        combo_edit.current_item_set(new_item)
 
     # ComboEdit.new_button_clicked():
     def new_button_clicked(self):
@@ -1316,9 +1263,6 @@ class ComboEdit:
         combo_edit = self
         tables_editor = combo_edit.tables_editor
         trace_signals = tables_editor.trace_signals
-        next_tracing = " " if trace_signals else None
-        if trace_signals:
-            print("=>ComboEdit.new_button_clicked('{0}')".format(combo_edit.name))
 
         # Grab some values from *combo_edit*:
         tables_editor.in_signal = True
@@ -1330,11 +1274,11 @@ class ComboEdit:
         # Create a *new_item* and append it to *items*:
         new_item_name = line_edit.text()
         # print("new_item_name='{0}'".format(new_item_name))
-        new_item = new_item_function(new_item_name, tracing=next_tracing)
+        new_item = new_item_function(new_item_name)
         combo_edit.item_append(new_item)
 
         # Update the GUI:
-        tables_editor.update(tracing=next_tracing)
+        tables_editor.update()
 
         # Wrap up any requested signal tracing:
         if trace_signals:
@@ -1347,9 +1291,6 @@ class ComboEdit:
         combo_edit = self
         tables_editor = combo_edit.tables_editor
         trace_signals = tables_editor.trace_signals
-        next_tracing = " " if trace_signals else None
-        if trace_signals:
-            print("=>ComboEdit.next_button_clicked('{0}')".format(combo_edit.name))
 
         # ...
         tables_editor.in_signal = True
@@ -1361,10 +1302,10 @@ class ComboEdit:
                 if index + 1 < items_size:
                     current_item = items[index + 1]
                 break
-        combo_edit.current_item_set(current_item, tracing=next_tracing)
+        combo_edit.current_item_set(current_item)
 
         # Update the GUI:
-        tables_editor.update(tracing=next_tracing)
+        tables_editor.update()
 
         # Wrap up any requested tracing:
         if trace_signals:
@@ -1381,9 +1322,6 @@ class ComboEdit:
 
             # Perform any requested signal tracing:
             trace_signals = tables_editor.trace_signals
-            next_tracing = " " if trace_signals else None
-            if trace_signals:
-                print("=>ComboEdit.position_changed('{0}')".format(combo_edit.name))
 
             # Grab the *actual_text* and *position* from the *comment_text* widget and stuff
             # both into the comment field of *item*:
@@ -1392,12 +1330,9 @@ class ComboEdit:
             cursor = comment_text.textCursor()
             position = cursor.position()
             actual_text = comment_text.toPlainText()
-            combo_edit.comment_set_function(item, actual_text, position, tracing=next_tracing)
+            combo_edit.comment_set_function(item, actual_text, position)
 
             # Wrap up any signal tracing:
-            if trace_signals:
-                # print("position={0}".format(position))
-                print("<=ComboEdit.position_changed('{0}')\n".format(combo_edit.name))
             tables_editor.in_signal = False
 
     # ComboEdit.previous_button_clicked():
@@ -1406,9 +1341,6 @@ class ComboEdit:
         combo_edit = self
         tables_editor = combo_edit.tables_editor
         trace_signals = tables_editor.trace_signals
-        next_tracing = " " if trace_signals else None
-        if trace_signals:
-            print("=>ComboEdit.previous_button_clicked('{0}')".format(combo_edit.name))
 
         # ...
         tables_editor.in_signal = True
@@ -1419,14 +1351,11 @@ class ComboEdit:
                 if index > 0:
                     current_item = items[index - 1]
                 break
-        combo_edit.current_item_set(current_item, tracing=next_tracing)
+        combo_edit.current_item_set(current_item)
 
         # Update the GUI:
-        tables_editor.update(tracing=next_tracing)
+        tables_editor.update()
 
-        # Wrap up any requested tracing:
-        if trace_signals:
-            print("<=ComboEdit.previous_button_clicked('{0}')\n".format(combo_edit.name))
         tables_editor.in_signal = False
 
     # ComboEdit.rename_button_clicked():
@@ -1435,9 +1364,6 @@ class ComboEdit:
         combo_edit = self
         tables_editor = combo_edit.tables_editor
         trace_signals = tables_editor.trace_signals
-        next_tracing = " " if trace_signals else None
-        if trace_signals:
-            print("=>ComboEdit.rename_button_clicked('{0}')".format(combo_edit.name))
 
         tables_editor.in_signal = True
         combo_edit = self
@@ -1449,11 +1375,8 @@ class ComboEdit:
             current_item.name = new_item_name
 
         # Update the GUI:
-        tables_editor.update(tracing=next_tracing)
+        tables_editor.update()
 
-        # Wrap up any requested tracing:
-        if trace_signals:
-            print("=>ComboEdit.rename_button_clicked('{0}')\n".format(combo_edit.name))
         tables_editor.in_signal = False
 
     # ComboEdit.WIDGET_CALLBACKS:
@@ -1566,13 +1489,13 @@ class Panda:
     # Panda stands for Pricing AND Availability:
 
     # Panda.__init__():
-    def __init__(self, name, tracing=None):
+    def __init__(self, name, tracing=""):
         # Verify argument types:
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}=>Panda.__init__('{name}')")
 
         # Wrap up any argument types:
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}<=Panda.__init__('{name}')")
 
 
@@ -2141,16 +2064,13 @@ class Filter:
         filter.use_item = None
 
     # Filter.xml_lines_append():
-    def xml_lines_append(self, xml_lines, indent, tracing=None):
+    def xml_lines_append(self, xml_lines, indent, tracing=""):
         # Verify argument types:
         assert isinstance(xml_lines, list)
         assert isinstance(indent, str)
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Perform any requested *tracing*:
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>Filter.xml_lines_append()".format(tracing))
 
         # Start appending the `<Filter...>` element to *xml_lines*:
         filter = self
@@ -2159,7 +2079,7 @@ class Filter:
         select = filter.select
         parameter_name = parameter.name
         xml_lines.append(f'{indent}<Filter name="{parameter_name}" use="{use}" select="{select}">')
-        if tracing is not None:
+        if tracing:
             print("{0}Name='{1}' Use='{2}' Select='{3}'".
                   format(tracing, parameter.name, filter.use, select))
 
@@ -2176,10 +2096,6 @@ class Filter:
 
         # Wrap up `<Filter...>` element:
         xml_lines.append(f'{indent}</Filter>')
-
-        # Wrap up any requested *Tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Filter.xml_lines_append()")
 
 
 # Footprint:
@@ -2271,16 +2187,11 @@ class Node:
     """ Represents a single *Node* suitable for use in a *QTreeView* tree. """
 
     # Node.__init__():
-    def __init__(self, name, parent, tracing=None):
+    def __init__(self, name, parent, tracing=""):
         # Verify argument types:
         assert isinstance(name, str)
         assert isinstance(parent, Node) or parent is None
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        parent_name = 'None' if parent is None else f"'{parent.name}'"
-        if tracing is not None:
-            print(f"{tracing}=>Node.__init__('{name}', {parent_name})")
+        assert isinstance(tracing, str)
 
         # Do some additional checking for *node* (i.e. *self*):
         node = self
@@ -2314,10 +2225,6 @@ class Node:
         # Force *node* to be a child of *parent*:
         if parent is not None:
             parent.child_append(node)
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Node.__init__('{name}', {parent_name})")
 
     # Node.child():
     def child(self, row):
@@ -2423,25 +2330,16 @@ class Node:
         return True
 
     # Node.child_remove()
-    def child_remove(self, child, tracing=None):
+    def child_remove(self, child, tracing=""):
         # Verify argument types:
         assert isinstance(child, Node)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing* for *Node* (i.e. *self*):
-        node = self
-        if tracing is not None:
-            print(f"{tracing}=>Node.child_remove('{node.name}', '{child.name}')")
+        assert isinstance(tracing, str)
 
         children = node._children
         assert child in children
         index = children.index(child)
         assert index >= 0
         node.child_delete(index)
-
-        # Wrap up an requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Node.child_remove('{node.name}', '{child.name}')")
 
     # Node.children_get():
     def children_get(self):
@@ -2450,32 +2348,28 @@ class Node:
         return node._children
 
     # Node.clicked():
-    def clicked(self, tables_editor, model_index, tracing=None):
+    def clicked(self, tables_editor, model_index, tracing=""):
         # Verify argument types:
         assert isinstance(tables_editor, TablesEditor)
         assert isinstance(model_index, QModelIndex)
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Fail with a more useful error message than "no such method":
         node = self
         assert False, "Node.clicked() needs to be overridden for type ('{0}')".format(type(node))
 
     # Node.csv_read_and_process():
-    def csv_read_and_process(self, csv_directory, bind=False, tracing=None):
+    def csv_read_and_process(self, csv_directory, bind=False, tracing=""):
         # Verify argument types:
         assert isinstance(csv_directory, str)
         assert False, ("Node sub-class '{0}' does not implement csv_read_and_process".
                        format(type(self)))
 
     # Node.directory_create():
-    def directory_create(self, root_path, tracing=None):
+    def directory_create(self, root_path, tracing=""):
         # Verify argument types:
         assert isinstance(root_path, str)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}=>Node.directory_create('node.name', '{root_path}')")
+        assert isinstance(tracing, str)
 
         node = self
         parent = node.parent
@@ -2484,12 +2378,8 @@ class Node:
         directory_path = os.path.join(root_path, parent_relative_path)
         if not os.path.isdir(directory_path):
             os.makedirs(directory_path)
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}Created directory '{directory_path}'")
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}=>Node.directory_create('node.name', '{root_path}')")
 
     # Node.full_file_name_get():
     def xxx_full_file_name_get(self):
@@ -2517,35 +2407,20 @@ class Node:
         return has_children
 
     # Node.name_get():
-    def name_get(self, tracing=None):
+    def name_get(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform an requested *tracing*:
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Node.name_get()")
+        assert isinstance(tracing, str)
 
         # Grab *title* from *node* (i.e. *self*):
         node = self
         name = node.name
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}=>Node.name_get()=>{name}")
         return name
 
     # Node.remove():
-    def remove(self, remove_node, tracing=None):
+    def remove(self, remove_node, tracing=""):
         # Verify argument types:
         assert isinstance(remove_node, Node)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing* for *node* (i.e. *self*):
-        node = self
-        name = node.name
-        if tracing is not None:
-            print(f"{tracing}=>Node.remove('{name}', '{remove_node.name}')")
+        assert isinstance(tracing, str)
 
         node = self
         children = node._children
@@ -2557,10 +2432,6 @@ class Node:
         else:
             assert False, ("Node '{0}' not in '{1}' remove failed".
                            format(remove_node.name, node.name))
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Node.remove('{name}', '{remove_node.name}')")
 
     # Node.searches_root_get():
     def searches_root_get(self):
@@ -2605,30 +2476,22 @@ class Node:
 class Directory(Node):
 
     # Directory.__init__():
-    def __init__(self, name, parent, tracing=None):
+    def __init__(self, name, parent, tracing=""):
         # Verify argument types:
         assert isinstance(name, str)
         assert isinstance(parent, Node)
-
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Directory.__init__('{name}', '{parent.name}')")
+        assert isinstance(tracing, str)
 
         # Perform some additional checking on *parent*:
         assert isinstance(parent, Directory) or isinstance(parent, Collection)
 
         # Initlialize the *Node* super class for directory (i.e. *self*):
-        super().__init__(name, parent, tracing=next_tracing)
+        super().__init__(name, parent)
 
         directory = self
         relative_path = directory.relative_path
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}relative_path='{relative_path}'")
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Directory.__init__('{name}', '{parent.name}')")
 
     # Directory.append():
     def append(self, node):
@@ -2643,21 +2506,13 @@ class Directory(Node):
         return False
 
     # Directory.clicked():
-    def clicked(self, tables_editor, model_index, tracing=None):
+    def clicked(self, tables_editor, model_index, tracing=""):
         # Verify argument types:
         assert isinstance(tables_editor, TablesEditor)
-        assert isinstance(tracing, str) or tracing is None
         assert isinstance(model_index, QModelIndex)
-
-        # Preform any requested *tracing*:
-        if tracing is not None:
-            print("{0}=>Directory.clicked()".format(tracing))
+        assert isinstance(tracing, str)
 
         tables_editor.current_search = None
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=Directory.clicked()".format(tracing))
 
     # Directory.directories_get():
     def directories_get(self):
@@ -2668,37 +2523,26 @@ class Directory(Node):
         return directories
 
     # Directory.name_get():
-    def name_get(self, tracing=None):
+    def name_get(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
-        # Perform any requested *tracing* for *directory* (i.e. *self*):
         directory = self
         name = directory.name
-        if tracing is not None:
-            print(f"{tracing}=>Directory.name_get('{name}')")
-            print(f"{tracing}<=Directory.name_get('{name}')=>'{name}'")
-
-        # Return *name*:
         return name
 
     # Directory.partial_load():
-    def partial_load(self, tracing=None):
+    def partial_load(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        directory = self
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Directory.partial_load('{directory.name}')")
+        assert isinstance(tracing, str)
 
         # Compute the *full_path* for the *collection* sub-*directory*:
+        directory = self
         relative_path = directory.relative_path
         collection = directory.collection
         collection_root = collection.collection_root
         full_path = os.path.join(collection_root, relative_path)
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}collection_root='{collection_root}'")
             print(f"{tracing}relative_path='{relative_path}'")
             print(f"{tracing}full_path='{full_path}'")
@@ -2706,7 +2550,7 @@ class Directory(Node):
 
         # Visit all of the files and directories in *directory_path*:
         for index, file_or_directory_name in enumerate(sorted(list(os.listdir(full_path)))):
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}File_Name[{index}]:'{file_or_directory_name}'")
 
             # Skip over any files/directories that start with '.':
@@ -2714,28 +2558,28 @@ class Directory(Node):
                 # Recursively do a partial load for *full_path*:
                 sub_relative_path = os.path.join(relative_path, file_or_directory_name)
                 sub_full_path = os.path.join(full_path, file_or_directory_name)
-                if tracing is not None:
+                if tracing:
                     print(f"{tracing}sub_relative_path='{sub_relative_path}'")
                     print(f"{tracing}sub_full_path='{sub_full_path}'")
                 if os.path.isdir(sub_full_path):
                     # *full_path* is a directory:
                     name = Encode.from_file_name(file_or_directory_name)
-                    sub_directory = Directory(name, directory, tracing=next_tracing)
+                    sub_directory = Directory(name, directory)
                     assert directory.has_child(sub_directory)
-                    sub_directory.partial_load(tracing=next_tracing)
+                    sub_directory.partial_load()
                 elif sub_full_path.endswith(".xml"):
                     # Full path is a *Table* `.xml` file:
                     name = Encode.from_file_name(file_or_directory_name[:-4])
                     url = "bogus URL"
-                    table = Table(name, directory, url, tracing=next_tracing)
+                    table = Table(name, directory, url)
                     assert directory.has_child(table)
                     sub_relative_path = os.path.join(relative_path, name)
-                    table.partial_load(tracing=next_tracing)
+                    table.partial_load()
                 else:
                     assert False, f"'{full_path}' is neither an .xml nor a directory"
 
         # Wrap up any requested *tracing*:
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}<=Directory.partial_load('{directory.name}')")
 
     # Directory.tables_append():
@@ -2757,24 +2601,19 @@ class Directory(Node):
 class Collection(Node):
 
     # Collection.__init__():
-    def __init__(self, name, parent, collection_root, searches_root, tracing=None):
+    @trace(1)
+    def __init__(self, name, parent, collection_root, searches_root, tracing=""):
         # Verify argument types:
         assert isinstance(name, str)
         assert isinstance(parent, Collections)
         assert isinstance(collection_root, str)
         assert isinstance(searches_root, str)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Collection.__init__('{name}', '{parent.name}', "
-                  f"'{collection_root}', '{searches_root}')")
+        assert isinstance(tracing, str)
 
         # Intialize the *Node* super class of *collection* (i.e. *self*).
         collection = self
-        super().__init__(name, parent, tracing=next_tracing)
-        if tracing is not None:
+        super().__init__(name, parent)
+        if tracing:
             print(f"{tracing}collection.relative_path='{collection.relative_path}'")
 
         # Do some additional checktin on *collections* (i.e. *parent*):
@@ -2792,27 +2631,18 @@ class Collection(Node):
         # Ensure that *type_letter_get()* returns 'C' for Collection:
         assert collection.type_letter_get() == 'C'
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Collection.__init__('{name}', '{parent.name}', "
-                  f"'{collection_root}', '{searches_root}')")
-
     # Collection.actual_parts_lookup():
-    def actual_parts_lookup(self, choice_part, tracing=None):
+    @trace(1)
+    def actual_parts_lookup(self, choice_part, tracing=""):
         # Verify argument types:
         assert isinstance(choice_part, ChoicePart)
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
-        # Perform any requested *tracing*:
-        search_name = choice_part.name
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Collection.actual_parts_lookup(*, '{search_name})")
-
-        # Grab some values from *collection* (i.e. *self*):
+        # Grab some values from *collection* (i.e. *self*) and *choice_part*:
         collection = self
         searches_table = collection.searches_table
         searches_root = collection.searches_root
+        search_name = choice_part.name
 
         # Get some time values:
         stale_time = 2 * 24 * 60 * 60  # 2 days in seconds
@@ -2827,14 +2657,14 @@ class Collection(Node):
             search = searches_table[search_name]
 
             # Force *search* to read in all of its information from its associated `.xml` file:
-            search.file_load(tracing=next_tracing)
+            search.file_load()
 
             # Grab some values from *search*:
             collection = search.collection
             search_name = search.name
             search_url = search.url
             relative_path = search.relative_path
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}search_name='{search_name}'")
                 print(f"{tracing}search_url='{search_url}'")
                 print(f"{tracing}relative_path='relative_path'")
@@ -2842,7 +2672,7 @@ class Collection(Node):
             # Compute the *csv_file_name* of where the `.csv` file associated with *search_url*
             # is (or will be) stored:
             csv_file_name = os.path.join(searches_root, relative_path + ".csv")
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}csv_file_name='{csv_file_name}'")
 
             # Compute *the
@@ -2853,7 +2683,7 @@ class Collection(Node):
             stale_time = 2 * 24 * 60 * 60  # 2 days in seconds
             if csv_modification_time + stale_time < now:
                 assert isinstance(collection, Collection)
-                collection.csv_fetch(search_url, csv_file_name, tracing=next_tracing)
+                collection.csv_fetch(search_url, csv_file_name)
 
             # Read in the *csv_file_name*:
             assert os.path.isfile(csv_file_name)
@@ -2884,15 +2714,11 @@ class Collection(Node):
 
             for index, pair in enumerate(pairs):
                 manufacturer, part_number = pair
-                if tracing is not None:
+                if tracing:
                     print(f"{tracing}Actual_Part[{index}]: '{manufacturer}' : '{part_number}'")
                 actual_part = ActualPart(manufacturer, part_number)
                 actual_parts.append(actual_part)
 
-        # Wrap up any requested *tracing* and return *actual_parts*:
-        if tracing is not None:
-            print(f"{tracing}<=Collection.actual_parts_lookup(*, '{search_name})"
-                  f" => len([...])={len(actual_parts)}")
         return actual_parts
 
     # Collection.can_fetch_more():
@@ -2911,48 +2737,39 @@ class Collection(Node):
         return directories
 
     # Collection.partial_load():
-    def partial_load(self, tracing=None):
+    def partial_load(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform an requested *tracing* for *collection* (i.e. *self*):
-        collection = self
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Collection.partial_load('{collection.name}')")
+        assert isinstance(tracing, str)
 
         # Visit all of the directories and files in *collection_root*:
+        collection = self
         collection_root = collection.collection_root
         relative_path = collection.relative_path
         directory_path = os.path.join(collection_root, relative_path)
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}collection_root='{collection_root}'")
             print(f"{tracing}relative_path='{relative_path}'")
             print(f"{tracing}directory_path='{directory_path}'")
         assert os.path.isdir(directory_path)
 
         for index, base_name in enumerate(list(sorted(os.listdir(directory_path)))):
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}File_Name[{index}]:'{base_name}'")
 
             # Compute a *full_path* from *collection_root* and *base_name*:
             full_path = os.path.join(directory_path, base_name)
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}full_path='{full_path}'")
             if not base_name.startswith('.'):
                 if base_name.endswith(".xml"):
                     assert False, "Top level tables not implemented yet"
                 elif os.path.isdir(full_path):
                     name = Encode.from_file_name(base_name)
-                    directory = Directory(name, collection, tracing=next_tracing)
+                    directory = Directory(name, collection)
                     assert collection.has_child(directory)
-                    directory.partial_load(tracing=next_tracing)
+                    directory.partial_load()
                 else:
                     assert False, f"'{base_name}' is neither an .xml file nor a directory"
-
-        # Wrap-up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Collection.partial_load('{collection.name}')")
 
     # Collection.search_find():
     def search_find(self, search_name):
@@ -2983,65 +2800,51 @@ class Collection(Node):
         return 'C'
 
     # Collection.url_load():
-    def url_load(self, url, output_file_name, tracing=None):
+    def url_load(self, url, output_file_name, tracing=""):
         # Verify argument types:
         assert isinstance(url, str)
         assert isinstance(output_file_name, str)
-
-        # Perform any requested *tracing*:
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Collection.url_load('{url}', '{output_file_name}')")
 
         assert False, "Old plugin code"
         collection = self
         plugin = collection.plugin
         if plugin is None:
             collection_root = collection.collection_root
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}collection_root='{collection_root}'")
             assert collection_root.endswith("ROOT")
             package_directory = os.path.split(collection_root)[0]
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}package_directory='{package_directory}'")
             package_name = os.path.split(package_directory)[1]
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}package_name='{package_name}'")
             plugin_name = f"{package_name}.plugin"
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}plug_name='{plugin_name}'")
             # plugin_module = importlib.import_module(plugin_name)
             # url_load = getattr(plugin_module, "url_load")
             # assert callable(url_load)
-            # url_load(url, output_file_name, tracing=next_tracing)
+            # url_load(url, output_file_name)
             # assert False
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Collection.url_load('{url}', '{output_file_name}')")
 
 
 # Collections:
 class Collections(Node):
 
     # Collections.__init__():
-    def __init__(self, name, collection_directories, searches_root, tree_model, tracing=None):
+    def __init__(self, name, collection_directories, searches_root, tree_model, tracing=""):
         # Verify argument types:
         assert isinstance(name, str)
         assert isinstance(collection_directories, list)
         assert isinstance(searches_root, str)
         assert isinstance(tree_model, TreeModel) or tree_model is None
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Collections.__init__('{name}', {collection_directories}, "
-                  f"'{searches_root}', *)")
 
         # Intialize the *Node* super class of *collections* (i.e. *self*):
         collections = self
-        super().__init__(name, None, tracing=next_tracing)
+        super().__init__(name, None)
 
         # Stuff some values into *collections*:
         collections.collection_directories = collection_directories
@@ -3049,7 +2852,7 @@ class Collections(Node):
         collections.tree_model = tree_model
 
         # Do some *tracing*:
-        if tracing is not None:
+        if tracing:
             relative_path = collections.relative_path
             print(f"{tracing}collection_directories={collection_directories}")
             print(f"{tracing}searchs_root='{searches_root}'")
@@ -3058,37 +2861,30 @@ class Collections(Node):
         # Ensure that *type_letter_get()* returns 'R' is for collections Root:
         assert collections.type_letter_get() == 'R'
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Collections.__init__('{name}', {collection_directories}, "
-                  f"'searches_root', *)")
+    # Collections.__str__():
+    def __str__(self):
+        collections = self
+        return f"Collections('{collections.name}')"
 
     # Collections.actual_parts_lookup():
-    def actual_parts_lookup(self, choice_part, tracing=None):
+    @trace(1)
+    def actual_parts_lookup(self, choice_part, tracing=""):
         # Verify argument types:
         assert isinstance(choice_part, ChoicePart)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Collections.actual_parts_lookup('{choice_part.name}')")
+        assert isinstance(tracing, str)
 
         # Visit each *collection* in *collections* (i.e. *self*) and find any
         # *ActualPart*'s that match *search_name*:
         collections = self
         actual_parts = []
         for index, collection in enumerate(collections.children_get()):
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}Collection[{index}]:{collection.name}")
-            actual_parts += collection.actual_parts_lookup(choice_part, tracing=next_tracing)
+            actual_parts += collection.actual_parts_lookup(choice_part)
 
         # FIXME: Cull out duplicate acutal parts (i.e. for the same manufacturer.):
         pass
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Collections.actual_parts_lookup('{choice_part.name}') => [...]")
         return actual_parts
 
     # Collections.can_fetch_more():
@@ -3098,16 +2894,12 @@ class Collections(Node):
         return False
 
     # Collections.check():
-    def check(self, search_name, project_name, reference, tracing=None):
+    def check(self, search_name, project_name, reference, tracing=""):
         # Verify argument types:
         assert isinstance(search_name, str)
         assert isinstance(project_name, str)
         assert isinstance(reference, str)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}=>Collections.check('{search_name}', '{project_name}', '{reference}')")
+        assert isinstance(tracing, str)
 
         # Find all *matching_searches* that matach *search_name* from *collections* (i.e. *self*):
         collections = self
@@ -3122,27 +2914,17 @@ class Collections(Node):
         if not matching_searches:
             print(f"{project_name}: {reference} '{search_name}' not found")
 
-        # Wrap up any reqested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Collections.check('{search_name}', '{project_name}', '{reference}')")
-
     # Collections.partial_load():
-    def partial_load(self, tracing=None):
+    def partial_load(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing* for *collections* (i.e. *self*):
-        collections = self
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Collections.partial_load('{collections.name})")
+        assert isinstance(tracing, str)
 
         # Extract some values from *collections*:
         collections = self
         collection_directories = collections.collection_directories
         searches_root = collections.searches_root
         # tree_model = collections.tree_model
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}collection_directories='{collection_directories}'")
             print(f"{tracing}searches_root='{searches_root}'")
 
@@ -3151,7 +2933,7 @@ class Collections(Node):
         entry_point_key = "bom_manager_collection_get"
         for index, entry_point in enumerate(pkg_resources.iter_entry_points(entry_point_key)):
             entry_point_name = entry_point.name
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}Entry_Point[{index}]:'{entry_point_name}'")
             assert entry_point_name == "collection_get", (f"'{entry_point_name}' is "
                                                           "not 'collection_get''")
@@ -3159,19 +2941,19 @@ class Collections(Node):
 
             # Create *collection*:
             name = "Digi-Key"
-            collection = collection_get(collections, searches_root, tracing=next_tracing)
+            collection = collection_get(collections, searches_root)
             # collection = Collection(name, collections, collection_root, searches_root, url_load,
-            #                         tracing=next_tracing)
+            #                         )
             assert isinstance(collection, Collection)
             assert collections.has_child(collection)
 
             # Recursively perfrom *partial_load*'s down from *collection*:
-            collection.partial_load(tracing=next_tracing)
+            collection.partial_load()
 
         # Sweep through *path* finding directories (technically symbolic links):
         for index, collection_directory in enumerate(sorted(collection_directories)):
             # Perform requested *tracing*:
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}Collection[{index}]:'{collection_directory}'")
 
             # Skip over Unix/Linux *collection_directory*'s that start with a '.':
@@ -3179,7 +2961,7 @@ class Collections(Node):
                 # Create *collection_root_path* and *searches_root*:
                 collection_directory_root = os.path.join(collection_directory, "ROOT")
                 collection_directory_root = os.path.abspath(collection_directory_root)
-                if tracing is not None:
+                if tracing:
                     print(f"{tracing}collection_directory_root='{collection_directory_root}'")
 
                 # Now find the directory under `ROOT`:
@@ -3188,7 +2970,7 @@ class Collections(Node):
                 base_name = os.path.basename(sub_directories[0])
                 name = Encode.from_file_name(base_name)
                 # collection_root = os.path.join(collection_directory_root, base_name)
-                if tracing is not None:
+                if tracing:
                     print(f"{tracing}base_name='{base_name}'")
                     print(f"{tracing}name='{name}'")
                     # print(f"{tracing}collection_root='{collection_root}'")
@@ -3196,15 +2978,11 @@ class Collections(Node):
 
                 # Create *collection*:
                 # collection = Collection(name, collections, collection_directory_root,
-                #                        searches_root, url_load, tracing=next_tracing)
+                #                        searches_root, url_load)
                 # assert collections.has_child(collection)
 
                 # Recursively perfrom *partial_load*'s down from *collection*:
-                collection.partial_load(tracing=next_tracing)
-
-        # Wrap any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Collections.partial_load('{collections.name})")
+                collection.partial_load()
 
     # Collections.searches_root_get():
     def searches_root_get(self):
@@ -3213,14 +2991,10 @@ class Collections(Node):
         return searches_root
 
     # Collections.searches_find():
-    def searches_find(self, search_name, tracing=None):
+    @trace(1)
+    def searches_find(self, search_name, tracing=""):
         # Verify argument types:
         assert isinstance(search_name, str)
-
-        # Perform any requested *tracing*:
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Collections.searches_find(*, '{search_name}')")
 
         # Visit each *collection in *collections* (i.e. *self*) to see if it has *search_name*:
         collections = self
@@ -3231,12 +3005,6 @@ class Collections(Node):
                 # We have a matching *search*:
                 assert search_name == search.name, f"'{search_name}'!='{search.name}'"
                 searches.append(search)
-
-        # Perform any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Collections.searches_find(*, '{search_name}')"
-                  f"=>len(searches)={len(searches)}")
-
         return searches
 
     # Collections.type_leter_get():
@@ -3259,25 +3027,18 @@ class Search(Node):
     }
 
     # Search.__init__():
-    def __init__(self, name, parent, search_parent, url, tracing=None):
+    def __init__(self, name, parent, search_parent, url, tracing=""):
         # Verify argument types:
         assert isinstance(name, str)
         assert isinstance(parent, Table)
         assert isinstance(search_parent, Search) or search_parent is None
         assert isinstance(url, str)
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Grab some values from *search* (i.e. *self*):
         search = self
 
         assert name.find("%3b") < 0
-
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            search_parent_text = "None" if search_parent is None else f"'{search_parent.name}'"
-            print(f"{tracing}=>Search.__init__('{name}', '{parent.name}', "
-                  f"{search_parent_text}, '{url}')")
 
         # Ensure sure that non-template *name is not already in *searches_table*:
         is_template = name.startswith('@')
@@ -3289,7 +3050,7 @@ class Search(Node):
 
         # Initialize the super class for *search* (i.e. *self*):
         search = self
-        super().__init__(name, parent, tracing=next_tracing)
+        super().__init__(name, parent)
 
         # The *parent* is known to be a *table* and must contain *search*:
         table = parent
@@ -3311,26 +3072,17 @@ class Search(Node):
         if not is_template:
             searches_table[name] = search
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Search.__init__('{name}', '{parent.name}', "
-                  f"'{search_parent_text}', '{url}')")
-
     # Search.can_fetch_more():
     def can_fetch_more(self):
         # Currently, all *Search* objects never have any childre.  Hence, there is nothing fetch:
         return False
 
     # Search.clicked()
-    def clicked(self, tables_editor, model_index, tracing=None):
+    def clicked(self, tables_editor, model_index, tracing=""):
         # Verify argument types:
         assert isinstance(tables_editor, TablesEditor)
         assert isinstance(model_index, QModelIndex)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Preform any requested *tracing*:
-        if tracing is not None:
-            print("{0}=>Search.clicked()".format(tracing))
+        assert isinstance(tracing, str)
 
         # Fetch the *url* from *search*:
         search = self
@@ -3338,7 +3090,7 @@ class Search(Node):
         assert isinstance(table, Table)
         url = search.url
         assert isinstance(url, str)
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}url='{url}' table.name='{table.name}'")
 
         # Force the *url* to open in the web browser:
@@ -3364,10 +3116,6 @@ class Search(Node):
         search_name = search.name
         collections_line.setText(search_name)
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=Search.clicked()".format(tracing))
-
     # Search.comments_append():
     def comments_append(self, comments):
         # Verify argument types:
@@ -3380,18 +3128,12 @@ class Search(Node):
         search.comments.extend(comments)
 
     # Search.file_load():
-    def file_load(self, tracing=None):
+    def file_load(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any required *tracing*:
-        search = self
-        name = search.name
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Search.file_load('{name}')")
+        assert isinstance(tracing, str)
 
         # Grab some informtation from parent *table* of *search*:
+        search = self
         table = search.parent
         assert isinstance(table, Table)
         table_name = table.name
@@ -3399,7 +3141,7 @@ class Search(Node):
         searches_size = len(searches)
         # Only load *search* (i.e. *self*) if it is not already *loaded*:
         loaded = search.loaded
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}loaded={loaded} table='{table_name}' searches_size={searches_size}")
         if not loaded:
             # Grab some values from *search*:
@@ -3407,7 +3149,7 @@ class Search(Node):
             searches_root = collection.searches_root
             relative_path = search.relative_path
             search_full_file_name = os.path.join(searches_root, relative_path + ".xml")
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}search_full_file_name={search_full_file_name}")
             with open(search_full_file_name, "r") as search_file:
                 # Read in *search_xml_text* from *search_file*:
@@ -3417,7 +3159,7 @@ class Search(Node):
                 search_tree = etree.fromstring(search_xml_text)
 
                 # Now process the contents of *search_tree* and stuff the result:
-                search.tree_load(search_tree, tracing=next_tracing)
+                search.tree_load(search_tree)
 
                 # Mark that *table* is no longer sorted since we may updated the
                 # *search_parent* and *search_parent_title* fields:
@@ -3428,19 +3170,10 @@ class Search(Node):
             # Mark *search* as *loaded*:
             search.loaded = True
 
-        # Wrap up any required *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Search.file_load('{name}')")
-
     # Search.filters_refresh()
-    def filters_refresh(self, tracing=None):
+    def filters_refresh(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>Search.filters_update()".format(tracing))
+        assert isinstance(tracing, str)
 
         # Before we do anything we have to make sure that *search* has an associated *table*.
         # Frankly, it is should be impossible not to have an associated table, but we must
@@ -3478,10 +3211,6 @@ class Search(Node):
                     filter = Filter(parameter=parameter, table=table, use=False, select="")
                     filters.append(filter)
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=Search.filters_refresh()".format(tracing))
-
     # Search.full_file_name_get():
     def xxx_full_file_name_get(self):
         # Grab some values from *search* (i.e. *self*):
@@ -3500,18 +3229,13 @@ class Search(Node):
         return full_file_name
 
     # Search.is_deletable():
-    def is_deletable(self, tracing=None):
+    def is_deletable(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Grab *search_name* from *search* (i.e. *self*):
         search = self
         search_name = search.name
-
-        # Perform any requested *tracing*:
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>is_deletable('{search_name}')")
 
         # Search through *sibling_searches* of *table* to ensure that *search* is not
         # a parent of any *sibling_search* object:
@@ -3525,10 +3249,6 @@ class Search(Node):
             if sibling_search.search_parent is search:
                 deletable = False
                 break
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=is_deletable('{search_name}')=>{deletable}")
         return deletable
 
     # Search.key():
@@ -3599,20 +3319,14 @@ class Search(Node):
         return (depth, number, rest)
 
     # Search.file_save():
-    def file_save(self, tracing=None):
+    def file_save(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing* for *search* (i.e. *self*):
-        search = self
-        search_name = search.name
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Search.file_save('{search_name}')")
+        assert isinstance(tracing, str)
 
         # Create the *search_xml_text* from *search*:
+        search = self
         search_xml_lines = list()
-        search.xml_lines_append(search_xml_lines, "", tracing=next_tracing)
+        search.xml_lines_append(search_xml_lines, "")
         search_xml_lines.append("")
         search_xml_text = "\n".join(search_xml_lines)
 
@@ -3621,7 +3335,7 @@ class Search(Node):
         searches_root = collection.searches_root
         relative_path = search.relative_path
         search_file_name = os.path.join(searches_root, relative_path + ".xml")
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}searches_root='{searches_root}'")
             print(f"{tracing}relative_path='{relative_path}'")
             print(f"{tracing}search_file_name='{search_file_name}'")
@@ -3634,31 +3348,27 @@ class Search(Node):
         # Mark *search* as *loaded* since we just wrote out the contents:
         search.loaded = True
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Search.file_save('{search_name}')")
-
     # Search.partial_load():
-    # def partial_load(self, tracing=None):
+    # def partial_load(self, tracing=""):
     #     # Verify argument types:
-    #     assert isinstance(tracing, str) or tracing is None
+    #     assert isinstance(tracing, str)
     #     assert False
 
     #     # Perform any requested *tracing*:
-    #     if tracing is not None:
+    #     if tracing:
     #         print(f"{tracing}=>Searches.populate(*)")
 
     #     # Compute the *glob_pattern* for searching:
     #     searches = self
     #     path = searches.path
     #     slash = os.sep
-    #     if tracing is not None:
+    #     if tracing:
     #         print(f"{tracing}glob_pattern='{glob_pattern}'")
     #     #for index, file_name in enumerate(glob.glob(glob_pattern, recursive=True)):
     #     #    print(f"Search[{index}]:'{file_name}'")
 
     #     # Wrap up any requested *tracing*:
-    #     if tracing is not None:
+    #     if tracing:
     #         print(f"{tracing}<=Searches.populate(*)")
 
     # Search.search_parent_set():
@@ -3682,62 +3392,42 @@ class Search(Node):
         search.search_parent_title = search_parent_title
 
     # Search.table_set():
-    def table_set(self, new_table, tracing=None):
+    def table_set(self, new_table, tracing=""):
         # Verify argument types:
         assert isinstance(new_table, Table) or new_table is None
-
-        # Perform any requested *tracing*:
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>Search.table_set('{1})".
-                  format(tracing, "None" if new_table is None else new_table.name))
 
         search = self
         search.table = new_table
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=Search.table_set('{1}')".
-                  format(tracing, "None" if new_table is None else new_table.name))
-
     # Search.name_get():
-    def name_get(self, tracing=None):
+    def name_get(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing* for *search* (i.e. *self*::
-        search = self
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Search.name_get('{search.name}')")
+        assert isinstance(tracing, str)
 
         # Grab some values from *search* (i.e. *self*):
+        search = self
         search_name = search.name
         table = search.parent
 
         # Make sure that all *searches* associated with *table* are loaded from their
         # associated `.xml` files:
-        table.searches_load(tracing=next_tracing)
+        table.searches_load()
 
         # Make sure that *table* is *sort*'ed:
         table = search.parent
         assert isinstance(table, Table)
-        table.sort(tracing=next_tracing)
+        table.sort()
 
         # Construct the *name*:
         search_parent = search.search_parent
         name = search_name if search_parent is None else f"{search_name} ({search_parent.name})"
-
-        # Wrap any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}=>Search.name_get('{search.name}')=>'{name}'")
         return name
 
     # Search.tree_load():
-    def tree_load(self, search_tree, tracing=None):
+    def tree_load(self, search_tree, tracing=""):
         # Verify argument types:
         assert isinstance(search_tree, etree._Element)
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # The basic format of the *search_tree* is:
         #
@@ -3816,16 +3506,11 @@ class Search(Node):
         search.url = url
 
     # Search.xml_lines_append()
-    def xml_lines_append(self, xml_lines, indent, tracing=None):
+    def xml_lines_append(self, xml_lines, indent, tracing=""):
         # Verify argument types:
         assert isinstance(xml_lines, list)
         assert isinstance(indent, str)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Search.xml_lines_append()")
+        assert isinstance(tracing, str)
 
         # Grab some values from *search* (i.e. *self*):
         search = self
@@ -3858,37 +3543,27 @@ class Search(Node):
         # xml_lines.append(f'{indent}  <Filters>')
         # filter_indent = indent + "    "
         # for filter in filters:
-        #     filter.xml_lines_append(xml_lines, filter_indent, tracing=next_tracing)
+        #     filter.xml_lines_append(xml_lines, filter_indent)
         # xml_lines.append(f'{indent}  </Filters>')
 
         # Wrap up the `<Search>` element:
         xml_lines.append(f'{indent}</Search>')
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Search.xml_lines_append()")
 
 
 # Table:
 class Table(Node):
 
     # Table.__init__():
-    def __init__(self, name, parent, url, tracing=None):
+    def __init__(self, name, parent, url, tracing=""):
         # Verify argument types:
         assert isinstance(name, str)
         assert isinstance(parent, Directory) or isinstance(parent, Collection)
         assert isinstance(url, str)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            parent_name = parent.name
-            print(f"{tracing}=>Table.__init__('{name}', '{parent_name}', 'url'")
+        assert isinstance(tracing, str)
 
         # Initialize the *Node* super-class for *table* (i.e. *self*)
         table = self
-        super().__init__(name, parent, tracing=next_tracing)
+        super().__init__(name, parent)
 
         # Load additional values into *table*:
         table.comments = list()
@@ -3899,19 +3574,10 @@ class Table(Node):
         table.searches_table = dict()
         table.url = None
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Table.__init__('{name}', '{parent.name}', 'url'")
-
     # Table.bind_parameters_from_imports():
-    def bind_parameters_from_imports(self, tracing=None):
+    def bind_parameters_from_imports(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>Tables.bind_parameters_from_imports()".format(tracing))
+        assert isinstance(tracing, str)
 
         # Update *current_table* an *parameters* from *tables_editor*:
         table = self
@@ -3960,10 +3626,6 @@ class Table(Node):
                                           csv_index=column_index, comments=comments)
                     parameters.append(parameter)
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=Tables.bind_parameters_from_imports()".format(tracing))
-
     # Table.can_fetch_more():
     def can_fetch_more(self):
         # Conceptually, every table as a default `@ALL` search.  We return *True* if
@@ -3974,15 +3636,11 @@ class Table(Node):
         return can_fetch_more
 
     # Table.clicked():
-    def clicked(self, tables_editor, model_index, tracing=None):
+    def clicked(self, tables_editor, model_index, tracing=""):
         # Verify argument types:
         assert isinstance(tables_editor, TablesEditor)
         assert isinstance(model_index, QModelIndex)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Preform any requested *tracing*:
-        if tracing is not None:
-            print("{0}=>Table.clicked()".format(tracing))
+        assert isinstance(tracing, str)
 
         tables_editor.current_search = None
 
@@ -3995,10 +3653,10 @@ class Table(Node):
                 break
         else:
             # Nope, *table* is not in *tables*, so let's stuff it in:
-            if tracing is not None:
+            if tracing:
                 print("{0}Before len(tables)={1}".format(tracing, len(tables)))
             tables_editor.tables_combo_edit.item_append(table)
-            if tracing is not None:
+            if tracing:
                 print("{0}After len(tables)={1}".format(tracing, len(tables)))
 
         # Force whatever is visible to be updated:
@@ -4011,30 +3669,21 @@ class Table(Node):
         tables_editor.current_comment = None
         tables_editor.current_search = None
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=Table.clicked()".format(tracing))
-
     # Table.csv_read_and_process():
-    def csv_read_and_process(self, csv_directory, bind=False, tracing=None):
+    def csv_read_and_process(self, csv_directory, bind=False, tracing=""):
         # Verify argument types:
         assert isinstance(csv_directory, str)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing* for *table* (i.e. *self*):
-        table = self
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Table.csv_read_process('{table.name}', '{csv_directory}', {bind})")
+        assert isinstance(tracing, str)
 
         # Grab *parameters* from *table* (i.e. *self*):
+        table = self
         parameters = table.parameters
         assert isinstance(parameters, list)
 
         # Open *csv_file_name* read in both *rows* and *headers*:
         csv_full_name = table.csv_full_name_get()
         assert isinstance(csv_full_name, str)
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}csv_full_name='{csv_full_name}'")
 
         rows = None
@@ -4100,7 +3749,7 @@ class Table(Node):
             # assert total_count == len(rows), \
             #  "total_count={0} len_rows={1}".format(total_count, len(rows))
 
-            # if tracing is not None:
+            # if tracing:
             #    print("{0}Column[{1}]: regex_table={2}".
             #      format(tracing, column_index, regex_table))
 
@@ -4133,47 +3782,38 @@ class Table(Node):
         assert isinstance(rows, list)
 
         if bind:
-            table.bind_parameters_from_imports(tracing=next_tracing)
-        table.file_save(tracing=next_tracing)
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Table.csv_read_process('{table.name}', '{csv_directory}', {bind})")
+            table.bind_parameters_from_imports()
+        table.file_save()
 
     # Table.directories_get():
     def directories_get(self):
         return []
 
     # Table.fetch_more():
-    def fetch_more(self, tracing=None):
+    def fetch_more(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        table = self
-        name = table.name
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Table.fetch_more('{name}')")
+        assert isinstance(tracing, str)
 
         # Create *all_search* if it does not already exist (i.e. *searches_size* is 0):
+        table = self
+        name = table.name
         searches = table.children_get()
         searches_size = len(searches)
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}1:searches_size={searches_size}")
         if searches_size == 0:
             # Note that the call to the *Search*() has the side-effect of appending
             # *all_search* to the children of *table*:
             # base_name = Encode.to_file_name(name)
-            all_search = Search("@ALL", table, None, table.url, tracing=next_tracing)
+            all_search = Search("@ALL", table, None, table.url)
             assert table.has_child(all_search)
             assert len(searches) == 1
-            all_search.file_save(tracing=next_tracing)
+            all_search.file_save()
 
             # Make sure that *table* is fully loaded so we can grab the *url*:
-            table.file_load(tracing=next_tracing)
+            table.file_load()
             searches_size = len(searches)
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}2:searches_size={searches_size}")
             assert searches_size == 1
             url = table.url
@@ -4184,32 +3824,22 @@ class Table(Node):
             all_search.url = url
 
             # Force *all_search* out to the file system:
-            all_search.file_save(tracing=next_tracing)
-            if tracing is not None:
+            all_search.file_save()
+            if tracing:
                 searches_size = len(searches)
                 print(f"{tracing}3:searches_size={searches_size}")
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Table.fetch_more('{name}')")
-
     # Table.file_load():
-    def file_load(self, tracing=None):
+    def file_load(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
-        # Perform any requested *tracing* for *table* (i.e. *self*):
+        # Only load *table* (i.e. *self*) if it is not already *loaded*:
         table = self
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            table_name = table.name
-            print(f"{tracing}=>Table.file_load('{table_name}')")
-
-        # Only load *table* if it is not already *loaded*:
         loaded = table.loaded
         searches = table.children_get()
         searches_size = len(searches)
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}loaded={loaded} searches_size={searches_size}")
         if not table.loaded:
             # Get *table_file_name* for *table*:
@@ -4229,15 +3859,10 @@ class Table(Node):
                 # FIXME: Catch XML parsing errors here!!!
 
                 # Now process the contents of *table_tree* and stuff the results into *table*:
-                table.tree_load(table_tree, tracing=next_tracing)
+                table.tree_load(table_tree)
 
             # Mark *table* as *loaded*:
             table.loaded = True
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            next_tracing = tracing + " "
-            print(f"{tracing}<=Table.file_load('{table_name}')")
 
     # Table.full_file_name_get():
     def xxx_full_file_name_get(self):
@@ -4280,42 +3905,26 @@ class Table(Node):
         return header_labels
 
     # Table.name_get():
-    def name_get(self, tracing=None):
+    def name_get(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform an requested *tracing*:
-        table = self
-        name = table.name
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Table.name_get('{name}')")
+        assert isinstance(tracing, str)
 
         # Force *table* (i.e. *self*) *load* if it has not already been loaded:
-        table.file_load(tracing=next_tracing)
+        table = self
+        name = table.name
+        table.file_load()
 
         # Augment *name* with the *searches_size*:
         searches = table.children_get()
         searches_size = len(searches)
         if len(searches) >= 2:
             name += f" ({searches_size})"
-
-        # Wrap up an requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Table.title_get()=>{name}")
         return name
 
     # Table.partial_load():
-    def partial_load(self, tracing=None):
+    def partial_load(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        table = self
-        # tracing = "res:" if self.name.startswith("resistors-chip") else tracing
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Table.partial_load('{table.name}')")
+        assert isinstance(tracing, str)
 
         # Grab some values from *table* (i.e. *self*):
         table = self
@@ -4327,7 +3936,7 @@ class Table(Node):
         collection_root = collection.collection_root
         searches_root = collection.searches_root
         searches_directory = os.path.join(searches_root, relative_path)
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}collection_root='{collection_root}'")
             print(f"{tracing}searches_root='{searches_root}'")
             print(f"{tracing}relative_path='{relative_path}'")
@@ -4338,7 +3947,7 @@ class Table(Node):
             # *searches_path* is a directory so we scan it:
             for index, search_file_name in enumerate(sorted(list(os.listdir(searches_directory)))):
                 # Preform requested *tracing*:
-                if tracing is not None:
+                if tracing:
                     print(f"{tracing}Search[{index}]:'{search_file_name}'")
 
                 # Skip over any files that do not end with `.xml` suffix:
@@ -4348,34 +3957,26 @@ class Table(Node):
                     search_name = Encode.from_file_name(file_base)
 
                     # Create *search* and then save it out to the file system:
-                    search = Search(search_name, table, None, "??", tracing=next_tracing)
+                    search = Search(search_name, table, None, "??")
                     assert table.has_child(search)
                     search.loaded = False
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Table.partial_load('{table.name}')")
-
     # Table.sort():
-    def sort(self, tracing=None):
+    def sort(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
-        # Perform any requested *tracing* for *table* (i.e. *self*):
+        # Only sort *table* (i.e. *self*) if it is not *is_sorted*:
         table = self
         name = table.name
-        if tracing is not None:
-            print(f"{tracing}=>Table.sort('{name}')")
-
-        # Only sort *table* if it is not *is_sorted*:
         is_sorted = table.is_sorted
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}is_sorted={is_sorted}")
         if not is_sorted:
             # Grab *searches* list from *table* (i.e. *self*):
             searches = table.children_get()
             searches_size = len(searches)
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}searches_size={searches_size}")
 
             # Create a new *searches_table* that contains every *search* keyed by *search_name*:
@@ -4389,7 +3990,7 @@ class Table(Node):
                 # print(f"Search[{index}]:'{search_name}'=>'{search_key}'")
             if len(searches) != len(searches_table):
                 # tracing = "TS:" if tracing is None else tracing
-                if tracing is not None:
+                if tracing:
                     searches_titles = [search.name for search in searches]
                     print(f"{tracing}searches_titles={searches_titles}")
                     print(f"{tracing}searches_table={searches_table}")
@@ -4405,7 +4006,7 @@ class Table(Node):
             #             assert False, f"'{search_parent_name}' not in searches_table {keys}"
             #         search_parent = searches_table[search_parent_title_key]
             #         search.search_parent = search_parent
-            #     if tracing is not None:
+            #     if tracing:
             #         search_parent_text = ("None" if search_parent is None
             #                               else f"'{search_parent.name}'")
             #         print(f"{tracing}Search[{index}]:'{search.name}' {search_parent_text}")
@@ -4416,49 +4017,31 @@ class Table(Node):
             # Mark that *table* *is_sorted*:
             table.is_sorted = True
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Table.sort('{name}')")
-
     # Table.save():
-    def save(self, tracing=None):
+    def save(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        table = self
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>Table.save('{1}')".format(tracing, table.name))
+        assert isinstance(tracing, str)
 
         # Write out *table* (i.e. *self*) to *file_name*:
+        table = self
         output_file_name = table.file_name
         xml_text = table.to_xml_string()
         with open(output_file_name, "w") as output_file:
             output_file.write(xml_text)
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}=>Table.save('{1}')".format(tracing, table.name))
-
     # Table.search_directory_get():
-    def search_directory_get(self, tracing=None):
+    def search_directory_get(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Preform any requested *tracing* for *table* (i.e. *self*):
-        table = self
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Table.search_directory_get('{table.name}')")
+        assert isinstance(tracing, str)
 
         # Compute *search_directory*:
+        table = self
         searches_root = table.searches_root_get()
         relative_path = table.relative_path
         table_name = table.name
         table_base_name = Encode.to_file_name(table_name)
         search_directory = os.path.join(searches_root, relative_path, table_base_name)
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}searches_root='{searches_root}'")
             print(f"{tracing}relative_path='{relative_path}'")
             # print(f"{tracing}table__directory='{table_directory}'")
@@ -4467,26 +4050,18 @@ class Table(Node):
         # Make sure *search_directory* exists:
         if not os.path.isdir(search_directory):
             os.makedirs(search_directory)
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}Created directory '{search_directory}'")
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Table.search_directory_get('{table.name}')=>'{search_directory}'")
         return search_directory
 
     # Table.searches_load():
-    def searches_load(self, tracing=None):
+    def searches_load(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing* for *table* (i.e. *self*):
-        table = self
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Table.searches_load('{table.name}')")
+        assert isinstance(tracing, str)
 
         # Grab some values from *table* (i.e. *self*):
+        table = self
         table_searches = dict()
         searches_loaded_count = 0
         searches = table.children_get()
@@ -4494,7 +4069,7 @@ class Table(Node):
             # Make sure *search* is *loaded*.  We test *loaded* up here to prevent
             # a lot of unnecessary calls to *file_load*:
             if not search.loaded:
-                search.file_load(tracing=next_tracing)
+                search.file_load()
                 assert search.loaded
                 searches_loaded_count += 1
 
@@ -4506,23 +4081,19 @@ class Table(Node):
         if searches_loaded_count >= 1:
             for search in searches:
                 search_parent_name = search.search_parent_name
-                if tracing is not None:
+                if tracing:
                     print(f"Search '{search.name}' parent name is '{search_parent_name}'")
                 if search_parent_name != "":
                     assert search_parent_name in table_searches, (f"'{search_parent_name} '"
                                                                   f"not in {table_searches.keys()}")
                     search_parent = table_searches[search_parent_name]
                     search.search_parent = search_parent
-                    if tracing is not None:
+                    if tracing:
                         print(f"Setting search '{search.name}' "
                               f"search parent to '{search_parent.name}'")
                 else:
-                    if tracing is not None:
+                    if tracing:
                         print(f"Search '{search.name}' has no search parent.")
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Table.searches_load('{table.name}')")
 
     # Table.searches_table_set():
     def searches_table_set(self, searches_table):
@@ -4539,15 +4110,10 @@ class Table(Node):
         return [table]
 
     # Table.tree_load():
-    def tree_load(self, table_tree, tracing=None):
+    def tree_load(self, table_tree, tracing=""):
         # Verify argument types:
         assert isinstance(table_tree, etree._Element)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform an request *tracing*:
-        # next_tracing = None if tacing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Table.tree_load()")
+        assert isinstance(tracing, str)
 
         # Verify that we have a "<Table ...> ... </Table>" at the top level of *table_tree*:
         assert table_tree.tag == "Table"
@@ -4595,10 +4161,6 @@ class Table(Node):
         table.name = name
         table.parameters[:] = parameters[:]
         table.url = url
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Table.file_load()")
 
     # Table.to_xml_string():
     def to_xml_string(self):
@@ -4718,9 +4280,20 @@ class Order:
         order.vendor_priority = 10
         order.vendor_searches_root = vendor_searches_root
 
+    # Order.__str__():
+    def __str__(self):
+        # Grab some values from *order* (i.e. *self*):
+        order = self
+        order_root = order.order_root
+        vendor_searches_root = order.vendor_searches_root
+        
+        # Construct the *result* string and return it:
+        result = f"Order(order_root='{order_root}', vendor_searches_root='{vendor_searches_root}'))"
+        return result
+
     # Order.project_create():
     def project_create(self, name, revision, net_file_name, count,
-                       positions_file_name=None, tracing=None):
+                       positions_file_name=None, tracing=""):
         """ *Order*: Create a *Project* containing *name*, *revision*,
             *net_file_name* and *count*. """
 
@@ -4730,13 +4303,7 @@ class Order:
         assert isinstance(net_file_name, str)
         assert isinstance(count, int)
         assert isinstance(positions_file_name, str) or positions_file_name is None
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Order.project_create(*, '{name}', '{revision}', "
-                  f"'{net_file_name}', '{count}, '{positions_file_name})")
+        assert isinstance(tracing, str)
 
         # Grab some values from *order* (i.e. *self*):
         order = self
@@ -4749,18 +4316,15 @@ class Order:
         else:
             # Create the new *project* and stuff into the appropriate data structures:
             project = Project(name, revision, net_file_name, count, order, positions_file_name,
-                              tracing=next_tracing)
+                              )
             projects_table[net_file_name] = project
             projects.append(project)
 
-        # Wrap up any requested *tracing* and return *project*:
-        if tracing is not None:
-            print(f"{tracing}<=Order.project_create(*, '{name}', '{revision}', "
-                  f"'{net_file_name}', '{count}, '{positions_file_name})=>'{project.name}'")
         return project
 
     # Order.bom_write():
-    def bom_write(self, bom_file_name, key_function, tracing=None):
+    @trace(1)
+    def bom_write(self, bom_file_name, key_function, tracing=""):
         """ *Order*: Write out the BOM (Bill Of Materials) for the
             *Order* object (i.e. *self*) to *bom_file_name* ("" for stdout)
             using *key_function* to provide the sort key for each
@@ -4771,15 +4335,11 @@ class Order:
         assert isinstance(bom_file_name, str)
         assert callable(key_function)
 
-        # Perform any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}=>Order.bom_write(*, '{bom_file_name}', *)")
-
         # Grab some values from *order* (i.e. *self*):
         order = self
         excluded_vendor_names = order.excluded_vendor_names
         final_choice_parts = order.final_choice_parts
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}len(final_choice_parts)={len(final_choice_parts)}")
 
         # Sort *final_choice_parts* using *key_function*.
@@ -4863,32 +4423,21 @@ class Order:
             # Wrap up the *bom_file*:
             bom_file.write("Total: ${0:.2f}\n".format(total_cost))
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Order.bom_write(*, '{bom_file_name}', *)")
-
     # Order.check():
-    def check(self, collections, tracing=None):
+    @trace(1)
+    def check(self, collections, tracing=""):
         # Verify argument types:
         assert isinstance(collections, Collections)
-
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Order.check()")
 
         # Check each of the *projects* in *order* (i.e. *self*):
         order = self
         projects = order.projects
         for project in projects:
-            project.check(collections, tracing=next_tracing)
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Order.check()")
+            project.check(collections)
 
     # Order.csvs_write():
-    def csv_write(self, tracing=None):
+    @trace(1)
+    def csv_write(self, tracing=""):
         """ *Order*: Write out the *Order* object (i.e. *self) BOM (Bill Of Materials)
             for each vendor as a .csv (Comma Seperated Values).
         """
@@ -4958,7 +4507,7 @@ class Order:
 
     # Order.exclude_vendors_to_reduce_shipping_costs():
     def exclude_vendors_to_reduce_shipping_costs(self, choice_parts, excluded_vendor_names,
-                                                 reduced_vendor_messages, tracing=None):
+                                                 reduced_vendor_messages, tracing=""):
         """ *Order*: Sweep through *choice_parts* and figure out which vendors
             to add to *excluded_vendor_names* to reduce shipping costs.
         """
@@ -4966,11 +4515,7 @@ class Order:
         assert isinstance(choice_parts, list)
         assert isinstance(excluded_vendor_names, dict)
         assert isinstance(reduced_vendor_messages, list)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        if tracing:
-            print(f"{tracing}=>Order.exclude_vendors_to_reduce_shipping_costs(*, *, *, *)")
+        assert isinstance(tracing, str)
 
         # First figure out the total *missing_parts*.  We will stop if
         # excluding a vendor increases above the *missing_parts* number:
@@ -5082,13 +4627,9 @@ class Order:
                 # print("lowest_cost={0:.2f}".format(lowest_cost))
                 done = True
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}=>Order.exclude_vendors_to_reduce_shipping_costs(*, *, *, *)")
-
     # Order.exclude_vendors_with_high_minimums():
     def exclude_vendors_with_high_minimums(self, choice_parts, excluded_vendor_names,
-                                           reduced_vendor_messages, tracing=None):
+                                           reduced_vendor_messages, tracing=""):
         """ *Order*: Sweep through *choice* parts and figure out if the
             vendors with large minimum orders can be dropped:
         """
@@ -5097,12 +4638,6 @@ class Order:
         assert isinstance(choice_parts, list)
         assert isinstance(excluded_vendor_names, dict)
         assert isinstance(reduced_vendor_messages, list)
-
-        # Perform any requested *tracing*:
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>exclude_vendors_with_high_minimums(...)")
-        assert False
 
         # Grab the talb eof *vendor_minimums*:
         database = self.database
@@ -5131,7 +4666,8 @@ class Order:
                   format(vendor_name, vendor_total_cost, vendor_minimum_cost))
 
     # Order.final_choice_parts_compute():
-    def final_choice_parts_compute(self, collections, tracing=None):
+    @trace(1)
+    def final_choice_parts_compute(self, collections, tracing=""):
         """ *Order*: Return a list of final *ChoicePart* objects to order
             for the the *Order* object (i.e. *self*).  This routine also
             has the side effect of looking up the vendor information for
@@ -5140,12 +4676,7 @@ class Order:
 
         # Verify argument types:
         assert isinstance(collections, Collections)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Order.final_choice_parts_compute(*)")
+        assert isinstance(tracing, str)
 
         # Grab the some values from *order* (i.e. *self*):
         order = self
@@ -5157,7 +4688,7 @@ class Order:
         # we have a name to a List[ProjectPart] mapping.
         project_parts_table = {}
         for project_index, project in enumerate(projects):
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}Project[{project_index}]:'{project.name}'")
 
             # Make sure that each *project_part* in *project* is on a list somewhere
@@ -5166,7 +4697,7 @@ class Order:
             for project_part_index, project_part in enumerate(project_parts):
                 assert isinstance(project_part, ProjectPart), (f"type(project_part)="
                                                                f"{type(project_part)}")
-                if tracing is not None:
+                if tracing:
                     print(f"{tracing}ProjectPart[{project_part_index}]:'{project_part.name}'")
                 project_part_name = project_part.name
                 if project_part_name not in project_parts_table:
@@ -5181,10 +4712,10 @@ class Order:
         pairs = list(project_parts_table.items())
         pairs.sort(key=lambda pair: pair[0])
         for search_name, project_parts in pairs:
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}search_name='{search_name}'")
             assert len(project_parts) >= 1
-            searches = collections.searches_find(search_name, tracing=next_tracing)
+            searches = collections.searches_find(search_name)
             if searches:
                 assert len(project_parts) >= 1, "Empty project_parts?"
                 for search in searches:
@@ -5200,21 +4731,21 @@ class Order:
         # Now load the associated *actual_parts* into each *choice_part* from *final_choice_parts*:
         for choice_part in final_choice_parts:
             # Refresh the vendor part cache for each *actual_part*:
-            new_actual_parts = collections.actual_parts_lookup(choice_part, tracing=next_tracing)
+            new_actual_parts = collections.actual_parts_lookup(choice_part)
 
             # Get reasonably up-to-date pricing and availability information about
             # each *ActualPart* in actual_parts.  *order* is needed to loccate where
             # the cached information is:
             choice_part_name = choice_part.name
             choice_part.vendor_parts_refresh(new_actual_parts, order, choice_part_name,
-                                             tracing=next_tracing)
+                                             )
 
         # Stuff *final_choice_parts* back into *order*:
         final_choice_parts.sort(key=lambda final_choice_part: final_choice_part.name)
         order.final_choice_part = final_choice_parts
 
         for final_choice_part in final_choice_parts:
-            final_choice_part.select(excluded_vendor_names, True, tracing=next_tracing)
+            final_choice_part.select(excluded_vendor_names, True)
 
         if False:
             # Old code:
@@ -5245,7 +4776,7 @@ class Order:
                     choice_part_name = choice_part.name
                     assert isinstance(choice_part, ChoicePart), ("Not a choice part "
                                                                  f"'{choice_part_name}'")
-                    if tracing is not None:
+                    if tracing:
                         print(f"{tracing}  ChoicePart[{choice_part_index}]:'{choice_part_name}'")
 
                     # Make sure *choice_part* is in *choice_parts_table*
@@ -5274,13 +4805,6 @@ class Order:
             assert isinstance(choice_part, ChoicePart)
             choice_part.pose_parts_sort()
 
-        # Wrap up any requested *tracing* and return *final_choice_parts*:
-        # Wrap up any requested *tracing* and return *final_choice_parts*:
-        if tracing is not None:
-            for choice_part_index, choice_part in enumerate(final_choice_parts):
-                print(f"{tracing}Final_Choice_Part[{choice_part_index}]:"
-                      f"'{choice_part.name}")
-            print(f"{tracing}<=Order.final_choice_parts_compute(*) => [...]")
         return final_choice_parts
 
     # Order.footprints_check():
@@ -5349,16 +4873,12 @@ class Order:
             project.positions_process(database)
 
     # Order.process():
-    def process(self, collections, tracing=None):
+    @trace(1)
+    def process(self, collections, tracing=""):
         """ *Order*: Process the *Order* object (i.e. *self*.) """
         # Verify argument types:
         assert isinstance(collections, Collections)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Order.process(*)")
+        assert isinstance(tracing, str)
 
         # Grab some values from *order* (i.e. *self*):
         order = self
@@ -5377,8 +4897,8 @@ class Order:
         # converted to *ChoicePart* objects.  Once we have
         # *final_choice_parts* it can be sorted various different ways
         # (by vendor, by cost, by part_name, etc.)
-        final_choice_parts = order.final_choice_parts_compute(collections, tracing=next_tracing)
-        if tracing is not None:
+        final_choice_parts = order.final_choice_parts_compute(collections)
+        if tracing:
             print(f"{tracing}A:len(final_choice_parts)={len(final_choice_parts)}")
 
         # excluded_vendor_names = order.excluded_vendor_names
@@ -5399,16 +4919,16 @@ class Order:
         #     #  final_choice_parts, excluded_vendor_names, reduced_vendor_messages)
         #     pass
 
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}B:len(final_choice_parts)={len(final_choice_parts)}")
 
         # order.exclude_vendors_with_high_minimums(final_choice_parts, excluded_vendor_names,
-        #                                          reduced_vendor_messages, tracing=next_tracing)
+        #                                          reduced_vendor_messages)
         order.exclude_vendors_to_reduce_shipping_costs(final_choice_parts, excluded_vendor_names,
                                                        reduced_vendor_messages,
-                                                       tracing=next_tracing)
+                                                       )
 
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}C:len(final_choice_parts)={len(final_choice_parts)}")
 
         # Write out *reduced_vendor_messages* to a report file:
@@ -5419,7 +4939,7 @@ class Order:
                 reduced_vendor_messages_file.write(reduced_vendor_message)
             reduced_vendor_messages_file.close()
 
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}D:len(final_choice_parts)={len(final_choice_parts)}")
 
         # Let the user know how many vendors were eliminated:
@@ -5428,14 +4948,14 @@ class Order:
             print(f"{reduced_vendor_messages_size} vendors eliminated.  "
                   f"See '{reduced_vendor_messages_file_name}' file for why.")
 
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}E:len(final_choice_parts)={len(final_choice_parts)}")
 
         # Check for missing footprints:
         # order.footprints_check(final_choice_parts)
         # order.positions_process()
 
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}F:len(final_choice_parts)={len(final_choice_parts)}")
 
         # Print out the final selected vendor summary:
@@ -5447,15 +4967,15 @@ class Order:
         order.bom_write(os.path.join(order_root, "bom_by_price.txt"), lambda choice_part:
                         (choice_part.selected_total_cost,
                          choice_part.selected_vendor_name,
-                         choice_part.name), tracing=next_tracing)
+                         choice_part.name))
         order.bom_write(os.path.join(order_root, "bom_by_vendor.txt"), lambda choice_part:
                         (choice_part.selected_vendor_name,
                          choice_part.selected_total_cost,
-                         choice_part.name), tracing=next_tracing)
+                         choice_part.name))
         order.bom_write(os.path.join(order_root, "bom_by_name.txt"), lambda choice_part:
                         (choice_part.name,
                          choice_part.selected_vendor_name,
-                         choice_part.selected_total_cost), tracing=next_tracing)
+                         choice_part.selected_total_cost))
         order.csv_write()
 
         # Write a part summary file for each project:
@@ -5529,10 +5049,6 @@ class Order:
             # Close all the vendor files:
             for csv_file in vendor_files.values():
                 csv_file.close()
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Order.process(*)")
 
     # Order.quad_compute():
     def quad_compute(self, choice_parts, excluded_vendor_names,
@@ -5628,13 +5144,15 @@ class Order:
         print("Total Cost: {0}".format(total_cost))
 
     # Order.summary_print():
-    def summary_print(self, choice_parts, excluded_vendor_names):
+    @trace(1)
+    def summary_print(self, choice_parts, excluded_vendor_names, tracing=""):
         """ *Order*: Print a summary of the selected vendors.
         """
 
         # Verify argument types:
         assert isinstance(choice_parts, list)
         assert isinstance(excluded_vendor_names, dict)
+        assert isinstance(tracing, str)
 
         # Let the user know what we winnowed the vendor list down to:
         final_vendor_names = self.vendor_names_get(choice_parts, excluded_vendor_names)
@@ -5892,28 +5410,21 @@ class PosePart:
         pose_part.install = (comment != "DNI")
 
     # PosePart.check():
-    def check(self, collections, tracing=None):
+    def check(self, collections, tracing=""):
         # Verify argument types:
         assert isinstance(collections, Collections)
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
-        # Perform any requested *tracing* for *pose_part* (i.e. *self*):
+        # Grab some values from *pose_part* (i.e. *self*):
         pose_part = self
         reference = pose_part.reference
         project = pose_part.project
         project_name = project.name
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>PosePart.check('{project_name}', '{reference}')")
 
         # Check the underlying *project_part*:
         project_part = pose_part.project_part
         search_name = project_part.name
-        collections.check(search_name, project_name, reference, tracing=next_tracing)
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=PosePart.check('{project_name}', '{reference}')")
+        collections.check(search_name, project_name, reference)
 
 
 # PositionRow:
@@ -6447,7 +5958,7 @@ class Project:
 
     # Project.__init__():
     def __init__(self, name, revision, cad_file_name, count, order,
-                 positions_file_name=None, tracing=None):
+                 positions_file_name=None, tracing=""):
         """ Initialize a new *Project* object (i.e. *self*) containing *name*, *revision*,
             *net_file_name*, *count*, *order*, and optionally *positions_file_name.
         """
@@ -6459,13 +5970,7 @@ class Project:
         assert isinstance(count, int)
         assert isinstance(order, Order)
         assert isinstance(positions_file_name, str) or positions_file_name is None
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Project.__init__(*, '{name}', '{revision}', '{cad_file_name}', "
-                  f"{count}, *, '{positions_file_name}'")
+        assert isinstance(tracing, str)
 
         # Load up *project* (i.e. *self*):
         project = self
@@ -6487,15 +5992,10 @@ class Project:
         cads = order.cads
         for cad in cads:
             assert isinstance(cad, Cad)
-            success = cad.file_read(cad_file_name, project, tracing=next_tracing)
+            success = cad.file_read(cad_file_name, project)
             if success:
                 break
         assert success, f"Could not successfully read and process file '{cad_file_name}'!"
-
-        # Wrap-up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Project.__init__(*, '{name}', '{revision}', '{cad_file_name}', "
-                  f"*, '{positions_file_name}')")
 
     # Project.__format__():
     def __format__(self, format):
@@ -6511,7 +6011,8 @@ class Project:
         return result
 
     # Project.assembly_summary_write():
-    def assembly_summary_write(self, final_choice_parts, order):
+    @trace(1)
+    def assembly_summary_write(self, final_choice_parts, order, tracing=""):
         """ Write out an assembly summary .csv file for the *Project* object (i.e. *self*)
             using *final_choice_parts*.
         """
@@ -6519,6 +6020,7 @@ class Project:
         # Verify argument types:
         assert isinstance(final_choice_parts, list)
         assert isinstance(order, Order)
+        assert isinstance(tracing, str)
 
         # Open *project_file* (i.e. *self*):
         project = self
@@ -6649,25 +6151,18 @@ class Project:
         return has_fractional_parts
 
     # Project.check():
-    def check(self, collections, tracing=None):
+    def check(self, collections, tracing=""):
         # Verify argument types:
         assert isinstance(collections, Collections)
 
-        # Perform an requested *tracing* for *project* (i.e. *self*):
+        # Grab some values from *project* (i.e. *self*):
         project = self
         name = project.name
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Project_check('{name}')")
+        all_pose_parts = project.all_pose_parts
 
         # Check *all_pose_parts*:
-        all_pose_parts = project.all_pose_parts
         for pose_part in all_pose_parts:
-            pose_part.check(collections, tracing=next_tracing)
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Project_check('{name}')")
+            pose_part.check(collections)
 
     # Project.project_part_append():
     def pose_part_append(self, pose_part):
@@ -6941,11 +6436,13 @@ class ChoicePart(ProjectPart):
             *format*.
         """
 
-        if format == "s":
-            result = "{0};{1}".format(self.base_name, self.short_footprint)
-        else:
-            result = "{0};{1}".format(self.base_name, self.short_footprint)
-        return result
+        choice_part = self
+        return choice_part.__str__()
+
+    # ChoicePart.__str__():
+    def __str__(self):
+        choice_part = self
+        return f"ChoicePart('{choice_part.name}')"
 
     # ChoicePart.actual_part():
     def actual_part(self, manufacturer_name, manufacturer_part_name, vendor_triples=[]):
@@ -6969,9 +6466,6 @@ class ChoicePart(ProjectPart):
             assert isinstance(vendor_triple[0], str)
             assert isinstance(vendor_triple[1], str)
             assert isinstance(vendor_triple[2], str)
-
-        # tracing = False
-        # tracing = manufacturer_name == "Pololu"
 
         actual_part = ActualPart(manufacturer_name, manufacturer_part_name)
         self.actual_parts.append(actual_part)
@@ -7153,7 +6647,7 @@ class ChoicePart(ProjectPart):
         return references_text
 
     # ChoicePart.select():
-    def select(self, excluded_vendor_names, announce=False, tracing=None):
+    def select(self, excluded_vendor_names, announce=False, tracing=""):
         """ *ChoicePart*: Select and return the best priced *ActualPart*
             for the *ChoicePart* (i.e. *self*) excluding any vendors
             in the *excluded_vendor_names* dictionary.
@@ -7161,7 +6655,9 @@ class ChoicePart(ProjectPart):
         # Verify argument types:
         assert isinstance(excluded_vendor_names, dict)
         assert isinstance(announce, bool)
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
+
+        global trace_level
 
         # This lovely piece of code basically brute forces the decision
         # process of figuring out which *vendor_part* to select and the
@@ -7172,24 +6668,28 @@ class ChoicePart(ProjectPart):
         # When we are done, we sort *quints* and select the first one
         # off the head of the list.
 
-        # Perform any requested *tracing* for *choice_part* (i.e. *self*):
+        # Grab some values from *choice_part* (i.e. *self*):
         choice_part = self
-        if tracing is not None:
-            print(f"{tracing}=>Choice_Part.select('{choice_part.name}', *, {announce})")
-
+        required_quantity = choice_part.count_get()
+        actual_parts = choice_part.actual_parts
+        actual_parts_size = len(actual_parts)
         quints = []
-        required_quantity = self.count_get()
-        actual_parts = self.actual_parts
-        for actual_part_index in range(len(actual_parts)):
-            actual_part = actual_parts[actual_part_index]
-            if tracing is not None:
-                print(" Manufacturer: {0} {1}".format(
-                      actual_part.manufacturer_name, actual_part.manufacturer_part_name))
+
+        for actual_part_index, actual_part in enumerate(actual_parts):
+            if tracing and trace_level >= 1: 
+                manufacturer_name = actual_part.manufacturer_name
+                manufacturer_part_name = actual_part.manufacturer_part_name
+                print(f"{tracing} Manufacturer: '{manufacturer_name}' '{manufacturer_part_name}'")
             vendor_parts = actual_part.vendor_parts
             for vendor_part_index, vendor_part in enumerate(vendor_parts):
-                if tracing:
-                    print(f"{tracing}Vendor: {vendor_part.vendor_name}: "
-                          f"'{vendor_part.vendor_part_name}'")
+                # if trace_level:
+                #     print(f"Vendor: {vendor_part.vendor_name}: "
+                #           f"'{vendor_part.vendor_part_name}':"
+                #           f":{vendor_part.quantity_available}")
+                if tracing and trace_level >= 2:
+                    vendor_name = vendor_part.vendor_name
+                    vendor_part_name = vendor_part.vendor_part_name
+                    print(f"{tracing}  Vendor: '{vendor_name}': '{vendor_part_name}'")
                 price_breaks = vendor_part.price_breaks
                 for price_break_index, price_break in enumerate(price_breaks):
                     # if tracing:
@@ -7209,16 +6709,20 @@ class ChoicePart(ProjectPart):
                     # Assemble the *quint* and append to *quints* if there
                     # enough parts available:
                     is_excluded = vendor_part.vendor_name in excluded_vendor_names
-                    if tracing is not None:
-                        print(f"{tracing}  Quantity Available: {vendor_part.quantity_available} "
-                              f"Is excluded: {1}")
+                    #if trace_level:
+                    #    print(f"quantity_available={vendor_part.quantity_available}, "
+                    #          f"is_excluded={is_excluded}")
+                    if tracing and trace_level >= 3:
+                        quantity_available = vendor_part.quantity_available
+                        print(f"{tracing}   Quantity Available:{quantity_available} "
+                              f"Is Excluded:{is_excluded}")
                     if not is_excluded and vendor_part.quantity_available >= order_quantity:
                         assert price_break_index < len(price_breaks)
                         quint = (total_cost, order_quantity,
                                  actual_part_index, vendor_part_index,
                                  price_break_index, len(price_breaks))
                         quints.append(quint)
-                        if tracing is not None:
+                        if tracing:
                             print(f"{tracing}    quint={quint}")
 
         if len(quints) == 0:
@@ -7273,10 +6777,6 @@ class ChoicePart(ProjectPart):
         if len(quints) == 0:
             missing_part = 1
 
-        # Perform any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=Choice_Part.select('{choice_part.name}', *, {announce})"
-                  f"=>{missing_part}")
         return missing_part
 
     # ChoicePart.vendor_names_load():
@@ -7297,18 +6797,13 @@ class ChoicePart(ProjectPart):
               vendor_names_table, excluded_vendor_names)
 
     # ChoicePart.vendor_parts_refresh():
-    def vendor_parts_refresh(self, proposed_actual_parts, order, part_name, tracing=None):
+    @trace(1)
+    def vendor_parts_refresh(self, proposed_actual_parts, order, part_name, tracing=""):
         # Verify argument types:
         assert isinstance(proposed_actual_parts, list)
         assert isinstance(order, Order)
         assert isinstance(part_name, str)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested_tracing:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-            print(f"{tracing}=>ChoicePart.vendor_parts_refresh(*, *, *, *, '{part_name})")
+        assert isinstance(tracing, str)
 
         # Grab some values from *choice_part* (i.e. *self*) and *order*:
         choice_part = self
@@ -7320,7 +6815,7 @@ class ChoicePart(ProjectPart):
         # Construct the file path for the `.xml` file associated *choice_part*:
         xml_base_name = Encode.to_file_name(choice_part_name + ".xml")
         xml_full_name = os.path.join(vendor_searches_root, xml_base_name)
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}choice_part_name='{choice_part_name}'")
             print(f"{tracing}vendor_searches_root='{vendor_searches_root}'")
             print(f"{tracing}xml_base_name='{xml_base_name}'")
@@ -7343,7 +6838,7 @@ class ChoicePart(ProjectPart):
                 # This is OK, since we only need the *previous_actual_parts* list
                 # which is popluated with valid *ActualPart*'s:
                 previous_choice_part = ChoicePart.xml_parse(choice_part_tree)
-                if tracing is not None:
+                if tracing:
                     print(f"{tracing}Read in '{xml_full_name}'")
 
                 # Sweep through *previous_actual_parts* and enter them into
@@ -7357,7 +6852,7 @@ class ChoicePart(ProjectPart):
 
         # For debugging show both the sorted *proposed_actual_parts* and *previous_actual_parts*
         # side-by-side:
-        if tracing is not None:
+        if tracing:
             # First sort *proposed_actual_parts* and *previous_actual_parts*:
             proposed_actual_parts.sort(key=lambda proposed_actual_part: proposed_actual_part.key)
             previous_actual_parts.sort(key=lambda previous_actual_part: previous_actual_part.key)
@@ -7382,7 +6877,7 @@ class ChoicePart(ProjectPart):
         # We need to figure out when actual parts from the `.xml` are old (i.e. *stale*)
         # and refresh them.
         now = int(time.time())
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}now={now} stale={stale} now-stale={now-stale}")
 
         # Now sweep through *proposed_actual_parts* and refresh any that are either missing or out
@@ -7391,14 +6886,14 @@ class ChoicePart(ProjectPart):
         for index, proposed_actual_part in enumerate(proposed_actual_parts):
             # Grab the *proposed_actual_part_key*:
             proposed_actual_part_key = proposed_actual_part.key
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}Proposed_Actual_Part[{index}]:'{proposed_actual_part.key}'")
 
             # Start by assuming that *lookup_required* and set to *False* if we can avoid
             # the lookup:
             lookup_required = True
             if proposed_actual_part_key in previous_actual_parts_table:
-                if tracing is not None:
+                if tracing:
                     print(f"{tracing}'{proposed_actual_part_key} is in previous_actual_parts_table")
 
                 # We have a *previous_actual_part* that matches *proposed_actual_part*.
@@ -7406,7 +6901,7 @@ class ChoicePart(ProjectPart):
                 # whether we must trigger a vendor parts lookup:
                 previous_actual_part = previous_actual_parts_table[proposed_actual_part_key]
                 previous_vendor_parts = previous_actual_part.vendor_parts
-                if tracing is not None:
+                if tracing:
                     print(f"{tracing}previous_actual_part.name="
                           f"'{previous_actual_part.manufacturer_part_name}'")
                     print(f"{tracing}len(previous_vendor_parts)={len(previous_vendor_parts)}")
@@ -7415,20 +6910,20 @@ class ChoicePart(ProjectPart):
                 minimum_timestamp = now
                 for previous_vendor_part in previous_vendor_parts:
                     minimum_timestamp = min(minimum_timestamp, previous_vendor_part.timestamp)
-                if tracing is not None:
+                if tracing:
                     print(f"{tracing}minimum_timestamp={minimum_timestamp}")
 
                 # If the *minimum_time_stamp* is too stale, force a refresh:
                 if minimum_timestamp + stale > now:
-                    if tracing is not None:
+                    if tracing:
                         print(f"{tracing}Not stale")
                     proposed_actual_part.vendor_parts = previous_vendor_parts
                     lookup_required = False
             else:
-                if tracing is not None:
+                if tracing:
                     print(f"{tracing}'{proposed_actual_part_key} is not"
                           f" in previous_actual_parts_table")
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}lookup_required={lookup_required}")
 
             # If *lookup_required*, visit each *Panda* object in *pandas* and look up
@@ -7437,9 +6932,11 @@ class ChoicePart(ProjectPart):
                 new_vendor_parts = list()
                 for panda in pandas:
                     panda_vendor_parts = panda.vendor_parts_lookup(proposed_actual_part,
-                                                                   part_name, tracing=next_tracing)
+                                                                   part_name)
+                    if trace_level:
+                        trace("len(panda_vendor_parts)={len(panda_vendor_parts)}")
                     new_vendor_parts.extend(panda_vendor_parts)
-                    if tracing is not None:
+                    if tracing:
                         panda_vendor_parts_size = len(panda_vendor_parts)
                         new_vendor_parts_size = len(new_vendor_parts)
                         print(f"{tracing}panda_vendor_parts_size={panda_vendor_parts_size}")
@@ -7468,7 +6965,7 @@ class ChoicePart(ProjectPart):
                     break
 
         # Do a little more *tracing*:
-        if tracing is not None:
+        if tracing:
             final_actual_parts_size = len(final_actual_parts)
             previous_actual_parts_size = len(previous_actual_parts)
             proposed_actual_parts_size = len(proposed_actual_parts)
@@ -7481,7 +6978,7 @@ class ChoicePart(ProjectPart):
 
         # Save *choice_part* out to *xml_file* if *xml_save_required* hase been set:
         if xml_save_required:
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}Writing out '{xml_full_name}'")
             xml_lines = []
             xml_lines.append('<?xml version="1.0"?>')
@@ -7490,11 +6987,6 @@ class ChoicePart(ProjectPart):
             xml_text = "\n".join(xml_lines)
             with open(xml_full_name, "w") as xml_write_file:
                 xml_write_file.write(xml_text)
-
-        # Wrap up any requested_tracing:
-        if tracing is not None:
-            print(f"{tracing}<=ChoicePart.vendor_parts_refresh(*, *, *, *, '{part_name})")
-            print(f"{tracing}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
 
     # ChoicePart.xml_lines_append():
     def xml_lines_append(self, xml_lines, indent):
@@ -7594,8 +7086,8 @@ class FractionalPart(ProjectPart):
 class TablesEditor(QMainWindow):
 
     # TablesEditor.__init__()
-    def __init__(self, tables, collection_directories, searches_root, order,
-                 tracing_level=0, tracing=None):
+    @trace(1)
+    def __init__(self, tables, collection_directories, searches_root, order, tracing=""):
         # Verify argument types:
         assert isinstance(tables, list)
         assert isinstance(collection_directories, list)
@@ -7604,26 +7096,19 @@ class TablesEditor(QMainWindow):
         for table in tables:
             assert isinstance(table, Table)
 
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>TablesEditor.__init__(...)")
-
         # Create the *application* first.  The set attribute makes a bogus warning message
         # printout go away:
         QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
         application = QApplication(sys.argv)
 
-        # Obtain the UI file:
+        # Construct *ui_file_name*:
         module_file_name = __file__
-        if tracing is not None:
-            print(f"module_file_name='{module_file_name}'")
         module_directory = os.path.split(module_file_name)[0]
-        if tracing is not None:
-            print(f"module_directory='{module_directory}'")
         ui_file_name = os.path.join(module_directory, "bom_manager.ui")
-        if tracing is not None:
-            print(f"ui_file_name='{ui_file_name}'")
+        if tracing:
+            print(f"{tracing}module_file_name='{module_file_name}'")
+            print(f"{tracing}module_directory='{module_directory}'")
+            print(f"{tracing}ui_file_name='{ui_file_name}'")
 
         # Create *main_window* from thie `.ui` file:
         # ui_qfile = QFile("bom_manager.ui")
@@ -7686,11 +7171,11 @@ class TablesEditor(QMainWindow):
         # Figure out *searches_root* and make sure it exists:
         if os.path.isdir(searches_root):
             # *searches_path* already exists:
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}Using '{searches_root}' directory to store searches into.")
         else:
             # Create directory *searches_path*:
-            if tracing is not None:
+            if tracing:
                 print(f"{tracing}Creating directory '{searches_root}' to store searches into...")
             try:
                 os.mkdir(searches_root)
@@ -7730,8 +7215,8 @@ class TablesEditor(QMainWindow):
         tables_editor.xsearches = None
         tables_editor.tab_unload = None
         tables_editor.tables = tables
-        tables_editor.tracing_level = tracing_level
-        tables_editor.trace_signals = tracing_level >= 1
+        # tables_editor.tracing_level = tracing_level
+        # tables_editor.trace_signals = tracing_level >= 1
 
         # Set up *tables* first, followed by *parameters*, followed by *enumerations*:
 
@@ -7760,7 +7245,7 @@ class TablesEditor(QMainWindow):
           new_button=main_window.tables_new,
           previous_button=main_window.tables_previous,
           rename_button=main_window.tables_rename,
-          tracing=next_tracing)
+          )
         tables_editor.tables_combo_edit = tables_combo_edit
 
         # Set up *parameters_combo_edit* and stuff into *tables_editor*:
@@ -7789,7 +7274,7 @@ class TablesEditor(QMainWindow):
           new_button=main_window.parameters_new,
           previous_button=main_window.parameters_previous,
           rename_button=main_window.parameters_rename,
-          tracing=next_tracing)
+          )
         tables_editor.parameters_combo_edit = parameters_combo_edit
 
         # Set up *enumerations_combo_edit* and stuff into *tables_editor*:
@@ -7819,7 +7304,7 @@ class TablesEditor(QMainWindow):
           new_button=main_window.enumerations_new,
           previous_button=main_window.enumerations_previous,
           rename_button=main_window.enumerations_rename,
-          tracing=next_tracing)
+          )
         tables_editor.enumerations_combo_edit = enumerations_combo_edit
 
         # Now build the *searches_combo_edit* and stuff into *tables_editor*:
@@ -7848,7 +7333,7 @@ class TablesEditor(QMainWindow):
           new_button=main_window.searches_new,
           previous_button=main_window.searches_previous,
           rename_button=main_window.searches_rename,
-          tracing=next_tracing)
+          )
         tables_editor.searches = searches
         tables_editor.searches_combo_edit = searches_combo_edit
 
@@ -7884,13 +7369,12 @@ class TablesEditor(QMainWindow):
         # print("file_names=", file_names)
 
         # Create the *tree_model* needed for *collections* and stuff into *tables_editor*:
-        tree_model_tracing = None if tracing_level <= 1 else ""
-        tree_model = TreeModel(tracing=tree_model_tracing)
+        tree_model = TreeModel()
         tables_editor.model = tree_model
 
         # Create the *collections* and stuff into *tables_editor*:
         collections = Collections("Collections", collection_directories, searches_root, tree_model,
-                                  tracing=next_tracing)
+                                  )
         tables_editor.collections = collections
 
         # Now stuff *collections* into *tree_model*:
@@ -7898,7 +7382,7 @@ class TablesEditor(QMainWindow):
 
         # Now that both *collections* and *tree_mode* refer to one another we can safely
         # call *partial_load*():
-        collections.partial_load(tracing=next_tracing)
+        collections.partial_load()
 
         # Now bind *tree_model* to the *collections_tree* widget:
         collections_tree = mw.collections_tree
@@ -7923,49 +7407,39 @@ class TablesEditor(QMainWindow):
             table.current_parameter = current_parameter
             table.current_enumeration = current_enumeration
 
-        # tables_editor.table_setup(tracing=next_tracing)
+        # tables_editor.table_setup()
 
         # Read in `searches.xml` if it exists:
         # tables_editor.searches_file_load(os.path.join(order_root, "searches.xml"),
-        #                                  tracing=next_tracing)
+        #                                  )
 
         # Update the entire user interface:
-        tables_editor.update(tracing=next_tracing)
+        tables_editor.update()
 
         tables_editor.in_signal = False
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=TablesEditor.__init__(...)\n")
+    # TablesEditor.__str__():
+    def __str__(self):
+        return "TablesEditor"
 
     # TablesEditor.comment_text_set()
-    def comment_text_set(self, new_text, tracing=None):
+    def comment_text_set(self, new_text, tracing=""):
         # Verify argument types:
         assert isinstance(new_text, str)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested tracing:
-        tables_editor = self
-        if tracing is not None:
-            print("{0}=>TablesEditor.comment_text_set(...)".format(tracing))
+        assert isinstance(tracing, str)
 
         # Carefully set thet text:
+        tables_editor = self
         main_window = tables_editor.main_window
         comment_text = main_window.parameters_comment_text
         comment_text.setPlainText(new_text)
 
-        # Wrap up any requested tracing:
-        if tracing is not None:
-            print("{0}<=TablesEditor.comment_text_set(...)".format(tracing))
-
     # TablesEditor.collections_delete_changed():
-    def collections_delete_clicked(self):
+    @trace(1)
+    def collections_delete_clicked(self, tracing=""):
+        assert isinstance(tracing, str)
         # Perform any requested signal *tracing* for *tables_editor* (i.e. *self*):
         tables_editor = self
-        tracing = "" if tables_editor.trace_signals else None
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Tables_Editor.collections_delete_clicked()")
 
         # Grab the *current_model_index* from *tables_editor* and process it if it exists:
         current_model_index = tables_editor.current_model_index
@@ -7987,13 +7461,13 @@ class TablesEditor(QMainWindow):
                 current_search = node
                 search_model_index = current_model_index
                 current_search_name = current_search.name
-                if tracing is not None:
+                if tracing:
                     print(f"{tracing}curent_search_name='{current_search_name}'")
 
                 # Grab the parent *table* from *current_search* and force it to be fixed up:
                 table = current_search.parent
                 assert isinstance(table, Table)
-                table.sort(tracing=next_tracing)
+                table.sort()
 
                 # Only attempt to delete *current_search* if it is in *searches* of *table*:
                 searches = table.children_get()
@@ -8012,25 +7486,25 @@ class TablesEditor(QMainWindow):
                     parent_search_model_index = search_model_index.siblingAtRow(find_index)
 
                     # Delete the *search* associated with *search_model_index* from *tree_model*:
-                    if tracing is not None:
+                    if tracing:
                         print(f"{tracing}Here 1")
-                    tree_model.delete(search_model_index, tracing=next_tracing)
+                    tree_model.delete(search_model_index)
                     collection = current_search.collection
                     searches_table = collection.searches_table
                     if current_search_name in searches_table:
                         del searches_table[current_search_name]
 
                     # If a *parent_search* as found, set it up as the next selected one:
-                    if tracing is not None:
+                    if tracing:
                         print(f"{tracing}Here 2")
                     if search_parent is None:
                         tables_editor.current_model_index = None
                         tables_editor.current_search = None
                     else:
-                        if tracing is not None:
+                        if tracing:
                             print(f"Here 3")
                         search_parent_name = search_parent.name
-                        if tracing is not None:
+                        if tracing:
                             print(f"{tracing}Parent is '{search_parent_name}'")
                         main_window = tables_editor.main_window
                         collections_tree = main_window.collections_tree
@@ -8043,7 +7517,7 @@ class TablesEditor(QMainWindow):
                         tables_editor.current_search = search_parent
 
                     # Remove the associated files `.xml` and `.csv` files (if they exist):
-                    if tracing is not None:
+                    if tracing:
                         print(f"Here 4")
                     collection = current_search.collection
                     searches_root = collection.searches_root
@@ -8063,40 +7537,24 @@ class TablesEditor(QMainWindow):
                 print("Non-search node '{0}' selected???".format(node.name))
 
         # Update the collections tab:
-        tables_editor.update(tracing=next_tracing)
-
-        # Wrap up any requested signal tracing:
-        if tracing is not None:
-            print(f"{tracing}<=Tables_Editor.collections_delete_clicked()\n")
+        tables_editor.update()
 
     # TablesEditor.collections_line_changed():
-    def collections_line_changed(self, text):
+    @trace(1)
+    def collections_line_changed(self, text, tracing=""):
         # Verify argument types:
         assert isinstance(text, str)
+        assert isinstance(tracing, str)
 
-        # Perform any requested signal tracing:
+        # Make sure that *tables_editor* (i.e. *self*) is updated:
         tables_editor = self
-        tracing = "" if tables_editor.trace_signals else None
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>Tables_Editor.collections_line_changed('{text}')")
-
-        # Update the collections tab:
-        tables_editor.update(tracing=next_tracing)
-
-        # Wrap up any requested signal tracing:
-        if tracing is not None:
-            print(f"{tracing}<=Tables_Editor.collections_line_changed('{text}')\n")
+        tables_editor.update()
 
     # TablesEditor.collections_new_clicked():
-    def collections_new_clicked(self):
+    @trace(1)
+    def collections_new_clicked(self, tracing=""):
         # Perform any requested *tracing*:
         tables_editor = self
-        tracing = "" if tables_editor.trace_signals else None
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>TablesEditor.collections_new_clicked()")
-
         # Grab some values from *tables_editor* (i.e. *self*):
         current_search = tables_editor.current_search
 
@@ -8115,7 +7573,7 @@ class TablesEditor(QMainWindow):
             url = selection
         elif clipboard.startswith("http"):
             url = clipboard
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}clipbboard='{clipboard}'")
             print(f"{tracing}selection='{selection}'")
             print(f"{tracing}url='{url}'")
@@ -8134,115 +7592,90 @@ class TablesEditor(QMainWindow):
             assert isinstance(table, Table)
 
             # Construct *new_search_name*:
-            new_search = Search(new_search_name, table, current_search, url, tracing=next_tracing)
+            new_search = Search(new_search_name, table, current_search, url)
             assert table.has_child(new_search)
 
-            # if tracing is not None:
+            # if tracing:
             #    print("{0}1:len(searches)={1}".format(tracing, len(searches)))
-            table.sort(tracing=next_tracing)
-            new_search.file_save(tracing=next_tracing)
+            table.sort()
+            new_search.file_save()
 
             model_index = tables_editor.current_model_index
             if model_index is not None:
                 parent_model_index = model_index.parent()
                 tree_model = model_index.model()
-                tree_model.children_update(parent_model_index, tracing=next_tracing)
+                tree_model.children_update(parent_model_index)
 
             # model = tables_editor.model
             # model.insertNodes(0, [ new_search ], parent_model_index)
-            # if tracing is not None:
+            # if tracing:
             #    print("{0}2:len(searches)={1}".format(tracing, len(searches)))
 
-            tables_editor.update(tracing=next_tracing)
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=TablesEditor.collections_new_clicked()\n")
+            tables_editor.update()
 
     # TablesEditor.collections_check_clicked():
-    def collections_check_clicked(self):
+    @trace(1)
+    def collections_check_clicked(self, tracing=""):
         # Perform any tracing requested by *tables_editor* (i.e. *self*):
         tables_editor = self
-        tracing = "" if tables_editor.trace_signals else None
-        tracing = None
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>TablesEditor.collections_check_clicked()")
 
         # Delegate checking to *order* object:
         collections = tables_editor.collections
         order = tables_editor.order
-        order.check(collections, tracing=next_tracing)
-
-        # Wrap any requested by *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=TablesEditor.collections_check_clicked()\n")
+        order.check(collections)
 
     # TablesEditor.collections_process_clicked():
-    def collections_process_clicked(self):
+    @trace(1)
+    def collections_process_clicked(self, tracing=""):
         # Perform any tracing requested by *tables_editor* (i.e. *self*):
         tables_editor = self
-        tracing = "" if tables_editor.trace_signals else None
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>TablesEditor.collections_process_clicked()")
 
         # Grab some values from *tables_editor*:
         collections = tables_editor.collections
         order = tables_editor.order
 
         # Now process *order* using *collections*:
-        order.process(collections, tracing=next_tracing)
-
-        # Wrap any requested by *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=TablesEditor.collections_process_clicked()\n")
+        order.process(collections)
 
     # TablesEditor.collections_tree_clicked():
-    def collections_tree_clicked(self, model_index):
+    @trace(1)
+    def collections_tree_clicked(self, model_index, tracing=""):
         # Verify argument types:
         assert isinstance(model_index, QModelIndex)
+        assert isinstance(tracing, str)
 
-        # Perform any requested signal *tracing* for *tables_editor* (i.e. *self*):
+        # Stuff *model_index* into *tables_editor* (i.e. *self*):
         tables_editor = self
-        tracing = "" if tables_editor.trace_signals else None
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>TablesEditor.collections_tree_clicked()")
-
-        # Grab the *node* associated with *model_index*:
         tables_editor.current_model_index = model_index
-        row = model_index.row()
-        column = model_index.column()
-        # parent_model_index = model_index.parent()
+
+        # If *tracing*, show the *row* and *column*:
+        if tracing:
+            row = model_index.row()
+            column = model_index.column()
+            print(f"{tracing}row={row} column={column}")
+
+        # Now grab the associated *node* from *model_index*:
         model = model_index.model()
         node = model.getNode(model_index)
         assert isinstance(node, Node)
-        node.clicked(tables_editor, model_index, tracing=next_tracing)
 
+        # Let the *node* know it has been clicked:
+        node.clicked(tables_editor, model_index)
+
+        # *Search* *node*'s get some additional treatment:
         if isinstance(node, Search):
             main_window = tables_editor.main_window
             collections_line = main_window.collections_line
             collections_line.setText(node.name)
 
-        tables_editor.update(tracing=next_tracing)
-
-        if tracing is not None:
-            print(f"{tracing}row={row} column={column}")
-
-        # Wrap up any requested signal tracing:
-        if tracing is not None:
-            print(f"{tracing}<=TablesEditor.collections_tree_clicked()\n")
+        # Lastly, tell *tables_editor* to update the GUI:
+        tables_editor.update()
 
     # TablesEditor.collections_update():
-    def collections_update(self, tracing=None):
+    @trace(1)
+    def collections_update(self, tracing=""):
         # Perform argument testing:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>TablesEditor.collections_update()")
+        assert isinstance(tracing, str)
 
         # Grab some widgets from *tables_editor*:
         tables_editor = self
@@ -8253,7 +7686,7 @@ class TablesEditor(QMainWindow):
 
         # Grab the *current_search* object:
         current_search = tables_editor.current_search
-        if tracing is not None:
+        if tracing:
             current_search_name = "None" if current_search is None else f"'{current_search.name}'"
             print(f"{tracing}current_search={current_search_name}")
 
@@ -8297,7 +7730,7 @@ class TablesEditor(QMainWindow):
 
         # Enable/disable the *collections_new* button widget:
         collections_new.setEnabled(new_button_enable)
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}new_button_enable={new_button_enable} why='{new_button_why}'")
 
         # We can only delete a search that exists and has no other sub searches that depend on it:
@@ -8318,24 +7751,15 @@ class TablesEditor(QMainWindow):
 
         # Enable/disable *delete_button_enable* button widget:
         collections_delete.setEnabled(delete_button_enable)
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}delete_button_enable={delete_button_enable} why='{delete_button_why}'")
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=TablesEditor.collections_update()")
-
     # TablesEditor.current_enumeration_set()
-    def current_enumeration_set(self, enumeration, tracing=None):
+    def current_enumeration_set(self, enumeration, tracing=""):
         # Verify argument types:
         assert isinstance(enumeration, Enumeration) or enumeration is None, \
           "{0}".format(enumeration)
-        assert isinstance(tracing, str) or tracing is None
-
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>TablesEditor.current_enumeration_set('{1}')".
-                  format(tracing, "None" if enumeration is None else enumeration.name))
+        assert isinstance(tracing, str)
 
         # Only do something if we are not in a signal:
         tables_editor = self
@@ -8357,18 +7781,14 @@ class TablesEditor(QMainWindow):
                       format("None" if enumeration is None else enumeration.name))
             tables_editor.in_signal = False
 
-        if tracing is not None:
-            print("{0}<=TablesEditor.current_enumeration_set('{1}')".
-                  format(tracing, "None" if enumeration is None else enumeration.name))
-
     # TablesEditor.current_parameter_set()
-    def current_parameter_set(self, parameter, tracing=None):
+    def current_parameter_set(self, parameter, tracing=""):
         # Verify argument types:
         assert isinstance(parameter, Parameter) or parameter is None
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Perform any requested *tracing*:
-        if tracing is not None:
+        if tracing:
             name = "None" if parameter is None else parameter.name
             print("{0}=>TablesEditor.current_parameter_set(*, '{1}')".format(tracing, name))
 
@@ -8376,21 +7796,12 @@ class TablesEditor(QMainWindow):
         tables_editor = self
         tables_editor.current_parameter = parameter
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=TablesEditor.current_parameter_set(*, '{1}')".format(tracing, name))
-
     # TablesEditor.current_search_set()
-    def current_search_set(self, new_current_search, tracing=None):
+    def current_search_set(self, new_current_search, tracing=""):
         # Verify argument types:
         assert isinstance(new_current_search, Search) or new_current_search is None, \
           print(new_current_search)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        if tracing is not None:
-            print("{0}=>TablesEditor.current_search_set('{1}')".format(tracing,
-                  "None" if new_current_search is None else new_current_search.name))
+        assert isinstance(tracing, str)
 
         # Make sure *new_current_search* is in *searches*:
         tables_editor = self
@@ -8398,7 +7809,7 @@ class TablesEditor(QMainWindow):
         if new_current_search is not None:
             for search_index, search in enumerate(searches):
                 assert isinstance(search, Search)
-                if tracing is not None:
+                if tracing:
                     print("{0}Search[{1}]: '{2}'".format(tracing, search_index, search.name))
                 if search is new_current_search:
                     break
@@ -8406,21 +7817,11 @@ class TablesEditor(QMainWindow):
                 assert False
         tables_editor.current_search = new_current_search
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=TablesEditor.current_table_set('{1}')".format(
-                  tracing, "None" if new_current_search is None else new_current_search.name))
-
     # TablesEditor.current_table_set()
-    def current_table_set(self, new_current_table, tracing=None):
+    def current_table_set(self, new_current_table, tracing=""):
         # Verify argument types:
         assert isinstance(new_current_table, Table) or new_current_table is None
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        if tracing is not None:
-            print("{0}=>TablesEditor.current_table_set('{1}')".
-                  format(tracing, "None" if new_current_table is None else new_current_table.name))
+        assert isinstance(tracing, str)
 
         # Stuff *new_current_table* into *tables_editor*:
         tables_editor = self
@@ -8433,23 +7834,14 @@ class TablesEditor(QMainWindow):
                 assert False, "table '{0}' not in tables list".format(new_current_table.name)
         tables_editor.current_table = new_current_table
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=TablesEditor.current_table_set('{1}')".
-                  format(tracing, "None" if new_current_table is None else new_current_table.name))
 
     # TablesEditor.current_update()
-    def current_update(self, tracing=None):
+    def current_update(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any tracing requested by *tables_editor* (i.e. *self*):
-        tables_editor = self
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>TablesEditor.current_update()".format(tracing))
+        assert isinstance(tracing, str)
 
         # Make sure *current_table* is valid (or *None*):
+        tables_editor = self
         tables = tables_editor.tables
         tables_size = len(tables)
         current_table = None
@@ -8469,7 +7861,7 @@ class TablesEditor(QMainWindow):
         if current_table is None and tables_size >= 1:
             current_table = tables[0]
         tables_editor.current_table = current_table
-        if tracing is not None:
+        if tracing:
             print("{0}current_table='{1}'".
                   format(tracing, "None" if current_table is None else current_table.name))
 
@@ -8493,7 +7885,7 @@ class TablesEditor(QMainWindow):
             if current_parameter is None and parameters_size >= 1:
                 current_parameter = parameters[0]
         tables_editor.current_parameter = current_parameter
-        if tracing is not None:
+        if tracing:
             print("{0}current_parameter='{1}'".
                   format(tracing, "None" if current_parameter is None else current_parameter.name))
 
@@ -8525,7 +7917,7 @@ class TablesEditor(QMainWindow):
         # Make sure that *current_search* is valid (or *None*):
         # tables_editor.current_search = current_search
 
-        if tracing is not None:
+        if tracing:
             print("{0}current_enumeration'{1}'".format(
               tracing, "None" if current_enumeration is None else current_enumeration.name))
 
@@ -8547,49 +7939,34 @@ class TablesEditor(QMainWindow):
                 # *current_search* is not in *searches* and must be invalid:
                 current_search = None
         tables_editor.current_search = current_search
-        if tracing is not None:
+        if tracing:
             print("{0}current_search='{1}'".
                   format(tracing, "None" if current_search is None else current_search.name))
 
-        # Wrap up any requested tracing:
-        if tracing is not None:
-            print("{0}<=TablesEditor.current_update()".format(tracing))
-
     # TablesEditor.data_update()
-    def data_update(self, tracing=None):
+    def data_update(self, tracing=""):
         # Verify artument types:
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Perform any tracing requested by *tables_editor* (i.e. *self*):
         tables_editor = self
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>TablesEditor.data_update()".format(tracing))
 
         # Make sure that the *current_table*, *current_parameter*, and *current_enumeration*
         # in *tables_editor* are valid:
-        tables_editor.current_update(tracing=next_tracing)
-
-        # Wrap up any requested tracing:
-        if tracing is not None:
-            print("{0}<=TablesEditor.data_update()".format(tracing))
+        tables_editor.current_update()
 
     # TablesEditor.enumeration_changed()
     def enumeration_changed(self):
         assert False
 
     # TablesEditor.enumeration_comment_get()
-    def enumeration_comment_get(self, enumeration, tracing=None):
+    def enumeration_comment_get(self, enumeration, tracing=""):
         # Verify argument types:
         assert isinstance(enumeration, Enumeration) or enumeration is None
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Perform any requested *tracing*:
         # tables_editor = self
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            name = "None" if tracing is None else enumeration.name
-            print("{0}=>enumeration_comment_get('{1}')".format(tracing, name))
 
         # Extract the comment *text* associated with *enumeration*:
         position = 0
@@ -8602,25 +7979,18 @@ class TablesEditor(QMainWindow):
             text = '\n'.join(comment.lines)
             position = comment.position
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=table_enumeration_get('{1}')".format(tracing, name))
         return text, position
 
     # TablesEditor.enumeration_comment_set()
-    def enumeration_comment_set(self, enumeration, text, position, tracing=None):
+    def enumeration_comment_set(self, enumeration, text, position, tracing=""):
         # Verify argument types:
         assert isinstance(enumeration, Enumeration) or enumeration is None
         assert isinstance(text, str)
         assert isinstance(position, int)
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Perform any requested *tracing*:
         # tables_editor = self
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            name = "None" if tracing is None else enumeration.name
-            print("{0}=>enumeration_comment_set('{1}')".format(tracing, name))
 
         # Stuff *text* into *enumeration*:
         if enumeration is not None:
@@ -8630,10 +8000,6 @@ class TablesEditor(QMainWindow):
             assert isinstance(comment, EnumerationComment)
             comment.lines = text.split('\n')
             comment.position = position
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=enumeration_comment_set('{1}')".format(tracing, name))
 
     # TablesEditor.enumeration_is_active():
     def enumeration_is_active(self):
@@ -8663,20 +8029,17 @@ class TablesEditor(QMainWindow):
         return new_enumeration
 
     # TablesEditor.enumerations_update()
-    def enumerations_update(self, enumeration=None, tracing=None):
+    def enumerations_update(self, enumeration=None, tracing=""):
         # Verify argument types:
         assert isinstance(enumeration, Enumeration) or enumeration is None
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Perform any tracing requested by *tables_editor* (i.e. *self*):
         tables_editor = self
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>TablesEditor.enumerations_update()".format(tracing))
 
         # Make sure that the *current_table*, *current_parameter*, and *current_enumeration*
         # in *tables_editor* are valid:
-        tables_editor.current_update(tracing=next_tracing)
+        tables_editor.current_update()
 
         # Grab some widgets from *main_window*:
         main_window = tables_editor.main_window
@@ -8702,17 +8065,13 @@ class TablesEditor(QMainWindow):
             # Now fill in *enumerations_combo_box* from *enumerations*:
             for index, enumeration in enumerate(enumerations):
                 enumeration_name = enumeration.name
-                if tracing is not None:
+                if tracing:
                     print("{0}[{1}]'{2}'".format(tracing, index, enumeration.name))
                 # print("[{0}]'{1}'".format(index, enumeration_name))
-                combo.addItem(enumeration_name, tracing=next_tracing)
+                combo.addItem(enumeration_name)
 
         # Update the *enumerations_combo_edit*:
-        tables_editor.enumerations_combo_edit.gui_update(tracing=next_tracing)
-
-        # Wrap-up and requested tracing:
-        if tracing is not None:
-            print("{0}<=TablesEditor.enumerations_update()".format(tracing))
+        tables_editor.enumerations_combo_edit.gui_update()
 
     # TablesEditor.filters_cell_clicked():
     def filters_cell_clicked(self, row, column):
@@ -8722,31 +8081,20 @@ class TablesEditor(QMainWindow):
 
         # Perform any requested signal tracing:
         tables_editor = self
-        trace_signals = tables_editor.trace_signals
-        next_tracing = " " if trace_signals else None
-        if trace_signals:
-            print("=>TablesEditor.filters_cell_clicked()")
 
         # Just update the filters tab:
-        tables_editor.filters_update(tracing=next_tracing)
-
-        # Wrap up any requested signal tracing:
-        if trace_signals:
-            print("<=TablesEditor.filters_cell_clicked()\n")
+        tables_editor.filters_update()
 
     # TablesEditor.filters_down_button_clicked():
     def filters_down_button_clicked(self):
         tables_editor = self
         trace_signals = tables_editor.trace_signals
-        next_tracing = " " if trace_signals else None
-        if trace_signals:
-            print("=>TablesEditor.filters_down_button_clicked()")
 
         # Note: The code here is very similar to the code in
         # *TablesEditor.filters_down_button_clicked*:
 
         # Grab some values from *tables_editor*:
-        tables_editor.current_update(tracing=next_tracing)
+        tables_editor.current_update()
         main_window = tables_editor.main_window
         filters_table = main_window.filters_table
         current_search = tables_editor.current_search
@@ -8766,7 +8114,7 @@ class TablesEditor(QMainWindow):
                 # We can only move a filter up if it is not the last one:
                 if current_row_index < last_row_index:
                     # Save all the stuff we care about from *filters_table* back into *filters*:
-                    tables_editor.filters_unload(tracing=next_tracing)
+                    tables_editor.filters_unload()
 
                     # Swap *filter_at* with *filter_before*:
                     filter_after = filters[current_row_index + 1]
@@ -8775,23 +8123,14 @@ class TablesEditor(QMainWindow):
                     filters[current_row_index] = filter_after
 
                     # Force the *filters_table* to be updated:
-                    tables_editor.filters_update(tracing=next_tracing)
+                    tables_editor.filters_update()
                     filters_table.setCurrentCell(current_row_index + 1, 0,
                                                  QItemSelectionModel.SelectCurrent)
 
-        # Wrap down any requested signal tracing:
-        if trace_signals:
-            print("<=TablesEditor.filters_down_button_clicked()\n")
-
     # TablesEditor.filters_unload()
-    def filters_unload(self, tracing=None):
+    def filters_unload(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>TablesEditor.filters_unload()".format(tracing))
+        assert isinstance(tracing, str)
 
         tables_editor = self
         tables_editor.current_update()
@@ -8813,24 +8152,17 @@ class TablesEditor(QMainWindow):
                     select = select_item.text()
                 filter.select = select
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=TablesEditor.filters_unload()".format(tracing))
-
     # TablesEditor.filters_up_button_clicked():
     def filters_up_button_clicked(self):
         # Perform any requested signal tracing:
         tables_editor = self
         trace_signals = tables_editor.trace_signals
-        next_tracing = " " if trace_signals else None
-        if trace_signals:
-            print("=>TablesEditor.filters_up_button_clicked()")
 
         # Note: The code here is very similar to the code in
         # *TablesEditor.filters_down_button_clicked*:
 
         # Grab some values from *tables_editor*:
-        tables_editor.current_update(tracing=next_tracing)
+        tables_editor.current_update()
         main_window = tables_editor.main_window
         filters_table = main_window.filters_table
         current_search = tables_editor.current_search
@@ -8851,7 +8183,7 @@ class TablesEditor(QMainWindow):
                 # We can only move a filter up if it is not the first one:
                 if current_row_index >= 1:
                     # Save all the stuff we care about from *filters_table* back into *filters*:
-                    tables_editor.filters_unload(tracing=next_tracing)
+                    tables_editor.filters_unload()
 
                     # Swap *filter_at* with *filter_before*:
                     filter_before = filters[current_row_index - 1]
@@ -8860,26 +8192,17 @@ class TablesEditor(QMainWindow):
                     filters[current_row_index] = filter_before
 
                     # Force the *filters_table* to be updated:
-                    tables_editor.filters_update(tracing=next_tracing)
+                    tables_editor.filters_update()
                     filters_table.setCurrentCell(current_row_index - 1, 0,
                                                  QItemSelectionModel.SelectCurrent)
 
             # if trace_signals:
             #    print(" filters_after={0}".format([filter.parameter.name for filter in filters]))
 
-        # Wrap up any requested signal tracing:
-        if trace_signals:
-            print("<=TablesEditor.filters_up_button_clicked()\n")
-
     # TablesEditor.filters_update()
-    def filters_update(self, tracing=None):
+    def filters_update(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>TablesEditor.filters_update()".format(tracing))
+        assert isinstance(tracing, str)
 
         # Empty out *filters_table* widget:
         tables_editor = self
@@ -8890,18 +8213,18 @@ class TablesEditor(QMainWindow):
         filters_table.setHorizontalHeaderLabels(["Parameter", "Type", "Use", "Select"])
 
         # Only fill in *filters_table* if there is a valid *current_search*:
-        tables_editor.current_update(tracing=next_tracing)
+        tables_editor.current_update()
         current_search = tables_editor.current_search
         if current_search is None:
             # No *current_search* so there is nothing to show:
             filters_table.setRowCount(0)
         else:
             # Let's update the *filters* and load them into the *filters_table* widget:
-            # current_search.filters_update(tables_editor, tracing=next_tracing)
+            # current_search.filters_update(tables_editor)
             filters = current_search.filters
             filters_size = len(filters)
             filters_table.setRowCount(filters_size)
-            if tracing is not None:
+            if tracing:
                 print("{0}current_search='{1}' filters_size={2}".
                       format(tracing, current_search.name, filters_size))
 
@@ -8909,7 +8232,7 @@ class TablesEditor(QMainWindow):
             for filter_index, filter in enumerate(filters):
                 # Create the header label in the first column:
                 parameter = filter.parameter
-                # if tracing is not None:
+                # if tracing:
                 #    print("{0}[{1}]: '{2}'".format(tracing, filter_index, parameter_name))
                 parameter_comments = parameter.comments
                 assert len(parameter_comments) >= 1
@@ -8925,7 +8248,7 @@ class TablesEditor(QMainWindow):
                     heading = long_heading
                 if heading is None:
                     heading = parameter_name
-                # if tracing is not None:
+                # if tracing:
                 #    print("{0}[{1}]: sh='{2}' lh='{3}' pn='{4}".format(
                 #      tracing, filter_index, short_heading, long_heading, parameter_name))
 
@@ -8968,10 +8291,6 @@ class TablesEditor(QMainWindow):
         # Remember to unload the filters before changing from the [Filters] tab:
         tables_editor.tab_unload = TablesEditor.filters_unload
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=TablesEditor.filters_update()".format(tracing))
-
     # TablesEditor.filter_use_clicked()
     def filter_use_clicked(self, use_item, filter, row, column):
         # Verify argument types:
@@ -8989,7 +8308,6 @@ class TablesEditor(QMainWindow):
 
             # Perform an requested signal tracing:
             trace_signals = tables_editor.trace_signals
-            # next_tracing = " " if trace_signals else None
             if trace_signals:
                 print("=>TablesEditor.filter_use_clicked(*, '{0}', {1}, {2})".
                       format(filter.parameter.name, row, column))
@@ -9016,43 +8334,31 @@ class TablesEditor(QMainWindow):
             tables_editor.in_signal = False
 
     # TablesEditor.find_update():
-    def find_update(self, tracing=None):
+    def find_update(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>TablesEditor.find_update()".format(tracing))
+        assert isinstance(tracing, str)
 
         tables_editor = self
         main_window = tables_editor.main_window
         find_tabs = main_window.find_tabs
         find_tabs_index = find_tabs.currentIndex()
         if find_tabs_index == 0:
-            tables_editor.searches_update(tracing=next_tracing)
+            tables_editor.searches_update()
         elif find_tabs_index == 1:
-            tables_editor.filters_update(tracing=next_tracing)
+            tables_editor.filters_update()
         elif find_tabs_index == 2:
-            tables_editor.results_update(tracing=next_tracing)
+            tables_editor.results_update()
         else:
             assert False
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=TablesEditor.find_update()".format(tracing))
 
     # TablesEditor.import_bind_clicked():
     def import_bind_button_clicked(self):
         # Perform any requested signal tracing:
         tables_editor = self
         trace_signals = tables_editor.trace_signals
-        next_tracing = "" if trace_signals else None
-        if trace_signals:
-            print("=>TablesEditor.import_bind_button_clicked()")
 
         # Update *current_table* an *parameters* from *tables_editor*:
-        tables_editor.current_update(tracing=next_tracing)
+        tables_editor.current_update()
         current_table = tables_editor.current_table
         if current_table is not None:
             parameters = current_table.parameters
@@ -9075,11 +8381,7 @@ class TablesEditor(QMainWindow):
                                               csv_index=column_index, comments=comments)
                         parameters.append(parameter)
 
-            tables_editor.update(tracing=next_tracing)
-
-        # Wrap up any requested signal tracing:
-        if trace_signals:
-            print("<=TablesEditor.import_bind_button_clicked()")
+            tables_editor.update()
 
     # TablesEditor.import_file_line_changed():
     def import_csv_file_line_changed(self, text):
@@ -9093,12 +8395,11 @@ class TablesEditor(QMainWindow):
 
             # Perform any requested signal tracing:
             trace_signals = tables_editor.trace_signals
-            # next_tracing = "" if trace_signals else None
             if trace_signals:
                 print("=>TablesEditor.import_csv_file_line_changed('{0}')".format(text))
 
             # Make sure *current_table* is up-to-date:
-            # tables_editor.current_update(tracing=next_tracing)
+            # tables_editor.current_update()
             # current_table = tables_editor.current_table
 
             # Read *csv_file_name* out of the *import_csv_file_line* widget and stuff into *table*:
@@ -9110,7 +8411,7 @@ class TablesEditor(QMainWindow):
             #    current_table.csv_file_name = csv_file_name
 
             # Force an update:
-            # tables_editor.update(tracing=next_tracing)
+            # tables_editor.update()
 
             # Wrap up any requested signal tracing:
             if trace_signals:
@@ -9130,9 +8431,6 @@ class TablesEditor(QMainWindow):
 
             # Perform any requested *tracing*:
             trace_signals = tables_editor.trace_signals
-            next_tracing = " " if trace_signals else None
-            if trace_signals:
-                print("=>TablesEditor.parameter_csv_changed('{0}')".format(new_csv))
 
             # Stuff *new_csv* into *current_parameter* (if possible):
             tables_editor.current_parameter()
@@ -9140,7 +8438,7 @@ class TablesEditor(QMainWindow):
             if current_parameter is not None:
                 current_parameter.csv = new_csv
 
-            tables_editor.update(tracing=next_tracing)
+            tables_editor.update()
             # Wrap up any requested signal tracing:
             if trace_signals:
                 print("=>TablesEditor.parameter_csv_changed('{0}')\n".format(new_csv))
@@ -9168,18 +8466,13 @@ class TablesEditor(QMainWindow):
             print("<=TablesEditor.parameter_default_changed('{0}')\n".format(new_default))
 
     # TablesEditor.parameter_comment_get():
-    def parameter_comment_get(self, parameter, tracing=None):
+    def parameter_comment_get(self, parameter, tracing=""):
         # Verify argument types:
         assert isinstance(parameter, Parameter) or parameter is None
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Perform any requested *tracing*:
         text = ""
-        # tables_editor = self
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            name = "None" if parameter is None else parameter.name
-            print("{0}=>parameter_comment_get('{1}')".format(tracing, name))
 
         # Grab the comment *text* from *parameter*:
         position = 0
@@ -9192,25 +8485,19 @@ class TablesEditor(QMainWindow):
             text = '\n'.join(comment.lines)
             position = comment.position
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=table_parameter_get('{1}')=>(*, {2})".format(tracing, name, position))
+        # Return *text* and *position*:
         return text, position
 
     # TablesEditor.parameter_comment_set():
-    def parameter_comment_set(self, parameter, text, position, tracing=None):
+    def parameter_comment_set(self, parameter, text, position, tracing=""):
         # Verify argument types:
         assert isinstance(parameter, Parameter) or parameter is None
         assert isinstance(text, str)
         assert isinstance(position, int)
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Perform any requested *tracing*:
         tables_editor = self
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            name = "None" if parameter is None else parameter.name
-            print("{0}=>parameter_comment_set('{1}', *, {2})".format(tracing, name, position))
 
         # Stuff *text* into *parameter*:
         if parameter is not None:
@@ -9221,16 +8508,12 @@ class TablesEditor(QMainWindow):
             comment.lines = text.split('\n')
             comment.position = position
 
-        if tracing is not None:
+        if tracing:
             main_window = tables_editor.main_window
             comment_text = main_window.parameters_comment_text
             cursor = comment_text.textCursor()
             actual_position = cursor.position()
             print("{0}position={1}".format(tracing, actual_position))
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=parameter_comment_set('{1}', *, {2}')".format(tracing, name, position))
 
     # TablesEditor.parameter_is_active():
     def parameter_is_active(self):
@@ -9250,9 +8533,6 @@ class TablesEditor(QMainWindow):
         if not in_signal:
             tables_editor.in_signal = True
             trace_signals = tables_editor.trace_signals
-            next_tracing = " " if trace_signals else None
-            if trace_signals:
-                print("=>TablesEditor.parameter_long_changed('{0}')".format(new_long_heading))
 
             # Update the correct *parameter_comment* with *new_long_heading*:
             current_parameter = tables_editor.current_parameter
@@ -9264,30 +8544,20 @@ class TablesEditor(QMainWindow):
             parameter_comment.long_heading = new_long_heading
 
             # Update the user interface:
-            tables_editor.update(tracing=next_tracing)
+            tables_editor.update()
 
-            # Wrap up
-            if trace_signals:
-                print("<=TablesEditor.parameter_long_changed('{0}')\n".format(new_long_heading))
-            tables_editor.in_signal = False
 
     # TablesEditor.parameters_edit_update():
-    def parameters_edit_update(self, parameter=None, tracing=None):
+    def parameters_edit_update(self, parameter=None, tracing=""):
         # Verify argument types:
         assert isinstance(parameter, Parameter) or parameter is None
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested tracing from *tables_editor* (i.e. *self*):
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>TablesEditor.parameters_edit_update('{1}')".
-                  format(tracing, "None" if parameter is None else parameter.name))
+        assert isinstance(tracing, str)
 
         # Make sure that the *current_table*, *current_parameter*, and *current_enumeration*
         # in *tables_editor* are valid:
         tables_editor = self
 
-        tables_editor.current_update(tracing=next_tracing)
+        tables_editor.current_update()
         current_table = tables_editor.current_table
         current_parameter = tables_editor.current_parameter
         parameter = current_parameter
@@ -9308,7 +8578,7 @@ class TablesEditor(QMainWindow):
             optional = parameter.optional
             type = parameter.type
             # print("type='{0}' optional={1}".format(type, optional))
-        if tracing is not None:
+        if tracing:
             print("{0}Parameter.name='{1}' csv='{2}'".
                   format(tracing, "None" if parameter is None else parameter.name, csv))
 
@@ -9329,7 +8599,7 @@ class TablesEditor(QMainWindow):
         previous_csv = csv_line.text()
         if previous_csv != csv:
             csv_line.setText(csv)
-            if tracing is not None:
+            if tracing:
                 print("{0}Set csv to '{1}'".format(tracing, csv))
 
         # Stuff the values in to the *type_combo* widget:
@@ -9361,8 +8631,8 @@ class TablesEditor(QMainWindow):
             assert isinstance(comment, ParameterComment)
 
             # Update the headings:
-            tables_editor.parameters_long_set(comment.long_heading, tracing=next_tracing)
-            tables_editor.parameters_short_set(comment.short_heading, tracing=next_tracing)
+            tables_editor.parameters_long_set(comment.long_heading)
+            tables_editor.parameters_short_set(comment.short_heading)
 
             previous_csv = csv_line.text()
             if csv != previous_csv:
@@ -9373,29 +8643,22 @@ class TablesEditor(QMainWindow):
             lines = comment.lines
             text = '\n'.join(lines)
 
-            tables_editor.comment_text_set(text, tracing=next_tracing)
+            tables_editor.comment_text_set(text)
 
         # Changing the *parameter* can change the enumeration combo box, so update it as well:
         # tables_editor.enumeration_update()
 
         # Update the *tables_combo_edit*:
-        tables_editor.parameters_combo_edit.gui_update(tracing=next_tracing)
-
-        if tracing is not None:
-            print("{0}<=TablesEditor.parameters_edit_update('{1}')".
-                  format(tracing, "None" if parameter is None else parameter.name))
+        tables_editor.parameters_combo_edit.gui_update()
 
     # TablesEditor.parameters_long_set():
-    def parameters_long_set(self, new_long_heading, tracing=None):
+    def parameters_long_set(self, new_long_heading, tracing=""):
         # Verify argument types:
         assert isinstance(new_long_heading, str)
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Perform any tracing requested by *tables_editor* (i.e. *self*):
         tables_editor = self
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>TablesEditor.parameters_long_set('{1}')".format(tracing, new_long_heading))
 
         # Stuff *new_long_heading* into *current_parameter*:
         current_parameter = tables_editor.current_parameter
@@ -9413,38 +8676,22 @@ class TablesEditor(QMainWindow):
         if previous_long_heading != new_long_heading:
             long_line.setText(new_long_heading)
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=TablesEditor.parameters_long_set('{1}')".format(tracing, new_long_heading))
-
     # TablesEditor.parameter_new():
-    def parameter_new(self, name, tracing=None):
+    def parameter_new(self, name, tracing=""):
         # Verify argument types:
         assert isinstance(name, str)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any tracing requested by *tables_editor* (i.e. *self*):
-        # tables_editor = self
-        if tracing is not None:
-            print("{0}=>TablesEditor.parmeter_new('{1}')".format(tracing, name))
+        assert isinstance(tracing, str)
 
         # Create *new_parameter* named *name*:
         comments = [ParameterComment(language="EN", long_heading=name, lines=list())]
         new_parameter = Parameter(name=name, type="boolean", csv="",
                                   csv_index=-1, comments=comments)
-
-        # Wrap up any requested tracing and return *new_parameter*:
-        if tracing is not None:
-            print("{0}<=TablesEditor.parmeter_new('{1}')".format(tracing, name))
         return new_parameter
 
     # TablesEditor.parameter_optional_clicked():
     def parameter_optional_clicked(self):
         # Perform any tracing requested by *tables_editor* (i.e. *self*):
         tables_editor = self
-        trace_level = tables_editor.trace_level
-        if trace_level >= 1:
-            print("=>TablesEditor.parameter_optional_clicked()")
 
         current_parameter = tables_editor.current_parameter
         if current_parameter is not None:
@@ -9452,10 +8699,6 @@ class TablesEditor(QMainWindow):
             parameter_optional_check = main_window.parameter_optional_check
             optional = parameter_optional_check.isChecked()
             current_parameter.optional = optional
-
-        # Wrap up any requested *tracing*:
-        if trace_level >= 1:
-            print("=>TablesEditor.parameter_optional_clicked()\n")
 
     # TablesEditor.parameter_short_changed():
     def parameter_short_changed(self, new_short_heading):
@@ -9469,9 +8712,6 @@ class TablesEditor(QMainWindow):
 
             # Perform any requested tracing from *tables_editor* (i.e. *self*):
             trace_signals = tables_editor.trace_signals
-            next_tracing = " " if trace_signals else None
-            if trace_signals:
-                print("=>TablesEditor.parameter_short_changed('{0}')".format(new_short_heading))
 
             # Update *current_parameter* to have *new_short_heading*:
             current_parameter = tables_editor.current_parameter
@@ -9483,24 +8723,18 @@ class TablesEditor(QMainWindow):
             parameter_comment.short_heading = new_short_heading
 
             # Update the user interface:
-            tables_editor.update(tracing=next_tracing)
+            tables_editor.update()
 
-            # Wrap up any requested tracing:
-            if trace_signals:
-                print("<=TablesEditor.parameter_short_changed('{0}')\n".format(new_short_heading))
             tables_editor.in_signal = False
 
     # TablesEditor.parameters_short_set():
-    def parameters_short_set(self, new_short_heading, tracing=None):
+    def parameters_short_set(self, new_short_heading, tracing=""):
         # Verify argument types:
         assert isinstance(new_short_heading, str) or new_short_heading is None
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Perform any tracing requested by *tables_editor* (i.e. *self*):
         tables_editor = self
-        if tracing is not None:
-            print("{0}=>TablesEditor.parameters_short_set('{1}')".
-                  format(tracing, new_short_heading))
 
         # Stuff *new_short_heading* into *current_parameter*:
         current_parameter = tables_editor.current_parameter
@@ -9516,11 +8750,6 @@ class TablesEditor(QMainWindow):
         previous_short_heading = short_line.text()
         if previous_short_heading != new_short_heading:
             short_line.setText(new_short_heading)
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=TablesEditor.parameters_short_set('{1}')".
-                  format(tracing, new_short_heading))
 
     # TablesEditor.parameters_type_changed():
     def parameters_type_changed(self):
@@ -9548,13 +8777,12 @@ class TablesEditor(QMainWindow):
             tables_editor.in_signal = False
 
     # TablesEditor.parameters_update():
-    def parameters_update(self, tracing=None):
+    def parameters_update(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
+        if tracing:
             print("{0}=>TabledsEditor.parameters_update".format(tracing))
 
             # Make sure *current_table* is up to date:
@@ -9565,7 +8793,7 @@ class TablesEditor(QMainWindow):
             # The [import] tab does not do anything if there is no *current_table*:
             if current_table is not None:
                 # Do some *tracing* if requested:
-                if tracing is not None:
+                if tracing:
                     print("{0}current_table='{1}'".format(tracing, current_table.name))
 
                 # Grab some widgets from *tables_editor*:
@@ -9577,23 +8805,23 @@ class TablesEditor(QMainWindow):
 
                 # Update the *import_csv_file_name* widget:
                 # csv_file_name = current_table.csv_file_name
-                # if tracing is not None:
+                # if tracing:
                 #    print("{0}csv_file_name='{1}'".format(tracing, csv_file_name))
                 assert False
                 current_table.csv_read_and_process(
-                  "/home/wayne/public_html/projects/digikey_csvs", tracing=next_tracing)
+                  "/home/wayne/public_html/projects/digikey_csvs")
 
                 # Load up *import_table*:
                 headers = current_table.import_headers
                 # rows = current_table.import_rows
                 column_triples = current_table.import_column_triples
-                # if tracing is not None:
+                # if tracing:
                 #    print("{0}headers={1} rows={2} column_triples={3}".
                 #      format(tracing, headers, rows, column_triples))
 
                 parameters_table.clearContents()
                 if headers is not None and column_triples is not None:
-                    if tracing is not None:
+                    if tracing:
                         print("{0}Have column_triples".format(tracing))
                     parameters_table.setRowCount(len(headers))
                     parameters_table.setColumnCount(6)
@@ -9634,10 +8862,6 @@ class TablesEditor(QMainWindow):
             #  csv_file_name is not None and os.path.isfile(csv_file_name))
             # import_bind.setEnabled(current_table.import_headers is not None)
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=TabledsEditor.parameters_update".format(tracing))
-
     # TablesEditor.quit_button_clicked():
     def quit_button_clicked(self):
         tables_editor = self
@@ -9646,24 +8870,19 @@ class TablesEditor(QMainWindow):
         application.quit()
 
     # TablesEditor.results_update():
-    def results_update(self, tracing=None):
+    def results_update(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>TablesEditor.results_update()".format(tracing))
+        assert isinstance(tracing, str)
 
         tables_editor = self
         main_window = tables_editor.main_window
         results_table = main_window.results_table
         results_table.clearContents()
 
-        tables_editor.current_update(tracing=next_tracing)
+        tables_editor.current_update()
         current_search = tables_editor.current_search
         if current_search is not None:
-            current_search.filters_refresh(tracing=next_tracing)
+            current_search.filters_refresh()
             filters = current_search.filters
 
             # Compile *reg_ex* for each *filter* in *filters* that is marked for *use*:
@@ -9707,7 +8926,7 @@ class TablesEditor(QMainWindow):
             results_table.resizeRowsToContents()
 
         # Wrap up any requested *tracing*:
-        if tracing is not None:
+        if tracing:
             print("{0}<=TablesEditor.results_update()".format(tracing))
 
     # TablesEditor.re_table_get():
@@ -9739,7 +8958,8 @@ class TablesEditor(QMainWindow):
         return re_table
 
     # TablesEditor.run():
-    def run(self):
+    @trace(1)
+    def run(self, tracing=""):
         # Show the *window* and exit when done:
         tables_editor = self
         main_window = tables_editor.main_window
@@ -9764,7 +8984,7 @@ class TablesEditor(QMainWindow):
 
         # Save each *table* in *current_tables*:
         for table in current_tables:
-            table.save(tracing=next_tracing)
+            table.save()
 
         searches = tables_editor.searches
         xml_lines = list()
@@ -9780,51 +9000,36 @@ class TablesEditor(QMainWindow):
         #     searches_xml_file.write(xml_text)
         assert False
 
-        # Wrap up any requested signal tracing:
-        if trace_signals:
-            print("<=TablesEditor.save_button_clicked()\n")
-
     # TablesEditor.schema_update():
-    def schema_update(self, tracing=None):
+    def schema_update(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
-        # Perform any tracing requested by *tables_editor* (i.e. *self*):
+        # Grab some values from *tables_editor* (i.e. *self*):
         tables_editor = self
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>TablesEditor.schema_update()".format(tracing))
-
         main_window = tables_editor.main_window
         schema_tabs = main_window.schema_tabs
         schema_tabs_index = schema_tabs.currentIndex()
         if schema_tabs_index == 0:
-            tables_editor.tables_update(tracing=next_tracing)
+            tables_editor.tables_update()
         elif schema_tabs_index == 1:
-            tables_editor.parameters_edit_update(tracing=next_tracing)
+            tables_editor.parameters_edit_update()
         elif schema_tabs_index == 2:
-            tables_editor.enumerations_update(tracing=next_tracing)
+            tables_editor.enumerations_update()
         else:
             assert False
         # tables_editor.combo_edit.update()
         # tables_editor.parameters_update(None)
         # tables_editor.search_update()
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}=>TablesEditor.schema_update()".format(tracing))
-
     # TablesEditor.searches_comment_get():
-    def searches_comment_get(self, search, tracing=None):
+    def searches_comment_get(self, search, tracing=""):
         # Verify argument types:
         assert isinstance(search, Search) or search is None
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Perform any requested *tracing*:
         # tables_editor = self
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>TableEditor.searches_comment_get('{1}')".format(tracing, search.name))
 
         # Extract the comment *text* from *search*:
         if search is None:
@@ -9838,25 +9043,18 @@ class TablesEditor(QMainWindow):
             text = '\n'.join(comment.lines)
             position = comment.position
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=TablesEditor.searches_comment_get('{1}')".format(tracing, search.name))
         return text, position
 
     # TablesEditor.searches_comment_set():
-    def searches_comment_set(self, search, text, position, tracing=None):
+    def searches_comment_set(self, search, text, position, tracing=""):
         # Verify argument types:
         assert isinstance(search, Search) or search is None
         assert isinstance(text, str)
         assert isinstance(position, int)
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Perform any requested *tracing*:
         # tables_editor = self
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>TablesEditor.searches_comment_set('{1}')".
-                  format(tracing, "None" if search is None else search.name))
 
         # Stuff *text* and *position* into *search*:
         if search is not None:
@@ -9867,20 +9065,15 @@ class TablesEditor(QMainWindow):
             comment.lines = text.split('\n')
             comment.position = position
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=TablesEditor.searches_comment_set('{1}')".
-                  format(tracing, "None" if search is None else search.name))
-
     # TablesEditor.searches_file_save():
-    def searches_file_save(self, file_name, tracing=None):
+    def searches_file_save(self, file_name, tracing=""):
         # Verify argument types:
         assert isinstance(file_name, str)
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Perform any requested *tracing*:
         next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
+        if tracing:
             print("{0}=>TablesEditor.searches_file_save('{1}')".format(tracing, file_name))
 
         xml_lines = list()
@@ -9891,7 +9084,7 @@ class TablesEditor(QMainWindow):
         tables_editor = self
         searches = tables_editor.searches
         for search in searches:
-            search.xml_lines_append(xml_lines, "  ", tracing=next_tracing)
+            search.xml_lines_append(xml_lines, "  ")
 
         # Wrap up *xml_lines* and generate *xml_text*:
         xml_lines.append('</Searches>')
@@ -9903,19 +9096,14 @@ class TablesEditor(QMainWindow):
             xml_file.write(xml_text)
 
         # Wrqp up any requested *tracing*:
-        if tracing is not None:
+        if tracing:
             print("{0}<=TablesEditor.searches_file_save('{1}')".format(tracing, file_name))
 
     # TablesEditor.searches_file_load():
-    def searches_file_load(self, xml_file_name, tracing=None):
+    def searches_file_load(self, xml_file_name, tracing=""):
         # Verify argument types:
         assert isinstance(xml_file_name, str)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>TablesEditor.searches_file_load('{1})".format(tracing, xml_file_name))
+        assert isinstance(tracing, str)
 
         # Read in *xml_file_name* (if it exists):
         if os.path.isfile(xml_file_name):
@@ -9940,16 +9128,12 @@ class TablesEditor(QMainWindow):
             for search_tree in search_trees:
                 assert isinstance(search_tree, etree._Element)
                 search = Search(search_tree=search_tree,
-                                tables=tables_editor.tables, tracing=next_tracing)
+                                tables=tables_editor.tables)
                 assert False, "Old code"
                 searches.append(search)
 
             # Set *current_search*
             tables_editor.current_search = searches[0] if len(searches) >= 1 else None
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=TablesEditor.searches_file_load('{1})".format(tracing, xml_file_name))
 
     # TablesEditor.searches_is_active():
     def searches_is_active(self):
@@ -9959,15 +9143,10 @@ class TablesEditor(QMainWindow):
         return tables_editor.current_table is not None
 
     # TablesEditor.searches_new():
-    def searches_new(self, name, tracing=None):
+    def searches_new(self, name, tracing=""):
         # Verify argument types:
         assert isinstance(name, str)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>TablesEditor.searches_new('{1}')".format(tracing, name))
+        assert isinstance(tracing, str)
 
         tables_editor = self
         tables_editor.current_update()
@@ -9977,12 +9156,8 @@ class TablesEditor(QMainWindow):
         search_comment = SearchComment(language="EN", lines=list())
         search_comments = [search_comment]
         search = Search(name=name, comments=search_comments, table=current_table)
-        search.filters_refresh(tracing=next_tracing)
+        search.filters_refresh()
 
-        # Wrap up any requested *tracing* and return *search*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}<=TablesEditor.searches_new('{1}')".format(tracing, name))
         return search
 
     # TablesEditor.searches_save_button_clicked():
@@ -9991,15 +9166,15 @@ class TablesEditor(QMainWindow):
         tables_editor = self
         tracing = " " if tables_editor.trace_signals else None
         # next_tracing = None if tracing is None else " "
-        if tracing is not None:
+        if tracing:
             print("=>TablesEditor.searches_save_button_clicked()".format(tracing))
 
         # Write out the searches to *file_name*:
         # file_name = os.path.join(order_root, "searches.xml")
-        # tables_editor.searches_file_save(file_name, tracing=next_tracing)
+        # tables_editor.searches_file_save(file_name)
         assert False
 
-        if tracing is not None:
+        if tracing:
             print("<=TablesEditor.searches_save_button_clicked()\n".format(tracing))
 
     # TablesEditor.searches_table_changed():
@@ -10019,7 +9194,7 @@ class TablesEditor(QMainWindow):
 
             # Make sure *current_search* is up to date:
             tables_editor = self
-            tables_editor.current_update(tracing=next_tracing)
+            tables_editor.current_update()
             current_search = tables_editor.current_search
 
             # Find the *table* that matches *new_text* and stuff it into *current_search*:
@@ -10031,7 +9206,7 @@ class TablesEditor(QMainWindow):
                     if table.name == new_text:
                         match_table = table
                         break
-                current_search.table_set(match_table, tracing=next_tracing)
+                current_search.table_set(match_table)
 
             # Wrap up any requested *tracing*:
             if trace_signals:
@@ -10039,23 +9214,18 @@ class TablesEditor(QMainWindow):
             tables_editor.in_signal = False
 
     # TablesEditor.searches_update():
-    def searches_update(self, tracing=None):
+    def searches_update(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>TablesEditor.searches_update()".format(tracing))
+        assert isinstance(tracing, str)
 
         # Make sure that *current_search* is up to date:
         tables_editor = self
-        tables_editor.current_update(tracing=next_tracing)
+        tables_editor.current_update()
         current_search = tables_editor.current_search
 
         # Update *searches_combo_edit*:
         searches_combo_edit = tables_editor.searches_combo_edit
-        searches_combo_edit.gui_update(tracing=next_tracing)
+        searches_combo_edit.gui_update()
 
         # Next: Update the table options:
         search_table = None if current_search is None else current_search.table
@@ -10072,10 +9242,6 @@ class TablesEditor(QMainWindow):
                     match_index = table_index
             if match_index >= 0:
                 searches_table_combo.setCurrentIndex(match_index)
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=TablesEditor.searches_update()".format(tracing))
 
     # TablesEditor.tab_changed():
     def tab_changed(self, new_index):
@@ -10099,10 +9265,10 @@ class TablesEditor(QMainWindow):
             # Deal with clean-up of previous tab (if requested):
             tab_unload = tables_editor.tab_unload
             if callable(tab_unload):
-                tab_unload(tables_editor, tracing=next_tracing)
+                tab_unload(tables_editor)
 
             # Perform the update:
-            tables_editor.update(tracing=next_tracing)
+            tables_editor.update()
 
             # Wrap up any requested signal tracing and restore *in_signal*:
             if trace_signals:
@@ -10110,17 +9276,14 @@ class TablesEditor(QMainWindow):
             tables_editor.in_signal = False
 
     # TablesEditor.table_comment_get():
-    def table_comment_get(self, table, tracing=None):
+    def table_comment_get(self, table, tracing=""):
         # Verify argument types:
         assert isinstance(table, Table)
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         text = ""
         # Perform any requested *tracing*:
         # tables_editor = self
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>table_comment_get('{1}')".format(tracing, table.name))
 
         # Extract the comment *text* from *table*:
         if table is not None:
@@ -10130,24 +9293,20 @@ class TablesEditor(QMainWindow):
             assert isinstance(comment, TableComment)
             text = '\n'.join(comment.lines)
             position = comment.position
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=table_comment_get('{1}')".format(tracing, table.name))
         return text, position
 
     # TablesEditor.table_comment_set():
-    def table_comment_set(self, table, text, position, tracing=None):
+    def table_comment_set(self, table, text, position, tracing=""):
         # Verify argument types:
         assert isinstance(table, Table)
         assert isinstance(text, str)
         assert isinstance(position, int)
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Perform any requested *tracing*:
         # tables_editor = self
         # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
+        if tracing:
             print("{0}=>table_comment_set('{1}')".format(tracing, table.name))
 
         # Stuff *text* into *table*:
@@ -10160,7 +9319,7 @@ class TablesEditor(QMainWindow):
             comment.position = position
 
         # Wrap up any requested *tracing*:
-        if tracing is not None:
+        if tracing:
             print("{0}<=table_comment_set('{1}')".format(tracing, table.name))
 
     def table_is_active(self):
@@ -10168,35 +9327,26 @@ class TablesEditor(QMainWindow):
         return True
 
     # TablesEditor.table_new():
-    def table_new(self, name, tracing=None):
+    def table_new(self, name, tracing=""):
         # Verify argument types:
         assert isinstance(name, str)
 
         # Perform an requested *tracing*:
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>TablesEditor.table_new('{1}')".format(tracing, name))
 
         file_name = "{0}.xml".format(name)
         table_comment = TableComment(language="EN", lines=list())
         table = Table(file_name=file_name, name=name, path="", comments=[table_comment],
                       parameters=list(), csv_file_name="", parent=None)
 
-        # Wrap up any requested *tracing* and return table:
-        if tracing is not None:
-            print("{0}<=TablesEditor.table_new('{1}')".format(tracing, name))
         return table
 
     # TablesEditor.table_setup():
-    def table_setup(self, tracing=None):
+    def table_setup(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Perform any tracing requested from *tables_editor* (i.e. *self*):
         tables_editor = self
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>TablesEditor.table_setup(*)".format(tracing))
 
         # Grab the *table* widget and *current_table* from *tables_editor* (i.e. *self*):
         tables_editor = self
@@ -10220,79 +9370,55 @@ class TablesEditor(QMainWindow):
             data_table.setColumnCount(len(header_labels))
             data_table.setRowCount(1)
 
-        # Wrap up any requested tracing:
-        if tracing is not None:
-            print("{0}=>TablesEditor.table_setup(*)".format(tracing))
-
     # TablesEditor.tables_update():
-    def tables_update(self, table=None, tracing=None):
+    def tables_update(self, table=None, tracing=""):
         # Verify argument types:
         assert isinstance(table, Table) or table is None
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Perform any tracing requested by *tables_editor* (i.e. *self*):
         tables_editor = self
 
-        # Perform any requested *trracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>TablesEditor.tables_update()".format(tracing))
-
         # Make sure that the *current_table*, *current_parameter*, and *current_enumeration*
         # in *tables_editor* are valid:
-        tables_editor.current_update(tracing=next_tracing)
+        tables_editor.current_update()
 
         # Update the *tables_combo_edit*:
-        tables_editor.tables_combo_edit.gui_update(tracing=next_tracing)
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=TablesEditor.tables_update()".format(tracing))
+        tables_editor.tables_combo_edit.gui_update()
 
     # TablesEditor.update():
-    def update(self, tracing=None):
+    @trace(1)
+    def update(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Perform any requested *tracing*:
         tables_editor = self
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>TablesEditor.update()")
 
         # Only update the visible tabs based on *root_tabs_index*:
         main_window = tables_editor.main_window
         root_tabs = main_window.root_tabs
         root_tabs_index = root_tabs.currentIndex()
         if root_tabs_index == 0:
-            tables_editor.collections_update(tracing=next_tracing)
+            tables_editor.collections_update()
         elif root_tabs_index == 1:
-            tables_editor.schema_update(tracing=next_tracing)
+            tables_editor.schema_update()
         elif root_tabs_index == 2:
-            tables_editor.parameters_update(tracing=next_tracing)
+            tables_editor.parameters_update()
         elif root_tabs_index == 3:
-            tables_editor.find_update(tracing=next_tracing)
+            tables_editor.find_update()
         else:
             assert False, "Illegal tab index: {0}".format(root_tabs_index)
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=TablesEditor.update()")
-
     # TablesEditor.search_update():
-    def xxx_search_update(self, tracing=None):
+    def xxx_search_update(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>TablesEditor.search_update(*)".format(tracing))
+        assert isinstance(tracing, str)
 
         # Make sure that the *current_table*, *current_parameter*, and *current_enumeration*
         # in *tables_editor* are valid:
         tables_editor = self
-        tables_editor.current_update(tracing=next_tracing)
+        tables_editor.current_update()
 
         # Grab the *current_table* *Table* object from *tables_editor* (i.e. *self*.)
         # Grab the *seach_table* widget from *tables_editor* as well:
@@ -10370,10 +9496,7 @@ class TablesEditor(QMainWindow):
                 search_table.setItem(parameter_index, 2, criteria_item)
 
         # Update the *search_combo_edit*:
-        tables_editor.search_combo_edit.gui_update(tracing=next_tracing)
-
-        if tracing is not None:
-            print("{0}<=TablesEditor.search_update(*)".format(tracing))
+        tables_editor.search_combo_edit.gui_update()
 
 
 # TreeModel:
@@ -10382,13 +9505,9 @@ class TreeModel(QAbstractItemModel):
     FLAG_DEFAULT = Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     # TreeModel.__init__():
-    def __init__(self, tracing=None):
+    def __init__(self, tracing=""):
         # Verify argument types:
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}=>TreeModel.__init__(*)")
+        assert isinstance(tracing, str)
 
         # Initialize the parent *QAbstraceItemModel*:
         super().__init__()
@@ -10399,10 +9518,6 @@ class TreeModel(QAbstractItemModel):
         tree_model.collections = None
         tree_model.tracing = tracing
 
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=TreeModel.__init__(*)")
-
     # check if the node has data that has not been loaded yet
     # TreeModel.canFetchMore():
     def canFetchMore(self, model_index):
@@ -10412,7 +9527,7 @@ class TreeModel(QAbstractItemModel):
         # Perform any *tracing* requested by *tree_model* (i.e.*self*):
         tree_model = self
         tracing = tree_model.tracing
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}=>TreeModel.canFetchMore()")
 
         # We delegate the decision of whether we can fetch more stuff to the *node*
@@ -10421,7 +9536,7 @@ class TreeModel(QAbstractItemModel):
         can_fetch_more = node.can_fetch_more()
 
         # Wrap up any requested *tracing*:
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}<=TreeModel.canFetchMore()=>{can_fetch_more}")
         return can_fetch_more
 
@@ -10451,7 +9566,7 @@ class TreeModel(QAbstractItemModel):
         tracing = tree_model.tracing
         tracing = None   # Disable *tracing* for now:
         next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}=>Tree_model.data(*, *, {role}')")
 
         value = None
@@ -10463,26 +9578,22 @@ class TreeModel(QAbstractItemModel):
                 if column == 0:
                     value = node.type_letter_get()
                 elif column == 1:
-                    value = node.name_get(tracing=next_tracing)
+                    value = node.name_get()
         assert isinstance(value, str) or value is None
 
         # Wrap up any requested *tracing*:
-        if tracing is not None:
+        if tracing:
             print(f"{tracing}<=Tree_model.data(*, *, {role}')=>{value}")
         return value
 
     # TreeModel.delete():
-    def delete(self, model_index, tracing=None):
+    def delete(self, model_index, tracing=""):
         # Verify argument types:
         assert isinstance(model_index, QModelIndex)
-        assert isinstance(tracing, str) or tracing is None
+        assert isinstance(tracing, str)
 
         # Perform any *tracing* requested by *tree_model* (i.e. *self*):
         tree_model = self
-        tracing = tracing if tracing is not None else tree_model.tracing
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>TreeModel.delete(*)")
 
         # Carefully delete the row associated with *model_index*:
         if model_index.isValid():
@@ -10491,11 +9602,7 @@ class TreeModel(QAbstractItemModel):
             assert isinstance(node, Node)
             parent = node.parent
             assert isinstance(parent, Node)
-            parent.child_remove(node, tracing=next_tracing)
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print(f"{tracing}<=TreeModel.delete(*, *)\n")
+            parent.child_remove(node)
 
     # TreeModel.fetchMore():
     def fetchMore(self, model_index):
@@ -10504,19 +9611,12 @@ class TreeModel(QAbstractItemModel):
 
         # Perform any *tracing* requested by *tree_model* (i.e. *self*):
         tree_model = self
-        tracing = tree_model.tracing
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print(f"{tracing}=>TreeModel.fetchMore(*, *)")
 
         # Delegate fetching to the *node* associated with *model_index*:
         tree_model = self
         node = tree_model.getNode(model_index)
-        node.fetch_more(tracing=next_tracing)
+        node.fetch_more()
         # tree_model.insertNodes(0, node.children_get(), model_index)
-
-        if tracing is not None:
-            print(f"{tracing}<=TreeModel.fetchMore(*, *)\n")
 
     # TreeModel.getNode():
     def getNode(self, model_index):
@@ -10577,15 +9677,10 @@ class TreeModel(QAbstractItemModel):
         return index
 
     # TreeModel.children_update():
-    def children_update(self, parent_model_index, tracing=None):
+    def children_update(self, parent_model_index, tracing=""):
         # Verify argument types:
         assert isinstance(parent_model_index, QModelIndex)
-        assert isinstance(tracing, str) or tracing is None
-
-        # Perform any requested *tracing*:
-        # next_tracing = None if tracing is None else tracing + " "
-        if tracing is not None:
-            print("{0}=>TreeModel.children_update(*,*)".format(tracing))
+        assert isinstance(tracing, str)
 
         # Grab the *parent_node* using *parent_model_index* and *tree_model* (i.e. *self*):
         tree_model = self
@@ -10599,10 +9694,6 @@ class TreeModel(QAbstractItemModel):
             tree_model.endRemoveRows()
         tree_model.beginInsertRows(parent_model_index, 0, children_size - 1)
         tree_model.endInsertRows()
-
-        # Wrap up any requested *tracing*:
-        if tracing is not None:
-            print("{0}<=TreeModel.children_update(*,*)".format(tracing))
 
     # TreeModel.insertNodes():
     def insertNodes(self, position, nodes, parent_model_index=QModelIndex()):
