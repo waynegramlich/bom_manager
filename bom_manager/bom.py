@@ -829,21 +829,6 @@ class EnumerationComment(Comment):
         xml_lines.append('{0}</EnumerationComment>'.format(indent))
 
 
-# Panda:
-class Panda:
-    # Panda stands for Pricing AND Availability:
-
-    # Panda.__init__():
-    def __init__(self, name, tracing=""):
-        # Verify argument types:
-        if tracing:
-            print(f"{tracing}=>Panda.__init__('{name}')")
-
-        # Wrap up any argument types:
-        if tracing:
-            print(f"{tracing}<=Panda.__init__('{name}')")
-
-
 # ParameterComment:
 class ParameterComment(Comment):
 
@@ -4560,6 +4545,21 @@ class Order:
 
         # Stuff *selected_vendors* into *order*:
         order.selected_vendor_names = selected_vendor_names
+
+
+# Panda:
+class Panda:
+    # Panda stands for Pricing AND Availability:
+
+    # Panda.__init__():
+    def __init__(self, name, tracing=""):
+        # Verify argument types:
+        if tracing:
+            print(f"{tracing}=>Panda.__init__('{name}')")
+
+        # Wrap up any argument types:
+        if tracing:
+            print(f"{tracing}<=Panda.__init__('{name}')")
 
 
 # Parameter():
