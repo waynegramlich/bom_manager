@@ -46,7 +46,10 @@ setuptools.setup(
     ],
     description="Bill Of Materials Manager",
     entry_points={
-        "console_scripts": ["bom_manager=bom_manager:main"],
+        "console_scripts": [
+            "bom_manager=bom_manager:main",
+            "bom_gui=bom_manager:gui_main",
+        ],
     },
     include_package_data=True,
     install_requires=([] if is_test else [

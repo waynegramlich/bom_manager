@@ -21,9 +21,14 @@
 # SOFTWARE.
 
 from bom_manager import bom
-
+from bom_manager import bom_gui
 
 # main():
 def main():
     # Forward to *bom.main*:
     bom.main()
+
+# gui_main():
+def gui_main():
+    # Forward to *bom_gui.main*:
+    bom_gui.main()
