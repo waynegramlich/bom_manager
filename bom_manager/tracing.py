@@ -152,7 +152,7 @@ def trace(level):
                 text="[]"
             else:
                 elipsis = "" if value_size <= 1 else ",..."
-                text = f"[{value2text(value[0])}{elipsis}]"
+                text = f"{value_size}:[{value2text(value[0])}{elipsis}]"
         elif isinstance(value, tuple):
             # We have a *tuple* and need to set *text* to "()", "(value0,)", or "(value0,...)":
             value_size = len(value)
@@ -160,7 +160,7 @@ def trace(level):
                 text="(,)"
             else:
                 elipsis = "" if value_size <= 1 else "..."
-                text = f"({value2text(value[0])}{elipsis}]"
+                text = f"{value_size}({value2text(value[0])}{elipsis}]"
         elif isinstance(value, dict):
             # We have a *dict*, and need to set *text* to "{}", "{key0: value0}", or
             # "{key0: value0,...}":
@@ -170,7 +170,8 @@ def trace(level):
             else:
                 elipsis = "" if value_size <= 1 else ",..."
                 for key in value:
-                    text = f"({value2text(key)}:{value2text(value[key])}){elipsis}]"
+                    text = (f"{value_size}:"
+                            f"{{{value2text(key)}:{value2text(value[key])}){elipsis}}}")
         elif isinstance(value, str):
             # We have a *str*, and need to set *text* to "value" or "val...ue" depending
             # upon *value_size*:

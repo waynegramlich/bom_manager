@@ -624,6 +624,12 @@ class ActualPart:
             print(f"{tracing}<=ActualPart.__eq__({actual_part1.key}, {actual_part2.key})=>{equal}")
         return equal
 
+    # ActualPart.__str__():
+    def __str__(self):
+        actual_part = self
+        return (f"ActualPart('{actual_part.manufacturer_name}':"
+                f"'{actual_part.manufacturer_part_name}')")
+
     # ActualPart.sorted_vendor_parts_get():
     def sorted_vendor_parts_get(self):
         actual_part = self
@@ -1548,8 +1554,11 @@ class Gui:
         gui = self
         self.re_table = re_table
 
+    def __str__(self):
+        return "GUI()"
+
     # Gui.begin_rows_insert():
-    def begin_rows_insert_rows(self, node, start_row_index, end_row_index, tracing=""):
+    def begin_rows_insert(self, node, start_row_index, end_row_index, tracing=""):
         # Verify argument types:
         assert isinstance(node, Node)
         assert isinstance(start_row_index, int)
@@ -1566,8 +1575,8 @@ class Gui:
         assert isinstance(tracing, str)
         pass  # Do nothing for the non-GUI version of th code
 
-    # Gui.end_rows_remove():
-    def end_rows_remove(self, tracing=""):
+    # Gui.end_rows_insert():
+    def end_rows_insert(self, tracing=""):
         # Verify argument types:
         assert isinstance(tracing, str)
         pass  # Do nothing for the non-GUI version of th code
@@ -2097,7 +2106,8 @@ class Collection(Node):
                     else:
                         data_rows.append(row)
 
-            # print("column_names=", column_names)
+            if tracing:
+                print(f"len(data_rows)={len(data_rows)} ; excludes header")
             manufacturer_part_number_index = column_names.index("Manufacturer Part Number")
             assert manufacturer_part_number_index >= 0
             manufacturer_index = column_names.index("Manufacturer")
@@ -2114,7 +2124,8 @@ class Collection(Node):
             for index, pair in enumerate(pairs):
                 manufacturer, part_number = pair
                 if tracing:
-                    print(f"{tracing}Actual_Part[{index}]: '{manufacturer}' : '{part_number}'")
+                    print(f"{tracing}Unique_Actual_Part[{index}]: '{manufacturer}': "
+                          f"'{part_number}'")
                 actual_part = ActualPart(manufacturer, part_number)
                 actual_parts.append(actual_part)
 
@@ -2136,6 +2147,7 @@ class Collection(Node):
         return directories
 
     # Collection.partial_load():
+    @trace(1)
     def partial_load(self, tracing=""):
         # Verify argument types:
         assert isinstance(tracing, str)
@@ -2249,6 +2261,20 @@ class Collections(Node):
         collections.collection_directories = collection_directories
         collections.searches_root = searches_root
         collections.gui = gui
+
+        # Construct the collections list:
+        entry_point_key = "bom_manager_collection_get"
+        for index, entry_point in enumerate(pkg_resources.iter_entry_points(entry_point_key)):
+            entry_point_name = entry_point.name
+            if tracing:
+                print(f"{tracing}Collection_Entry_Point[{index}]: '{entry_point_name}'")
+            assert entry_point_name == "collection_get"
+            collection_get = entry_point.load()
+            assert callable(collection_get)
+            collection = collection_get(collections, searches_root, gui)
+            assert isinstance(collection, Collection)
+            collection.partial_load()
+            #collections.child_append(collection)
 
         # Do some *tracing*:
         if tracing:
@@ -3632,7 +3658,9 @@ class Order:
         vendor_searches_root = order.vendor_searches_root
         
         # Construct the *result* string and return it:
-        result = f"Order(order_root='{order_root}', vendor_searches_root='{vendor_searches_root}'))"
+        #result = (f"Order(order_root='...{order_root[-10:]}', "
+        #         f"vendor_searches_root='...{vendor_searches_root[-10:]}'))")
+        result = "Order()"
         return result
 
     # Order.project_create():
@@ -3761,10 +3789,10 @@ class Order:
                     total_cost += selected_total_cost
                 else:
                     # It should be impossible to get here:
-                    print(f"type(selected_vendor_part)={type(selected_vendor_part)}")
+                    print(f"{tracing}type(selected_vendor_part)={type(selected_vendor_part)}")
 
             # Wrap up the *bom_file*:
-            bom_file.write("Total: ${0:.2f}\n".format(total_cost))
+            bom_file.write(f"{tracing}Total: ${0:.2f}\n".format(total_cost))
 
     # Order.check():
     @trace(1)
@@ -4069,7 +4097,7 @@ class Order:
                 choice_part = ChoicePart(search_name, project_parts, searches)
                 final_choice_parts.append(choice_part)
             else:
-                print(f"Could not find a search that matches part '{search_name}'")
+                print(f"{tracing}Could not find a search that matches part '{search_name}'")
 
         # Now load the associated *actual_parts* into each *choice_part* from *final_choice_parts*:
         for choice_part in final_choice_parts:
@@ -4080,8 +4108,7 @@ class Order:
             # each *ActualPart* in actual_parts.  *order* is needed to loccate where
             # the cached information is:
             choice_part_name = choice_part.name
-            choice_part.vendor_parts_refresh(new_actual_parts, order, choice_part_name,
-                                             )
+            choice_part.vendor_parts_refresh(new_actual_parts, order, choice_part_name)
 
         # Stuff *final_choice_parts* back into *order*:
         final_choice_parts.sort(key=lambda final_choice_part: final_choice_part.name)
@@ -6005,6 +6032,7 @@ class ChoicePart(ProjectPart):
         return references_text
 
     # ChoicePart.select():
+    @trace(2)
     def select(self, excluded_vendor_names, announce=False, tracing=""):
         """ *ChoicePart*: Select and return the best priced *ActualPart*
             for the *ChoicePart* (i.e. *self*) excluding any vendors
@@ -6015,7 +6043,7 @@ class ChoicePart(ProjectPart):
         assert isinstance(announce, bool)
         assert isinstance(tracing, str)
 
-        global trace_level
+        trace_level = trace_level_get()
 
         # This lovely piece of code basically brute forces the decision
         # process of figuring out which *vendor_part* to select and the
@@ -6040,14 +6068,16 @@ class ChoicePart(ProjectPart):
                 print(f"{tracing} Manufacturer: '{manufacturer_name}' '{manufacturer_part_name}'")
             vendor_parts = actual_part.vendor_parts
             for vendor_part_index, vendor_part in enumerate(vendor_parts):
-                # if trace_level:
+                #if tracing and trace_level >= 2
                 #     print(f"Vendor: {vendor_part.vendor_name}: "
                 #           f"'{vendor_part.vendor_part_name}':"
                 #           f":{vendor_part.quantity_available}")
                 if tracing and trace_level >= 2:
                     vendor_name = vendor_part.vendor_name
                     vendor_part_name = vendor_part.vendor_part_name
-                    print(f"{tracing}  Vendor: '{vendor_name}': '{vendor_part_name}'")
+                    quantity_available = vendor_part.quantity_available
+                    print(f"{tracing}  Vendor: {quantity_available} x "
+                          f"'{vendor_name}': '{vendor_part_name}'")
                 price_breaks = vendor_part.price_breaks
                 for price_break_index, price_break in enumerate(price_breaks):
                     # if tracing:
@@ -6086,7 +6116,7 @@ class ChoicePart(ProjectPart):
         if len(quints) == 0:
             choice_part_name = self.name
             if announce:
-                print("No vendor parts found for Part '{0}'".format(choice_part_name))
+                print(f"{tracing}No vendor parts found for Part '{choice_part_name}'")
         else:
             # Now sort in ascending order:
             quints.sort()
@@ -6170,6 +6200,8 @@ class ChoicePart(ProjectPart):
         stale = order.stale
         vendor_searches_root = order.vendor_searches_root
 
+        trace_level = trace_level_get()
+
         # Construct the file path for the `.xml` file associated *choice_part*:
         xml_base_name = Encode.to_file_name(choice_part_name + ".xml")
         xml_full_name = os.path.join(vendor_searches_root, xml_base_name)
@@ -6210,7 +6242,7 @@ class ChoicePart(ProjectPart):
 
         # For debugging show both the sorted *proposed_actual_parts* and *previous_actual_parts*
         # side-by-side:
-        if tracing:
+        if tracing and trace_level >= 2:
             # First sort *proposed_actual_parts* and *previous_actual_parts*:
             proposed_actual_parts.sort(key=lambda proposed_actual_part: proposed_actual_part.key)
             previous_actual_parts.sort(key=lambda previous_actual_part: previous_actual_part.key)
@@ -6225,6 +6257,7 @@ class ChoicePart(ProjectPart):
 
             # Now sweep across both *proposed_actual_parts* and *previous_actual_parts*
             # printing out the key values side by side:
+            print(f"{tracing}Actual_Parts[xx]: (proposed)  (previous)")    
             for index in range(maximum_actual_parts_size):
                 proposed_text = ("--------" if index >= proposed_actual_parts_size
                                  else proposed_actual_parts[index].key)
@@ -6247,11 +6280,11 @@ class ChoicePart(ProjectPart):
             if tracing:
                 print(f"{tracing}Proposed_Actual_Part[{index}]:'{proposed_actual_part.key}'")
 
-            # Start by assuming that *lookup_required* and set to *False* if we can avoid
+            # Start by assuming that *lookup_is_required* and set to *False* if we can avoid
             # the lookup:
-            lookup_required = True
+            lookup_is_required = True
             if proposed_actual_part_key in previous_actual_parts_table:
-                if tracing:
+                if tracing and trace_level >= 2:
                     print(f"{tracing}'{proposed_actual_part_key} is in previous_actual_parts_table")
 
                 # We have a *previous_actual_part* that matches *proposed_actual_part*.
@@ -6259,7 +6292,7 @@ class ChoicePart(ProjectPart):
                 # whether we must trigger a vendor parts lookup:
                 previous_actual_part = previous_actual_parts_table[proposed_actual_part_key]
                 previous_vendor_parts = previous_actual_part.vendor_parts
-                if tracing:
+                if tracing and trace_level >= 2:
                     print(f"{tracing}previous_actual_part.name="
                           f"'{previous_actual_part.manufacturer_part_name}'")
                     print(f"{tracing}len(previous_vendor_parts)={len(previous_vendor_parts)}")
@@ -6268,31 +6301,31 @@ class ChoicePart(ProjectPart):
                 minimum_timestamp = now
                 for previous_vendor_part in previous_vendor_parts:
                     minimum_timestamp = min(minimum_timestamp, previous_vendor_part.timestamp)
-                if tracing:
+                if tracing and trace_level >= 2:
                     print(f"{tracing}minimum_timestamp={minimum_timestamp}")
 
                 # If the *minimum_time_stamp* is too stale, force a refresh:
                 if minimum_timestamp + stale > now:
-                    if tracing:
+                    if tracing and trace_level >= 2:
                         print(f"{tracing}Not stale")
                     proposed_actual_part.vendor_parts = previous_vendor_parts
-                    lookup_required = False
+                    lookup_is_required = False
             else:
-                if tracing:
+                if tracing and trace_level >= 2:
                     print(f"{tracing}'{proposed_actual_part_key} is not"
                           f" in previous_actual_parts_table")
             if tracing:
-                print(f"{tracing}lookup_required={lookup_required}")
+                print(f"{tracing}lookup_is_required={lookup_is_required}")
 
-            # If *lookup_required*, visit each *Panda* object in *pandas* and look up
+            # If *lookup_is_required*, visit each *Panda* object in *pandas* and look up
             # *VendorPart*'s.  Assemble them all in the *new_vendor_parts* list:
-            if lookup_required:
+            if lookup_is_required:
                 new_vendor_parts = list()
                 for panda in pandas:
                     panda_vendor_parts = panda.vendor_parts_lookup(proposed_actual_part,
                                                                    part_name)
-                    if trace_level:
-                        trace("len(panda_vendor_parts)={len(panda_vendor_parts)}")
+                    if tracing:
+                        trace("{tracing}len(panda_vendor_parts)={len(panda_vendor_parts)}")
                     new_vendor_parts.extend(panda_vendor_parts)
                     if tracing:
                         panda_vendor_parts_size = len(panda_vendor_parts)
@@ -6504,8 +6537,7 @@ class VendorPart:
         assert isinstance(actual_part, ActualPart)
         assert isinstance(vendor_name, str)
         assert isinstance(vendor_part_name, str)
-        assert isinstance(quantity_available, int), ("quantity_available={0}".format(
-                                                     quantity_available))
+        assert isinstance(quantity_available, int), f"quantity_available={quantity_available}"
         assert isinstance(price_breaks, list)
         assert isinstance(timestamp, int)
         for price_break in price_breaks:
@@ -6581,6 +6613,10 @@ class VendorPart:
         # price_breaks = vendor_part.price_breaks
         return "'{0}':'{1}'".format(vendor_name, vendor_part_name)
 
+    def __str__(self):
+        vendor_part = self
+        return f"VendorPart('{vendor_part.vendor_name}':'{vendor_part.vendor_part_name}')"
+
     # VendorPart.dump():
     def dump(self, out_stream, indent):
         """ *VendorPart*: Dump the *VendorPart* (i.e. *self*) out to
@@ -6648,10 +6684,12 @@ class VendorPart:
 
     # VendorPart.xml_parse():
     @staticmethod
-    def xml_parse(vendor_part_tree, actual_part):
+    @trace(2)
+    def xml_parse(vendor_part_tree, actual_part, tracing=""):
         # Verify argument types:
         assert isinstance(vendor_part_tree, etree._Element)
         assert isinstance(actual_part, ActualPart)
+        assert isinstance(tracing, str)
         assert vendor_part_tree.tag == "VendorPart"
 
         # Pull out the attribute values:
@@ -6659,6 +6697,7 @@ class VendorPart:
         timestamp = int(float(attributes_table["timestamp"]))
         vendor_name = attributes_table["vendor_name"]
         vendor_part_name = attributes_table["vendor_part_name"]
+        quantity_available = int(attributes_table["quantity_available"])
 
         price_breaks = []
         price_break_trees = list(vendor_part_tree)
@@ -6666,7 +6705,6 @@ class VendorPart:
             price_break = PriceBreak.xml_parse(price_break_tree)
             price_breaks.append(price_break)
 
-        quantity_available = 0  # Old inventory stuff...
         vendor_part = VendorPart(actual_part, vendor_name, vendor_part_name,
                                  quantity_available, price_breaks, timestamp)
         return vendor_part

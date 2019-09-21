@@ -1025,7 +1025,7 @@ class BomGui(QMainWindow, Gui):
 
         # Now that both *collections* and *tree_mode* refer to one another we can safely
         # call *partial_load*():
-        collections.partial_load()
+        # collections.partial_load()
 
         # Now bind *tree_model* to the *collections_tree* widget:
         collections_tree = mw.collections_tree
@@ -1643,7 +1643,6 @@ class BomGui(QMainWindow, Gui):
         bom_gui.current_search = None
 
     # BomGui.end_rows_insert():
-    @trace(1)
     def end_rows_insert(self, tracing=""):
         # Verify argument types:
         assert isinstance(tracing, str)
@@ -1655,7 +1654,6 @@ class BomGui(QMainWindow, Gui):
         tree_model.endInsertRows()
 
     # BomGui.end_rows_remove():
-    @trace(1)
     def end_rows_remove(self, tracing=""):
         # Verify argument types:
         assert isinstance(tracing, str)
