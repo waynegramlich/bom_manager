@@ -90,14 +90,14 @@ from PySide2.QtGui import (QClipboard,)
 def main(tracing=""):
     collection_directories, searches_root, order = command_line_arguments_process()
 
-    # Now create the *tables_editor* graphical user interface (GUI) and run it:
+    # Now create the *bom_gui* graphical user interface (GUI) and run it:
     if tracing:
         print(f"{tracing}searches_root='{searches_root}'")
     tables = list()
-    tables_editor = TablesEditor(tables, collection_directories, searches_root, order)
+    bom_gui = BomGui(tables, collection_directories, searches_root, order)
 
     # Start up the GUI:
-    tables_editor.run()
+    bom_gui.run()
 
 
 # ComboEdit:
@@ -110,14 +110,14 @@ class ComboEdit:
     WIDGET_CALLBACKS = dict()
 
     # ComboEdit.__init__():
-    def __init__(self, name, tables_editor, items,
+    def __init__(self, name, bom_gui, items,
                  new_item_function, current_item_set_function, comment_get_function,
                  comment_set_function, is_active_function, tracing="", **widgets):
         """ Initialize the *ComboEdit* object (i.e. *self*.)
 
         The arguments are:
         * *name*: A name for the *ComboEdit* object (i.e. *self*) for debugging.
-        * *tables_editor*: The root *TablesEditor* object.
+        * *bom_gui*: The root *BomGui* object.
         * *items*: A list of item objects to manage.
         * *new_item_function*: A function that is called to create a new item.
         * *is_active_function*: A function that returns *True* if combo box should be active.
@@ -166,7 +166,7 @@ class ComboEdit:
         combo_edit.items = items
         combo_edit.name = name
         combo_edit.new_item_function = new_item_function
-        combo_edit.tables_editor = tables_editor
+        combo_edit.bom_gui = bom_gui
 
         # Set the current item after *current_item_set_function* has been set.
         combo_edit.current_item_set(items[0] if len(items) > 0 else None)
@@ -217,12 +217,12 @@ class ComboEdit:
 
         # Only do something if we are not already *in_signal*:
         combo_edit = self
-        tables_editor = combo_edit.tables_editor
-        if not tables_editor.in_signal:
-            tables_editor.in_signal = True
+        bom_gui = combo_edit.bom_gui
+        if not bom_gui.in_signal:
+            bom_gui.in_signal = True
 
             # Perform any requested signal tracing:
-            trace_signals = tables_editor.trace_signals
+            trace_signals = bom_gui.trace_signals
             if trace_signals:
                 print("=>ComboEdit.combo_box_changed('{0}', '{1}')".
                       format(combo_edit.name, new_name))
@@ -237,25 +237,25 @@ class ComboEdit:
                         break
 
             # Update the the GUI:
-            tables_editor.update()
+            bom_gui.update()
 
             # Wrap up any signal tracing:
             if trace_signals:
                 print("<=ComboEdit.combo_box_changed('{0}', '{1}')\n".
                       format(combo_edit.name, new_name))
-            tables_editor.in_signal = False
+            bom_gui.in_signal = False
 
     # ComboEdit.comment_text_changed():
     def comment_text_changed(self):
         # Do nothing if we are in a signal:
         combo_edit = self
-        tables_editor = combo_edit.tables_editor
-        in_signal = tables_editor.in_signal
+        bom_gui = combo_edit.bom_gui
+        in_signal = bom_gui.in_signal
         if not in_signal:
-            tables_editor.in_signal = True
+            bom_gui.in_signal = True
 
             # Perform any requested signal tracing:
-            trace_signals = tables_editor.trace_signals
+            trace_signals = bom_gui.trace_signals
             if trace_signals:
                 print("=>ComboEdit.comment_text_changed()")
 
@@ -271,12 +271,12 @@ class ComboEdit:
                 combo_edit.comment_set_function(item, actual_text, position)
 
             # Force the GUI to be updated:
-            tables_editor.update()
+            bom_gui.update()
 
             # Wrap up any signal tracing:
             if trace_signals:
                 print(" <=ComboEditor.comment_text_changed():{0}\n".format(cursor.position()))
-            tables_editor.in_signal = False
+            bom_gui.in_signal = False
 
     # ComboEdit.current_item_get():
     def current_item_get(self, tracing=""):
@@ -326,13 +326,13 @@ class ComboEdit:
     def delete_button_clicked(self):
         # Perform any requested tracing from *combo_edit* (i.e. *self*):
         combo_edit = self
-        tables_editor = combo_edit.tables_editor
-        trace_signals = tables_editor.trace_signals
+        bom_gui = combo_edit.bom_gui
+        trace_signals = bom_gui.trace_signals
         if trace_signals:
             print("=>ComboEdit.delete_button_clicked('{0}')".format(combo_edit.name))
 
         # Find the matching *item* in *items* and delete it:
-        tables_editor.in_signal = True
+        bom_gui.in_signal = True
         items = combo_edit.items
         items_size = len(items)
         current_item = combo_edit.current_item_get()
@@ -353,24 +353,24 @@ class ComboEdit:
                 break
 
         # Update the GUI:
-        tables_editor.update()
+        bom_gui.update()
 
         # Wrap up any requested tracing;
         if trace_signals:
             print("<=ComboEdit.delete_button_clicked('{0}')\n".format(combo_edit.name))
-        tables_editor.in_signal = False
+        bom_gui.in_signal = False
 
     # ComboEdit.first_button_clicked():
     def first_button_clicked(self):
         # Perform any tracing requested by *combo_edit* (i.e. *self*):
         combo_edit = self
-        tables_editor = combo_edit.tables_editor
-        trace_signals = tables_editor.trace_signals
+        bom_gui = combo_edit.bom_gui
+        trace_signals = bom_gui.trace_signals
         if trace_signals:
             print("=>ComboEdit.first_button_clicked('{0}')".format(combo_edit.name))
 
         # If possible, select the *first_item*:
-        tables_editor.in_signal = True
+        bom_gui.in_signal = True
         items = combo_edit.items
         items_size = len(items)
         if items_size > 0:
@@ -378,12 +378,12 @@ class ComboEdit:
             combo_edit.current_item_set(first_item)
 
         # Update the user interface:
-        tables_editor.update()
+        bom_gui.update()
 
         # Wrap up any requested tracing:
         if trace_signals:
             print("<=ComboEdit.first_button_clicked('{0})\n".format(combo_edit.name))
-        tables_editor.in_signal = False
+        bom_gui.in_signal = False
 
     # ComboEdit.gui_update():
     def gui_update(self, tracing=""):
@@ -520,13 +520,13 @@ class ComboEdit:
     def last_button_clicked(self):
         # Perform any tracing requested by *combo_edit* (i.e. *self*):
         combo_edit = self
-        tables_editor = combo_edit.tables_editor
-        trace_signals = tables_editor.trace_signals
+        bom_gui = combo_edit.bom_gui
+        trace_signals = bom_gui.trace_signals
         if trace_signals:
             print("=>ComboEdit.last_button_clicked('{0}')".format(combo_edit.name))
 
         # If possible select the *last_item*:
-        tables_editor.in_signal = True
+        bom_gui.in_signal = True
         items = combo_edit.items
         items_size = len(items)
         if items_size > 0:
@@ -534,12 +534,12 @@ class ComboEdit:
             combo_edit.current_item_set(last_item)
 
         # Update the user interface:
-        tables_editor.update()
+        bom_gui.update()
 
         # Wrap up any requested tracing:
         if trace_signals:
             print("<=ComboEdit.last_button_clicked('{0}')\n".format(combo_edit.name))
-        tables_editor.in_signal = False
+        bom_gui.in_signal = False
 
     # ComboEdit.line_edit_changed():
     def line_edit_changed(self, text):
@@ -548,12 +548,12 @@ class ComboEdit:
 
         # Make sure that we are not already in a signal before doing anything:
         combo_edit = self
-        tables_editor = combo_edit.tables_editor
-        if not tables_editor.in_signal:
-            tables_editor.in_signal = True
+        bom_gui = combo_edit.bom_gui
+        if not bom_gui.in_signal:
+            bom_gui.in_signal = True
 
             # Perform any requested siginal tracing:
-            trace_signals = tables_editor.trace_signals
+            trace_signals = bom_gui.trace_signals
 
             # Make sure that the *combo_edit* *is_active*:
             is_active = combo_edit.is_active_function()
@@ -568,7 +568,7 @@ class ComboEdit:
             # Wrap up any requested signal tracing:
             if trace_signals:
                 print("<=ComboEditor.line_edit_changed('{0}')\n".format(text))
-            tables_editor.in_signal = False
+            bom_gui.in_signal = False
 
     # ComboEdit.item_append():
     def item_append(self, new_item, tracing=""):
@@ -587,11 +587,11 @@ class ComboEdit:
     def new_button_clicked(self):
         # Perform any tracing requested by *combo_edit* (i.e. *self*):
         combo_edit = self
-        tables_editor = combo_edit.tables_editor
-        trace_signals = tables_editor.trace_signals
+        bom_gui = combo_edit.bom_gui
+        trace_signals = bom_gui.trace_signals
 
         # Grab some values from *combo_edit*:
-        tables_editor.in_signal = True
+        bom_gui.in_signal = True
         items = combo_edit.items
         line_edit = combo_edit.line_edit
         new_item_function = combo_edit.new_item_function
@@ -604,22 +604,22 @@ class ComboEdit:
         combo_edit.item_append(new_item)
 
         # Update the GUI:
-        tables_editor.update()
+        bom_gui.update()
 
         # Wrap up any requested signal tracing:
         if trace_signals:
             print("<=ComboEdit.new_button_clicked('{0}')\n".format(combo_edit.name))
-        tables_editor.in_signal = False
+        bom_gui.in_signal = False
 
     # ComboEdit.next_button_clicked():
     def next_button_clicked(self):
         # Perform any tracing requested by *combo_edit* (i.e. *self*):
         combo_edit = self
-        tables_editor = combo_edit.tables_editor
-        trace_signals = tables_editor.trace_signals
+        bom_gui = combo_edit.bom_gui
+        trace_signals = bom_gui.trace_signals
 
         # ...
-        tables_editor.in_signal = True
+        bom_gui.in_signal = True
         items = combo_edit.items
         items_size = len(items)
         current_item = combo_edit.current_item_get()
@@ -631,23 +631,23 @@ class ComboEdit:
         combo_edit.current_item_set(current_item)
 
         # Update the GUI:
-        tables_editor.update()
+        bom_gui.update()
 
         # Wrap up any requested tracing:
         if trace_signals:
             print("<=ComboEdit.next_button_clicked('{0}')\n".format(combo_edit.name))
-        tables_editor.in_signal = False
+        bom_gui.in_signal = False
 
     # ComboEdit.position_changed():
     def position_changed(self):
         # Do nothing if we already in a signal:
         combo_edit = self
-        tables_editor = combo_edit.tables_editor
-        if not tables_editor.in_signal:
-            tables_editor.in_signal = True
+        bom_gui = combo_edit.bom_gui
+        if not bom_gui.in_signal:
+            bom_gui.in_signal = True
 
             # Perform any requested signal tracing:
-            trace_signals = tables_editor.trace_signals
+            trace_signals = bom_gui.trace_signals
 
             # Grab the *actual_text* and *position* from the *comment_text* widget and stuff
             # both into the comment field of *item*:
@@ -659,17 +659,17 @@ class ComboEdit:
             combo_edit.comment_set_function(item, actual_text, position)
 
             # Wrap up any signal tracing:
-            tables_editor.in_signal = False
+            bom_gui.in_signal = False
 
     # ComboEdit.previous_button_clicked():
     def previous_button_clicked(self):
         # Perform any tracing requested by *combo_edit* (i.e. *self*):
         combo_edit = self
-        tables_editor = combo_edit.tables_editor
-        trace_signals = tables_editor.trace_signals
+        bom_gui = combo_edit.bom_gui
+        trace_signals = bom_gui.trace_signals
 
         # ...
-        tables_editor.in_signal = True
+        bom_gui.in_signal = True
         items = combo_edit.items
         current_item = combo_edit.current_item_get()
         for index, item in enumerate(items):
@@ -680,18 +680,18 @@ class ComboEdit:
         combo_edit.current_item_set(current_item)
 
         # Update the GUI:
-        tables_editor.update()
+        bom_gui.update()
 
-        tables_editor.in_signal = False
+        bom_gui.in_signal = False
 
     # ComboEdit.rename_button_clicked():
     def rename_button_clicked(self):
         # Perform any tracing requested by *combo_edit* (i.e. *self*):
         combo_edit = self
-        tables_editor = combo_edit.tables_editor
-        trace_signals = tables_editor.trace_signals
+        bom_gui = combo_edit.bom_gui
+        trace_signals = bom_gui.trace_signals
 
-        tables_editor.in_signal = True
+        bom_gui.in_signal = True
         combo_edit = self
         line_edit = combo_edit.line_edit
         new_item_name = line_edit.text()
@@ -701,9 +701,9 @@ class ComboEdit:
             current_item.name = new_item_name
 
         # Update the GUI:
-        tables_editor.update()
+        bom_gui.update()
 
-        tables_editor.in_signal = False
+        bom_gui.in_signal = False
 
     # ComboEdit.WIDGET_CALLBACKS:
     # *WIDGET_CALLBACKS* is defined here **after** the actual callback routines are defined:
@@ -721,10 +721,10 @@ class ComboEdit:
     }
 
 
-# TablesEditor:
-class TablesEditor(QMainWindow):
+# BomGui:
+class BomGui(QMainWindow, Gui):
 
-    # TablesEditor.__init__()
+    # BomGui.__init__()
     @trace(1)
     def __init__(self, tables, collection_directories, searches_root, order, tracing=""):
         # Verify argument types:
@@ -796,11 +796,11 @@ class TablesEditor(QMainWindow):
 
         # Connect file widgets to their callback routines:
         # file_line_edit.textEdited.connect(
-        #  partial(TablesEditor.file_line_edit_changed, tables_editor))
+        #  partial(BomGui.file_line_edit_changed, bom_gui))
         # file_new_button.clicked.connect(
-        #  partial(TablesEditor.file_new_button_clicked, tables_editor))
+        #  partial(BomGui.file_new_button_clicked, bom_gui))
         # file_open_button.clicked.connect(
-        #  partial(TablesEditor.file_open_button_clicked, tables_editor))
+        #  partial(BomGui.file_open_button_clicked, bom_gui))
 
         # Get *working_directory_path*:
         working_directory_path = os.getcwd()
@@ -829,45 +829,51 @@ class TablesEditor(QMainWindow):
         # collections_root = os.path.join(working_directory_path, "collections")
         # assert os.path.isdir(collections_root)
 
-        # Load all values into *tables_editor* before creating *combo_edit*.
-        # The *ComboEdit* initializer needs to access *tables_editor.main_window*:
+        tree_model = TreeModel()
+
+        # Load all values into *bom_gui* before creating *combo_edit*.
+        # The *ComboEdit* initializer needs to access *bom_gui.main_window*:
         current_table = tables[0] if len(tables) >= 1 else None
-        tables_editor = self
-        tables_editor.application = application
-        tables_editor.collection_directories = collection_directories
-        tables_editor.collections = None  # Filled in below
-        tables_editor.current_comment = None
-        tables_editor.current_enumeration = None
-        tables_editor.current_model_index = None
-        tables_editor.current_parameter = None
-        tables_editor.current_search = None
-        tables_editor.current_table = current_table
-        tables_editor.current_tables = tables
-        tables_editor.in_signal = True
-        tables_editor.languages = ["English", "Spanish", "Chinese"]
-        tables_editor.main_window = main_window
-        tables_editor.order = order
-        # tables_editor.original_tables = copy.deepcopy(tables)
-        tables_editor.re_table = TablesEditor.re_table_get()
-        tables_editor.searches_root = searches_root
-        tables_editor.searches = list()
-        tables_editor.xsearches = None
-        tables_editor.tab_unload = None
-        tables_editor.tables = tables
-        # tables_editor.tracing_level = tracing_level
-        # tables_editor.trace_signals = tracing_level >= 1
+        bom_gui = self
+        bom_gui.application = application
+        bom_gui.clicked_model_index = QModelIndex()
+        bom_gui.collection_directories = collection_directories
+        bom_gui.collections = None  # Filled in below
+        bom_gui.current_comment = None
+        bom_gui.current_enumeration = None
+        bom_gui.current_model_index = None
+        bom_gui.current_parameter = None
+        bom_gui.current_search = None
+        bom_gui.current_table = current_table
+        bom_gui.current_tables = tables
+        bom_gui.in_signal = True
+        bom_gui.languages = ["English", "Spanish", "Chinese"]
+        bom_gui.main_window = main_window
+        bom_gui.order = order
+        # bom_gui.original_tables = copy.deepcopy(tables)
+        bom_gui.searches_root = searches_root
+        bom_gui.searches = list()
+        bom_gui.xsearches = None
+        bom_gui.tree_model = tree_model
+        bom_gui.tab_unload = None
+        bom_gui.tables = tables
+        # bom_gui.tracing_level = tracing_level
+        # bom_gui.trace_signals = tracing_level >= 1
+
+        # Initialze both the *QMainWindow* and *Gui* super classes:
+        super().__init__()
 
         # Set up *tables* first, followed by *parameters*, followed by *enumerations*:
 
-        # Set up *tables_combo_edit* and stuff into *tables_editor*:
-        new_item_function = partial(TablesEditor.table_new, tables_editor)
-        current_item_set_function = partial(TablesEditor.current_table_set, tables_editor)
-        comment_get_function = partial(TablesEditor.table_comment_get, tables_editor)
-        comment_set_function = partial(TablesEditor.table_comment_set, tables_editor)
-        is_active_function = partial(TablesEditor.table_is_active, tables_editor)
+        # Set up *tables_combo_edit* and stuff into *bom_gui*:
+        new_item_function = partial(BomGui.table_new, bom_gui)
+        current_item_set_function = partial(BomGui.current_table_set, bom_gui)
+        comment_get_function = partial(BomGui.table_comment_get, bom_gui)
+        comment_set_function = partial(BomGui.table_comment_set, bom_gui)
+        is_active_function = partial(BomGui.table_is_active, bom_gui)
         tables_combo_edit = ComboEdit(
           "tables",
-          tables_editor,
+          bom_gui,
           tables,
           new_item_function,
           current_item_set_function,
@@ -885,18 +891,18 @@ class TablesEditor(QMainWindow):
           previous_button=main_window.tables_previous,
           rename_button=main_window.tables_rename,
           )
-        tables_editor.tables_combo_edit = tables_combo_edit
+        bom_gui.tables_combo_edit = tables_combo_edit
 
-        # Set up *parameters_combo_edit* and stuff into *tables_editor*:
+        # Set up *parameters_combo_edit* and stuff into *bom_gui*:
         parameters = list() if current_table is None else current_table.parameters
-        new_item_function = partial(TablesEditor.parameter_new, tables_editor)
-        current_item_set_function = partial(TablesEditor.current_parameter_set, tables_editor)
-        comment_get_function = partial(TablesEditor.parameter_comment_get, tables_editor)
-        comment_set_function = partial(TablesEditor.parameter_comment_set, tables_editor)
-        is_active_function = partial(TablesEditor.parameter_is_active, tables_editor)
+        new_item_function = partial(BomGui.parameter_new, bom_gui)
+        current_item_set_function = partial(BomGui.current_parameter_set, bom_gui)
+        comment_get_function = partial(BomGui.parameter_comment_get, bom_gui)
+        comment_set_function = partial(BomGui.parameter_comment_set, bom_gui)
+        is_active_function = partial(BomGui.parameter_is_active, bom_gui)
         parameters_combo_edit = ComboEdit(
           "parameters",
-          tables_editor,
+          bom_gui,
           parameters,
           new_item_function,
           current_item_set_function,
@@ -914,19 +920,19 @@ class TablesEditor(QMainWindow):
           previous_button=main_window.parameters_previous,
           rename_button=main_window.parameters_rename,
           )
-        tables_editor.parameters_combo_edit = parameters_combo_edit
+        bom_gui.parameters_combo_edit = parameters_combo_edit
 
-        # Set up *enumerations_combo_edit* and stuff into *tables_editor*:
+        # Set up *enumerations_combo_edit* and stuff into *bom_gui*:
         enumerations = (
           list() if parameters is None or len(parameters) == 0 else parameters[0].enumerations)
-        new_item_function = partial(TablesEditor.enumeration_new, tables_editor)
-        current_item_set_function = partial(TablesEditor.current_enumeration_set, tables_editor)
-        comment_get_function = partial(TablesEditor.enumeration_comment_get, tables_editor)
-        comment_set_function = partial(TablesEditor.enumeration_comment_set, tables_editor)
-        is_active_function = partial(TablesEditor.enumeration_is_active, tables_editor)
+        new_item_function = partial(BomGui.enumeration_new, bom_gui)
+        current_item_set_function = partial(BomGui.current_enumeration_set, bom_gui)
+        comment_get_function = partial(BomGui.enumeration_comment_get, bom_gui)
+        comment_set_function = partial(BomGui.enumeration_comment_set, bom_gui)
+        is_active_function = partial(BomGui.enumeration_is_active, bom_gui)
         enumerations_combo_edit = ComboEdit(
           "enumerations",
-          tables_editor,
+          bom_gui,
           enumerations,
           new_item_function,
           current_item_set_function,
@@ -944,18 +950,18 @@ class TablesEditor(QMainWindow):
           previous_button=main_window.enumerations_previous,
           rename_button=main_window.enumerations_rename,
           )
-        tables_editor.enumerations_combo_edit = enumerations_combo_edit
+        bom_gui.enumerations_combo_edit = enumerations_combo_edit
 
-        # Now build the *searches_combo_edit* and stuff into *tables_editor*:
-        searches = tables_editor.searches
-        new_item_function = partial(TablesEditor.searches_new, tables_editor)
-        current_item_set_function = partial(TablesEditor.current_search_set, tables_editor)
-        comment_get_function = partial(TablesEditor.searches_comment_get, tables_editor)
-        comment_set_function = partial(TablesEditor.searches_comment_set, tables_editor)
-        is_active_function = partial(TablesEditor.searches_is_active, tables_editor)
+        # Now build the *searches_combo_edit* and stuff into *bom_gui*:
+        searches = bom_gui.searches
+        new_item_function = partial(BomGui.searches_new, bom_gui)
+        current_item_set_function = partial(BomGui.current_search_set, bom_gui)
+        comment_get_function = partial(BomGui.searches_comment_get, bom_gui)
+        comment_set_function = partial(BomGui.searches_comment_set, bom_gui)
+        is_active_function = partial(BomGui.searches_is_active, bom_gui)
         searches_combo_edit = ComboEdit(
           "searches",
-          tables_editor,
+          bom_gui,
           searches,
           new_item_function,
           current_item_set_function,
@@ -973,48 +979,46 @@ class TablesEditor(QMainWindow):
           previous_button=main_window.searches_previous,
           rename_button=main_window.searches_rename,
           )
-        tables_editor.searches = searches
-        tables_editor.searches_combo_edit = searches_combo_edit
+        bom_gui.searches = searches
+        bom_gui.searches_combo_edit = searches_combo_edit
 
         # Perform some global signal connections to *main_window* (abbreviated as *mw*):
         mw = main_window
-        mw.common_save_button.clicked.connect(tables_editor.save_button_clicked)
-        mw.common_quit_button.clicked.connect(tables_editor.quit_button_clicked)
-        mw.find_tabs.currentChanged.connect(tables_editor.tab_changed)
-        mw.filters_down.clicked.connect(tables_editor.filters_down_button_clicked)
-        mw.filters_up.clicked.connect(tables_editor.filters_up_button_clicked)
-        mw.collections_check.clicked.connect(tables_editor.collections_check_clicked)
-        mw.collections_process.clicked.connect(tables_editor.collections_process_clicked)
-        mw.parameters_csv_line.textChanged.connect(tables_editor.parameter_csv_changed)
-        mw.parameters_default_line.textChanged.connect(tables_editor.parameter_default_changed)
-        mw.parameters_long_line.textChanged.connect(tables_editor.parameter_long_changed)
-        mw.parameters_optional_check.clicked.connect(tables_editor.parameter_optional_clicked)
-        mw.parameters_short_line.textChanged.connect(tables_editor.parameter_short_changed)
-        mw.parameters_type_combo.currentTextChanged.connect(tables_editor.parameters_type_changed)
-        mw.schema_tabs.currentChanged.connect(tables_editor.tab_changed)
-        mw.searches_save.clicked.connect(tables_editor.searches_save_button_clicked)
-        mw.searches_table_combo.currentTextChanged.connect(tables_editor.searches_table_changed)
-        mw.root_tabs.currentChanged.connect(tables_editor.tab_changed)
+        mw.common_save_button.clicked.connect(bom_gui.save_button_clicked)
+        mw.common_quit_button.clicked.connect(bom_gui.quit_button_clicked)
+        mw.find_tabs.currentChanged.connect(bom_gui.tab_changed)
+        mw.filters_down.clicked.connect(bom_gui.filters_down_button_clicked)
+        mw.filters_up.clicked.connect(bom_gui.filters_up_button_clicked)
+        mw.collections_check.clicked.connect(bom_gui.collections_check_clicked)
+        mw.collections_process.clicked.connect(bom_gui.collections_process_clicked)
+        mw.parameters_csv_line.textChanged.connect(bom_gui.parameter_csv_changed)
+        mw.parameters_default_line.textChanged.connect(bom_gui.parameter_default_changed)
+        mw.parameters_long_line.textChanged.connect(bom_gui.parameter_long_changed)
+        mw.parameters_optional_check.clicked.connect(bom_gui.parameter_optional_clicked)
+        mw.parameters_short_line.textChanged.connect(bom_gui.parameter_short_changed)
+        mw.parameters_type_combo.currentTextChanged.connect(bom_gui.parameters_type_changed)
+        mw.schema_tabs.currentChanged.connect(bom_gui.tab_changed)
+        mw.searches_save.clicked.connect(bom_gui.searches_save_button_clicked)
+        mw.searches_table_combo.currentTextChanged.connect(bom_gui.searches_table_changed)
+        mw.root_tabs.currentChanged.connect(bom_gui.tab_changed)
 
-        mw.collections_new.clicked.connect(tables_editor.collections_new_clicked)
+        mw.collections_new.clicked.connect(bom_gui.collections_new_clicked)
         mw.collections_new.setEnabled(False)
-        mw.collections_line.textChanged.connect(tables_editor.collections_line_changed)
-        mw.collections_tree.clicked.connect(tables_editor.collections_tree_clicked)
-        mw.collections_delete.clicked.connect(tables_editor.collections_delete_clicked)
+        mw.collections_line.textChanged.connect(bom_gui.collections_line_changed)
+        mw.collections_tree.clicked.connect(bom_gui.collections_tree_clicked)
+        mw.collections_delete.clicked.connect(bom_gui.collections_delete_clicked)
         mw.collections_delete.setEnabled(False)
 
         # file_names = glob.glob("../digikey_tables/**", recursive=True)
         # file_names.sort()
         # print("file_names=", file_names)
 
-        # Create the *tree_model* needed for *collections* and stuff into *tables_editor*:
-        tree_model = TreeModel()
-        tables_editor.model = tree_model
+        # Create the *tree_model* needed for *collections* and stuff into *bom_gui*:
 
-        # Create the *collections* and stuff into *tables_editor*:
-        collections = Collections("Collections", collection_directories, searches_root, tree_model,
-                                  )
-        tables_editor.collections = collections
+        # Create the *collections* and stuff into *bom_gui*:
+        collections = Collections("Collections", collection_directories,
+                                  searches_root, bom_gui)
+        bom_gui.collections = collections
 
         # Now stuff *collections* into *tree_model*:
         tree_model.collections_set(collections)
@@ -1028,7 +1032,7 @@ class TablesEditor(QMainWindow):
         collections_tree.setModel(tree_model)
         collections_tree.setSortingEnabled(True)
 
-        # FIXME: Used *tables_editor.current_update()* instead!!!
+        # FIXME: Used *bom_gui.current_update()* instead!!!
         current_table = None
         current_parameter = None
         current_enumeration = None
@@ -1046,42 +1050,78 @@ class TablesEditor(QMainWindow):
             table.current_parameter = current_parameter
             table.current_enumeration = current_enumeration
 
-        # tables_editor.table_setup()
+        # bom_gui.table_setup()
 
         # Read in `searches.xml` if it exists:
-        # tables_editor.searches_file_load(os.path.join(order_root, "searches.xml"),
+        # bom_gui.searches_file_load(os.path.join(order_root, "searches.xml"),
         #                                  )
 
         # Update the entire user interface:
-        tables_editor.update()
+        bom_gui.update()
 
-        tables_editor.in_signal = False
+        bom_gui.in_signal = False
 
-    # TablesEditor.__str__():
+    # BomGui.__str__():
     def __str__(self):
-        return "TablesEditor"
+        return "BomGui"
 
-    # TablesEditor.comment_text_set()
+    # BomGui.begin_rows_insert():
+    def begin_rows_insert(self, node, start_row_index, end_row_index, tracing=""):
+        # Verify argument types:
+        assert isinstance(node, Node)
+        assert isinstance(start_row_index, int)
+        assert isinstance(end_row_index, int)
+        assert isinstance(tracing, str)
+
+        # Create a *model_index* for *node* and *insert_row_index* starting from
+        # *bom_gui* (i.e. *self):
+        bom_gui = self
+        tree_model = bom_gui.tree_model
+        model_index = tree_model.createIndex(0, 0, node)
+
+        # Inform the *tree_model* that rows will be inserted from *start_row_index* through
+        # *end_row_index*:
+        tree_model.beginInsertRows(model_index, start_row_index, end_row_index)
+
+    # BomGui.begin_rows_remove():
+    def begin_rows_remove(self, node, start_row_index, end_row_index, tracing=""):
+        # Verify argument types:
+        assert isinstance(node, Node)
+        assert isinstance(start_row_index, int)
+        assert isinstance(end_row_index, int)
+        assert isinstance(tracing, str)
+
+        # Create a *model_index* for *node* and *insert_row_index* starting from
+        # *bom_gui* (i.e. *self):
+        bom_gui = self
+        tree_model = bom_gui.tree_model
+        model_index = tree_model.createIndex(0, 0, node)
+
+        # Inform the *tree_model* that rows will be inserted from *start_row_index* through
+        # *end_row_index*:
+        tree_model.beginRemoveRows(model_index, start_row_index, end_row_index)
+
+    # BomGui.comment_text_set()
     def comment_text_set(self, new_text, tracing=""):
         # Verify argument types:
         assert isinstance(new_text, str)
         assert isinstance(tracing, str)
 
         # Carefully set thet text:
-        tables_editor = self
-        main_window = tables_editor.main_window
+        bom_gui = self
+        main_window = bom_gui.main_window
         comment_text = main_window.parameters_comment_text
         comment_text.setPlainText(new_text)
 
-    # TablesEditor.collections_delete_changed():
+    # BomGui.collections_delete_changed():
     @trace(1)
     def collections_delete_clicked(self, tracing=""):
         assert isinstance(tracing, str)
-        # Perform any requested signal *tracing* for *tables_editor* (i.e. *self*):
-        tables_editor = self
+        # Perform any requested signal *tracing* for *bom_gui* (i.e. *self*):
+        bom_gui = self
 
-        # Grab the *current_model_index* from *tables_editor* and process it if it exists:
-        current_model_index = tables_editor.current_model_index
+        # Grab the *current_model_index* from *bom_gui* and process it if it exists:
+        current_model_index = bom_gui.current_model_index
         if current_model_index is None:
             # It should be impossible to get here, since the [Delete] button should be disabled
             # if there is no *current_model_index*:
@@ -1137,27 +1177,27 @@ class TablesEditor(QMainWindow):
                     if tracing:
                         print(f"{tracing}Here 2")
                     if search_parent is None:
-                        tables_editor.current_model_index = None
-                        tables_editor.current_search = None
+                        bom_gui.current_model_index = None
+                        bom_gui.current_search = None
                     else:
                         if tracing:
-                            print(f"Here 3")
+                            print(f"{tracing}Here 3")
                         search_parent_name = search_parent.name
                         if tracing:
                             print(f"{tracing}Parent is '{search_parent_name}'")
-                        main_window = tables_editor.main_window
+                        main_window = bom_gui.main_window
                         collections_tree = main_window.collections_tree
                         selection_model = collections_tree.selectionModel()
                         collections_line = main_window.collections_line
                         collections_line.setText(search_parent_name)
                         flags = (QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
                         selection_model.setCurrentIndex(parent_search_model_index, flags)
-                        tables_editor.current_model_index = parent_search_model_index
-                        tables_editor.current_search = search_parent
+                        bom_gui.current_model_index = parent_search_model_index
+                        bom_gui.current_search = search_parent
 
                     # Remove the associated files `.xml` and `.csv` files (if they exist):
                     if tracing:
-                        print(f"Here 4")
+                        print(f"{tracing}Here 4")
                     collection = current_search.collection
                     searches_root = collection.searches_root
                     relative_path = current_search.relative_path
@@ -1176,33 +1216,33 @@ class TablesEditor(QMainWindow):
                 print("Non-search node '{0}' selected???".format(node.name))
 
         # Update the collections tab:
-        tables_editor.update()
+        bom_gui.update()
 
-    # TablesEditor.collections_line_changed():
+    # BomGui.collections_line_changed():
     @trace(1)
     def collections_line_changed(self, text, tracing=""):
         # Verify argument types:
         assert isinstance(text, str)
         assert isinstance(tracing, str)
 
-        # Make sure that *tables_editor* (i.e. *self*) is updated:
-        tables_editor = self
-        tables_editor.update()
+        # Make sure that *bom_gui* (i.e. *self*) is updated:
+        bom_gui = self
+        bom_gui.update()
 
-    # TablesEditor.collections_new_clicked():
+    # BomGui.collections_new_clicked():
     @trace(1)
     def collections_new_clicked(self, tracing=""):
         # Perform any requested *tracing*:
-        tables_editor = self
-        # Grab some values from *tables_editor* (i.e. *self*):
-        current_search = tables_editor.current_search
+        bom_gui = self
+        # Grab some values from *bom_gui* (i.e. *self*):
+        current_search = bom_gui.current_search
 
         # Make sure *current_search* exists (this button click should be disabled if not available):
         assert current_search is not None
 
         # clip_board = pyperclip.paste()
         # selection = os.popen("xsel").read()
-        application = tables_editor.application
+        application = bom_gui.application
         application_clipboard = application.clipboard()
         selection = application_clipboard.text(QClipboard.Selection)
         clipboard = application_clipboard.text(QClipboard.Clipboard)
@@ -1221,8 +1261,8 @@ class TablesEditor(QMainWindow):
         if url is None:
             print("URL: No valid URL found!")
         else:
-            # Grab some stuff from *tables_editor*:
-            main_window = tables_editor.main_window
+            # Grab some stuff from *bom_gui*:
+            main_window = bom_gui.main_window
             collections_line = main_window.collections_line
             new_search_name = collections_line.text().strip()
 
@@ -1239,53 +1279,53 @@ class TablesEditor(QMainWindow):
             table.sort()
             new_search.file_save()
 
-            model_index = tables_editor.current_model_index
+            model_index = bom_gui.current_model_index
             if model_index is not None:
                 parent_model_index = model_index.parent()
                 tree_model = model_index.model()
                 tree_model.children_update(parent_model_index)
 
-            # model = tables_editor.model
+            # model = bom_gui.model
             # model.insertNodes(0, [ new_search ], parent_model_index)
             # if tracing:
             #    print("{0}2:len(searches)={1}".format(tracing, len(searches)))
 
-            tables_editor.update()
+            bom_gui.update()
 
-    # TablesEditor.collections_check_clicked():
+    # BomGui.collections_check_clicked():
     @trace(1)
     def collections_check_clicked(self, tracing=""):
-        # Perform any tracing requested by *tables_editor* (i.e. *self*):
-        tables_editor = self
+        # Perform any tracing requested by *bom_gui* (i.e. *self*):
+        bom_gui = self
 
         # Delegate checking to *order* object:
-        collections = tables_editor.collections
-        order = tables_editor.order
+        collections = bom_gui.collections
+        order = bom_gui.order
         order.check(collections)
 
-    # TablesEditor.collections_process_clicked():
+    # BomGui.collections_process_clicked():
     @trace(1)
     def collections_process_clicked(self, tracing=""):
-        # Perform any tracing requested by *tables_editor* (i.e. *self*):
-        tables_editor = self
+        # Perform any tracing requested by *bom_gui* (i.e. *self*):
+        bom_gui = self
 
-        # Grab some values from *tables_editor*:
-        collections = tables_editor.collections
-        order = tables_editor.order
+        # Grab some values from *bom_gui*:
+        collections = bom_gui.collections
+        order = bom_gui.order
 
         # Now process *order* using *collections*:
         order.process(collections)
 
-    # TablesEditor.collections_tree_clicked():
+    # BomGui.collections_tree_clicked():
     @trace(1)
     def collections_tree_clicked(self, model_index, tracing=""):
         # Verify argument types:
         assert isinstance(model_index, QModelIndex)
         assert isinstance(tracing, str)
 
-        # Stuff *model_index* into *tables_editor* (i.e. *self*):
-        tables_editor = self
-        tables_editor.current_model_index = model_index
+        # Stuff *model_index* into *bom_gui* (i.e. *self*):
+        bom_gui = self
+        bom_gui.current_model_index = model_index
 
         # If *tracing*, show the *row* and *column*:
         if tracing:
@@ -1299,32 +1339,33 @@ class TablesEditor(QMainWindow):
         assert isinstance(node, Node)
 
         # Let the *node* know it has been clicked:
-        node.clicked(tables_editor, model_index)
+        bom_gui.clicked_model_index = model_index
+        node.clicked(bom_gui)
 
         # *Search* *node*'s get some additional treatment:
         if isinstance(node, Search):
-            main_window = tables_editor.main_window
+            main_window = bom_gui.main_window
             collections_line = main_window.collections_line
             collections_line.setText(node.name)
 
-        # Lastly, tell *tables_editor* to update the GUI:
-        tables_editor.update()
+        # Lastly, tell *bom_gui* to update the GUI:
+        bom_gui.update()
 
-    # TablesEditor.collections_update():
+    # BomGui.collections_update():
     @trace(1)
     def collections_update(self, tracing=""):
         # Perform argument testing:
         assert isinstance(tracing, str)
 
-        # Grab some widgets from *tables_editor*:
-        tables_editor = self
-        main_window = tables_editor.main_window
+        # Grab some widgets from *bom_gui*:
+        bom_gui = self
+        main_window = bom_gui.main_window
         collections_delete = main_window.collections_delete
         collections_line = main_window.collections_line
         collections_new = main_window.collections_new
 
         # Grab the *current_search* object:
-        current_search = tables_editor.current_search
+        current_search = bom_gui.current_search
         if tracing:
             current_search_name = "None" if current_search is None else f"'{current_search.name}'"
             print(f"{tracing}current_search={current_search_name}")
@@ -1393,7 +1434,7 @@ class TablesEditor(QMainWindow):
         if tracing:
             print(f"{tracing}delete_button_enable={delete_button_enable} why='{delete_button_why}'")
 
-    # TablesEditor.current_enumeration_set()
+    # BomGui.current_enumeration_set()
     def current_enumeration_set(self, enumeration, tracing=""):
         # Verify argument types:
         assert isinstance(enumeration, Enumeration) or enumeration is None, \
@@ -1401,26 +1442,26 @@ class TablesEditor(QMainWindow):
         assert isinstance(tracing, str)
 
         # Only do something if we are not in a signal:
-        tables_editor = self
-        if not tables_editor.in_signal:
-            tables_editor.in_signal = True
+        bom_gui = self
+        if not bom_gui.in_signal:
+            bom_gui.in_signal = True
 
             # Perform any tracing requested signal tracing:
-            trace_signals = tables_editor.trace_signals
+            trace_signals = bom_gui.trace_signals
             if trace_signals:
-                print("=>TablesEditor.current_enumeration_set('{0}')".
+                print("=>BomGui.current_enumeration_set('{0}')".
                       format("None" if enumeration is None else enumeration.name))
 
             # Finally, set the *current_enumeration*:
-            tables_editor.current_enumeration = enumeration
+            bom_gui.current_enumeration = enumeration
 
             # Wrap up any requested tracing:
             if trace_signals:
-                print("<=TablesEditor.current_enumeration_set('{0}')\n".
+                print("<=BomGui.current_enumeration_set('{0}')\n".
                       format("None" if enumeration is None else enumeration.name))
-            tables_editor.in_signal = False
+            bom_gui.in_signal = False
 
-    # TablesEditor.current_parameter_set()
+    # BomGui.current_parameter_set()
     def current_parameter_set(self, parameter, tracing=""):
         # Verify argument types:
         assert isinstance(parameter, Parameter) or parameter is None
@@ -1429,13 +1470,13 @@ class TablesEditor(QMainWindow):
         # Perform any requested *tracing*:
         if tracing:
             name = "None" if parameter is None else parameter.name
-            print("{0}=>TablesEditor.current_parameter_set(*, '{1}')".format(tracing, name))
+            print("{0}=>BomGui.current_parameter_set(*, '{1}')".format(tracing, name))
 
-        # Set the *current_parameter* in *tables_editor*:
-        tables_editor = self
-        tables_editor.current_parameter = parameter
+        # Set the *current_parameter* in *bom_gui*:
+        bom_gui = self
+        bom_gui.current_parameter = parameter
 
-    # TablesEditor.current_search_set()
+    # BomGui.current_search_set()
     def current_search_set(self, new_current_search, tracing=""):
         # Verify argument types:
         assert isinstance(new_current_search, Search) or new_current_search is None, \
@@ -1443,8 +1484,8 @@ class TablesEditor(QMainWindow):
         assert isinstance(tracing, str)
 
         # Make sure *new_current_search* is in *searches*:
-        tables_editor = self
-        searches = tables_editor.searches
+        bom_gui = self
+        searches = bom_gui.searches
         if new_current_search is not None:
             for search_index, search in enumerate(searches):
                 assert isinstance(search, Search)
@@ -1454,39 +1495,39 @@ class TablesEditor(QMainWindow):
                     break
             else:
                 assert False
-        tables_editor.current_search = new_current_search
+        bom_gui.current_search = new_current_search
 
-    # TablesEditor.current_table_set()
+    # BomGui.current_table_set()
     def current_table_set(self, new_current_table, tracing=""):
         # Verify argument types:
         assert isinstance(new_current_table, Table) or new_current_table is None
         assert isinstance(tracing, str)
 
-        # Stuff *new_current_table* into *tables_editor*:
-        tables_editor = self
+        # Stuff *new_current_table* into *bom_gui*:
+        bom_gui = self
         if new_current_table is not None:
-            tables = tables_editor.tables
+            tables = bom_gui.tables
             for table in tables:
                 if table is new_current_table:
                     break
             else:
                 assert False, "table '{0}' not in tables list".format(new_current_table.name)
-        tables_editor.current_table = new_current_table
+        bom_gui.current_table = new_current_table
 
 
-    # TablesEditor.current_update()
+    # BomGui.current_update()
     def current_update(self, tracing=""):
         # Verify argument types:
         assert isinstance(tracing, str)
 
         # Make sure *current_table* is valid (or *None*):
-        tables_editor = self
-        tables = tables_editor.tables
+        bom_gui = self
+        tables = bom_gui.tables
         tables_size = len(tables)
         current_table = None
         if tables_size >= 1:
             # Figure out if *current_table* is in *tables):
-            current_table = tables_editor.current_table
+            current_table = bom_gui.current_table
             if current_table is not None:
                 for table_index, table in enumerate(tables):
                     # print("Table[{0}]: '{1}'".format(table_index, table.name))
@@ -1499,7 +1540,7 @@ class TablesEditor(QMainWindow):
                     current_table = None
         if current_table is None and tables_size >= 1:
             current_table = tables[0]
-        tables_editor.current_table = current_table
+        bom_gui.current_table = current_table
         if tracing:
             print("{0}current_table='{1}'".
                   format(tracing, "None" if current_table is None else current_table.name))
@@ -1512,7 +1553,7 @@ class TablesEditor(QMainWindow):
             parameters = current_table.parameters
             parameters_size = len(parameters)
             if parameters_size >= 1:
-                current_parameter = tables_editor.current_parameter
+                current_parameter = bom_gui.current_parameter
                 if current_parameter is not None:
                     for parameter in parameters:
                         assert isinstance(parameter, Parameter)
@@ -1523,13 +1564,13 @@ class TablesEditor(QMainWindow):
                         current_parameter = None
             if current_parameter is None and parameters_size >= 1:
                 current_parameter = parameters[0]
-        tables_editor.current_parameter = current_parameter
+        bom_gui.current_parameter = current_parameter
         if tracing:
             print("{0}current_parameter='{1}'".
                   format(tracing, "None" if current_parameter is None else current_parameter.name))
 
         # Update *parameters* in *parameters_combo_edit*:
-        parameters_combo_edit = tables_editor.parameters_combo_edit
+        parameters_combo_edit = bom_gui.parameters_combo_edit
         parameters_combo_edit.items_replace(parameters)
 
         # Make sure *current_enumeration* is valid (or *None*):
@@ -1540,7 +1581,7 @@ class TablesEditor(QMainWindow):
             enumerations = current_parameter.enumerations
             enumerations_size = len(enumerations)
             if enumerations_size >= 1:
-                current_enumeration = tables_editor.current_enumeration
+                current_enumeration = bom_gui.current_enumeration
                 if current_enumeration is not None:
                     for enumeration in enumerations:
                         assert isinstance(enumeration, Enumeration)
@@ -1551,22 +1592,22 @@ class TablesEditor(QMainWindow):
                         current_enumeration = None
                 if current_enumeration is None and enumerations_size >= 1:
                     current_enumeration = enumerations[0]
-        tables_editor.current_enumeration = current_enumeration
+        bom_gui.current_enumeration = current_enumeration
 
         # Make sure that *current_search* is valid (or *None*):
-        # tables_editor.current_search = current_search
+        # bom_gui.current_search = current_search
 
         if tracing:
             print("{0}current_enumeration'{1}'".format(
               tracing, "None" if current_enumeration is None else current_enumeration.name))
 
         # Update *enumerations* into *enumerations_combo_edit*:
-        enumerations_combo_edit = tables_editor.enumerations_combo_edit
+        enumerations_combo_edit = bom_gui.enumerations_combo_edit
         enumerations_combo_edit.items_replace(enumerations)
 
         # Make sure that *current_search* is valid (or *None*):
-        searches = tables_editor.searches
-        current_search = tables_editor.current_search
+        searches = bom_gui.searches
+        current_search = bom_gui.current_search
         if current_search is None:
             if len(searches) >= 1:
                 current_search = searches[0]
@@ -1577,35 +1618,66 @@ class TablesEditor(QMainWindow):
             else:
                 # *current_search* is not in *searches* and must be invalid:
                 current_search = None
-        tables_editor.current_search = current_search
+        bom_gui.current_search = current_search
         if tracing:
             print("{0}current_search='{1}'".
                   format(tracing, "None" if current_search is None else current_search.name))
 
-    # TablesEditor.data_update()
+    # BomGui.data_update()
     def data_update(self, tracing=""):
         # Verify artument types:
         assert isinstance(tracing, str)
 
-        # Perform any tracing requested by *tables_editor* (i.e. *self*):
-        tables_editor = self
+        # Perform any tracing requested by *bom_gui* (i.e. *self*):
+        bom_gui = self
 
         # Make sure that the *current_table*, *current_parameter*, and *current_enumeration*
-        # in *tables_editor* are valid:
-        tables_editor.current_update()
+        # in *bom_gui* are valid:
+        bom_gui.current_update()
 
-    # TablesEditor.enumeration_changed()
+    # BomGui.directory_clicked():
+    def directory_clicked(self, directory):
+        # Verify argument types:
+        assert isinstance(directory, Directory)
+
+        bom_gui.current_search = None
+
+    # BomGui.end_rows_insert():
+    @trace(1)
+    def end_rows_insert(self, tracing=""):
+        # Verify argument types:
+        assert isinstance(tracing, str)
+    
+        # Inform the *tree_model* associated with *bom_gui* (i.e. *self*) that we are
+        # done inserting rows:
+        bom_gui = self
+        tree_model = bom_gui.tree_model
+        tree_model.endInsertRows()
+
+    # BomGui.end_rows_remove():
+    @trace(1)
+    def end_rows_remove(self, tracing=""):
+        # Verify argument types:
+        assert isinstance(tracing, str)
+    
+        # Inform the *tree_model* associated with *bom_gui* (i.e. *self*) that we are
+        # done inserting rows:
+        bom_gui = self
+        tree_model = bom_gui.tree_model
+        tree_model.endRemoveRows()
+
+    # BomGui.enumeration_changed()
     def enumeration_changed(self):
         assert False
 
-    # TablesEditor.enumeration_comment_get()
+    # BomGui.enumeration_comment_get()
     def enumeration_comment_get(self, enumeration, tracing=""):
         # Verify argument types:
         assert isinstance(enumeration, Enumeration) or enumeration is None
         assert isinstance(tracing, str)
 
         # Perform any requested *tracing*:
-        # tables_editor = self
+        # bom_gui = self
 
         # Extract the comment *text* associated with *enumeration*:
         position = 0
@@ -1620,7 +1692,7 @@ class TablesEditor(QMainWindow):
 
         return text, position
 
-    # TablesEditor.enumeration_comment_set()
+    # BomGui.enumeration_comment_set()
     def enumeration_comment_set(self, enumeration, text, position, tracing=""):
         # Verify argument types:
         assert isinstance(enumeration, Enumeration) or enumeration is None
@@ -1629,7 +1701,7 @@ class TablesEditor(QMainWindow):
         assert isinstance(tracing, str)
 
         # Perform any requested *tracing*:
-        # tables_editor = self
+        # bom_gui = self
 
         # Stuff *text* into *enumeration*:
         if enumeration is not None:
@@ -1640,23 +1712,23 @@ class TablesEditor(QMainWindow):
             comment.lines = text.split('\n')
             comment.position = position
 
-    # TablesEditor.enumeration_is_active():
+    # BomGui.enumeration_is_active():
     def enumeration_is_active(self):
-        tables_editor = self
-        tables_editor.current_update()
-        current_parameter = tables_editor.current_parameter
+        bom_gui = self
+        bom_gui.current_update()
+        current_parameter = bom_gui.current_parameter
         return current_parameter is not None and current_parameter.type == "enumeration"
 
-    # TablesEditor.enumeration_new()
+    # BomGui.enumeration_new()
     def enumeration_new(self, name):
         # Verify argument types:
         assert isinstance(name, str)
 
-        # Perform any tracing requested by *tables_editor* (i.e. *self*):
-        tables_editor = self
-        trace_level = tables_editor.trace_level
+        # Perform any tracing requested by *bom_gui* (i.e. *self*):
+        bom_gui = self
+        trace_level = bom_gui.trace_level
         if trace_level >= 1:
-            print("=>TablesEditor.enumeration_new('{0}')".format(name))
+            print("=>BomGui.enumeration_new('{0}')".format(name))
 
         # Create *new_parameter* named *name*:
         comments = [EnumerationComment(language="EN", lines=list())]
@@ -1664,36 +1736,36 @@ class TablesEditor(QMainWindow):
 
         # Wrap up any requested tracing and return *new_parameter*:
         if trace_level >= 1:
-            print("<=TablesEditor.enumeration_new('{0}')=>'{1}'".format(new_enumeration.name))
+            print("<=BomGui.enumeration_new('{0}')=>'{1}'".format(new_enumeration.name))
         return new_enumeration
 
-    # TablesEditor.enumerations_update()
+    # BomGui.enumerations_update()
     def enumerations_update(self, enumeration=None, tracing=""):
         # Verify argument types:
         assert isinstance(enumeration, Enumeration) or enumeration is None
         assert isinstance(tracing, str)
 
-        # Perform any tracing requested by *tables_editor* (i.e. *self*):
-        tables_editor = self
+        # Perform any tracing requested by *bom_gui* (i.e. *self*):
+        bom_gui = self
 
         # Make sure that the *current_table*, *current_parameter*, and *current_enumeration*
-        # in *tables_editor* are valid:
-        tables_editor.current_update()
+        # in *bom_gui* are valid:
+        bom_gui.current_update()
 
         # Grab some widgets from *main_window*:
-        main_window = tables_editor.main_window
+        main_window = bom_gui.main_window
         table_name = main_window.enumerations_table_name
         parameter_name = main_window.enumerations_parameter_name
         combo = main_window.enumerations_combo
 
         # Upbdate the *table_name* and *parameter_name* widgets:
-        current_table = tables_editor.current_table
+        current_table = bom_gui.current_table
         table_name.setText("" if current_table is None else current_table.name)
-        current_parameter = tables_editor.current_parameter
+        current_parameter = bom_gui.current_parameter
         parameter_name.setText("" if current_parameter is None else current_parameter.name)
 
         # Empty out *enumeration_combo* widgit:
-        main_window = tables_editor.main_window
+        main_window = bom_gui.main_window
         while combo.count() > 0:
             combo.removeItem(0)
 
@@ -1710,33 +1782,33 @@ class TablesEditor(QMainWindow):
                 combo.addItem(enumeration_name)
 
         # Update the *enumerations_combo_edit*:
-        tables_editor.enumerations_combo_edit.gui_update()
+        bom_gui.enumerations_combo_edit.gui_update()
 
-    # TablesEditor.filters_cell_clicked():
+    # BomGui.filters_cell_clicked():
     def filters_cell_clicked(self, row, column):
         # Verify argument types:
         assert isinstance(row, int)
         assert isinstance(column, int)
 
         # Perform any requested signal tracing:
-        tables_editor = self
+        bom_gui = self
 
         # Just update the filters tab:
-        tables_editor.filters_update()
+        bom_gui.filters_update()
 
-    # TablesEditor.filters_down_button_clicked():
+    # BomGui.filters_down_button_clicked():
     def filters_down_button_clicked(self):
-        tables_editor = self
-        trace_signals = tables_editor.trace_signals
+        bom_gui = self
+        trace_signals = bom_gui.trace_signals
 
         # Note: The code here is very similar to the code in
-        # *TablesEditor.filters_down_button_clicked*:
+        # *BomGui.filters_down_button_clicked*:
 
-        # Grab some values from *tables_editor*:
-        tables_editor.current_update()
-        main_window = tables_editor.main_window
+        # Grab some values from *bom_gui*:
+        bom_gui.current_update()
+        main_window = bom_gui.main_window
         filters_table = main_window.filters_table
-        current_search = tables_editor.current_search
+        current_search = bom_gui.current_search
 
         # If there is no *current_search* there is nothing to be done:
         if current_search is not None:
@@ -1753,7 +1825,7 @@ class TablesEditor(QMainWindow):
                 # We can only move a filter up if it is not the last one:
                 if current_row_index < last_row_index:
                     # Save all the stuff we care about from *filters_table* back into *filters*:
-                    tables_editor.filters_unload()
+                    bom_gui.filters_unload()
 
                     # Swap *filter_at* with *filter_before*:
                     filter_after = filters[current_row_index + 1]
@@ -1762,18 +1834,18 @@ class TablesEditor(QMainWindow):
                     filters[current_row_index] = filter_after
 
                     # Force the *filters_table* to be updated:
-                    tables_editor.filters_update()
+                    bom_gui.filters_update()
                     filters_table.setCurrentCell(current_row_index + 1, 0,
                                                  QItemSelectionModel.SelectCurrent)
 
-    # TablesEditor.filters_unload()
+    # BomGui.filters_unload()
     def filters_unload(self, tracing=""):
         # Verify argument types:
         assert isinstance(tracing, str)
 
-        tables_editor = self
-        tables_editor.current_update()
-        current_search = tables_editor.current_search
+        bom_gui = self
+        bom_gui.current_update()
+        current_search = bom_gui.current_search
         if current_search is not None:
             filters = current_search.filters
             for filter in filters:
@@ -1791,20 +1863,20 @@ class TablesEditor(QMainWindow):
                     select = select_item.text()
                 filter.select = select
 
-    # TablesEditor.filters_up_button_clicked():
+    # BomGui.filters_up_button_clicked():
     def filters_up_button_clicked(self):
         # Perform any requested signal tracing:
-        tables_editor = self
-        trace_signals = tables_editor.trace_signals
+        bom_gui = self
+        trace_signals = bom_gui.trace_signals
 
         # Note: The code here is very similar to the code in
-        # *TablesEditor.filters_down_button_clicked*:
+        # *BomGui.filters_down_button_clicked*:
 
-        # Grab some values from *tables_editor*:
-        tables_editor.current_update()
-        main_window = tables_editor.main_window
+        # Grab some values from *bom_gui*:
+        bom_gui.current_update()
+        main_window = bom_gui.main_window
         filters_table = main_window.filters_table
-        current_search = tables_editor.current_search
+        current_search = bom_gui.current_search
 
         # If there is no *current_search* there is nothing to be done:
         if current_search is not None:
@@ -1822,7 +1894,7 @@ class TablesEditor(QMainWindow):
                 # We can only move a filter up if it is not the first one:
                 if current_row_index >= 1:
                     # Save all the stuff we care about from *filters_table* back into *filters*:
-                    tables_editor.filters_unload()
+                    bom_gui.filters_unload()
 
                     # Swap *filter_at* with *filter_before*:
                     filter_before = filters[current_row_index - 1]
@@ -1831,35 +1903,35 @@ class TablesEditor(QMainWindow):
                     filters[current_row_index] = filter_before
 
                     # Force the *filters_table* to be updated:
-                    tables_editor.filters_update()
+                    bom_gui.filters_update()
                     filters_table.setCurrentCell(current_row_index - 1, 0,
                                                  QItemSelectionModel.SelectCurrent)
 
             # if trace_signals:
             #    print(" filters_after={0}".format([filter.parameter.name for filter in filters]))
 
-    # TablesEditor.filters_update()
+    # BomGui.filters_update()
     def filters_update(self, tracing=""):
         # Verify argument types:
         assert isinstance(tracing, str)
 
         # Empty out *filters_table* widget:
-        tables_editor = self
-        main_window = tables_editor.main_window
+        bom_gui = self
+        main_window = bom_gui.main_window
         filters_table = main_window.filters_table
         filters_table.clearContents()
         filters_table.setColumnCount(4)
         filters_table.setHorizontalHeaderLabels(["Parameter", "Type", "Use", "Select"])
 
         # Only fill in *filters_table* if there is a valid *current_search*:
-        tables_editor.current_update()
-        current_search = tables_editor.current_search
+        bom_gui.current_update()
+        current_search = bom_gui.current_search
         if current_search is None:
             # No *current_search* so there is nothing to show:
             filters_table.setRowCount(0)
         else:
             # Let's update the *filters* and load them into the *filters_table* widget:
-            # current_search.filters_update(tables_editor)
+            # current_search.filters_update(bom_gui)
             filters = current_search.filters
             filters_size = len(filters)
             filters_table.setRowCount(filters_size)
@@ -1928,9 +2000,9 @@ class TablesEditor(QMainWindow):
             #    filters_up.setEnabled(False)
 
         # Remember to unload the filters before changing from the [Filters] tab:
-        tables_editor.tab_unload = TablesEditor.filters_unload
+        bom_gui.tab_unload = BomGui.filters_unload
 
-    # TablesEditor.filter_use_clicked()
+    # BomGui.filter_use_clicked()
     def filter_use_clicked(self, use_item, filter, row, column):
         # Verify argument types:
         assert isinstance(use_item, QTableWidgetItem)
@@ -1941,14 +2013,14 @@ class TablesEditor(QMainWindow):
         # FIXME: This routine probably no longer used!!!
 
         # Do nothing if we are already in a signal:
-        tables_editor = self
-        if not tables_editor.in_signal:
-            tables_editor.in_signal = True
+        bom_gui = self
+        if not bom_gui.in_signal:
+            bom_gui.in_signal = True
 
             # Perform an requested signal tracing:
-            trace_signals = tables_editor.trace_signals
+            trace_signals = bom_gui.trace_signals
             if trace_signals:
-                print("=>TablesEditor.filter_use_clicked(*, '{0}', {1}, {2})".
+                print("=>BomGui.filter_use_clicked(*, '{0}', {1}, {2})".
                       format(filter.parameter.name, row, column))
 
             check_state = use_item.checkState()
@@ -1968,41 +2040,41 @@ class TablesEditor(QMainWindow):
             # Wrap up any signal tracing:
             if trace_signals:
                 print("parameter check state={0}".format(result))
-                print("<=TablesEditor.filter_use_clicked(*, '{0}', {1}, {2})\n".
+                print("<=BomGui.filter_use_clicked(*, '{0}', {1}, {2})\n".
                       format(filter.parameter.name, row, column))
-            tables_editor.in_signal = False
+            bom_gui.in_signal = False
 
-    # TablesEditor.find_update():
+    # BomGui.find_update():
     def find_update(self, tracing=""):
         # Verify argument types:
         assert isinstance(tracing, str)
 
-        tables_editor = self
-        main_window = tables_editor.main_window
+        bom_gui = self
+        main_window = bom_gui.main_window
         find_tabs = main_window.find_tabs
         find_tabs_index = find_tabs.currentIndex()
         if find_tabs_index == 0:
-            tables_editor.searches_update()
+            bom_gui.searches_update()
         elif find_tabs_index == 1:
-            tables_editor.filters_update()
+            bom_gui.filters_update()
         elif find_tabs_index == 2:
-            tables_editor.results_update()
+            bom_gui.results_update()
         else:
             assert False
 
-    # TablesEditor.import_bind_clicked():
+    # BomGui.import_bind_clicked():
     def import_bind_button_clicked(self):
         # Perform any requested signal tracing:
-        tables_editor = self
-        trace_signals = tables_editor.trace_signals
+        bom_gui = self
+        trace_signals = bom_gui.trace_signals
 
-        # Update *current_table* an *parameters* from *tables_editor*:
-        tables_editor.current_update()
-        current_table = tables_editor.current_table
+        # Update *current_table* an *parameters* from *bom_gui*:
+        bom_gui.current_update()
+        current_table = bom_gui.current_table
         if current_table is not None:
             parameters = current_table.parameters
-            headers = tables_editor.import_headers
-            column_triples = tables_editor.import_column_triples
+            headers = bom_gui.import_headers
+            column_triples = bom_gui.import_column_triples
             for column_index, triples in enumerate(column_triples):
                 header = headers[column_index]
                 if len(triples) >= 1:
@@ -2020,91 +2092,91 @@ class TablesEditor(QMainWindow):
                                               csv_index=column_index, comments=comments)
                         parameters.append(parameter)
 
-            tables_editor.update()
+            bom_gui.update()
 
-    # TablesEditor.import_file_line_changed():
+    # BomGui.import_file_line_changed():
     def import_csv_file_line_changed(self, text):
         # Verify argument types:
         assert isinstance(text, str)
 
-        tables_editor = self
-        in_signal = tables_editor.in_signal
+        bom_gui = self
+        in_signal = bom_gui.in_signal
         if not in_signal:
-            tables_editor.in_signal = True
+            bom_gui.in_signal = True
 
             # Perform any requested signal tracing:
-            trace_signals = tables_editor.trace_signals
+            trace_signals = bom_gui.trace_signals
             if trace_signals:
-                print("=>TablesEditor.import_csv_file_line_changed('{0}')".format(text))
+                print("=>BomGui.import_csv_file_line_changed('{0}')".format(text))
 
             # Make sure *current_table* is up-to-date:
-            # tables_editor.current_update()
-            # current_table = tables_editor.current_table
+            # bom_gui.current_update()
+            # current_table = bom_gui.current_table
 
             # Read *csv_file_name* out of the *import_csv_file_line* widget and stuff into *table*:
             # if current_table is not None:
-            #     main_window = tables_editor.main_window
+            #     main_window = bom_gui.main_window
             #     import_csv_file_line = main_window.import_csv_file_line
             #     xxx = import_csv_file_line.text()
             #     print("xxx='{0}' text='{1}'".format(xxx, text))
             #    current_table.csv_file_name = csv_file_name
 
             # Force an update:
-            # tables_editor.update()
+            # bom_gui.update()
 
             # Wrap up any requested signal tracing:
             if trace_signals:
-                print("<=TablesEditor.import_csv_file_line_changed('{0}')\n".format(text))
-            tables_editor.in_signal = False
+                print("<=BomGui.import_csv_file_line_changed('{0}')\n".format(text))
+            bom_gui.in_signal = False
 
-    # TablesEditor.parameter_default_changed():
+    # BomGui.parameter_default_changed():
     def parameter_csv_changed(self, new_csv):
         # Verify argument types:
         assert isinstance(new_csv, str)
 
-        # Perform any tracing requested by *tables_editor* (i.e. *self*):
-        tables_editor = self
-        in_signal = tables_editor.in_signal
+        # Perform any tracing requested by *bom_gui* (i.e. *self*):
+        bom_gui = self
+        in_signal = bom_gui.in_signal
         if not in_signal:
-            tables_editor.in_signal = True
+            bom_gui.in_signal = True
 
             # Perform any requested *tracing*:
-            trace_signals = tables_editor.trace_signals
+            trace_signals = bom_gui.trace_signals
 
             # Stuff *new_csv* into *current_parameter* (if possible):
-            tables_editor.current_parameter()
-            current_parameter = tables_editor.current_parameter
+            bom_gui.current_parameter()
+            current_parameter = bom_gui.current_parameter
             if current_parameter is not None:
                 current_parameter.csv = new_csv
 
-            tables_editor.update()
+            bom_gui.update()
             # Wrap up any requested signal tracing:
             if trace_signals:
-                print("=>TablesEditor.parameter_csv_changed('{0}')\n".format(new_csv))
-                tables_editor.in_signal = False
+                print("=>BomGui.parameter_csv_changed('{0}')\n".format(new_csv))
+                bom_gui.in_signal = False
 
-    # TablesEditor.parameter_default_changed():
+    # BomGui.parameter_default_changed():
     def parameter_default_changed(self, new_default):
         # Verify argument types:
         assert isinstance(new_default, str)
 
-        # Perform any tracing requested by *tables_editor* (i.e. *self*):
-        tables_editor = self
-        trace_level = tables_editor.trace_level
+        # Perform any tracing requested by *bom_gui* (i.e. *self*):
+        bom_gui = self
+        trace_level = bom_gui.trace_level
         trace_level = 1
         if trace_level >= 1:
-            print("=>TablesEditor.parameter_default_changed('{0}')".format(new_default))
+            print("=>BomGui.parameter_default_changed('{0}')".format(new_default))
 
         # Stuff *new_default* into *current_parameter* (if possible):
-        current_parameter = tables_editor.current_parameter
+        current_parameter = bom_gui.current_parameter
         if current_parameter is not None:
             current_parameter.default = new_default
 
         # Wrap up any requested tracing:
         if trace_level >= 1:
-            print("<=TablesEditor.parameter_default_changed('{0}')\n".format(new_default))
+            print("<=BomGui.parameter_default_changed('{0}')\n".format(new_default))
 
-    # TablesEditor.parameter_comment_get():
+    # BomGui.parameter_comment_get():
     def parameter_comment_get(self, parameter, tracing=""):
         # Verify argument types:
         assert isinstance(parameter, Parameter) or parameter is None
@@ -2127,7 +2199,7 @@ class TablesEditor(QMainWindow):
         # Return *text* and *position*:
         return text, position
 
-    # TablesEditor.parameter_comment_set():
+    # BomGui.parameter_comment_set():
     def parameter_comment_set(self, parameter, text, position, tracing=""):
         # Verify argument types:
         assert isinstance(parameter, Parameter) or parameter is None
@@ -2136,7 +2208,7 @@ class TablesEditor(QMainWindow):
         assert isinstance(tracing, str)
 
         # Perform any requested *tracing*:
-        tables_editor = self
+        bom_gui = self
 
         # Stuff *text* into *parameter*:
         if parameter is not None:
@@ -2148,33 +2220,33 @@ class TablesEditor(QMainWindow):
             comment.position = position
 
         if tracing:
-            main_window = tables_editor.main_window
+            main_window = bom_gui.main_window
             comment_text = main_window.parameters_comment_text
             cursor = comment_text.textCursor()
             actual_position = cursor.position()
             print("{0}position={1}".format(tracing, actual_position))
 
-    # TablesEditor.parameter_is_active():
+    # BomGui.parameter_is_active():
     def parameter_is_active(self):
-        tables_editor = self
-        tables_editor.current_update()
+        bom_gui = self
+        bom_gui.current_update()
         # We can only create/edit parameters when there is an active *current_table*:
-        return tables_editor.current_table is not None
+        return bom_gui.current_table is not None
 
-    # TablesEditor.parameter_long_changed():
+    # BomGui.parameter_long_changed():
     def parameter_long_changed(self, new_long_heading):
         # Verify argument types:
         assert isinstance(new_long_heading, str)
 
         # Only do something if we are not already in a signal:
-        tables_editor = self
-        in_signal = tables_editor.in_signal
+        bom_gui = self
+        in_signal = bom_gui.in_signal
         if not in_signal:
-            tables_editor.in_signal = True
-            trace_signals = tables_editor.trace_signals
+            bom_gui.in_signal = True
+            trace_signals = bom_gui.trace_signals
 
             # Update the correct *parameter_comment* with *new_long_heading*:
-            current_parameter = tables_editor.current_parameter
+            current_parameter = bom_gui.current_parameter
             assert isinstance(current_parameter, Parameter)
             parameter_comments = current_parameter.comments
             assert len(parameter_comments) >= 1
@@ -2183,22 +2255,22 @@ class TablesEditor(QMainWindow):
             parameter_comment.long_heading = new_long_heading
 
             # Update the user interface:
-            tables_editor.update()
+            bom_gui.update()
 
 
-    # TablesEditor.parameters_edit_update():
+    # BomGui.parameters_edit_update():
     def parameters_edit_update(self, parameter=None, tracing=""):
         # Verify argument types:
         assert isinstance(parameter, Parameter) or parameter is None
         assert isinstance(tracing, str)
 
         # Make sure that the *current_table*, *current_parameter*, and *current_enumeration*
-        # in *tables_editor* are valid:
-        tables_editor = self
+        # in *bom_gui* are valid:
+        bom_gui = self
 
-        tables_editor.current_update()
-        current_table = tables_editor.current_table
-        current_parameter = tables_editor.current_parameter
+        bom_gui.current_update()
+        current_table = bom_gui.current_table
+        current_parameter = bom_gui.current_parameter
         parameter = current_parameter
 
         # Initialize all fields to an "empty" value:
@@ -2222,16 +2294,16 @@ class TablesEditor(QMainWindow):
                   format(tracing, "None" if parameter is None else parameter.name, csv))
 
         # Grab some widgets from *main_window*:
-        main_window = tables_editor.main_window
+        main_window = bom_gui.main_window
         csv_line = main_window.parameters_csv_line
         default_line = main_window.parameters_default_line
         optional_check = main_window.parameters_optional_check
         table_name = main_window.parameters_table_name
         type_combo = main_window.parameters_type_combo
 
-        # The top-level update routine should have already called *TablesEditor*.*current_update*
+        # The top-level update routine should have already called *BomGui*.*current_update*
         # to enusure that *current_table* is up-to-date:
-        current_table = tables_editor.current_table
+        current_table = bom_gui.current_table
         table_name.setText("" if current_table is None else current_table.name)
 
         # Set the *csv_line* widget:
@@ -2270,37 +2342,37 @@ class TablesEditor(QMainWindow):
             assert isinstance(comment, ParameterComment)
 
             # Update the headings:
-            tables_editor.parameters_long_set(comment.long_heading)
-            tables_editor.parameters_short_set(comment.short_heading)
+            bom_gui.parameters_long_set(comment.long_heading)
+            bom_gui.parameters_short_set(comment.short_heading)
 
             previous_csv = csv_line.text()
             if csv != previous_csv:
                 csv_line.setText(csv)
 
             # Deal with comment text edit area:
-            tables_editor.current_comment = comment
+            bom_gui.current_comment = comment
             lines = comment.lines
             text = '\n'.join(lines)
 
-            tables_editor.comment_text_set(text)
+            bom_gui.comment_text_set(text)
 
         # Changing the *parameter* can change the enumeration combo box, so update it as well:
-        # tables_editor.enumeration_update()
+        # bom_gui.enumeration_update()
 
         # Update the *tables_combo_edit*:
-        tables_editor.parameters_combo_edit.gui_update()
+        bom_gui.parameters_combo_edit.gui_update()
 
-    # TablesEditor.parameters_long_set():
+    # BomGui.parameters_long_set():
     def parameters_long_set(self, new_long_heading, tracing=""):
         # Verify argument types:
         assert isinstance(new_long_heading, str)
         assert isinstance(tracing, str)
 
-        # Perform any tracing requested by *tables_editor* (i.e. *self*):
-        tables_editor = self
+        # Perform any tracing requested by *bom_gui* (i.e. *self*):
+        bom_gui = self
 
         # Stuff *new_long_heading* into *current_parameter*:
-        current_parameter = tables_editor.current_parameter
+        current_parameter = bom_gui.current_parameter
         if current_parameter is None:
             new_long_heading = ""
         else:
@@ -2309,13 +2381,13 @@ class TablesEditor(QMainWindow):
 
         # Now update the user interface to shove *new_long_heading* into the *parameter_long_line*
         # widget:
-        main_window = tables_editor.main_window
+        main_window = bom_gui.main_window
         long_line = main_window.parameters_long_line
         previous_long_heading = long_line.text()
         if previous_long_heading != new_long_heading:
             long_line.setText(new_long_heading)
 
-    # TablesEditor.parameter_new():
+    # BomGui.parameter_new():
     def parameter_new(self, name, tracing=""):
         # Verify argument types:
         assert isinstance(name, str)
@@ -2327,33 +2399,33 @@ class TablesEditor(QMainWindow):
                                   csv_index=-1, comments=comments)
         return new_parameter
 
-    # TablesEditor.parameter_optional_clicked():
+    # BomGui.parameter_optional_clicked():
     def parameter_optional_clicked(self):
-        # Perform any tracing requested by *tables_editor* (i.e. *self*):
-        tables_editor = self
+        # Perform any tracing requested by *bom_gui* (i.e. *self*):
+        bom_gui = self
 
-        current_parameter = tables_editor.current_parameter
+        current_parameter = bom_gui.current_parameter
         if current_parameter is not None:
-            main_window = tables_editor.main_window
+            main_window = bom_gui.main_window
             parameter_optional_check = main_window.parameter_optional_check
             optional = parameter_optional_check.isChecked()
             current_parameter.optional = optional
 
-    # TablesEditor.parameter_short_changed():
+    # BomGui.parameter_short_changed():
     def parameter_short_changed(self, new_short_heading):
         # Verify argument types:
         assert isinstance(new_short_heading, str)
 
         # Do not do anything when we are already in a signal:
-        tables_editor = self
-        if not tables_editor.in_signal:
-            tables_editor.in_signal = True
+        bom_gui = self
+        if not bom_gui.in_signal:
+            bom_gui.in_signal = True
 
-            # Perform any requested tracing from *tables_editor* (i.e. *self*):
-            trace_signals = tables_editor.trace_signals
+            # Perform any requested tracing from *bom_gui* (i.e. *self*):
+            trace_signals = bom_gui.trace_signals
 
             # Update *current_parameter* to have *new_short_heading*:
-            current_parameter = tables_editor.current_parameter
+            current_parameter = bom_gui.current_parameter
             assert isinstance(current_parameter, Parameter)
             parameter_comments = current_parameter.comments
             assert len(parameter_comments) >= 1
@@ -2362,21 +2434,21 @@ class TablesEditor(QMainWindow):
             parameter_comment.short_heading = new_short_heading
 
             # Update the user interface:
-            tables_editor.update()
+            bom_gui.update()
 
-            tables_editor.in_signal = False
+            bom_gui.in_signal = False
 
-    # TablesEditor.parameters_short_set():
+    # BomGui.parameters_short_set():
     def parameters_short_set(self, new_short_heading, tracing=""):
         # Verify argument types:
         assert isinstance(new_short_heading, str) or new_short_heading is None
         assert isinstance(tracing, str)
 
-        # Perform any tracing requested by *tables_editor* (i.e. *self*):
-        tables_editor = self
+        # Perform any tracing requested by *bom_gui* (i.e. *self*):
+        bom_gui = self
 
         # Stuff *new_short_heading* into *current_parameter*:
-        current_parameter = tables_editor.current_parameter
+        current_parameter = bom_gui.current_parameter
         if new_short_heading is None or current_parameter is None:
             new_short_heading = ""
         else:
@@ -2384,38 +2456,38 @@ class TablesEditor(QMainWindow):
 
         # Now update the user interface to show *new_short_heading* into the *parameter_short_line*
         # widget:
-        main_window = tables_editor.main_window
+        main_window = bom_gui.main_window
         short_line = main_window.parameters_short_line
         previous_short_heading = short_line.text()
         if previous_short_heading != new_short_heading:
             short_line.setText(new_short_heading)
 
-    # TablesEditor.parameters_type_changed():
+    # BomGui.parameters_type_changed():
     def parameters_type_changed(self):
-        # Perform any requested *signal_tracing* from *tables_editor* (i.e. *self*):
-        tables_editor = self
-        if tables_editor.in_signal == 0:
-            tables_editor.in_signal = True
-            current_parameter = tables_editor.current_parameter
-            trace_signals = tables_editor.trace_signals
+        # Perform any requested *signal_tracing* from *bom_gui* (i.e. *self*):
+        bom_gui = self
+        if bom_gui.in_signal == 0:
+            bom_gui.in_signal = True
+            current_parameter = bom_gui.current_parameter
+            trace_signals = bom_gui.trace_signals
             if trace_signals:
-                print("=>TablesEditor.parameters_type_changed('{0}')".
+                print("=>BomGui.parameters_type_changed('{0}')".
                       format(None if current_parameter is None else current_parameter.name))
 
             # Load *type* into *current_parameter*:
             if current_parameter is not None:
-                main_window = tables_editor.main_window
+                main_window = bom_gui.main_window
                 parameters_type_combo = main_window.parameters_type_combo
                 type = parameters_type_combo.currentText().lower()
                 current_parameter.type = type
 
             # Wrap-up any requested *signal_tracing*:
             if trace_signals:
-                print("<=TablesEditor.parameters_type_changed('{0}')\n".
+                print("<=BomGui.parameters_type_changed('{0}')\n".
                       format(None if current_parameter is None else current_parameter.name))
-            tables_editor.in_signal = False
+            bom_gui.in_signal = False
 
-    # TablesEditor.parameters_update():
+    # BomGui.parameters_update():
     def parameters_update(self, tracing=""):
         # Verify argument types:
         assert isinstance(tracing, str)
@@ -2425,9 +2497,9 @@ class TablesEditor(QMainWindow):
             print("{0}=>TabledsEditor.parameters_update".format(tracing))
 
             # Make sure *current_table* is up to date:
-            tables_editor = self
-            tables_editor.current_update()
-            current_table = tables_editor.current_table
+            bom_gui = self
+            bom_gui.current_update()
+            current_table = bom_gui.current_table
 
             # The [import] tab does not do anything if there is no *current_table*:
             if current_table is not None:
@@ -2435,8 +2507,8 @@ class TablesEditor(QMainWindow):
                 if tracing:
                     print("{0}current_table='{1}'".format(tracing, current_table.name))
 
-                # Grab some widgets from *tables_editor*:
-                main_window = tables_editor.main_window
+                # Grab some widgets from *bom_gui*:
+                main_window = bom_gui.main_window
                 # import_bind = main_window.import_bind
                 # import_csv_file_line = main_window.import_csv_file_line
                 # import_read = main_window.import_read
@@ -2501,25 +2573,25 @@ class TablesEditor(QMainWindow):
             #  csv_file_name is not None and os.path.isfile(csv_file_name))
             # import_bind.setEnabled(current_table.import_headers is not None)
 
-    # TablesEditor.quit_button_clicked():
+    # BomGui.quit_button_clicked():
     def quit_button_clicked(self):
-        tables_editor = self
-        print("TablesEditor.quit_button_clicked() called")
-        application = tables_editor.application
+        bom_gui = self
+        print("BomGui.quit_button_clicked() called")
+        application = bom_gui.application
         application.quit()
 
-    # TablesEditor.results_update():
+    # BomGui.results_update():
     def results_update(self, tracing=""):
         # Verify argument types:
         assert isinstance(tracing, str)
 
-        tables_editor = self
-        main_window = tables_editor.main_window
+        bom_gui = self
+        main_window = bom_gui.main_window
         results_table = main_window.results_table
         results_table.clearContents()
 
-        tables_editor.current_update()
-        current_search = tables_editor.current_search
+        bom_gui.current_update()
+        current_search = bom_gui.current_search
         if current_search is not None:
             current_search.filters_refresh()
             filters = current_search.filters
@@ -2566,43 +2638,15 @@ class TablesEditor(QMainWindow):
 
         # Wrap up any requested *tracing*:
         if tracing:
-            print("{0}<=TablesEditor.results_update()".format(tracing))
+            print("{0}<=BomGui.results_update()".format(tracing))
 
-    # TablesEditor.re_table_get():
-    @staticmethod
-    def re_table_get():
-        # Create some regular expressions and stuff the into *re_table*:
-        si_units_re_text = Units.si_units_re_text_get()
-        float_re_text = "-?([0-9]+\\.[0-9]*|\\.[0-9]+)"
-        white_space_text = "[ \t]*"
-        integer_re_text = "-?[0-9]+"
-        integer_re = re.compile(integer_re_text + "$")
-        float_re = re.compile(float_re_text + "$")
-        url_re = re.compile("(https?://)|(//).*$")
-        empty_re = re.compile("-?$")
-        funits_re = re.compile(float_re_text + white_space_text + si_units_re_text + "$")
-        iunits_re = re.compile(integer_re_text + white_space_text + si_units_re_text + "$")
-        range_re = re.compile("[^~]+~[^~]+$")
-        list_re = re.compile("([^,]+,)+[^,]+$")
-        re_table = {
-          "Empty": empty_re,
-          "Float": float_re,
-          "FUnits": funits_re,
-          "Integer": integer_re,
-          "IUnits": iunits_re,
-          "List": list_re,
-          "Range": range_re,
-          "URL": url_re,
-        }
-        return re_table
-
-    # TablesEditor.run():
+    # BomGui.run():
     @trace(1)
     def run(self, tracing=""):
         # Show the *window* and exit when done:
-        tables_editor = self
-        main_window = tables_editor.main_window
-        application = tables_editor.application
+        bom_gui = self
+        main_window = bom_gui.main_window
+        application = bom_gui.application
         # clipboard = application.clipboard()
         # print(f"type(clipboard)='{type(clipboard)}'")
         # assert isinstance(clipboard, QClipboard)
@@ -2611,21 +2655,21 @@ class TablesEditor(QMainWindow):
 
         sys.exit(application.exec_())
 
-    # TablesEditor.save_button_clicked():
+    # BomGui.save_button_clicked():
     def save_button_clicked(self):
         # Perform any requested signal tracing:
-        tables_editor = self
-        trace_signals = tables_editor.trace_signals
+        bom_gui = self
+        trace_signals = bom_gui.trace_signals
         next_tracing = " " if trace_signals else None
         if trace_signals:
-            print("=>TablesEditor.save_button_clicked()")
-        current_tables = tables_editor.current_tables
+            print("=>BomGui.save_button_clicked()")
+        current_tables = bom_gui.current_tables
 
         # Save each *table* in *current_tables*:
         for table in current_tables:
             table.save()
 
-        searches = tables_editor.searches
+        searches = bom_gui.searches
         xml_lines = list()
         xml_lines.append('<?xml version="1.0"?>')
         xml_lines.append('<Searches>')
@@ -2639,36 +2683,73 @@ class TablesEditor(QMainWindow):
         #     searches_xml_file.write(xml_text)
         assert False
 
-    # TablesEditor.schema_update():
+    # BomGui.schema_update():
     def schema_update(self, tracing=""):
         # Verify argument types:
         assert isinstance(tracing, str)
 
-        # Grab some values from *tables_editor* (i.e. *self*):
-        tables_editor = self
-        main_window = tables_editor.main_window
+        # Grab some values from *bom_gui* (i.e. *self*):
+        bom_gui = self
+        main_window = bom_gui.main_window
         schema_tabs = main_window.schema_tabs
         schema_tabs_index = schema_tabs.currentIndex()
         if schema_tabs_index == 0:
-            tables_editor.tables_update()
+            bom_gui.tables_update()
         elif schema_tabs_index == 1:
-            tables_editor.parameters_edit_update()
+            bom_gui.parameters_edit_update()
         elif schema_tabs_index == 2:
-            tables_editor.enumerations_update()
+            bom_gui.enumerations_update()
         else:
             assert False
-        # tables_editor.combo_edit.update()
-        # tables_editor.parameters_update(None)
-        # tables_editor.search_update()
+        # bom_gui.combo_edit.update()
+        # bom_gui.parameters_update(None)
+        # bom_gui.search_update()
 
-    # TablesEditor.searches_comment_get():
+    # BomGui.search_clicked():
+    def search_clicked(self, search, tracing=""):
+        # Verify argument types:
+        assert isinstance(search, Search)
+        assert isinstance(tracing, str)
+
+        # Grab some values from *bom_gui* (i.e. *self*):
+        bom_gui = self
+        clicked_model_index = bom_gui.clicked_model_index
+        main_window = bom_gui.main_window
+        collections_tree = main_window.collections_tree
+        collections_line = main_window.collections_line
+        selection_model = collections_tree.selectionModel()
+
+        # Grab some values from *search*:
+        search_name = search.name
+        table = search.parent
+        url = search.url
+        if tracing:
+            print(f"{tracing}url='{url}' table.name='{table.name}'")
+
+        # Force the *url* to open in the web browser:
+        webbrowser.open(url, new=0, autoraise=True)
+
+        # Remember that *search* and *model_index* are current:
+        bom_gui.current_search = search
+        bom_gui.current_model_index = clicked_model_index
+
+        # Now tediously force the GUI to high-light *model_index*:
+        flags = (QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
+        selection_model.setCurrentIndex(clicked_model_index, flags)
+        flags = (QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
+        selection_model.setCurrentIndex(clicked_model_index, flags)
+
+        # Force *search_name* into the *collections_line* widget:
+        collections_line.setText(search_name)
+
+    # BomGui.searches_comment_get():
     def searches_comment_get(self, search, tracing=""):
         # Verify argument types:
         assert isinstance(search, Search) or search is None
         assert isinstance(tracing, str)
 
         # Perform any requested *tracing*:
-        # tables_editor = self
+        # bom_gui = self
 
         # Extract the comment *text* from *search*:
         if search is None:
@@ -2684,7 +2765,7 @@ class TablesEditor(QMainWindow):
 
         return text, position
 
-    # TablesEditor.searches_comment_set():
+    # BomGui.searches_comment_set():
     def searches_comment_set(self, search, text, position, tracing=""):
         # Verify argument types:
         assert isinstance(search, Search) or search is None
@@ -2693,7 +2774,7 @@ class TablesEditor(QMainWindow):
         assert isinstance(tracing, str)
 
         # Perform any requested *tracing*:
-        # tables_editor = self
+        # bom_gui = self
 
         # Stuff *text* and *position* into *search*:
         if search is not None:
@@ -2704,7 +2785,7 @@ class TablesEditor(QMainWindow):
             comment.lines = text.split('\n')
             comment.position = position
 
-    # TablesEditor.searches_file_save():
+    # BomGui.searches_file_save():
     def searches_file_save(self, file_name, tracing=""):
         # Verify argument types:
         assert isinstance(file_name, str)
@@ -2713,15 +2794,15 @@ class TablesEditor(QMainWindow):
         # Perform any requested *tracing*:
         next_tracing = None if tracing is None else tracing + " "
         if tracing:
-            print("{0}=>TablesEditor.searches_file_save('{1}')".format(tracing, file_name))
+            print("{0}=>BomGui.searches_file_save('{1}')".format(tracing, file_name))
 
         xml_lines = list()
         xml_lines.append('<?xml version="1.0"?>')
         xml_lines.append('<Searches>')
 
         # Sweep through each *search* in *searches* and append the results to *xml_lines*:
-        tables_editor = self
-        searches = tables_editor.searches
+        bom_gui = self
+        searches = bom_gui.searches
         for search in searches:
             search.xml_lines_append(xml_lines, "  ")
 
@@ -2736,9 +2817,9 @@ class TablesEditor(QMainWindow):
 
         # Wrqp up any requested *tracing*:
         if tracing:
-            print("{0}<=TablesEditor.searches_file_save('{1}')".format(tracing, file_name))
+            print("{0}<=BomGui.searches_file_save('{1}')".format(tracing, file_name))
 
-    # TablesEditor.searches_file_load():
+    # BomGui.searches_file_load():
     def searches_file_load(self, xml_file_name, tracing=""):
         # Verify argument types:
         assert isinstance(xml_file_name, str)
@@ -2757,9 +2838,9 @@ class TablesEditor(QMainWindow):
             # Dig dow the next layer of *searches_tree*
             search_trees = list(searches_tree)
 
-            # Grab *searches* from *tables_editor* (i.e. *self*) and empty it out:
-            tables_editor = self
-            searches = tables_editor.searches
+            # Grab *searches* from *bom_gui* (i.e. *self*) and empty it out:
+            bom_gui = self
+            searches = bom_gui.searches
             assert isinstance(searches, list)
             del searches[:]
 
@@ -2767,29 +2848,29 @@ class TablesEditor(QMainWindow):
             for search_tree in search_trees:
                 assert isinstance(search_tree, etree._Element)
                 search = Search(search_tree=search_tree,
-                                tables=tables_editor.tables)
+                                tables=bom_gui.tables)
                 assert False, "Old code"
                 searches.append(search)
 
             # Set *current_search*
-            tables_editor.current_search = searches[0] if len(searches) >= 1 else None
+            bom_gui.current_search = searches[0] if len(searches) >= 1 else None
 
-    # TablesEditor.searches_is_active():
+    # BomGui.searches_is_active():
     def searches_is_active(self):
-        tables_editor = self
-        tables_editor.current_update()
+        bom_gui = self
+        bom_gui.current_update()
         # We can only edit searches if there is there is an active *current_table8:
-        return tables_editor.current_table is not None
+        return bom_gui.current_table is not None
 
-    # TablesEditor.searches_new():
+    # BomGui.searches_new():
     def searches_new(self, name, tracing=""):
         # Verify argument types:
         assert isinstance(name, str)
         assert isinstance(tracing, str)
 
-        tables_editor = self
-        tables_editor.current_update()
-        current_table = tables_editor.current_table
+        bom_gui = self
+        bom_gui.current_update()
+        current_table = bom_gui.current_table
 
         # Create *serach* with an empty English *serach_comment*:
         search_comment = SearchComment(language="EN", lines=list())
@@ -2799,47 +2880,47 @@ class TablesEditor(QMainWindow):
 
         return search
 
-    # TablesEditor.searches_save_button_clicked():
+    # BomGui.searches_save_button_clicked():
     def searches_save_button_clicked(self):
         # Peform an requested signal tracing:
-        tables_editor = self
-        tracing = " " if tables_editor.trace_signals else None
+        bom_gui = self
+        tracing = " " if bom_gui.trace_signals else None
         # next_tracing = None if tracing is None else " "
         if tracing:
-            print("=>TablesEditor.searches_save_button_clicked()".format(tracing))
+            print("=>BomGui.searches_save_button_clicked()".format(tracing))
 
         # Write out the searches to *file_name*:
         # file_name = os.path.join(order_root, "searches.xml")
-        # tables_editor.searches_file_save(file_name)
+        # bom_gui.searches_file_save(file_name)
         assert False
 
         if tracing:
-            print("<=TablesEditor.searches_save_button_clicked()\n".format(tracing))
+            print("<=BomGui.searches_save_button_clicked()\n".format(tracing))
 
-    # TablesEditor.searches_table_changed():
+    # BomGui.searches_table_changed():
     def searches_table_changed(self, new_text):
         # Verify argument types:
         assert isinstance(new_text, str)
 
         # Do nothing if we are already in a signal:
-        tables_editor = self
-        if not tables_editor.in_signal:
-            tables_editor.in_signal = True
+        bom_gui = self
+        if not bom_gui.in_signal:
+            bom_gui.in_signal = True
             # Perform any requested *tracing*:
-            trace_signals = tables_editor.trace_signals
+            trace_signals = bom_gui.trace_signals
             next_tracing = " " if trace_signals else None
             if trace_signals:
-                print("=>TablesEditor.searches_table_changed('{0}')".format(new_text))
+                print("=>BomGui.searches_table_changed('{0}')".format(new_text))
 
             # Make sure *current_search* is up to date:
-            tables_editor = self
-            tables_editor.current_update()
-            current_search = tables_editor.current_search
+            bom_gui = self
+            bom_gui.current_update()
+            current_search = bom_gui.current_search
 
             # Find the *table* that matches *new_text* and stuff it into *current_search*:
             if current_search is not None:
                 match_table = None
-                tables = tables_editor.tables
+                tables = bom_gui.tables
                 for table_index, table in enumerate(tables):
                     assert isinstance(table, Table)
                     if table.name == new_text:
@@ -2849,27 +2930,27 @@ class TablesEditor(QMainWindow):
 
             # Wrap up any requested *tracing*:
             if trace_signals:
-                print("<=TablesEditor.searches_table_changed('{0}')\n".format(new_text))
-            tables_editor.in_signal = False
+                print("<=BomGui.searches_table_changed('{0}')\n".format(new_text))
+            bom_gui.in_signal = False
 
-    # TablesEditor.searches_update():
+    # BomGui.searches_update():
     def searches_update(self, tracing=""):
         # Verify argument types:
         assert isinstance(tracing, str)
 
         # Make sure that *current_search* is up to date:
-        tables_editor = self
-        tables_editor.current_update()
-        current_search = tables_editor.current_search
+        bom_gui = self
+        bom_gui.current_update()
+        current_search = bom_gui.current_search
 
         # Update *searches_combo_edit*:
-        searches_combo_edit = tables_editor.searches_combo_edit
+        searches_combo_edit = bom_gui.searches_combo_edit
         searches_combo_edit.gui_update()
 
         # Next: Update the table options:
         search_table = None if current_search is None else current_search.table
-        tables = tables_editor.tables
-        main_window = tables_editor.main_window
+        tables = bom_gui.tables
+        main_window = bom_gui.main_window
         searches_table_combo = main_window.searches_table_combo
         searches_table_combo.clear()
         if len(tables) >= 1:
@@ -2882,7 +2963,7 @@ class TablesEditor(QMainWindow):
             if match_index >= 0:
                 searches_table_combo.setCurrentIndex(match_index)
 
-    # TablesEditor.tab_changed():
+    # BomGui.tab_changed():
     def tab_changed(self, new_index):
         # Verify argument types:
         assert isinstance(new_index, int)
@@ -2890,31 +2971,65 @@ class TablesEditor(QMainWindow):
         # Note: *new_index* is only used for debugging.
 
         # Only deal with this siginal if we are not already *in_signal*:
-        tables_editor = self
-        if not tables_editor.in_signal:
+        bom_gui = self
+        if not bom_gui.in_signal:
             # Disable  *nested_signals*:
-            tables_editor.in_signal = True
+            bom_gui.in_signal = True
 
             # Perform any requested signal tracing:
-            trace_signals = tables_editor.trace_signals
+            trace_signals = bom_gui.trace_signals
             next_tracing = " " if trace_signals else None
             if trace_signals:
-                print("=>TablesEditor.tab_changed(*, {0})".format(new_index))
+                print("=>BomGui.tab_changed(*, {0})".format(new_index))
 
             # Deal with clean-up of previous tab (if requested):
-            tab_unload = tables_editor.tab_unload
+            tab_unload = bom_gui.tab_unload
             if callable(tab_unload):
-                tab_unload(tables_editor)
+                tab_unload(bom_gui)
 
             # Perform the update:
-            tables_editor.update()
+            bom_gui.update()
 
             # Wrap up any requested signal tracing and restore *in_signal*:
             if trace_signals:
-                print("<=TablesEditor.tab_changed(*, {0})\n".format(new_index))
-            tables_editor.in_signal = False
+                print("<=BomGui.tab_changed(*, {0})\n".format(new_index))
+            bom_gui.in_signal = False
 
-    # TablesEditor.table_comment_get():
+    # BomGui.table_clicked():
+    def table_clicked(self, table, tracing=""):
+        # Verify argument types:
+        assert isinstance(table, Table)
+        assert isinstance(tracing, str)
+
+        # Grab some values from *BomGui*:
+        bom_gui = self
+        bom_gui.current_search = None
+
+        # Sweep through *tables* to see if *table* (i.e. *self*) is in it:
+        tables = bom_gui.tables
+        for sub_table in tables:
+            if table is sub_table:
+                # We found a match, so we are done searching:
+                break
+        else:
+            # Nope, *table* is not in *tables*, so let's stuff it in:
+            if tracing:
+                print("{0}Before len(tables)={1}".format(tracing, len(tables)))
+            bom_gui.tables_combo_edit.item_append(table)
+            if tracing:
+                print("{0}After len(tables)={1}".format(tracing, len(tables)))
+
+        # Force whatever is visible to be updated:
+        bom_gui.update(tracing=tracing)
+
+        # Make *table* the current one:
+        bom_gui.current_table = table
+        bom_gui.current_parameter = None
+        bom_gui.current_enumeration = None
+        bom_gui.current_comment = None
+        bom_gui.current_search = None
+
+    # BomGui.table_comment_get():
     def table_comment_get(self, table, tracing=""):
         # Verify argument types:
         assert isinstance(table, Table)
@@ -2922,7 +3037,7 @@ class TablesEditor(QMainWindow):
 
         text = ""
         # Perform any requested *tracing*:
-        # tables_editor = self
+        # bom_gui = self
 
         # Extract the comment *text* from *table*:
         if table is not None:
@@ -2934,7 +3049,7 @@ class TablesEditor(QMainWindow):
             position = comment.position
         return text, position
 
-    # TablesEditor.table_comment_set():
+    # BomGui.table_comment_set():
     def table_comment_set(self, table, text, position, tracing=""):
         # Verify argument types:
         assert isinstance(table, Table)
@@ -2943,7 +3058,7 @@ class TablesEditor(QMainWindow):
         assert isinstance(tracing, str)
 
         # Perform any requested *tracing*:
-        # tables_editor = self
+        # bom_gui = self
         # next_tracing = None if tracing is None else tracing + " "
         if tracing:
             print("{0}=>table_comment_set('{1}')".format(tracing, table.name))
@@ -2965,7 +3080,7 @@ class TablesEditor(QMainWindow):
         # The table combo box is always active, so we return *True*:
         return True
 
-    # TablesEditor.table_new():
+    # BomGui.table_new():
     def table_new(self, name, tracing=""):
         # Verify argument types:
         assert isinstance(name, str)
@@ -2979,20 +3094,20 @@ class TablesEditor(QMainWindow):
 
         return table
 
-    # TablesEditor.table_setup():
+    # BomGui.table_setup():
     def table_setup(self, tracing=""):
         # Verify argument types:
         assert isinstance(tracing, str)
 
-        # Perform any tracing requested from *tables_editor* (i.e. *self*):
-        tables_editor = self
+        # Perform any tracing requested from *bom_gui* (i.e. *self*):
+        bom_gui = self
 
-        # Grab the *table* widget and *current_table* from *tables_editor* (i.e. *self*):
-        tables_editor = self
-        main_window = tables_editor.main_window
+        # Grab the *table* widget and *current_table* from *bom_gui* (i.e. *self*):
+        bom_gui = self
+        main_window = bom_gui.main_window
         data_table = main_window.data_table
         assert isinstance(data_table, QTableWidget)
-        current_table = tables_editor.current_table
+        current_table = bom_gui.current_table
 
         # Dispatch on *current_table* depending upon whether it exists or not:
         if current_table is None:
@@ -3009,60 +3124,60 @@ class TablesEditor(QMainWindow):
             data_table.setColumnCount(len(header_labels))
             data_table.setRowCount(1)
 
-    # TablesEditor.tables_update():
+    # BomGui.tables_update():
     def tables_update(self, table=None, tracing=""):
         # Verify argument types:
         assert isinstance(table, Table) or table is None
         assert isinstance(tracing, str)
 
-        # Perform any tracing requested by *tables_editor* (i.e. *self*):
-        tables_editor = self
+        # Perform any tracing requested by *bom_gui* (i.e. *self*):
+        bom_gui = self
 
         # Make sure that the *current_table*, *current_parameter*, and *current_enumeration*
-        # in *tables_editor* are valid:
-        tables_editor.current_update()
+        # in *bom_gui* are valid:
+        bom_gui.current_update()
 
         # Update the *tables_combo_edit*:
-        tables_editor.tables_combo_edit.gui_update()
+        bom_gui.tables_combo_edit.gui_update()
 
-    # TablesEditor.update():
+    # BomGui.update():
     @trace(1)
     def update(self, tracing=""):
         # Verify argument types:
         assert isinstance(tracing, str)
 
         # Perform any requested *tracing*:
-        tables_editor = self
+        bom_gui = self
 
         # Only update the visible tabs based on *root_tabs_index*:
-        main_window = tables_editor.main_window
+        main_window = bom_gui.main_window
         root_tabs = main_window.root_tabs
         root_tabs_index = root_tabs.currentIndex()
         if root_tabs_index == 0:
-            tables_editor.collections_update()
+            bom_gui.collections_update()
         elif root_tabs_index == 1:
-            tables_editor.schema_update()
+            bom_gui.schema_update()
         elif root_tabs_index == 2:
-            tables_editor.parameters_update()
+            bom_gui.parameters_update()
         elif root_tabs_index == 3:
-            tables_editor.find_update()
+            bom_gui.find_update()
         else:
             assert False, "Illegal tab index: {0}".format(root_tabs_index)
 
-    # TablesEditor.search_update():
+    # BomGui.search_update():
     def xxx_search_update(self, tracing=""):
         # Verify argument types:
         assert isinstance(tracing, str)
 
         # Make sure that the *current_table*, *current_parameter*, and *current_enumeration*
-        # in *tables_editor* are valid:
-        tables_editor = self
-        tables_editor.current_update()
+        # in *bom_gui* are valid:
+        bom_gui = self
+        bom_gui.current_update()
 
-        # Grab the *current_table* *Table* object from *tables_editor* (i.e. *self*.)
-        # Grab the *seach_table* widget from *tables_editor* as well:
-        current_table = tables_editor.current_table
-        main_window = tables_editor.main_window
+        # Grab the *current_table* *Table* object from *bom_gui* (i.e. *self*.)
+        # Grab the *seach_table* widget from *bom_gui* as well:
+        current_table = bom_gui.current_table
+        main_window = bom_gui.main_window
         search_table = main_window.search_table
         assert isinstance(search_table, QTableWidget)
 
@@ -3106,11 +3221,11 @@ class TablesEditor(QMainWindow):
                     check_state = Qt.Checked
                 use_item.setCheckState(check_state)
                 # use_item.itemChanged.connect(
-                #  partial(TablesEditor.search_use_clicked, tables_editor, use_item, parameter))
+                #  partial(BomGui.search_use_clicked, bom_gui, use_item, parameter))
                 parameter.use = False
                 search_table.setItem(parameter_index, 1, use_item)
                 search_table.cellClicked.connect(
-                  partial(TablesEditor.search_use_clicked, tables_editor, use_item, parameter))
+                  partial(BomGui.search_use_clicked, bom_gui, use_item, parameter))
 
                 # if parameter.type == "enumeration":
                 #    #combo_box = QComboBox()
@@ -3135,7 +3250,7 @@ class TablesEditor(QMainWindow):
                 search_table.setItem(parameter_index, 2, criteria_item)
 
         # Update the *search_combo_edit*:
-        tables_editor.search_combo_edit.gui_update()
+        bom_gui.search_combo_edit.gui_update()
 
 
 # TreeModel:
@@ -3381,3 +3496,32 @@ class TreeModel(QAbstractItemModel):
 
 if __name__ == "__main__":
     main()
+
+# Qt Designer application Notes:
+# * Use grid layouts for everything.  This easier said than done since the designer
+#   user interface is kind of clunky:
+#   1. Just drop one or more widgets into the area.
+#   2. Using the tree view, select the widgets using left mouse button and [Control] key.
+#   3. Using right mouse button, get a drop-down, and set the grid layout.
+#   4. You are not done until all the widgets with layouts are grids with no red circle
+#      that indicate that now layout is active.
+#
+# Notes on using tab widgets:
+# * Tabs are actually named in the parent tab widget (1 level up.)
+# * To add a tab, hover the mouse over an existing tab, right click mouse, and select
+#   Insert page.
+
+# PySide2 TableView Video: https://www.youtube.com/watch?v=4PkPezdpO90
+# Associatied repo: https://github.com/vfxpipeline/filebrowser
+# class CheckableComboBox(QComboBox):
+#    # once there is a checkState set, it is rendered
+#    # here we assume default Unchecked
+#    def addItem(self, item):
+#        super(CheckableComboBox, self).addItem(item)
+#        item = self.model().item(self.count()-1,0)
+#        item.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
+#        item.setCheckState(QtCore.Qt.Unchecked)
+#
+#    def itemChecked(self, index):
+#        item = self.model().item(i,0)
+#        return item.checkState() == QtCore.Qt.Checked

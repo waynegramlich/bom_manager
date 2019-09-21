@@ -397,6 +397,7 @@ import webbrowser
 # as a .csv file.
 
 # main():
+@trace(1)
 def main(tracing=""):
     # Verify argument types:
     assert isinstance(tracing, str)
@@ -406,12 +407,15 @@ def main(tracing=""):
 
     collections_directories, searches_root, order = command_line_arguments_process()
 
-    collections = Collections("Collections", collections_directories, searches_root, None)
+    gui = Gui()
+
+    collections = Collections("Collections", collections_directories, searches_root, gui)
 
     order.process(collections)
 
     return 0
 
+@trace(1)
 def command_line_arguments_process(tracing=""):
     # Set up command line *parser* and parse it into *parsed_arguments* dict:
     parser = argparse.ArgumentParser(description="Bill of Materials (BOM) Manager.")
@@ -1512,15 +1516,78 @@ class Inventory:
 #
 # {Talk about file system structure here:}
 
+# Gui:
+class Gui:
+    """ Represents some callback interfaces to the GUI if it exists. """
+
+    # Gui.__init__():
+    def __init__(self):
+        # Construct a bunch of regular expressions:
+        si_units_re_text = Units.si_units_re_text_get()
+        float_re_text = "-?([0-9]+\\.[0-9]*|\\.[0-9]+)"
+        white_space_text = "[ \t]*"
+        integer_re_text = "-?[0-9]+"
+        integer_re = re.compile(integer_re_text + "$")
+        float_re = re.compile(float_re_text + "$")
+        url_re = re.compile("(https?://)|(//).*$")
+        empty_re = re.compile("-?$")
+        funits_re = re.compile(float_re_text + white_space_text + si_units_re_text + "$")
+        iunits_re = re.compile(integer_re_text + white_space_text + si_units_re_text + "$")
+        range_re = re.compile("[^~]+~[^~]+$")
+        list_re = re.compile("([^,]+,)+[^,]+$")
+        re_table = {
+          "Empty": empty_re,
+          "Float": float_re,
+          "FUnits": funits_re,
+          "Integer": integer_re,
+          "IUnits": iunits_re,
+          "List": list_re,
+          "Range": range_re,
+          "URL": url_re,
+        }
+        gui = self
+        self.re_table = re_table
+
+    # Gui.begin_rows_insert():
+    def begin_rows_insert_rows(self, node, start_row_index, end_row_index, tracing=""):
+        # Verify argument types:
+        assert isinstance(node, Node)
+        assert isinstance(start_row_index, int)
+        assert isinstance(end_row_index, int)
+        assert isinstance(tracing, str)
+        pass  # Do nothing for the non-GUI version of th code
+
+    # Gui.begin_rows_remove():
+    def begin_rows_remove(self, node, start_row_index, end_row_index, tracing=""):
+        # Verify argument types:
+        assert isinstance(node, Node)
+        assert isinstance(start_row_index, int)
+        assert isinstance(end_row_index, int)
+        assert isinstance(tracing, str)
+        pass  # Do nothing for the non-GUI version of th code
+
+    # Gui.end_rows_remove():
+    def end_rows_remove(self, tracing=""):
+        # Verify argument types:
+        assert isinstance(tracing, str)
+        pass  # Do nothing for the non-GUI version of th code
+
+    # Gui.end_rows_remove():
+    def end_rows_remove(self, tracing=""):
+        # Verify argument types:
+        assert isinstance(tracing, str)
+        pass  # Do nothing for the non-GUI version of th code
+
 # Node:
 class Node:
     """ Represents a single *Node* suitable for use in a *QTreeView* tree. """
 
     # Node.__init__():
-    def __init__(self, name, parent, tracing=""):
+    def __init__(self, name, parent, gui=None, tracing=""):
         # Verify argument types:
         assert isinstance(name, str)
         assert isinstance(parent, Node) or parent is None
+        assert isinstance(gui, Gui) or gui is None
         assert isinstance(tracing, str)
 
         # Do some additional checking for *node* (i.e. *self*):
@@ -1538,9 +1605,16 @@ class Node:
         relative_path = ("" if parent is None
                          else os.path.join(parent.relative_path, Encode.to_file_name(name)))
 
+        # Make sure we have a valid *gui* object:
+        if gui is None:
+            assert collection is not None
+            gui = collection.gui
+        assert isinstance(gui, Gui)
+
         # Load up *node* (i.e. *self*):
         node = self
         node._children = list()              # List of children *Node*'s
+        node.gui = gui
         node.collection = collection         # Parent *Collection* for *node* (if it makes sense)
         node.name = name                     # Human readable name of version of *Node*
         node.parent = parent                 # Parent *Node* (*None* for *Collections*)
@@ -1571,27 +1645,25 @@ class Node:
         # Verify argument types:
         assert isinstance(child, Node)
 
-        # FIXME: This should just call *child_insert*() with a position of 0!!!
+        # FIXME: This should just call *child_insert*() with a position of len(children)!!!
 
         # Grab *children* from *node* (i.e. *self*):
         node = self
         children = node._children
+        gui = node.gui
+        assert isinstance(gui, Gui)
 
-        # Let *tree_model* (if it exists) know that we are about to insert *node* at the
+        # Let *gui* (if it exists) know that we are about to insert *node* at the
         # end of *children* (i.e. at the *insert_row_index*):
-        tree_model = node.tree_model_get()
-        if tree_model is not None:
-            model_index = tree_model.createIndex(0, 0, node)
-            insert_row_index = len(children)
-            tree_model.beginInsertRows(model_index, insert_row_index, insert_row_index)
+        insert_row_index = len(children)
+        gui.begin_rows_insert(node, insert_row_index, insert_row_index)
 
         # Now tack *child* onto the end of *child* and update *child*'s parent field:
         children.append(child)
         child.parent = node
 
-        # Wrap up *tree_model* row insert (if there is a *tree_model*):
-        if tree_model is not None:
-            tree_model.endInsertRows()
+        # Let any *gui* know that the row has been appended:
+        gui.end_rows_insert()
 
     # Node.child_count():
     def child_count(self):
@@ -1613,19 +1685,16 @@ class Node:
         # Only delete if *position* is valid*:
         deleted = False
         if 0 <= position < children_size:
-            # Let *tree_model* know that the delete is about to happend:
-            tree_model = node.tree_model_get()
-            if tree_model is not None:
-                model_index = tree_model.createIndex(0, 0, node)
-                tree_model.beginRemoveRows(model_index, position, position)
+            # Let *gui* know that a row is about to be removed:
+            gui = node.gui
+            gui.begin_rows_remove(node, position, position)
 
             # Perform the actual deletion:
             del children[position]
             deleted = True
 
-            # Wrap up the *tree_model* deletion:
-            if tree_model is not None:
-                tree_model.endRemoveRows()
+            # Let *gui* know that the row has been deleted:
+            gui.end_rows_remove()
 
         # Return whether or not we succussfully *deleted* the child:
         return deleted
@@ -1642,20 +1711,17 @@ class Node:
         children_size = len(children)
         assert 0 <= position <= children_size, f"Bad position={position} size={children_size}"
 
-        # Let *tree_model* (if it exists) know that we are about to insert *node* at the
-        # end of *children* (i.e. at *position*):
-        tree_model = node.tree_model_get()
-        if tree_model is not None:
-            model_index = tree_model.createIndex(0, 0, node)
-            tree_model.beginInsertRows(model_index, position, position)
+        # Let *gui* know that we are about to insert *node* at the of *children*
+        # (i.e. at *position*):
+        gui = node.gui
+        gui.begin_rows_insert(node, position, position)
 
         # Now stuff *child* into *children* at *position*:
         children.insert(position, child)
         child.parent = node
 
-        # Wrap up *tree_model* row insert (if there is a *tree_model*):
-        if tree_model is not None:
-            tree_model.endInsertRows()
+        # Wrap up *gui* row insert:
+        gui.end_rows_Insert()
 
         return True
 
@@ -1665,6 +1731,8 @@ class Node:
         assert isinstance(child, Node)
         assert isinstance(tracing, str)
 
+        # Find the *index* of *child* in *node* (i.e. *self*) and delete it:
+        node = self     
         children = node._children
         assert child in children
         index = children.index(child)
@@ -1678,13 +1746,12 @@ class Node:
         return node._children
 
     # Node.clicked():
-    def clicked(self, tables_editor, model_index, tracing=""):
+    def clicked(self, gui, tracing=""):
         # Verify argument types:
-        assert isinstance(tables_editor, TablesEditor)
-        assert isinstance(model_index, QModelIndex)
+        assert isinstance(gui, Gui)
         assert isinstance(tracing, str)
 
-        # Fail with a more useful error message than "no such method":
+        # Fail with a more useful error message better than "no such method":
         node = self
         assert False, "Node.clicked() needs to be overridden for type ('{0}')".format(type(node))
 
@@ -1714,6 +1781,14 @@ class Node:
     # Node.full_file_name_get():
     def xxx_full_file_name_get(self):
         assert False, "Node.full_file_name_get() needs to be overridden"
+
+    # Node.gui_get():
+    def gui_get(self):
+        # Return *gui* (or *None*) for *node* (i.e. *self*):
+        node = self
+        collection = node.collection
+        gui = None if collection is None else collection.gui
+        return gui
 
     # Node.has_child():
     def has_child(self, sub_node):
@@ -1785,14 +1860,6 @@ class Node:
         children = node._children
         children.sort(key=key_function)
 
-    # Node.tree_model_get():
-    def tree_model_get(self):
-        # Return *tree_model* (or *None*) for *node* (i.e. *self*):
-        node = self
-        collection = node.collection
-        tree_model = None if collection is None else collection.tree_model
-        return tree_model
-
     # Node.row():
     def row(self):
         # Return the index of *node* (i.e. *self*) from its parent children list:
@@ -1836,13 +1903,14 @@ class Directory(Node):
         return False
 
     # Directory.clicked():
-    def clicked(self, tables_editor, model_index, tracing=""):
+    def clicked(self, gui, tracing=""):
         # Verify argument types:
-        assert isinstance(tables_editor, TablesEditor)
-        assert isinstance(model_index, QModelIndex)
+        assert isinstance(gui, Gui)
         assert isinstance(tracing, str)
 
-        tables_editor.current_search = None
+        # Send the clicked event back to the *gui* along with *directory* (i.e. *self*):
+        directory = self
+        gui.directory_clicked(directory)
 
     # Directory.directories_get():
     def directories_get(self):
@@ -1932,17 +2000,18 @@ class Collection(Node):
 
     # Collection.__init__():
     @trace(1)
-    def __init__(self, name, parent, collection_root, searches_root, tracing=""):
+    def __init__(self, name, parent, collection_root, searches_root, gui, tracing=""):
         # Verify argument types:
         assert isinstance(name, str)
         assert isinstance(parent, Collections)
         assert isinstance(collection_root, str)
         assert isinstance(searches_root, str)
+        assert isinstance(gui, Gui)
         assert isinstance(tracing, str)
 
         # Intialize the *Node* super class of *collection* (i.e. *self*).
         collection = self
-        super().__init__(name, parent)
+        super().__init__(name, parent, gui=gui)
         if tracing:
             print(f"{tracing}collection.relative_path='{collection.relative_path}'")
 
@@ -1956,7 +2025,7 @@ class Collection(Node):
         collection.plugin = None
         collection.searches_root = searches_root
         collection.searches_table = dict()
-        collection.tree_model = collections.tree_model
+        collection.gui = collections.gui
 
         # Ensure that *type_letter_get()* returns 'C' for Collection:
         assert collection.type_letter_get() == 'C'
@@ -2163,23 +2232,23 @@ class Collection(Node):
 class Collections(Node):
 
     # Collections.__init__():
-    def __init__(self, name, collection_directories, searches_root, tree_model, tracing=""):
+    @trace(1)
+    def __init__(self, name, collection_directories, searches_root, gui, tracing=""):
         # Verify argument types:
         assert isinstance(name, str)
         assert isinstance(collection_directories, list)
         assert isinstance(searches_root, str)
-        # assert isinstance(tree_model, TreeModel) or tree_model is None
+        assert isinstance(gui, Gui)
         assert isinstance(tracing, str)
-
 
         # Intialize the *Node* super class of *collections* (i.e. *self*):
         collections = self
-        super().__init__(name, None)
+        super().__init__(name, None, gui=gui)
 
         # Stuff some values into *collections*:
         collections.collection_directories = collection_directories
         collections.searches_root = searches_root
-        collections.tree_model = tree_model
+        collections.gui = gui
 
         # Do some *tracing*:
         if tracing:
@@ -2194,7 +2263,7 @@ class Collections(Node):
     # Collections.__str__():
     def __str__(self):
         collections = self
-        return f"Collections('{collections.name}')"
+        return f"Collections('Collections')"
 
     # Collections.actual_parts_lookup():
     @trace(1)
@@ -2251,9 +2320,9 @@ class Collections(Node):
 
         # Extract some values from *collections*:
         collections = self
+        gui = collections.gui            
         collection_directories = collections.collection_directories
         searches_root = collections.searches_root
-        # tree_model = collections.tree_model
         if tracing:
             print(f"{tracing}collection_directories='{collection_directories}'")
             print(f"{tracing}searches_root='{searches_root}'")
@@ -2270,8 +2339,7 @@ class Collections(Node):
             collection_get = entry_point.load()
 
             # Create *collection*:
-            name = "Digi-Key"
-            collection = collection_get(collections, searches_root)
+            collection = collection_get(collections, searches_root, gui)
             # collection = Collection(name, collections, collection_root, searches_root, url_load,
             #                         )
             assert isinstance(collection, Collection)
@@ -2408,43 +2476,14 @@ class Search(Node):
         return False
 
     # Search.clicked()
-    def clicked(self, tables_editor, model_index, tracing=""):
+    def clicked(self, gui, tracing=""):
         # Verify argument types:
-        assert isinstance(tables_editor, TablesEditor)
-        assert isinstance(model_index, QModelIndex)
+        assert isinstance(gui, Gui)
         assert isinstance(tracing, str)
 
-        # Fetch the *url* from *search*:
+        # Send the clicked event back to *gui* along with *search* (i.e. *self*):
         search = self
-        table = search.parent
-        assert isinstance(table, Table)
-        url = search.url
-        assert isinstance(url, str)
-        if tracing:
-            print(f"{tracing}url='{url}' table.name='{table.name}'")
-
-        # Force the *url* to open in the web browser:
-        webbrowser.open(url, new=0, autoraise=True)
-
-        # Remember that *search* and *model_index* are current:
-        tables_editor.current_search = search
-        tables_editor.current_model_index = model_index
-
-        # Get the *selection_model* associated with *collections_tree*:
-        main_window = tables_editor.main_window
-        collections_tree = main_window.collections_tree
-        collections_line = main_window.collections_line
-        selection_model = collections_tree.selectionModel()
-
-        # Now tediously force the GUI to high-light *model_index*:
-        flags = (QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
-        selection_model.setCurrentIndex(model_index, flags)
-        flags = (QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
-        selection_model.setCurrentIndex(model_index, flags)
-
-        # Force *search_title* into the *collections_line* widget:
-        search_name = search.name
-        collections_line.setText(search_name)
+        gui.search_clicked(search)
 
     # Search.comments_append():
     def comments_append(self, comments):
@@ -2966,38 +3005,14 @@ class Table(Node):
         return can_fetch_more
 
     # Table.clicked():
-    def clicked(self, tables_editor, model_index, tracing=""):
+    def clicked(self, gui, tracing=""):
         # Verify argument types:
-        assert isinstance(tables_editor, TablesEditor)
-        assert isinstance(model_index, QModelIndex)
+        assert isinstance(gui, Gui)
         assert isinstance(tracing, str)
 
-        tables_editor.current_search = None
-
-        # Sweep through *tables* to see if *table* (i.e. *self*) is in it:
-        tables = tables_editor.tables
+        # Forward clicked event back to *gui* along with *table* (i.e. *self*):
         table = self
-        for sub_table in tables:
-            if table is sub_table:
-                # We found a match, so we are done searching:
-                break
-        else:
-            # Nope, *table* is not in *tables*, so let's stuff it in:
-            if tracing:
-                print("{0}Before len(tables)={1}".format(tracing, len(tables)))
-            tables_editor.tables_combo_edit.item_append(table)
-            if tracing:
-                print("{0}After len(tables)={1}".format(tracing, len(tables)))
-
-        # Force whatever is visible to be updated:
-        tables_editor.update(tracing=tracing)
-
-        # Make *table* the current one:
-        tables_editor.current_table = table
-        tables_editor.current_parameter = None
-        tables_editor.current_enumeration = None
-        tables_editor.current_comment = None
-        tables_editor.current_search = None
+        gui.table_clicked(table)
 
     # Table.csv_read_and_process():
     def csv_read_and_process(self, csv_directory, bind=False, tracing=""):
@@ -3049,7 +3064,7 @@ class Table(Node):
         # has a count of the number of times that value occured in the column.
 
         # Now sweep through *column_tables* and build *column_triples*:
-        re_table = TablesEditor.re_table_get()
+        re_table = gui.re_table
         column_triples = list()
         for column_index, column_table in enumerate(column_tables):
             # FIXME: Does *column_list* really need to be sorted???!!!!
@@ -3544,7 +3559,6 @@ class Order:
     # listed as well.
 
     # Order.__init__():
-    @trace(1)
     def __init__(self, order_root, cads, pandas, tracing=""):
         """ *Order*: Initialize *self* for an order. """
         # Verify argument types:
@@ -4554,12 +4568,12 @@ class Panda:
     # Panda.__init__():
     def __init__(self, name, tracing=""):
         # Verify argument types:
-        if tracing:
-            print(f"{tracing}=>Panda.__init__('{name}')")
+        assert isinstance(name, str)
+        assert isinstance(tracing, str)
 
-        # Wrap up any argument types:
-        if tracing:
-            print(f"{tracing}<=Panda.__init__('{name}')")
+        # Stuff values into *panda* (i.e. *self*):
+        panda = self
+        panda.name = name
 
 
 # Parameter():
@@ -6961,50 +6975,6 @@ class VendorPart:
 #        text = '\n'.join(xml_lines)
 #        return text
 #
-# class CheckableComboBox(QComboBox):
-#    # once there is a checkState set, it is rendered
-#    # here we assume default Unchecked
-#    def addItem(self, item):
-#        super(CheckableComboBox, self).addItem(item)
-#        item = self.model().item(self.count()-1,0)
-#        item.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
-#        item.setCheckState(QtCore.Qt.Unchecked)
-#
-#    def itemChecked(self, index):
-#        item = self.model().item(i,0)
-#        return item.checkState() == QtCore.Qt.Checked
-
-    # Old Stuff....
-
-    # Read the contents of the file named *xsd_file_name* into *xsd_file_text*:
-    # xsd_file_name = xsd_file_names[0]
-    # with open(xsd_file_name) as xsd_file:
-    #     xsd_file_text = xsd_file.read()
-    #
-    # Parse *xsd_file_text* into *xsd_schema*:
-    # xsd_schema = xmlschema.XMLSchema(xsd_file_text)
-
-    # Iterate across all of the *xml_file_names* and verify that they are valid:
-    # for xml_file_name in xml_file_names:
-    #     with open(xml_file_name) as xml_file:
-    #         xml_file_text = xml_file.read()
-    #     xsd_schema.validate(xml_file_text)
-
-    # Parse the *xsd_file_text* into *xsd_root*:
-    # xsd_root = etree.fromstring(xsd_file_text)
-    # show(xsd_root, "")
-
-    # schema = Schema(xsd_root)
-    # assert schema == schema
-
-    # For debugging:
-    # schema_text = schema.to_string()
-    # with open(os.path.join(order_root, "drills.xsd"), "w") as schema_file:
-    #     schema_file.write(schema_text)
-
-    # Now run the *tables_editor* graphical user interface (GUI):
-    # tables_editor = TablesEditor(xsd_root, schema)
-    # tables_editor.run()
 
 # https://stackoverflow.com/questions/5226091/checkboxes-in-a-combobox-using-pyqt?rq=1
 # https://stackoverflow.com/questions/24961383/how-to-see-the-value-of-pyside-qtcore-qt-itemflag
@@ -7012,23 +6982,6 @@ class VendorPart:
 # https://stackoverflow.com/questions/8422760/combobox-of-checkboxes
 
 
-# Qt Designer application Notes:
-# * Use grid layouts for everything.  This easier said than done since the designer
-#   user interface is kind of clunky:
-#   1. Just drop one or more widgets into the area.
-#   2. Using the tree view, select the widgets using left mouse button and [Control] key.
-#   3. Using right mouse button, get a drop-down, and set the grid layout.
-#   4. You are not done until all the widgets with layouts are grids with no red circle
-#      that indicate that now layout is active.
-#
-# Notes on using tab widgets:
-# * Tabs are actually named in the parent tab widget (1 level up.)
-# * To add a tab, hover the mouse over an existing tab, right click mouse, and select
-#   Insert page.
-
-
-# PySide2 TableView Video: https://www.youtube.com/watch?v=4PkPezdpO90
-# Associatied repo: https://github.com/vfxpipeline/filebrowser
 
 # [Python Virtual Environments](https://realpython.com/python-virtual-environments-a-primer/)
 #
