@@ -38,6 +38,8 @@ lint:
 	flake8 --max-line-length=100 $(BOM_KICAD_PLUGIN)/bom_kicad_plugin/__init__.py
 	flake8 --max-line-length=100 $(BOM_KICAD_PLUGIN)/setup.py
 	flake8 --max-line-length=100 $(BOM_MANAGER)/bom_manager/bom.py
+	flake8 --max-line-length=100 $(BOM_MANAGER)/bom_manager/bom_gui.py
+	flake8 --max-line-length=100 $(BOM_MANAGER)/bom_manager/tracing.py
 	flake8 --max-line-length=100 $(BOM_MANAGER)/bom_manager/__init__.py
 	flake8 --max-line-length=100 $(BOM_MANAGER)/setup.py
 

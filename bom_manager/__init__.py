@@ -1,4 +1,8 @@
-# MIT License
+# # BOM Manager Entry Points
+#
+# This file provides both a GUI and an non-GUI entry point to the BOM Manager.
+#
+# ## MIT License
 #
 # Copyright (c) 2019 Wayne C. Gramlich
 #
@@ -20,15 +24,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from bom_manager import bom
-from bom_manager import bom_gui
+# Import both the *bom* and *bom_gui* modules from the *bom_manager* package:
+from bom_manager import bom, bom_gui
+
 
 # main():
 def main():
+    """Non-GUI entry point for the BOM Manager."""
     # Forward to *bom.main*:
     bom.main()
 
+
 # gui_main():
 def gui_main():
+    """GUI entry point for the BOM Manager."""
     # Forward to *bom_gui.main*:
     bom_gui.main()

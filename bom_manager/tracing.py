@@ -33,15 +33,15 @@
 #        pip install bom_manager
 #
 # ## Code Setup
-# 
+#
 # For each module, add the following `import` to the code:
 #
-#        from bom_manager.tracing import trace
+#        from bom_manager.tracing import trace, trace_level_get, trace_level_set
 #
 # Somewhere early in your code execution (i.e. *main*), the tracer module is enabled by:
 #
 #        global trace_level
-#        trace_level = N
+#        trace_level_set(N)
 #
 # where N is a non-negative integer that specifies the level of tracing detail.
 # The conventional values for *trace_level* are:
@@ -64,14 +64,15 @@
 # you want to trace:
 #
 #        @trace(LEVEL)
-#        def function_or_method(...):
+#        def function_or_method(..., tracing=""):
 #            ...
 #
 # where LEVEL is a number from 0 to 3 matches the trecing level conventiou that
-# you have adopted for you code.
-#
-# If you want to enable additional tracing messages as a function/method is executed,
-# you need to add a *tracing* argument to your function or method:
+# you have adopted for you code.  Any function that has an `@trace(LEVEL)` decorator
+# must have an additional keyword argument `tracing=""`.  This *tracing* keyword
+# argument is used for additional tracing.  The decorator will set the *trace* argument
+# to a non-empty sequence of spaces that can be used to indent tracing messages sprinkled
+# thoughout your code:
 #
 #        @trace(LEVEL)
 #        def function_or_method(..., tracing=""):
@@ -88,7 +89,7 @@
 # Additional control of the tracing messages can also be keyed off the *trace_level* variable.
 # For example:
 #
-#        global trace_level
+#        trace_level = trace_level_get()
 #        ...
 #        if tracing and trace_level >= 11:
 #            print(f"{tracing}This is beyond impossible!!!")
@@ -100,7 +101,7 @@
 # tracing decorator:
 #
 # [Python Tracing Decorator](https://cscheid.net/2017/12/11/minimal-tracing-decorator-python-3.html)
-# 
+#
 # <------------------------------------------- 100 characters -----------------------------------> #
 #
 # ## Coding standards:
@@ -129,14 +130,14 @@
 #     quotes (`"`).  Empty strings are represented as `""`.  Strings with multiple double quotes
 #     can be enclosed in single quotes (e.g. `  f'<Tag foo="{foo}" bar="{bar}"/>'  `.)
 
-import inspect                    # Python object inspection library used by *trace*:
+import inspect     # Python object inspection library used by *trace*:
+import functools   # Clean up some introspection stuff with wrapper:
 
 # This module uses a couple of global variables for easy access:
-global indent, trace_level, tracing
+global trace_level, tracing
 trace_level = 0
 tracing = ""
 
-import functools   # Clean up some introspection stuff with wrapper:
 
 def trace(level):
     def value2text(value):
@@ -149,7 +150,7 @@ def trace(level):
             # We have a *list* and need to set *text* to "[]", "[value0]", or "[value0,...]":
             value_size = len(value)
             if value_size == 0:
-                text="[]"
+                text = "[]"
             else:
                 elipsis = "" if value_size <= 1 else ",..."
                 text = f"{value_size}:[{value2text(value[0])}{elipsis}]"
@@ -157,7 +158,7 @@ def trace(level):
             # We have a *tuple* and need to set *text* to "()", "(value0,)", or "(value0,...)":
             value_size = len(value)
             if value_size == 0:
-                text="(,)"
+                text = "()"
             else:
                 elipsis = "" if value_size <= 1 else "..."
                 text = f"{value_size}({value2text(value[0])}{elipsis}]"
@@ -166,7 +167,7 @@ def trace(level):
             # "{key0: value0,...}":
             value_size = len(value)
             if value_size == 0:
-                text="{}"
+                text = "{}"
             else:
                 elipsis = "" if value_size <= 1 else ",..."
                 for key in value:
@@ -196,24 +197,8 @@ def trace(level):
                 signature = inspect.signature(function)
                 tracing += " "
                 function_name = function.__name__
-                function_type = type(function)
                 arguments_size = len(arguments)
-                keyword_arguments_size = len(keyword_arguments)
                 parameters_values = list(signature.parameters.values())
-                parameters_values_size = len(parameters_values)
-                is_method = inspect.ismethod(function)
-                is_function = inspect.isfunction(function)
-                class_name = fucntion.__class__.__name__ if is_method else "None"
-
-                # print(f"trace_indent={trace_indent}")
-                # print(f"function_name='{function_name}'")
-                # print(f"function_type='{function_type}'")
-                # print(f"arguments_size={arguments_size}")
-                # print(f"keyword_arguments_size={keyword_arguments_size}")
-                # print(f"parameters_values_size={parameters_values_size}")
-                # print(f"is_method={is_method}")
-                # print(f"is_function={is_function}")
-                # print(f"class_name='{class_name}'")
 
                 # Compute a list of *value_texts* for each *parameter_value* in *parameter_values*:
                 value_texts = list()
@@ -258,15 +243,17 @@ def trace(level):
 
                 # Strip off one space from *tracing* and return *results*:
                 tracing = tracing[:-1]
-            
+
             # We are done, so just return *results*:
             return results
         return wrapper
     return decorator_wrapper
 
+
 def trace_level_get():
     global trace_level
     return trace_level
+
 
 def trace_level_set(new_trace_level):
     global trace_level, tracing

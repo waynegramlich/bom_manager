@@ -1,8 +1,6 @@
-#!/usr/bin/env python
-
 # # BOM Manager GUI
 #
-# BOM Manager is a program for managing one or more Bill of Materials.
+# BOM Manager GUI is a Graphial User Interface for managing one or more Bill of Materials.
 #
 # ## License
 #
@@ -77,8 +75,19 @@
 #     can be enclosed in single quotes (e.g. `  f'<Tag foo="{foo}" bar="{bar}"/>'  `.)
 #
 
-from bom_manager.bom import *
-from bom_manager.tracing import trace, trace_level_get
+# These are all of the imports from the parent bom engine module.  All of the types
+# are explicitly listed to make the flake8 linting program happier:
+from bom_manager.bom import (command_line_arguments_process, Collection, Collections, Directory,
+                             Enumeration, EnumerationComment, Filter, Gui, Node, Order,
+                             Parameter, ParameterComment,
+                             Search, SearchComment, Table, TableComment)
+from bom_manager.tracing import trace  # Tracing decorator module:
+import csv                      # Parser for CSV (Comma Separated Values) files
+from functools import partial   # Needed for window events
+import lxml.etree as etree      # Parser for XML files
+import os                       # General Operating system features:
+
+# All of the PySide2 stuff provides the GUI technology used by the GUI.
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtWidgets import (QApplication, QComboBox, QLineEdit, QMainWindow,
                                QPlainTextEdit, QPushButton,
@@ -86,7 +95,12 @@ from PySide2.QtWidgets import (QApplication, QComboBox, QLineEdit, QMainWindow,
 from PySide2.QtCore import (QAbstractItemModel, QCoreApplication, QFile, QItemSelectionModel,
                             QModelIndex, Qt)
 from PySide2.QtGui import (QClipboard,)
+import re                       # Regular expressions
+import sys                      # System utilities
+import webbrowser               # Some tools to send messages to a web browser
 
+
+# main():
 def main(tracing=""):
     collection_directories, searches_root, order = command_line_arguments_process()
 
@@ -646,9 +660,6 @@ class ComboEdit:
         if not bom_gui.in_signal:
             bom_gui.in_signal = True
 
-            # Perform any requested signal tracing:
-            trace_signals = bom_gui.trace_signals
-
             # Grab the *actual_text* and *position* from the *comment_text* widget and stuff
             # both into the comment field of *item*:
             item = combo_edit.current_item_get()
@@ -666,7 +677,6 @@ class ComboEdit:
         # Perform any tracing requested by *combo_edit* (i.e. *self*):
         combo_edit = self
         bom_gui = combo_edit.bom_gui
-        trace_signals = bom_gui.trace_signals
 
         # ...
         bom_gui.in_signal = True
@@ -689,7 +699,6 @@ class ComboEdit:
         # Perform any tracing requested by *combo_edit* (i.e. *self*):
         combo_edit = self
         bom_gui = combo_edit.bom_gui
-        trace_signals = bom_gui.trace_signals
 
         bom_gui.in_signal = True
         combo_edit = self
@@ -1514,7 +1523,6 @@ class BomGui(QMainWindow, Gui):
                 assert False, "table '{0}' not in tables list".format(new_current_table.name)
         bom_gui.current_table = new_current_table
 
-
     # BomGui.current_update()
     def current_update(self, tracing=""):
         # Verify argument types:
@@ -1640,13 +1648,14 @@ class BomGui(QMainWindow, Gui):
         # Verify argument types:
         assert isinstance(directory, Directory)
 
+        bom_gui = self
         bom_gui.current_search = None
 
     # BomGui.end_rows_insert():
     def end_rows_insert(self, tracing=""):
         # Verify argument types:
         assert isinstance(tracing, str)
-    
+
         # Inform the *tree_model* associated with *bom_gui* (i.e. *self*) that we are
         # done inserting rows:
         bom_gui = self
@@ -1657,7 +1666,7 @@ class BomGui(QMainWindow, Gui):
     def end_rows_remove(self, tracing=""):
         # Verify argument types:
         assert isinstance(tracing, str)
-    
+
         # Inform the *tree_model* associated with *bom_gui* (i.e. *self*) that we are
         # done inserting rows:
         bom_gui = self
@@ -1797,7 +1806,6 @@ class BomGui(QMainWindow, Gui):
     # BomGui.filters_down_button_clicked():
     def filters_down_button_clicked(self):
         bom_gui = self
-        trace_signals = bom_gui.trace_signals
 
         # Note: The code here is very similar to the code in
         # *BomGui.filters_down_button_clicked*:
@@ -1865,7 +1873,6 @@ class BomGui(QMainWindow, Gui):
     def filters_up_button_clicked(self):
         # Perform any requested signal tracing:
         bom_gui = self
-        trace_signals = bom_gui.trace_signals
 
         # Note: The code here is very similar to the code in
         # *BomGui.filters_down_button_clicked*:
@@ -1904,9 +1911,6 @@ class BomGui(QMainWindow, Gui):
                     bom_gui.filters_update()
                     filters_table.setCurrentCell(current_row_index - 1, 0,
                                                  QItemSelectionModel.SelectCurrent)
-
-            # if trace_signals:
-            #    print(" filters_after={0}".format([filter.parameter.name for filter in filters]))
 
     # BomGui.filters_update()
     def filters_update(self, tracing=""):
@@ -2064,7 +2068,6 @@ class BomGui(QMainWindow, Gui):
     def import_bind_button_clicked(self):
         # Perform any requested signal tracing:
         bom_gui = self
-        trace_signals = bom_gui.trace_signals
 
         # Update *current_table* an *parameters* from *bom_gui*:
         bom_gui.current_update()
@@ -2241,7 +2244,6 @@ class BomGui(QMainWindow, Gui):
         in_signal = bom_gui.in_signal
         if not in_signal:
             bom_gui.in_signal = True
-            trace_signals = bom_gui.trace_signals
 
             # Update the correct *parameter_comment* with *new_long_heading*:
             current_parameter = bom_gui.current_parameter
@@ -2254,7 +2256,6 @@ class BomGui(QMainWindow, Gui):
 
             # Update the user interface:
             bom_gui.update()
-
 
     # BomGui.parameters_edit_update():
     def parameters_edit_update(self, parameter=None, tracing=""):
@@ -2418,9 +2419,6 @@ class BomGui(QMainWindow, Gui):
         bom_gui = self
         if not bom_gui.in_signal:
             bom_gui.in_signal = True
-
-            # Perform any requested tracing from *bom_gui* (i.e. *self*):
-            trace_signals = bom_gui.trace_signals
 
             # Update *current_parameter* to have *new_short_heading*:
             current_parameter = bom_gui.current_parameter
@@ -2657,10 +2655,6 @@ class BomGui(QMainWindow, Gui):
     def save_button_clicked(self):
         # Perform any requested signal tracing:
         bom_gui = self
-        trace_signals = bom_gui.trace_signals
-        next_tracing = " " if trace_signals else None
-        if trace_signals:
-            print("=>BomGui.save_button_clicked()")
         current_tables = bom_gui.current_tables
 
         # Save each *table* in *current_tables*:
@@ -2789,11 +2783,6 @@ class BomGui(QMainWindow, Gui):
         assert isinstance(file_name, str)
         assert isinstance(tracing, str)
 
-        # Perform any requested *tracing*:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing:
-            print("{0}=>BomGui.searches_file_save('{1}')".format(tracing, file_name))
-
         xml_lines = list()
         xml_lines.append('<?xml version="1.0"?>')
         xml_lines.append('<Searches>')
@@ -2812,10 +2801,6 @@ class BomGui(QMainWindow, Gui):
         # Write out *xml_text* to *file_name*:
         with open(file_name, "w") as xml_file:
             xml_file.write(xml_text)
-
-        # Wrqp up any requested *tracing*:
-        if tracing:
-            print("{0}<=BomGui.searches_file_save('{1}')".format(tracing, file_name))
 
     # BomGui.searches_file_load():
     def searches_file_load(self, xml_file_name, tracing=""):
@@ -2905,10 +2890,6 @@ class BomGui(QMainWindow, Gui):
         if not bom_gui.in_signal:
             bom_gui.in_signal = True
             # Perform any requested *tracing*:
-            trace_signals = bom_gui.trace_signals
-            next_tracing = " " if trace_signals else None
-            if trace_signals:
-                print("=>BomGui.searches_table_changed('{0}')".format(new_text))
 
             # Make sure *current_search* is up to date:
             bom_gui = self
@@ -2926,9 +2907,6 @@ class BomGui(QMainWindow, Gui):
                         break
                 current_search.table_set(match_table)
 
-            # Wrap up any requested *tracing*:
-            if trace_signals:
-                print("<=BomGui.searches_table_changed('{0}')\n".format(new_text))
             bom_gui.in_signal = False
 
     # BomGui.searches_update():
@@ -2974,12 +2952,6 @@ class BomGui(QMainWindow, Gui):
             # Disable  *nested_signals*:
             bom_gui.in_signal = True
 
-            # Perform any requested signal tracing:
-            trace_signals = bom_gui.trace_signals
-            next_tracing = " " if trace_signals else None
-            if trace_signals:
-                print("=>BomGui.tab_changed(*, {0})".format(new_index))
-
             # Deal with clean-up of previous tab (if requested):
             tab_unload = bom_gui.tab_unload
             if callable(tab_unload):
@@ -2988,9 +2960,6 @@ class BomGui(QMainWindow, Gui):
             # Perform the update:
             bom_gui.update()
 
-            # Wrap up any requested signal tracing and restore *in_signal*:
-            if trace_signals:
-                print("<=BomGui.tab_changed(*, {0})\n".format(new_index))
             bom_gui.in_signal = False
 
     # BomGui.table_clicked():
@@ -3314,13 +3283,6 @@ class TreeModel(QAbstractItemModel):
         assert isinstance(role, int)
 
         # Perform any *tracing* requested by *tree_model* (i.e. *self*):
-        tree_model = self
-        tracing = tree_model.tracing
-        tracing = None   # Disable *tracing* for now:
-        next_tracing = None if tracing is None else tracing + " "
-        if tracing:
-            print(f"{tracing}=>Tree_model.data(*, *, {role}')")
-
         value = None
         if model_index.isValid():
             # row = model_index.row()
@@ -3332,10 +3294,6 @@ class TreeModel(QAbstractItemModel):
                 elif column == 1:
                     value = node.name_get()
         assert isinstance(value, str) or value is None
-
-        # Wrap up any requested *tracing*:
-        if tracing:
-            print(f"{tracing}<=Tree_model.data(*, *, {role}')=>{value}")
         return value
 
     # TreeModel.delete():
@@ -3492,8 +3450,10 @@ class TreeModel(QAbstractItemModel):
         count = node.child_count()
         return count
 
+
 if __name__ == "__main__":
     main()
+
 
 # Qt Designer application Notes:
 # * Use grid layouts for everything.  This easier said than done since the designer

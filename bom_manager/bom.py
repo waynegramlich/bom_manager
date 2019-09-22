@@ -233,10 +233,8 @@ import argparse
 # from bs4 import BeautifulSoup     # HTML/XML data structucure searching
 # import bs4
 # import copy                       # Used for the old pickle code...
-#from bom_manager import bom_gui
 import csv
 # from currency_converter import CurrencyConverter         # Currency converter
-from functools import partial
 # import fnmatch                    # File Name Matching
 import glob                       # Unix/Linux style command line file name pattern matching
 import io                         # I/O stuff
@@ -253,7 +251,6 @@ import re                         # Regular expressions
 # import subprocess
 import sys
 import time                       # Time package
-import webbrowser
 # import xmlschema
 
 # Data Structure and Algorithm Overview:
@@ -415,6 +412,7 @@ def main(tracing=""):
 
     return 0
 
+
 @trace(1)
 def command_line_arguments_process(tracing=""):
     # Set up command line *parser* and parse it into *parsed_arguments* dict:
@@ -445,7 +443,6 @@ def command_line_arguments_process(tracing=""):
         panda_get = entry_point.load()
         assert callable(panda_get)
         panda = panda_get()
-        #assert isinstance(panda, Panda), f"type(panda)={type(panda)}"
         pandas.append(panda)
 
     # Fill in the *cads* list with *CAD* objects for reading in :
@@ -459,7 +456,6 @@ def command_line_arguments_process(tracing=""):
         cad_get = entry_point.load()
         assert callable(cad_get)
         cad = cad_get()
-        #assert isinstance(cad, Cad)
         cads.append(cad)
 
     # Now create the *order* object.  It is created here because we need *order*
@@ -501,8 +497,6 @@ def command_line_arguments_process(tracing=""):
         print(f"{tracing}nets processed")
 
     collection_directories = list()
-
-    tables = list()
 
     searches_root = os.path.abspath(parsed_arguments["search"])
     return collection_directories, searches_root, order
@@ -1552,7 +1546,7 @@ class Gui:
           "URL": url_re,
         }
         gui = self
-        self.re_table = re_table
+        gui.re_table = re_table
 
     def __str__(self):
         return "GUI()"
@@ -1586,6 +1580,7 @@ class Gui:
         # Verify argument types:
         assert isinstance(tracing, str)
         pass  # Do nothing for the non-GUI version of th code
+
 
 # Node:
 class Node:
@@ -1741,7 +1736,7 @@ class Node:
         assert isinstance(tracing, str)
 
         # Find the *index* of *child* in *node* (i.e. *self*) and delete it:
-        node = self     
+        node = self
         children = node._children
         assert child in children
         index = children.index(child)
@@ -2274,7 +2269,7 @@ class Collections(Node):
             collection = collection_get(collections, searches_root, gui)
             assert isinstance(collection, Collection)
             collection.partial_load()
-            #collections.child_append(collection)
+            # collections.child_append(collection)
 
         # Do some *tracing*:
         if tracing:
@@ -2288,7 +2283,7 @@ class Collections(Node):
 
     # Collections.__str__():
     def __str__(self):
-        collections = self
+        # collections = self
         return f"Collections('Collections')"
 
     # Collections.actual_parts_lookup():
@@ -2346,7 +2341,7 @@ class Collections(Node):
 
         # Extract some values from *collections*:
         collections = self
-        gui = collections.gui            
+        gui = collections.gui
         collection_directories = collections.collection_directories
         searches_root = collections.searches_root
         if tracing:
@@ -2630,7 +2625,6 @@ class Search(Node):
 
         # Grab *search_name* from *search* (i.e. *self*):
         search = self
-        search_name = search.name
 
         # Search through *sibling_searches* of *table* to ensure that *search* is not
         # a parent of any *sibling_search* object:
@@ -3090,7 +3084,9 @@ class Table(Node):
         # has a count of the number of times that value occured in the column.
 
         # Now sweep through *column_tables* and build *column_triples*:
-        re_table = gui.re_table
+        # re_table = gui.re_table
+        re_table = dict()
+        assert False
         column_triples = list()
         for column_index, column_table in enumerate(column_tables):
             # FIXME: Does *column_list* really need to be sorted???!!!!
@@ -3167,7 +3163,6 @@ class Table(Node):
 
         # Create *all_search* if it does not already exist (i.e. *searches_size* is 0):
         table = self
-        name = table.name
         searches = table.children_get()
         searches_size = len(searches)
         if tracing:
@@ -3339,7 +3334,6 @@ class Table(Node):
 
         # Only sort *table* (i.e. *self*) if it is not *is_sorted*:
         table = self
-        name = table.name
         is_sorted = table.is_sorted
         if tracing:
             print(f"{tracing}is_sorted={is_sorted}")
@@ -3574,6 +3568,7 @@ class Table(Node):
         # Close out the `<Table>` element:
         xml_lines.append(f'{indent}</Table>')
 
+
 # Order:
 class Order:
     # An Order consists of a list of projects to orders parts for.
@@ -3591,10 +3586,6 @@ class Order:
         assert isinstance(order_root, str)
         assert isinstance(cads, list)
         assert isinstance(pandas, list)
-        #for cad in cads:
-        #    assert isinstance(cad, Cad)
-        #for panda in pandas:
-        #    assert isinstance(panda, Panda)
 
         # Ensure that *order_root* exists:
         if not os.path.isdir(order_root):
@@ -3653,12 +3644,10 @@ class Order:
     # Order.__str__():
     def __str__(self):
         # Grab some values from *order* (i.e. *self*):
-        order = self
-        order_root = order.order_root
-        vendor_searches_root = order.vendor_searches_root
-        
-        # Construct the *result* string and return it:
-        #result = (f"Order(order_root='...{order_root[-10:]}', "
+        # order = self
+        # order_root = order.order_root
+        # vendor_searches_root = order.vendor_searches_root
+        # result = (f"Order(order_root='...{order_root[-10:]}', "
         #         f"vendor_searches_root='...{vendor_searches_root[-10:]}'))")
         result = "Order()"
         return result
@@ -4781,7 +4770,7 @@ class PosePart:
         """
 
         # Verify argument types:
-        #assert isinstance(project, Project)
+        assert isinstance(project, Project)
         assert isinstance(project_part, ProjectPart)
         assert isinstance(reference, str)
         assert isinstance(comment, str)
@@ -5376,7 +5365,6 @@ class Project:
         success = False
         cads = order.cads
         for cad in cads:
-            #assert isinstance(cad, Cad)
             success = cad.file_read(cad_file_name, project)
             if success:
                 break
@@ -5542,7 +5530,6 @@ class Project:
 
         # Grab some values from *project* (i.e. *self*):
         project = self
-        name = project.name
         all_pose_parts = project.all_pose_parts
 
         # Check *all_pose_parts*:
@@ -6058,17 +6045,16 @@ class ChoicePart(ProjectPart):
         choice_part = self
         required_quantity = choice_part.count_get()
         actual_parts = choice_part.actual_parts
-        actual_parts_size = len(actual_parts)
         quints = []
 
         for actual_part_index, actual_part in enumerate(actual_parts):
-            if tracing and trace_level >= 1: 
+            if tracing and trace_level >= 1:
                 manufacturer_name = actual_part.manufacturer_name
                 manufacturer_part_name = actual_part.manufacturer_part_name
                 print(f"{tracing} Manufacturer: '{manufacturer_name}' '{manufacturer_part_name}'")
             vendor_parts = actual_part.vendor_parts
             for vendor_part_index, vendor_part in enumerate(vendor_parts):
-                #if tracing and trace_level >= 2
+                # if tracing and trace_level >= 2
                 #     print(f"Vendor: {vendor_part.vendor_name}: "
                 #           f"'{vendor_part.vendor_part_name}':"
                 #           f":{vendor_part.quantity_available}")
@@ -6097,7 +6083,7 @@ class ChoicePart(ProjectPart):
                     # Assemble the *quint* and append to *quints* if there
                     # enough parts available:
                     is_excluded = vendor_part.vendor_name in excluded_vendor_names
-                    #if trace_level:
+                    # if trace_level:
                     #    print(f"quantity_available={vendor_part.quantity_available}, "
                     #          f"is_excluded={is_excluded}")
                     if tracing and trace_level >= 3:
@@ -6257,7 +6243,7 @@ class ChoicePart(ProjectPart):
 
             # Now sweep across both *proposed_actual_parts* and *previous_actual_parts*
             # printing out the key values side by side:
-            print(f"{tracing}Actual_Parts[xx]: (proposed)  (previous)")    
+            print(f"{tracing}Actual_Parts[xx]: (proposed)  (previous)")
             for index in range(maximum_actual_parts_size):
                 proposed_text = ("--------" if index >= proposed_actual_parts_size
                                  else proposed_actual_parts[index].key)
@@ -7013,14 +6999,12 @@ class VendorPart:
 #        text = '\n'.join(xml_lines)
 #        return text
 #
-
+#
 # https://stackoverflow.com/questions/5226091/checkboxes-in-a-combobox-using-pyqt?rq=1
 # https://stackoverflow.com/questions/24961383/how-to-see-the-value-of-pyside-qtcore-qt-itemflag
 # /usr/local/lib/python3.6/dist-packages/PySide2/examples/widgets/itemviews/stardelegate
 # https://stackoverflow.com/questions/8422760/combobox-of-checkboxes
-
-
-
+#
 # [Python Virtual Environments](https://realpython.com/python-virtual-environments-a-primer/)
 #
 # * Use [Virtual Environment Wrapper](https://virtualenvwrapper.readthedocs.io/en/latest/)
@@ -7061,5 +7045,7 @@ class VendorPart:
 # [Python Plugins](https://packaging.python.org/guides/creating-and-discovering-plugins/)
 # [Python Plugins Tutorial](https://amir.rachum.com/blog/2017/07/28/python-entry-points/)
 # [Python Tracing Decorator](https://cscheid.net/2017/12/11/minimal-tracing-decorator-python-3.html)
+
+
 if __name__ == "__main__":
     main()
