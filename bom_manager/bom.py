@@ -229,28 +229,30 @@
 
 # Import some libraries (alphabetical order):
 
-import argparse
+from argparse import ArgumentParser
 # from bs4 import BeautifulSoup     # HTML/XML data structucure searching
 # import bs4
 # import copy                       # Used for the old pickle code...
 import csv
 # from currency_converter import CurrencyConverter         # Currency converter
 # import fnmatch                    # File Name Matching
-import glob                       # Unix/Linux style command line file name pattern matching
-import io                         # I/O stuff
-import lxml.etree as etree
+import glob                         # Unix/Linux style command line file name pattern matching
+import io                           # I/O stuff
+import lxml.etree as etree  # type: ignore
 # import pickle                     # Python data structure pickle/unpickle
-import pkg_resources              # Used to find plug-ins.
+import pkg_resources                # Used to find plug-ins.
 # import pkgutil
 from bom_manager.tracing import trace, trace_level_get, trace_level_set
 import os
-import re                         # Regular expressions
+import re                           # Regular expressions
 # import requests                   # HTML Requests
 # import sexpdata                   # (LISP) S_EXpresson Data
 # from sexpdata import Symbol       # (LISP) S-EXpression Symbol
 # import subprocess
 import sys
-import time                       # Time package
+import time                         # Time package
+from typing import Any, Callable, Dict, IO, List, Optional, Tuple
+ReCompiled = Any
 # import xmlschema
 
 # Data Structure and Algorithm Overview:
@@ -395,18 +397,22 @@ import time                       # Time package
 
 # main():
 @trace(1)
-def main(tracing=""):
+def main(tracing: str = "") -> int:
     # Verify argument types:
     assert isinstance(tracing, str)
 
     # Run the *Encode* class unit tests:
     Encode.test()
 
+    collections_directories: List[str]
+    searches_root: str
+    order: Order
     collections_directories, searches_root, order = command_line_arguments_process()
 
-    gui = Gui()
+    gui: Gui = Gui()
 
-    collections = Collections("Collections", collections_directories, searches_root, gui)
+    collections: Collections = Collections("Collections",
+                                           collections_directories, searches_root, gui)
 
     order.process(collections)
 
@@ -414,9 +420,9 @@ def main(tracing=""):
 
 
 @trace(1)
-def command_line_arguments_process(tracing=""):
+def command_line_arguments_process(tracing: str = "") -> Tuple[List[str], str, "Order"]:
     # Set up command line *parser* and parse it into *parsed_arguments* dict:
-    parser = argparse.ArgumentParser(description="Bill of Materials (BOM) Manager.")
+    parser: ArgumentParser = ArgumentParser(description="Bill of Materials (BOM) Manager.")
     parser.add_argument("-b", "--bom", action="append", default=[],
                         help="Bom file (.csv, .net). Preceed with 'NUMBER:' to increase count. ")
     parser.add_argument("-s", "--search", default="searches",
@@ -427,67 +433,72 @@ def command_line_arguments_process(tracing=""):
                         help="Set tracing level (defaults to 0 which is off).")
 
     # Now parse the command line arguments:
-    parsed_arguments = vars(parser.parse_args())
+    parsed_arguments: Dict[str, Any] = vars(parser.parse_args())
 
-    trace_level = 0 if parsed_arguments["verbose"] is None else parsed_arguments["verbose"]
+    trace_level: int = 0 if parsed_arguments["verbose"] is None else parsed_arguments["verbose"]
     trace_level_set(trace_level)
 
     # Fill in the *pandas* list with *Panda* objects for doing pricing and availabity checking:
-    pandas = list()
-    entry_point_key = "bom_manager_panda_get"
+    pandas: List[Panda] = list()
+    entry_point_key: str = "bom_manager_panda_get"
+    index: int
+    entry_point: pkg_resources.EntryPoint
     for index, entry_point in enumerate(pkg_resources.iter_entry_points(entry_point_key)):
-        entry_point_name = entry_point.name
+        entry_point_name: str = entry_point.name
         if tracing:
             print(f"{tracing}Panda_Entry_Point[{index}]: '{entry_point_name}'")
         assert entry_point_name == "panda_get"
-        panda_get = entry_point.load()
+        panda_get: Callable = entry_point.load()
         assert callable(panda_get)
-        panda = panda_get()
+        panda: Panda = panda_get()
         pandas.append(panda)
 
     # Fill in the *cads* list with *CAD* objects for reading in :
-    cads = list()
+    cads: List[Cad] = list()
     entry_point_key = "bom_manager_cad_get"
     for index, entry_point in enumerate(pkg_resources.iter_entry_points(entry_point_key)):
         entry_point_name = entry_point.name
         if tracing:
             print(f"{tracing}Cad_Entry_Point[{index}]: '{entry_point_name}'")
         assert entry_point_name == "cad_get"
-        cad_get = entry_point.load()
+        cad_get: Callable = entry_point.load()
         assert callable(cad_get)
-        cad = cad_get()
+        cad: Cad = cad_get()
         cads.append(cad)
 
     # Now create the *order* object.  It is created here because we need *order*
     # for dealing with *bom_file_names* immediately below:
-    order_root = parsed_arguments["order"]
-    order = Order(order_root, cads, pandas)
+    order_root: str = parsed_arguments["order"]
+    order: Order = Order(order_root, cads, pandas)
     if tracing:
         print(f"{tracing}order_created")
 
     # Deal with *bom_file_names* from *parsed_arguments*:
-    bom_file_names = parsed_arguments["bom"]
+    bom_file_names: List[str] = parsed_arguments["bom"]
+    bom_file_name: str
     for bom_file_name in bom_file_names:
         if bom_file_name.endswith(".net") or bom_file_name.endswith(".csv"):
             # We have a `.net` file name:
-            colon_index = bom_file_name.find(':')
+            colon_index: int = bom_file_name.find(':')
             # print(f"colon_index={colon_index}")
-            count = 1
+            count: int = 1
             if colon_index >= 0:
                 count = int(bom_file_name[:colon_index])
                 bom_file_name = bom_file_name[colon_index:]
             # print(f"count={count}")
             assert os.path.isfile(bom_file_name), f"'{bom_file_name}' does not exist."
-            paths = os.path.split(bom_file_name)
-            # print(f"paths={paths}")
-            base_name = paths[-1]
-            # print(f"base_name='{base_name}'")
-            name = base_name[:-4]
-            # print(f"name='{name}'")
-            revision_letter = 'A'
-            if len(paths) >= 2:
-                revision_letter = paths[-2][-1].upper()
-            # print(f"revision_letter='{revision_letter}'")
+            path: str
+            base_name: str
+            path, base_name = os.path.split(bom_file_name)
+            name: str = base_name[:-4]
+            revision_letter: str = 'A'
+            if len(path) >= 2:
+                revision_letter = path[-1].upper()
+            if tracing:
+                print(f"path={path}")
+                print(f"base_name='{base_name}'")
+                print(f"name='{name}'")
+                print(f"revision_letter='{revision_letter}'")
 
             # Create an order project:
             order.project_create(name, revision_letter, bom_file_name, count, tracing=tracing)
@@ -496,67 +507,67 @@ def command_line_arguments_process(tracing=""):
     if tracing:
         print(f"{tracing}nets processed")
 
-    collection_directories = list()
+    collection_directories: List[str] = list()
 
-    searches_root = os.path.abspath(parsed_arguments["search"])
+    searches_root: str = os.path.abspath(parsed_arguments["search"])
     return collection_directories, searches_root, order
 
 
-# "se" stands for "S Expression":
-def se_find(se, base_name, key_name):
-    """ {}: Find *key_name* in *se* and return its value. """
-
-    # *se* is a list of the form:
-    #
-    #        [base_name, [key1, value1], [key2, value2], ..., [keyN, valueN]]
-    #
-    # This routine searches through the *[keyI, valueI]* pairs
-    # and returnts the *valueI* that corresponds to *key_name*.
-
-    # Check argument types:
-    # assert isinstance(se, list)
-    # assert isinstance(base_name, str)
-    # assert isinstance(key_name, str)
-
-    # Do some sanity checking:
-    # size = len(se)
-    # assert size > 0
-    # assert se[0] == Symbol(base_name)
-
-    result = None
-    # key_symbol = Symbol(key_name)
-    # for index in range(1, size):
-    #     sub_se = se[index]
-    #     if len(sub_se) > 0 and sub_se[0] == key_symbol:
-    #         result = sub_se
-    #         break
-    return result
-
-
-def text2safe_attribute(text):
-    # Verify argument types:
-    assert isinstance(text, str)
-
-    # Sweep across *text* one *character* at a time performing any neccesary conversions:
-    new_characters = list()
-    for character in text:
-        new_character = character
-        if character == '&':
-            new_character = "&amp;"
-        elif character == '<':
-            new_character = "&lt;"
-        elif character == '>':
-            new_character = "&gt;"
-        elif character == "'":
-            new_character = "&apos;"
-        elif character == '"':
-            new_character = "&quot;"
-        new_characters.append(new_character)
-    safe_attribute = "".join(new_characters)
-    return safe_attribute
+# # "se" stands for "S Expression":
+# def se_find(se, base_name, key_name):
+#     """ {}: Find *key_name* in *se* and return its value. """
+#
+#     # *se* is a list of the form:
+#     #
+#     #        [base_name, [key1, value1], [key2, value2], ..., [keyN, valueN]]
+#     #
+#     # This routine searches through the *[keyI, valueI]* pairs
+#     # and returnts the *valueI* that corresponds to *key_name*.
+#
+#     # Check argument types:
+#     # assert isinstance(se, list)
+#     # assert isinstance(base_name, str)
+#     # assert isinstance(key_name, str)
+#
+#     # Do some sanity checking:
+#     # size = len(se)
+#     # assert size > 0
+#     # assert se[0] == Symbol(base_name)
+#
+#     result = None
+#     # key_symbol = Symbol(key_name)
+#     # for index in range(1, size):
+#     #     sub_se = se[index]
+#     #     if len(sub_se) > 0 and sub_se[0] == key_symbol:
+#     #         result = sub_se
+#     #         break
+#     return result
 
 
-def text_filter(text, function):
+# def text2safe_attribute(text):
+#     # Verify argument types:
+#     assert isinstance(text, str)
+#
+#     # Sweep across *text* one *character* at a time performing any neccesary conversions:
+#     new_characters = list()
+#     for character in text:
+#         new_character = character
+#         if character == '&':
+#             new_character = "&amp;"
+#         elif character == '<':
+#             new_character = "&lt;"
+#         elif character == '>':
+#             new_character = "&gt;"
+#         elif character == "'":
+#             new_character = "&apos;"
+#         elif character == '"':
+#             new_character = "&quot;"
+#         new_characters.append(new_character)
+#     safe_attribute = "".join(new_characters)
+#     return safe_attribute
+
+
+def text_filter(text: str, function: Callable) -> str:
     # Verify argument types:
     assert isinstance(text, str)
     assert callable(function)
@@ -569,10 +580,10 @@ class ActualPart:
     # An *ActualPart* represents a single manufacturer part.
     # A list of vendor parts specifies where the part can be ordered from.
 
-    ACTUAL_PART_EXCHANGE_RATES = dict()
+    ACTUAL_PART_EXCHANGE_RATES: Dict[str, float] = dict()
 
     # ActualPart.__init__():
-    def __init__(self, manufacturer_name, manufacturer_part_name):
+    def __init__(self, manufacturer_name: str, manufacturer_part_name: str):
         """ *ActualPart*: Initialize *self* to contain *manufacturer* and
             *manufacturer_part_name*. """
 
@@ -581,58 +592,59 @@ class ActualPart:
         assert isinstance(manufacturer_part_name, str)
 
         # Create the *key* for *actual_part* (i.e. *self*):
-        actual_part = self
-        key = (manufacturer_name, manufacturer_part_name)
+        # actual_part: ActualPart = self
+        key: Tuple[str, str] = (manufacturer_name, manufacturer_part_name)
 
-        # Load up *self*:
-        actual_part.manufacturer_name = manufacturer_name
-        actual_part.manufacturer_part_name = manufacturer_part_name
-
-        actual_part.key = key
+        # Load up *actual_part* (i.e. *self*):
+        # actual_part: Actual_Part = self
+        self.manufacturer_name: str = manufacturer_name
+        self.manufacturer_part_name: str = manufacturer_part_name
+        self.key: Tuple[str, str] = key
         # Fields used by algorithm:
-        actual_part.quantity_needed = 0
-        actual_part.vendor_parts = []
-        actual_part.selected_vendor_part = None
+        self.quantity_needed: int = 0
+        self.vendor_parts: List[VendorPart] = []
+        self.selected_vendor_part: Optional[VendorPart] = None
 
     # ActualPart.__eq__():
-    def __eq__(self, actual_part2, tracing=""):
-        # Verify argument types:
-        assert isinstance(actual_part2, ActualPart)
-
-        actual_part1 = self
-        equal = actual_part1.key == actual_part2.key
-        if equal:
-            # Extract *vendor_parts* making sure that they are sorted:
-            vendor_parts1 = actual_part1.sorted_vendor_parts_get()
-            vendor_parts2 = actual_part2.sorted_vendor_parts_get()
-            equal &= len(vendor_parts1) == len(vendor_parts2)
+    def __eq__(self, actual_part2: object, tracing: str = "") -> bool:
+        equal: bool = False
+        if isinstance(actual_part2, ActualPart):
+            actual_part1: ActualPart = self
+            equal = actual_part1.key == actual_part2.key
             if equal:
-                for index, vendor_part1 in enumerate(vendor_parts1):
-                    vendor_part2 = vendor_parts2[index]
-                    if vendor_part1 != vendor_part2:
-                        equal = False
-                        break
-
-        # Wrap up requested any *tracing* and return *equal*:
-        if tracing:
-            print(f"{tracing}<=ActualPart.__eq__({actual_part1.key}, {actual_part2.key})=>{equal}")
+                # Extract *vendor_parts* making sure that they are sorted:
+                vendor_parts1: List[VendorPart] = actual_part1.sorted_vendor_parts_get()
+                vendor_parts2: List[VendorPart] = actual_part2.sorted_vendor_parts_get()
+                equal &= len(vendor_parts1) == len(vendor_parts2)
+                if equal:
+                    index: int
+                    vendor_part1: VendorPart
+                    for index, vendor_part1 in enumerate(vendor_parts1):
+                        vendor_part2: VendorPart = vendor_parts2[index]
+                        if vendor_part1 != vendor_part2:
+                            equal = False
+                            break
         return equal
 
     # ActualPart.__str__():
-    def __str__(self):
-        actual_part = self
-        return (f"ActualPart('{actual_part.manufacturer_name}':"
-                f"'{actual_part.manufacturer_part_name}')")
+    def __str__(self) -> str:
+        actual_part: ActualPart = self
+        manufacturer_part_name: str = "??"
+        if hasattr(actual_part, "manufacturer_part_name"):
+            manufacturer_part_name = actual_part.manufacturer_part_name
+        return (f"ActualPart('{manufacturer_part_name}')")
 
     # ActualPart.sorted_vendor_parts_get():
-    def sorted_vendor_parts_get(self):
-        actual_part = self
-        vendor_parts = actual_part.vendor_parts
-        vendor_parts.sort(key=lambda vendor_part: vendor_part.vendor_key)
+    def sorted_vendor_parts_get(self) -> "List[VendorPart]":
+        actual_part: ActualPart = self
+        vendor_parts: List[VendorPart] = actual_part.vendor_parts
+        sort_function: Callable = lambda vendor_part: vendor_part.vendor_key
+        vendor_parts.sort(key=sort_function)
         return vendor_parts
 
     # ActualPart.vendor_names_restore():
-    def vendor_names_load(self, vendor_names_table, excluded_vendor_names):
+    def vendor_names_load(self, vendor_names_table: Dict[str, None],
+                          excluded_vendor_names: Dict[str, None]) -> None:
         """ *ActualPart*:*: Add each possible to vendor name for the
             *ActualPart* object (i.e. *self*) to *vendor_names_table*:
         """
@@ -643,54 +655,44 @@ class ActualPart:
 
         # Add the possible vendor names for *vendor_part* to
         # *vendor_names_table*:
+        vendor_part: VendorPart
         for vendor_part in self.vendor_parts:
-            vendor_name = vendor_part.vendor_name
+            vendor_name: str = vendor_part.vendor_name
             if vendor_name not in excluded_vendor_names:
                 vendor_names_table[vendor_name] = None
 
     # ActualPart.vendor_part_append():
-    def vendor_part_append(self, vendor_part):
+    def vendor_part_append(self, vendor_part: "VendorPart") -> None:
         """ *ActualPart: Append *vendor_part* to the vendor parts of *self*. """
-
-        actual_part = self
-        tracing = False
-        tracing = (actual_part.manufacturer_name == "Pololu" and
-                   actual_part.manufacturer_part_name == "S18V20F6)")
-        if tracing:
-            print("appending part")
-            assert False
+        # Verify argument types:
         assert isinstance(vendor_part, VendorPart)
+
+        # Append *vendor_part* to the *actual_part* (i.e. *self*):
+        actual_part: ActualPart = self
         actual_part.vendor_parts.append(vendor_part)
 
     # ActualPart.vendor_parts_restore():
-    def vendor_parts_restore(self, order, tracing=""):
+    def vendor_parts_restore(self, order: "Order", tracing: str = "") -> bool:
         # Verify argument types:
         assert isinstance(order, Order)
         assert isinstance(tracing, str)
 
-        # actual_part = self
-        result = False
-        # order_root = order.root
-        # vendor_searches_root = order.vendor_searches_root
-        # xml_base_name = actual_part.name + ".xml"
-        # xml_file_name = os.path.join(vendor_searches_root, xml_base_name)
-
-        # Wrap up any requested *tracing*:
-        if tracing:
-            print(f"{tracing}ActualPart.vendor_parts_restore(*)=>{result}")
+        # FIXME: What does this routine actually do?:
+        assert False
+        result: bool = False
         return result
 
     # ActualPart.xml_lines_append():
-    def xml_lines_append(self, xml_lines, indent):
+    def xml_lines_append(self, xml_lines: List[str], indent: int) -> None:
         # Verify argument types:
         assert isinstance(xml_lines, list)
         assert isinstance(indent, str)
 
         # Grab some values from *actual_part* (i.e. *self*):
-        actual_part = self
-        manufacturer_name = actual_part.manufacturer_name
-        manufacturer_part_name = actual_part.manufacturer_part_name
-        vendor_parts = actual_part.vendor_parts
+        actual_part: ActualPart = self
+        manufacturer_name: str = actual_part.manufacturer_name
+        manufacturer_part_name: str = actual_part.manufacturer_part_name
+        vendor_parts: List[VendorPart] = actual_part.vendor_parts
 
         # Output the `<ActualPart ...>` tag first:
         xml_lines.append(f'{indent}<ActualPart '
@@ -698,7 +700,8 @@ class ActualPart:
                          f'manufacturer_part_name="{Encode.to_attribute(manufacturer_part_name)}">')
 
         # Output the nested `<VendorPart ...>` tags:
-        next_indent = indent + " "
+        next_indent: str = indent + " "
+        vendor_part: VendorPart
         for vendor_part in vendor_parts:
             vendor_part.xml_lines_append(xml_lines, next_indent)
 
@@ -707,24 +710,24 @@ class ActualPart:
 
     # ActualPart.xml_parse():
     @staticmethod
-    def xml_parse(actual_part_tree):
+    def xml_parse(actual_part_tree: etree._Element) -> "ActualPart":
         # Verify argument types:
         assert isinstance(actual_part_tree, etree._Element)
 
         # Grab the attribute information out of *actual_part_tree*:
         assert actual_part_tree.tag == "ActualPart"
-        attributes_table = actual_part_tree.attrib
-        manufacturer_name = attributes_table["manufacturer_name"]
-        manufacturer_part_name = attributes_table["manufacturer_part_name"]
-        vendor_part_trees = list(actual_part_tree)
+        attributes_table: Dict[str, str] = actual_part_tree.attrib
+        manufacturer_name: str = attributes_table["manufacturer_name"]
+        manufacturer_part_name: str = attributes_table["manufacturer_part_name"]
+        vendor_part_trees: List[etree._Element] = list(actual_part_tree)
 
         # Create *actual_part* with empty *vendor_parts*:
-        actual_part = ActualPart(manufacturer_name, manufacturer_part_name)
-        vendor_parts = actual_part.vendor_parts
+        actual_part: ActualPart = ActualPart(manufacturer_name, manufacturer_part_name)
+        vendor_parts: List[VendorPart] = actual_part.vendor_parts
 
         # Process all of the `<VendorPart ...>` tags:
         for vendor_part_tree in vendor_part_trees:
-            vendor_part = VendorPart.xml_parse(vendor_part_tree, actual_part)
+            vendor_part: VendorPart = VendorPart.xml_parse(vendor_part_tree, actual_part)
             vendor_parts.append(vendor_part)
         return actual_part
 
@@ -734,263 +737,233 @@ class Cad:
     # Cad Stands for Computer Aided Design:
 
     # Cad.__init__():
-    def __init__(self, name, tracing=""):
+    def __init__(self, name: str, tracing: str = "") -> None:
         # Verify argument types:
-        if tracing:
-            print(f"{tracing}=>Cad.__init__('{name}')")
-
-        # Wrap up any argument types:
-        if tracing:
-            print(f"{tracing}<=Cad.__init__('{name}')")
+        assert isinstance(name, str)
+        assert isinstance(tracing, str)
+        pass  # This is just a place holder class that is sub-classed against.
 
 
 # Comment:
 class Comment:
 
     # Comment.__init__():
-    def __init__(self, tag_name, **arguments_table):
-        # Verify argument types:
-        assert isinstance(tag_name, str) and tag_name in \
-         ("EnumerationComment", "ParameterComment", "TableComment", "SearchComment")
-        is_comment_tree = "comment_tree" in arguments_table
-        if is_comment_tree:
-            assert len(arguments_table) == 1
-            assert isinstance(arguments_table["comment_tree"], etree._Element)
-        else:
-            assert len(arguments_table) >= 2
-            assert "language" in arguments_table and isinstance(arguments_table["language"], str)
-            assert "lines" in arguments_table
-            lines = arguments_table["lines"]
-            for line in lines:
-                assert isinstance(line, str)
-
-        if is_comment_tree:
-            comment_tree = arguments_table["comment_tree"]
-            assert comment_tree.tag == tag_name, (
-              "tag_name='{0}' tree_tag='{1}'".format(tag_name, comment_tree.tag))
-            attributes_table = comment_tree.attrib
-            assert "language" in attributes_table
-            language = attributes_table["language"]
-            text = comment_tree.text.strip()
-            lines = text.split('\n')
-            for index, line in enumerate(lines):
-                lines[index] = line.strip().replace("<", "&lt;").replace(">", "&gt;")
-        else:
-            language = arguments_table["language"]
-            lines = arguments_table["lines"]
-
-        # Load up *table_comment* (i.e. *self*):
-        comment = self
-        comment.position = 0
-        comment.language = language
-        comment.lines = lines
-        # print("Comment(): comment.lines=", tag_name, lines)
+    def __init__(self, language: str, lines: List[str]) -> None:
+        # Load up *comment* (i.e. *self*):
+        # comment: Comment = self
+        self.language: str = language
+        self.lines: List[str] = lines
 
     # Comment.__eq__():
-    def __eq__(self, comment2):
-        # Verify argument types:
-        assert isinstance(comment2, Comment)
+    def __eq__(self, comment2: object) -> bool:
+        # `mypy` recommends that the *__eq__* method work with any *object*.  So we start
+        # with *equal* set to *False* and only set it to *True* on success:
+        equal: bool = False
+        if isinstance(comment2, Comment):
+            comment1: Comment = self
+            language_equal: bool = comment1.language == comment2.language
+            lines_equal: bool = comment1.lines == comment2.lines
+            equal = language_equal and lines_equal
+        return equal
 
-        # Compare each field in *comment1* (i.e. *self*) with the corresponding field in *comment2*:
-        comment1 = self
-        language_equal = (comment1.language == comment2.language)
-        lines_equal = (comment1.lines == comment2.lines)
-        all_equal = (language_equal and lines_equal)
-        # print("language_equal={0}".format(language_equal))
-        # print("lines_equal={0}".format(lines_equal))
-        return all_equal
+    # Comment.__str__():
+    def __str__(self):
+        # Return a simple string since there is no need to expose the contents of the comment
+        # (i.e. *self*):
+        comment: Comment = self
+        language: str = "??"
+        if hasattr(comment, "language"):
+            language = comment.language
+        class_name: str = comment.__class__.__name__
+        return f"{class_name}('{language}')"
+
+    # Comment.xml_parse():
+    @staticmethod
+    def xml_parse(comment_tree: etree._Element) -> "Comment":
+        # Grab the *language* from the *comment_tree* *attributes_table*:
+        attributes_table: Dict[str, str] = comment_tree.attrib
+        assert "language" in attributes_table
+        language: str = attributes_table["language"]
+
+        # Grab the *lines* from *comment_tree* and return the final *comment*:
+        lines: List[str] = Comment.xml_lines_get(comment_tree)
+        comment: Comment = Comment(language, lines)
+        return comment
+
+    # Comment.xml_lines_append():
+    def xml_lines_append(self, xml_lines: List[str], indent: str) -> None:
+        # Grab some values from *comment* (i.e. *self*):
+        comment: Comment = self
+        class_name: str = comment.__class__.__name__
+        language: str = comment.language
+        lines: List[str] = comment.lines
+
+        # Output the initial element XML tag (i.e. *class_name*):
+        xml_lines.append(f'{indent}<{class_name} language="{language}">')
+
+        # Output the comment *lines*:
+        line: str
+        for line in lines:
+            xml_lines.append(f"{indent}  {line}")
+
+        # Output the closing element XML tag:
+        xml_lines.append('f{indent}</{class_name}>")')
+
+    # Comment.xml_parse_helper():
+    @staticmethod
+    def xml_parse_helper(comment_tree: etree._Element) -> Tuple[Dict[str, str], str, List[str]]:
+        # Grab some values from *comment_tree*:
+        attributes_table: Dict[str, str] = comment_tree.attrib
+        assert "language" in attributes_table
+        language: str = attributes_table["language"]
+
+        # Grab the *text* from *comment_tree*, split it into *lines*, clean up each line:
+        text: str = comment_tree.text.strip()
+        lines: List[str] = text.split('\n')
+        for index, line in enumerate(lines):
+            lines[index] = line.strip().replace("<", "&lt;").replace(">", "&gt;")
+
+        # Return everything:
+        return attributes_table, language, lines
 
 
 # EnumerationComment:
 class EnumerationComment(Comment):
 
     # EnumerationComment.__init__():
-    def __init__(self, **arguments_table):
-        # print("=>EnumerationComment.__init__()")
-        enumeration_comment = self
-        super().__init__("EnumerationComment", **arguments_table)
-        assert isinstance(enumeration_comment.language, str)
-        assert isinstance(enumeration_comment.lines, list)
+    def __init__(self, language: str, lines: List[str]) -> None:
+        # An *EnumerationComment* is just pure sub-class of *Comment*:
+        super().__init__(language, lines)
 
-    # EnumerationComment.__equ__():
-    def __equ__(self, enumeration_comment2):
-        assert isinstance(enumeration_comment2, EnumerationComment)
-        return super.__eq__(enumeration_comment2)
+    # EnumerationComment.xml_parse():
+    @staticmethod
+    def xml_parse(comment_tree: etree._element) -> "EnumerationComment":
+        # Grab some values from *comment_tree*):
+        attributes_table: Dict[str, str]
+        langauge: str
+        lines: List[str]
+        attributes_table, language, lines = Comment.xml_parse_helper(comment_tree)
 
-    # EnumerationComment.xml_lines_append():
-    def xml_lines_append(self, xml_lines, indent):
-        # Verify argument types:
-        assert isinstance(xml_lines, list)
-        assert isinstance(indent, str)
-
-        # Append and `<EnumerationComment>` an element to *xml_lines*:
-        enumeration_comment = self
-        language = enumeration_comment.language
-        xml_lines.append(enumeration_comment.language,
-                         f'{indent}<EnumerationComment language="{language}">')
-        for line in enumeration_comment.lines:
-            xml_lines.append('{0}  {1}'.format(indent, line))
-        xml_lines.append('{0}</EnumerationComment>'.format(indent))
+        # Construct and return the final *enumeration_comment*:
+        enumeration_comment: EnumerationComment = EnumerationComment(language, lines)
+        return enumeration_comment
 
 
 # ParameterComment:
 class ParameterComment(Comment):
 
     # ParameterComment.__init__():
-    def __init__(self, **arguments_table):
-        # Verify argument types:
-        is_comment_tree = "comment_tree" in arguments_table
-        if is_comment_tree:
-            assert isinstance(arguments_table["comment_tree"], etree._Element)
-        else:
-            assert "language" in arguments_table and isinstance(arguments_table["language"], str)
-            assert ("long_heading" in arguments_table
-                    and isinstance(arguments_table["long_heading"], str))
-            assert "lines" in arguments_table
-            lines = arguments_table["lines"]
-            for line in lines:
-                assert isinstance(line, str)
-            arguments_count = 3
-            has_short_heading = "short_heading" in arguments_table
-            if has_short_heading:
-                arguments_count += 1
-                assert isinstance(arguments_table["short_heading"], str)
-            assert len(arguments_table) == arguments_count
+    def __init__(self, language: str, lines: List[str],
+                 long_heading: str, short_heading: str) -> None:
 
-        if is_comment_tree:
-            comment_tree = arguments_table["comment_tree"]
-            attributes_table = comment_tree.attrib
-            attributes_count = 2
-            long_heading = attributes_table["longHeading"]
-            if "shortHeading" in attributes_table:
-                attributes_count += 1
-                short_heading = attributes_table["shortHeading"]
-            else:
-                short_heading = None
-            assert len(attributes_table) == attributes_count
-        else:
-            long_heading = arguments_table["long_heading"]
-            lines = arguments_table["lines"]
-            short_heading = arguments_table["short_heading"] if has_short_heading else None
+        # Initialize the parent *Comment* class with *language* and *lines*:
+        super().__init__(language, lines)
 
-        # Initailize the parent of *parameter_comment* (i.e. *self*).  The parent initializer
-        # will fill in the *language* and *lines* fields:
-        parameter_comment = self
-        super().__init__("ParameterComment", **arguments_table)
-        assert isinstance(parameter_comment.language, str)
-        assert isinstance(parameter_comment.lines, list)
+        # Initialize the remaining fields of *parameter_comment*:
+        # parameter_comment: ParameterComment = self
+        self.long_heading: str = long_heading
+        self.short_heading: str = short_heading
 
-        # Initialize the remaining two fields that are specific to a *parameter_comment*:
-        parameter_comment.long_heading = long_heading
-        parameter_comment.short_heading = short_heading
-
-    # ParameterComment.__equ__():
-    def __eq__(self, parameter_comment2):
-        # Verify argument types:
-        assert isinstance(parameter_comment2, ParameterComment)
-
-        parameter_comment1 = self
-        language_equal = parameter_comment1.language == parameter_comment2.language
-        lines_equal = parameter_comment1.lines == parameter_comment2.lines
-        long_equal = parameter_comment1.long_heading == parameter_comment2.long_heading
-        short_equal = parameter_comment1.short_heading == parameter_comment2.short_heading
-        all_equal = language_equal and lines_equal and long_equal and short_equal
-        return all_equal
+    # ParameterComment.__eq__():
+    def __eq__(self, parameter_comment2: object) -> bool:
+        # `mypy` recommends that the *__eq__* method work with any *object*.  So we start
+        # with *equal* set to *False* and only set it to *True* on success:
+        equal: bool = False
+        if isinstance(parameter_comment2, ParameterComment):
+            parameter_comment1: ParameterComment = self
+            language_equal: bool = parameter_comment1.language == parameter_comment2.language
+            lines_equal: bool = parameter_comment1.lines == parameter_comment2.lines
+            long_equal: bool = parameter_comment1.long_heading == parameter_comment2.long_heading
+            short_equal: bool = parameter_comment1.short_heading == parameter_comment2.short_heading
+            equal = language_equal and lines_equal and long_equal and short_equal
+        return equal
 
     # ParameterComment.xml_lines_append():
-    def xml_lines_append(self, xml_lines):
-        parameter_comment = self
-        xml_line = '        <ParameterComment language="{0}" longHeading="{1}"'.format(
-          parameter_comment.language, parameter_comment.long_heading)
-        short_heading = parameter_comment.short_heading
-        if short_heading is not None:
-            xml_line += ' shortHeading="{0}"'.format(short_heading)
-        xml_line += '>'
+    def xml_lines_append(self, xml_lines: List[str], indent: str) -> None:
+        # Grab some values from *parameter_comment* (i.e. *self*):
+        parameter_comment: ParameterComment = self
+        language: str = parameter_comment.language
+        lines: List[str] = parameter_comment.lines
+        long_heading: str = parameter_comment.long_heading
+        short_heading: str = parameter_comment.short_heading
+
+        # Append an XML `<ParameterComment ...>` element to *xml_lines*.
+        short_heading_text = f" shortHeading={short_heading}" if short_heading else ""
+        xml_line: str = (f'{indent}<ParameterComment'
+                         f' language="{language}"'
+                         f' longHeading="{long_heading}"'
+                         f'{short_heading_text}>')
+
+        # Append *lines* to *xml_lines* indented by *indent* and tack on the closing
+        # `</ParameterComment>` XML element:
         xml_lines.append(xml_line)
-        for line in parameter_comment.lines:
-            xml_lines.append('          {0}'.format(line))
-        xml_lines.append('        </ParameterComment>')
+        line: str
+        for line in lines:
+            xml_lines.append(f'{indent} {line}')
+        xml_lines.append(f'{indent}</ParameterComment>')
+
+    # ParameterComment.xml_parse():
+    @staticmethod
+    def xml_parse(comment_tree: etree._Element) -> "ParameterComment":
+        # Grab some values from *comment_tree*:
+        attributes_table: Dict[str, str]
+        language: str
+        lines: List[str]
+        attributes_table, language, lines = Comment.xml_parse_helper(comment_tree)
+
+        # Grab some values from *attributes_table:
+        assert "longHeading" in attributes_table
+        long_heading: str = attributes_table["longHeading"]
+        short_heading: str = (attributes_table["shortHeading"]
+                              if "shortHeading" in attributes_table else "")
+
+        # Construct the final *parameter_comment* and return it:
+        parameter_comment: ParameterComment = ParameterComment(language, lines,
+                                                               long_heading, short_heading)
+        return parameter_comment
 
 
 # SearchComment:
 class SearchComment(Comment):
     # SearchComment.__init()
-    def __init__(self, **arguments_table):
-        # Verify argument types:
-        is_comment_tree = "comment_tree" in arguments_table
-        if is_comment_tree:
-            assert len(arguments_table) == 1
-            assert isinstance(arguments_table["comment_tree"], etree._Element)
-        else:
-            assert len(arguments_table) == 2
-            assert "language" in arguments_table and isinstance(arguments_table["language"], str)
-            assert "lines" in arguments_table
-            lines = arguments_table["lines"]
-            assert isinstance(lines, list)
-            for line in lines:
-                assert isinstance(line, str)
+    def __init__(self, language: str, lines: List[str]) -> None:
+        # A *SearchComment* is a pure sub-class of the parent *Comment* class:
+        super().__init__(language, lines)
 
-        # There are no extra attributes above a *Comment* object, so we can just use the
-        # intializer for the *Coment* class:
-        super().__init__("SearchComment", **arguments_table)
+    # SearchComment.xml_parse()
+    @staticmethod
+    def xml_parse(comment_tree: etree._Element) -> "SearchComment":
+        # Grab some values out of *comment_tree*:
+        attributes_table: Dict[str, str]
+        language: str
+        lines: List[str]
+        attributes_table, language, lines = Comment.xml_parse_helper(comment_tree)
 
-    # SearchComment.xml_lines_append():
-    def xml_lines_append(self, xml_lines, indent):
-        # Verify argument types:
-        assert isinstance(xml_lines, list)
-        assert isinstance(indent, str)
-
-        # Append the <SearchComment> element:
-        search_comment = self
-        lines = search_comment.lines
-        xml_lines.append('{0}<SearchComment language="{1}">'.
-                         format(indent, search_comment.language))
-        for line in lines:
-            xml_lines.append("{0}  {1}".format(indent, line))
-        xml_lines.append('{0}</SearchComment>'.format(indent))
+        # Construct and return the final *search_comment*:
+        search_comment: SearchComment = SearchComment(language, lines)
+        return search_comment
 
 
 # TableComment:
 class TableComment(Comment):
 
     # TableComment.__init__():
-    def __init__(self, **arguments_table):
-        # Verify argument types:
-        is_comment_tree = "comment_tree" in arguments_table
-        if is_comment_tree:
-            assert len(arguments_table) == 1
-            assert isinstance(arguments_table["comment_tree"], etree._Element)
-        else:
-            assert len(arguments_table) == 2
-            assert "language" in arguments_table and isinstance(arguments_table["language"], str)
-            assert "lines" in arguments_table
-            lines = arguments_table["lines"]
-            assert isinstance(lines, list)
-            for line in lines:
-                assert isinstance(line, str)
+    def __init__(self, language: str, lines: List[str]) -> None:
+        # *TableComment* is just a pure sub-class of the parent *Comment* class:
+        super().__init__(language, lines)
 
-        # There are no extra attributes above a *Comment* object, so we can just use the
-        # intializer for the *Coment* class:
-        super().__init__("TableComment", **arguments_table)
+    # TableComment.xml_parse():
+    @staticmethod
+    def xml_parse(comment_tree: etree._Element) -> "TableComment":
+        # Grab some values out of *comment_tree*:
+        attributes_table: Dict[str, str]
+        language: str
+        lines: List[str]
+        attributes_table, language, lines = Comment.xml_parse_helper(comment_tree)
 
-    # TableComment.__equ__():
-    def __equ__(self, table_comment2):
-        # Verify argument types:
-        assert isinstance(table_comment2, TableComment)
-        return super().__eq__(table_comment2)
-
-    # TableComment.xml_lines_append():
-    def xml_lines_append(self, xml_lines, indent):
-        # Verify argument types:
-        assert isinstance(xml_lines, list)
-        assert isinstance(indent, str)
-
-        # Append the <TableComment...> element:
-        table_comment = self
-        xml_lines.append('{0}<TableComment language="{1}">'.format(indent, table_comment.language))
-        for line in table_comment.lines:
-            xml_lines.append('{0}  {1}'.format(indent, line))
-        xml_lines.append('{0}</TableComment>'.format(indent))
+        # Construct and return the final *table_comment*:
+        table_comment: TableComment = TableComment(language, lines)
+        return table_comment
 
 
 # Encode:
@@ -998,21 +971,21 @@ class Encode:
 
     # Encode.from_attribute():
     @staticmethod
-    def from_attribute(attribute):
-        characters = list()
-        attribute_size = len(attribute)
-        index = 0
+    def from_attribute(attribute: str) -> str:
+        characters: List[str] = list()
+        attribute_size: int = len(attribute)
+        index: int = 0
         while index < attribute_size:
             # Grab the *character* and compute the *next_index:
-            character = attribute[index]
-            next_index = index + 1
+            character: str = attribute[index]
+            next_index: int = index + 1
 
             # Determine if we have an HTML entity:
             if character == '&':
                 # We do have an HTML entity; find the closing ';':
                 # rest = attribute[index:]
                 # print(f"rest='{rest}'")
-                entity = ""
+                entity: str = ""
                 for entity_index in range(index, attribute_size):
                     entity_character = attribute[entity_index]
                     # print(f"Attribute[{entity_index}]='{entity_character}'")
@@ -1053,23 +1026,23 @@ class Encode:
             index = next_index
 
         # Concatenate *characters* into final *text* and return it:
-        text = "".join(characters)
+        text: str = "".join(characters)
         return text
 
     # Encode.from_file_name():
     @staticmethod
-    def from_file_name(file_name):
+    def from_file_name(file_name: str) -> str:
         # Verify argument types:
         assert isinstance(file_name, str)
 
         # Construct a list of *characters* one at a time to join together into final *text*:
-        characters = list()
-        index = 0
-        file_name_size = len(file_name)
+        characters: List[str] = list()
+        index: int = 0
+        file_name_size: int = len(file_name)
         while index < file_name_size:
             # Dispatch on *character* and compute *next_index*:
-            character = file_name[index]
-            next_index = index + 1
+            character: str = file_name[index]
+            next_index: int = index + 1
 
             # Dispatch on *character*:
             if character == '_':
@@ -1086,7 +1059,7 @@ class Encode:
                     # digit number:
                     if next_character == '%':
                         # We have "%%XXXX"" to parse:
-                        hex_index = index + 2
+                        hex_index: int = index + 2
                         next_index = index + 6
                     else:
                         # We have "%XX" to parse into a single *character*:
@@ -1095,7 +1068,7 @@ class Encode:
 
                     # Extract the *hex_text* from *file_name* to parse:
                     assert next_index <= file_name_size, "'%' at end of string is wrong"
-                    hex_text = file_name[hex_index:next_index]
+                    hex_text: str = file_name[hex_index:next_index]
 
                     # Now attempt top arse *hex_text* into *character*:
                     try:
@@ -1117,18 +1090,19 @@ class Encode:
             index = next_index
 
         # Join *characters* back into a single *text* string:
-        text = "".join(characters)
+        text: str = "".join(characters)
         return text
 
     # Encode.to_attribute():
     @staticmethod
-    def to_attribute(text):
+    def to_attribute(text: str) -> str:
         assert isinstance(text, str)
-        characters = list()
-        ord_space = ord(' ')
-        ord_tilde = ord('~')
+        characters: List[str] = list()
+        ord_space: int = ord(' ')
+        ord_tilde: int = ord('~')
+        character: str
         for character in text:
-            ord_character = ord(character)
+            ord_character: int = ord(character)
             if ord_space <= ord_character <= ord_tilde:
                 # *character* is ASCII printable; now convert some of them to HTML entity:
                 if character == '&':
@@ -1147,19 +1121,20 @@ class Encode:
             characters.append(character)
 
         # Convert *characters* to an *attribute* string and return it:
-        attribute = "".join(characters)
+        attribute: str = "".join(characters)
         return attribute
 
     # Encode.to_file_name():
     @staticmethod
-    def to_file_name(text):
-        characters = list()
-        ord_space = ord(' ')
-        ord_tilde = ord('~')
-        ord_del = ord('\xff')
+    def to_file_name(text: str) -> str:
+        characters: List[str] = list()
+        ord_space: int = ord(' ')
+        ord_tilde: int = ord('~')
+        ord_del: int = ord('\xff')
+        character: str
         for character in text:
             # Dispatch on the integer *ord_character*:
-            ord_character = ord(character)
+            ord_character: int = ord(character)
             if ord_character == ord_space:
                 # Convert *character* space (' ') to an underscore ('_'):
                 character = '_'
@@ -1182,58 +1157,61 @@ class Encode:
             characters.append(character)
 
         # Concatenate *characters* into *file_name* and return it:
-        file_name = "".join(characters)
+        file_name: str = "".join(characters)
         return file_name
 
     # Encode.to_url():
     @staticmethod
-    def to_url(text):
+    def to_url(text: str) -> str:
         # Convert *text* into the %XX encoding system used by URL's as per RFC 3986:
+        character: str
         return "".join([character if character.isalnum() or character in "-.!"
                         else "%0:02x".format(ord(character)) for character in text])
 
     # Encode.test():
     @staticmethod
-    def test():
-        printable_ascii = "".join([chr(index) for index in range(ord(' '), ord('~')+1)])
+    def test() -> None:
+        printable_ascii: str = "".join([chr(index) for index in range(ord(' '), ord('~')+1)])
         Encode.test_both(printable_ascii)
-        control_ascii = "".join([chr(index) for index in range(ord(' ')-1)]) + "\xff"
+        control_ascii: str = "".join([chr(index) for index in range(ord(' ')-1)]) + "\xff"
         Encode.test_both(control_ascii)
-        unicode_characters = "\u03a9Ω\u03bcμ"
+        unicode_characters: str = "\u03a9Ω\u03bcμ"
         Encode.test_both(unicode_characters)
 
     # Encode.test_attribute():
     @staticmethod
-    def test_attribute(before_attribute):
+    def test_attribute(before_attribute: str) -> None:
         assert isinstance(before_attribute, str)
         # print(f"before_attribute='{before_attribute}'")
-        attribute_text = Encode.to_attribute(before_attribute)
+        attribute_text: str = Encode.to_attribute(before_attribute)
         # print(f"attribute_text='{attribute_text}'")
-        after_attribute = Encode.from_attribute(attribute_text)
+        after_attribute: str = Encode.from_attribute(attribute_text)
         # print(f"after_attribute='{after_attribute}'")
         Encode.test_compare(before_attribute, after_attribute)
 
     # Encode.test_both():
     @staticmethod
-    def test_both(text):
+    def test_both(text: str) -> None:
         assert isinstance(text, str)
         Encode.test_attribute(text)
         Encode.test_file_name(text)
 
     # Encode.test_compare():
     @staticmethod
-    def test_compare(text1, text2):
+    def test_compare(text1: str, text2: str) -> None:
         # Verify argument types:
         assert isinstance(text1, str)
         assert isinstance(text2, str)
 
         if text1 != text2:
-            text1_size = len(text1)
-            text2_size = len(text2)
-            text_size = min(text1_size, text2_size)
-            for index, character in enumerate(range(text_size)):
-                character1 = text1[index]
-                character2 = text2[index]
+            text1_size: int = len(text1)
+            text2_size: int = len(text2)
+            text_size: int = min(text1_size, text2_size)
+            index: int
+            character: str
+            for index in range(text_size):
+                character1: str = text1[index]
+                character2: str = text2[index]
                 assert character1 == character2, (f"Mismatch at index={index}"
                                                   f" '{character1}' != '{character2}'"
                                                   f" text1='{text1}' text2='{text2}'")
@@ -1241,10 +1219,10 @@ class Encode:
 
     # Encode.test_file_name():
     @staticmethod
-    def test_file_name(before_text):
+    def test_file_name(before_text: str) -> None:
         assert isinstance(before_text, str)
-        file_name_text = Encode.to_file_name(before_text)
-        after_text = Encode.from_file_name(file_name_text)
+        file_name_text: str = Encode.to_file_name(before_text)
+        after_text: str = Encode.from_file_name(file_name_text)
         Encode.test_compare(before_text, after_text)
 
 
@@ -1252,15 +1230,16 @@ class Encode:
 class Enumeration:
 
     # Enumeration.__init__():
-    def __init__(self, **arguments_table):
-        is_enumeration_tree = "enumeration_tree" in arguments_table
+    def __init__(self, **arguments_table) -> None:
+        is_enumeration_tree: bool = "enumeration_tree" in arguments_table
         if is_enumeration_tree:
             assert isinstance(arguments_table["enumeration_tree"], etree._Element)
         else:
             assert len(arguments_table) == 2
             assert "name" in arguments_table
             assert "comments" in arguments_table
-            comments = arguments_table["comments"]
+            comments: List[EnumerationComment] = arguments_table["comments"]
+            comment: EnumerationComment
             for comment in comments:
                 assert isinstance(comment, EnumerationComment)
 
@@ -1274,7 +1253,7 @@ class Enumeration:
             comments_tree = list(enumeration_tree)
             comments = list()
             for comment_tree in comments_tree:
-                comment = EnumerationComment(comment_tree=comment_tree)
+                comment = EnumerationComment.xml_parse(comment_tree)
                 comments.append(comment)
             assert len(comments) >= 1
         else:
@@ -1282,31 +1261,33 @@ class Enumeration:
             comments = arguments_table["comments"]
 
         # Load value into *enumeration* (i.e. *self*):
-        enumeration = self
-        enumeration.name = name
-        enumeration.comments = comments
+        # enumeration: Enumeration = self
+        self.name: str = name
+        self.comments: List[EnumerationComment] = comments
 
     # Enumeration.__eq__():
-    def __eq__(self, enumeration2):
+    def __eq__(self, enumeration2: object) -> bool:
         # Verify argument types:
-        assert isinstance(enumeration2, Enumeration)
-
-        enumeration1 = self
-        name_equal = (enumeration1.name == enumeration2.name)
-        comments_equal = (enumeration1.comments == enumeration2.comments)
-        return name_equal and comments_equal
+        equal: bool = False
+        if isinstance(enumeration2, Enumeration):
+            enumeration1: Enumeration = self
+            name_equal: bool = enumeration1.name == enumeration2.name
+            comments_equal: bool = enumeration1.comments == enumeration2.comments
+            equal = name_equal and comments_equal
+        return equal
 
     # Enumeration.xml_lines_append():
-    def xml_lines_append(self, xml_lines, indent):
+    def xml_lines_append(self, xml_lines: List[str], indent: str) -> None:
         # Verify argument types:
         assert isinstance(xml_lines, list)
         assert isinstance(indent, str)
 
         # Append an `<Enumeration>` element to *xml_lines*:
-        enumeration = self
-        name = enumeration.name
-        name_attribute = Encode.to_attribute(name)
+        enumeration: Enumeration = self
+        name: str = enumeration.name
+        name_attribute: str = Encode.to_attribute(name)
         xml_lines.append(f'{indent}<Enumeration name="{name_attribute}">')
+        comment: EnumerationComment
         for comment in enumeration.comments:
             comment.xml_lines_append(xml_lines, indent + "  ")
         xml_lines.append(f'{indent}</Enumeration>')
@@ -1316,20 +1297,7 @@ class Enumeration:
 class Filter:
 
     # Filter.__init__():
-    def __init__(self, **arguments_table):
-        # Verify argument types:
-        is_filter_tree = "tree" in arguments_table
-        arguments_table_size = len(arguments_table)
-        if is_filter_tree:
-            assert arguments_table_size == 2
-            assert "table" in arguments_table
-        else:
-            assert arguments_table_size == 4
-            assert "parameter" in arguments_table
-            assert "table" in arguments_table
-            assert "use" in arguments_table
-            assert "select" in arguments_table
-
+    def __init__(self, ) -> None:
         # Dispatch on *is_filter_tree*:
         if is_filter_tree:
             # Grab *tree* and *table* out of *arguments_table*:
@@ -1389,16 +1357,16 @@ class Filter:
                 assert False
 
         # Load up *filter* (i.e. *self*):
-        filter = self
-        filter.parameter = parameter
-        filter.reg_ex = None
-        filter.select = select
-        filter.select_item = None
-        filter.use = use
-        filter.use_item = None
+        # filter: Filter = self
+        self.parameter: Parameter = parameter
+        self.reg_ex: Any = None
+        self.select: str = select
+        self.select_item: None = None
+        self.use: bool = use
+        self.use_item: None = None
 
     # Filter.xml_lines_append():
-    def xml_lines_append(self, xml_lines, indent, tracing=""):
+    def xml_lines_append(self, xml_lines: List[str], indent: str, tracing: str = "") -> None:
         # Verify argument types:
         assert isinstance(xml_lines, list)
         assert isinstance(indent, str)
@@ -1407,20 +1375,19 @@ class Filter:
         # Perform any requested *tracing*:
 
         # Start appending the `<Filter...>` element to *xml_lines*:
-        filter = self
-        parameter = filter.parameter
-        use = filter.use
-        select = filter.select
-        parameter_name = parameter.name
+        filter: Filter = self
+        parameter: Parameter = filter.parameter
+        use: bool = filter.use
+        select: str = filter.select
+        parameter_name: str = parameter.name
         xml_lines.append(f'{indent}<Filter name="{parameter_name}" use="{use}" select="{select}">')
         if tracing:
-            print("{0}Name='{1}' Use='{2}' Select='{3}'".
-                  format(tracing, parameter.name, filter.use, select))
+            print(f"{tracing}name='{parameter_name}' Use='{use}' select='{select}'")
 
         # Append any *enumerations*:
-        enumerations = parameter.enumerations
+        enumerations: List[Enumeration] = parameter.enumerations
         if len(enumerations) >= 1:
-            xml_lines.append('{0}  <FilterEnumerations>'.format(indent))
+            xml_lines.append(f'{indent}  <FilterEnumerations>')
             for enumeration in enumerations:
                 enumeration_name = enumeration.name
                 match = False
@@ -1437,7 +1404,7 @@ class Footprint:
     """ *Footprint*: Represents a PCB footprint. """
 
     # Footprint.__init__():
-    def __init__(self, name, rotation):
+    def __init__(self, name: str, rotation: float) -> None:
         """ *Footprint*: Initialize a new *FootPrint* object.
 
         The arguments are:
@@ -1451,16 +1418,16 @@ class Footprint:
         assert isinstance(rotation, float) and 0.0 <= rotation <= 360.0 or rotation is None
 
         # Stuff values into *footprint* (i.e. *self*):
-        footprint = self
-        footprint.name = name
-        footprint.rotation = rotation
+        # footprint: Footprint = self
+        self.name = name
+        self.rotation = rotation
 
 
 # Inventory:
 class Inventory:
 
     # Inventory.__init__():
-    def __init__(self, project_part, amount):
+    def __init__(self, project_part: "ProjectPart", amount: int) -> None:
         """ *Inventory*: Initialize *self* to contain *scheamtic_part* and
             *amount*. """
 
@@ -1469,8 +1436,9 @@ class Inventory:
         assert isinstance(amount, int)
 
         # Load up *self*:
-        self.project_part = project_part
-        self.amount = amount
+        # inventory: Inventory = self
+        self.project_part: ProjectPart = project_part
+        self.amount: int = amount
 
 
 # The *Node* class and its associated sub-classes *Collections*, *Collection*, *Directory*
@@ -1521,21 +1489,23 @@ class Gui:
     """ Represents some callback interfaces to the GUI if it exists. """
 
     # Gui.__init__():
-    def __init__(self):
+    def __init__(self) -> None:
         # Construct a bunch of regular expressions:
-        si_units_re_text = Units.si_units_re_text_get()
-        float_re_text = "-?([0-9]+\\.[0-9]*|\\.[0-9]+)"
-        white_space_text = "[ \t]*"
-        integer_re_text = "-?[0-9]+"
-        integer_re = re.compile(integer_re_text + "$")
-        float_re = re.compile(float_re_text + "$")
-        url_re = re.compile("(https?://)|(//).*$")
-        empty_re = re.compile("-?$")
-        funits_re = re.compile(float_re_text + white_space_text + si_units_re_text + "$")
-        iunits_re = re.compile(integer_re_text + white_space_text + si_units_re_text + "$")
-        range_re = re.compile("[^~]+~[^~]+$")
-        list_re = re.compile("([^,]+,)+[^,]+$")
-        re_table = {
+        si_units_re_text: str = Units.si_units_re_text_get()
+        float_re_text: str = "-?([0-9]+\\.[0-9]*|\\.[0-9]+)"
+        white_space_text: str = "[ \t]*"
+        integer_re_text: str = "-?[0-9]+"
+        integer_re: ReCompiled = re.compile(integer_re_text + "$")
+        float_re: ReCompiled = re.compile(float_re_text + "$")
+        url_re: ReCompiled = re.compile("(https?://)|(//).*$")
+        empty_re: ReCompiled = re.compile("-?$")
+        funits_re: ReCompiled = re.compile(float_re_text +
+                                           white_space_text + si_units_re_text + "$")
+        iunits_re: ReCompiled = re.compile(integer_re_text + white_space_text +
+                                           si_units_re_text + "$")
+        range_re: ReCompiled = re.compile("[^~]+~[^~]+$")
+        list_re: ReCompiled = re.compile("([^,]+,)+[^,]+$")
+        re_table: Dict[str, ReCompiled] = {
           "Empty": empty_re,
           "Float": float_re,
           "FUnits": funits_re,
@@ -1545,14 +1515,15 @@ class Gui:
           "Range": range_re,
           "URL": url_re,
         }
-        gui = self
-        gui.re_table = re_table
+        # gui: Gui = self
+        self.re_table: Dict[str, ReCompiled] = re_table
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "GUI()"
 
     # Gui.begin_rows_insert():
-    def begin_rows_insert(self, node, start_row_index, end_row_index, tracing=""):
+    def begin_rows_insert(self, node: "Node",
+                          start_row_index: int, end_row_index: int, tracing: str = "") -> None:
         # Verify argument types:
         assert isinstance(node, Node)
         assert isinstance(start_row_index, int)
@@ -1561,7 +1532,8 @@ class Gui:
         pass  # Do nothing for the non-GUI version of th code
 
     # Gui.begin_rows_remove():
-    def begin_rows_remove(self, node, start_row_index, end_row_index, tracing=""):
+    def begin_rows_remove(self, node: "Node",
+                          start_row_index: int, end_row_index: int, tracing: str = "") -> None:
         # Verify argument types:
         assert isinstance(node, Node)
         assert isinstance(start_row_index, int)
@@ -1569,17 +1541,25 @@ class Gui:
         assert isinstance(tracing, str)
         pass  # Do nothing for the non-GUI version of th code
 
+    # Gui.directory_clicked():
+    def directory_clicked(self, directory: "Directory") -> None:
+        assert False, "Gui.directory_clicked() should never be called"
+
     # Gui.end_rows_insert():
-    def end_rows_insert(self, tracing=""):
+    def end_rows_insert(self, tracing: str = "") -> None:
         # Verify argument types:
         assert isinstance(tracing, str)
         pass  # Do nothing for the non-GUI version of th code
 
     # Gui.end_rows_remove():
-    def end_rows_remove(self, tracing=""):
+    def end_rows_remove(self, tracing: str = "") -> None:
         # Verify argument types:
         assert isinstance(tracing, str)
         pass  # Do nothing for the non-GUI version of th code
+
+    # Gui.search_clicked():
+    def search_clicked(self, search: "Search") -> None:
+        assert False, "Gui.search_clicked() should never be called"
 
 
 # Node:
@@ -1587,7 +1567,8 @@ class Node:
     """ Represents a single *Node* suitable for use in a *QTreeView* tree. """
 
     # Node.__init__():
-    def __init__(self, name, parent, gui=None, tracing=""):
+    def __init__(self, name: str, parent: "Optional[Node]",
+                 gui: Optional[Gui] = None, tracing: str = "") -> None:
         # Verify argument types:
         assert isinstance(name, str)
         assert isinstance(parent, Node) or parent is None
@@ -1595,19 +1576,40 @@ class Node:
         assert isinstance(tracing, str)
 
         # Do some additional checking for *node* (i.e. *self*):
-        node = self
-        is_collection = isinstance(node, Collection)
-        is_collections = isinstance(node, Collections)
+        node: Node = self
+        # is_collection: bool = isinstance(node, Collection)
+        # is_collections: bool = isinstance(node, Collections)
         # is_either = is_collections or is_collection
-        assert (parent is None) == is_collections, f"Node '{name}' has bad parent"
+        # assert (parent is None) == is_collections, f"Node '{name}' has bad parent"
 
         # Initilize the super class for *node*:
         super().__init__()
 
-        # Compute *relative_path* using *partent*:
-        collection = None if is_collections else (node if is_collection else parent.collection)
-        relative_path = ("" if parent is None
-                         else os.path.join(parent.relative_path, Encode.to_file_name(name)))
+        # Determine the *collection* to attache *node*.  Do this very carefully so that
+        # `mypy` does not throw a fit:
+        collection: Optional[Collection] = None
+        if parent is None:
+            # A *Node* with no parent is a root node which will not be a *Collection* node,
+            # so we mark this *node* as having no *collection*:
+            collection = None
+        elif isinstance(parent, Collection):
+            # If the *parent* is a *Collection*, we can just use the *parent*:
+            collection = parent
+        elif isinstance(parent, Collections):
+            # If the *parent* is a *Collections*, we know this it a child *Collection*, so
+            # we just use *node* (i.e. *self*) as the *collection*:
+            assert isinstance(node, Collection)
+            collection = node
+        elif isinstance(parent.collection, Collection):
+            # If *parant* has a valid *Collection*, we use it as the *collection*:
+            collection = parent.collection
+        else:
+            # We have not found a valid *Collection* and force *None* into *collection*:
+            collection = None
+
+        # Compute *relative_path*:
+        relative_path: str = ("" if parent is None
+                              else os.path.join(parent.relative_path, Encode.to_file_name(name)))
 
         # Make sure we have a valid *gui* object:
         if gui is None:
@@ -1617,12 +1619,12 @@ class Node:
 
         # Load up *node* (i.e. *self*):
         node = self
-        node._children = list()              # List of children *Node*'s
-        node.gui = gui
-        node.collection = collection         # Parent *Collection* for *node* (if it makes sense)
-        node.name = name                     # Human readable name of version of *Node*
-        node.parent = parent                 # Parent *Node* (*None* for *Collections*)
-        node.relative_path = relative_path   # Relative path from root to *node* name without suffix
+        self._children: List[Node] = list()       # *Node* sub-classes should use *chldren_get*()
+        self.gui: Gui = gui                       # The *gui* object to use for GUI updates
+        self.collection: Optional[Collection] = collection  # Parent *Collection* for *node*
+        self.name: str = name                     # Human readable name of version of *node*
+        self.parent: Optional[Node] = parent      # Parent *Node* (*None* for *Collections*)
+        self.relative_path: str = relative_path   # Relative path from root to *node* name wo/suffix
 
         # To construct a path to the file/directory associated with a *node*:
         # 1. Start with either *node.collection.collection_root* or
@@ -1635,31 +1637,25 @@ class Node:
             parent.child_append(node)
 
     # Node.child():
-    def child(self, row):
-        # Verify argument types:
-        assert isinstance(row, int)
-
-        node = self
-        children = node._children
-        result = children[row] if 0 <= row < len(children) else None
-        return result
+    def child(self, index: int) -> "Node":
+        node: Node = self
+        children: List[Node] = node._children
+        assert 0 <= index < len(children)
+        child: Node = children[index]
+        return child
 
     # Node.child_append():
-    def child_append(self, child):
-        # Verify argument types:
-        assert isinstance(child, Node)
-
+    def child_append(self, child: "Node") -> None:
         # FIXME: This should just call *child_insert*() with a position of len(children)!!!
 
-        # Grab *children* from *node* (i.e. *self*):
-        node = self
-        children = node._children
-        gui = node.gui
-        assert isinstance(gui, Gui)
+        # Grab some values from *node* (i.e. *self*):
+        node: Node = self
+        children: List[Node] = node._children
+        gui: Gui = node.gui
 
         # Let *gui* (if it exists) know that we are about to insert *node* at the
         # end of *children* (i.e. at the *insert_row_index*):
-        insert_row_index = len(children)
+        insert_row_index: int = len(children)
         gui.begin_rows_insert(node, insert_row_index, insert_row_index)
 
         # Now tack *child* onto the end of *child* and update *child*'s parent field:
@@ -1670,206 +1666,170 @@ class Node:
         gui.end_rows_insert()
 
     # Node.child_count():
-    def child_count(self):
+    def child_count(self) -> int:
         # Return the number of children associated with *node* (i.e. *self*):
-        node = self
-        count = len(node._children)
+        node: Node = self
+        count: int = len(node._children)
         return count
 
     # Node.child_delete():
-    def child_delete(self, position):
-        # Verify argument types:
-        assert isinstance(position, int)
-
+    def child_delete(self, index: int) -> None:
         # Grab some values out of *node* (i.e. *self*):
         node = self
         children = node._children
         children_size = len(children)
 
-        # Only delete if *position* is valid*:
-        deleted = False
-        if 0 <= position < children_size:
-            # Let *gui* know that a row is about to be removed:
-            gui = node.gui
-            gui.begin_rows_remove(node, position, position)
+        # Only delete if *index* is valid*:
+        assert 0 <= index < children_size
 
-            # Perform the actual deletion:
-            del children[position]
-            deleted = True
+        # Let *gui* know that the *index*'th row is about to be removed:
+        gui = node.gui
+        gui.begin_rows_remove(node, index, index)
 
-            # Let *gui* know that the row has been deleted:
-            gui.end_rows_remove()
+        # Perform the actual deletion:
+        del children[index]
 
-        # Return whether or not we succussfully *deleted* the child:
-        return deleted
+        # Let *gui* know that the row has been deleted:
+        gui.end_rows_remove()
 
     # Node.child_insert():
-    def child_insert(self, position, child):
-        # Verify argument types:
-        assert isinstance(position, int)
-        assert isinstance(child, Node)
-
-        # Verify that *position* is valid for inserting into *node* (i.e. *self*):
-        node = self
+    def child_insert(self, index: int, child: "Node") -> None:
+        # Verify that *index* is valid for inserting into *node* (i.e. *self*):
+        node: Node = self
         children = node._children
         children_size = len(children)
-        assert 0 <= position <= children_size, f"Bad position={position} size={children_size}"
+        assert 0 <= index <= children_size, f"Bad index={index} size={children_size}"
 
         # Let *gui* know that we are about to insert *node* at the of *children*
-        # (i.e. at *position*):
-        gui = node.gui
-        gui.begin_rows_insert(node, position, position)
+        # (i.e. at *index*):
+        gui: Gui = node.gui
+        gui.begin_rows_insert(node, index, index)
 
-        # Now stuff *child* into *children* at *position*:
-        children.insert(position, child)
+        # Now stuff *child* into *children* at *index*:
+        children.insert(index, child)
         child.parent = node
 
         # Wrap up *gui* row insert:
-        gui.end_rows_Insert()
-
-        return True
+        gui.end_rows_insert()
 
     # Node.child_remove()
-    def child_remove(self, child, tracing=""):
-        # Verify argument types:
-        assert isinstance(child, Node)
-        assert isinstance(tracing, str)
-
+    def child_remove(self, child: "Node", tracing="") -> None:
         # Find the *index* of *child* in *node* (i.e. *self*) and delete it:
-        node = self
-        children = node._children
-        assert child in children
-        index = children.index(child)
+        node: Node = self
+        children: List[Node] = node._children
+        index: int = children.index(child)
         assert index >= 0
         node.child_delete(index)
 
     # Node.children_get():
-    def children_get(self):
+    def children_get(self) -> "List[Node]":
         # Return the children of *node* (i.e. *self*):
-        node = self
-        return node._children
+        node: "Node" = self
+        children: "List[Node]" = node._children
+        return children
 
     # Node.clicked():
-    def clicked(self, gui, tracing=""):
-        # Verify argument types:
-        assert isinstance(gui, Gui)
-        assert isinstance(tracing, str)
-
+    def clicked(self, gui: Gui, tracing: str = "") -> None:
         # Fail with a more useful error message better than "no such method":
-        node = self
-        assert False, "Node.clicked() needs to be overridden for type ('{0}')".format(type(node))
+        node: Node = self
+        assert False, f"Node.clicked() needs to be overridden for type ('{type(node)}')"
 
     # Node.csv_read_and_process():
-    def csv_read_and_process(self, csv_directory, bind=False, tracing=""):
-        # Verify argument types:
-        assert isinstance(csv_directory, str)
-        assert False, ("Node sub-class '{0}' does not implement csv_read_and_process".
-                       format(type(self)))
+    def csv_read_and_process(self, csv_directory: str, bind: bool = False,
+                             tracing: str = "") -> None:
+        # Fail with a more useful error message better than "no such method":
+        node: Node = self
+        assert False, f"Node sub-class '{type(node)}' does not implement csv_read_and_process"
+
+    # Node.directories_get():
+    def directories_get(self) -> "List[Directory]":
+        node: Node = self
+        assert False, f"Node.directories_get() for node of type '{type(node)}'"
+        return list()
 
     # Node.directory_create():
-    def directory_create(self, root_path, tracing=""):
-        # Verify argument types:
-        assert isinstance(root_path, str)
-        assert isinstance(tracing, str)
-
-        node = self
-        parent = node.parent
-        assert parent is not None
-        parent_relative_path = parent.relative_path
-        directory_path = os.path.join(root_path, parent_relative_path)
-        if not os.path.isdir(directory_path):
-            os.makedirs(directory_path)
-            if tracing:
-                print(f"{tracing}Created directory '{directory_path}'")
-
-    # Node.full_file_name_get():
-    def xxx_full_file_name_get(self):
-        assert False, "Node.full_file_name_get() needs to be overridden"
+    def directory_create(self, root_path: str, tracing="") -> None:
+        node: "Node" = self
+        parent: Optional[Node] = node.parent
+        if parent is not None:
+            parent_relative_path: str = parent.relative_path
+            directory_path: str = os.path.join(root_path, parent_relative_path)
+            if not os.path.isdir(directory_path):
+                os.makedirs(directory_path)
+                if tracing:
+                    print(f"{tracing}Created directory '{directory_path}'")
 
     # Node.gui_get():
-    def gui_get(self):
-        # Return *gui* (or *None*) for *node* (i.e. *self*):
-        node = self
-        collection = node.collection
-        gui = None if collection is None else collection.gui
+    def gui_get(self) -> Gui:
+        # Return *gui* for *node* (i.e. *self*):
+        node: "Node" = self
+        gui: Gui = node.gui
         return gui
 
     # Node.has_child():
-    def has_child(self, sub_node):
-        # Verify argument types:
-        assert isinstance(sub_node, Node)
-
-        node = self
-        found = False
-        for child in node._children:
+    def has_child(self, sub_node: "Node") -> bool:
+        # Start with *found* set to *False* and only set to *True* if *sub_node* is found
+        # in the *children* of *node* (i.e. *self*):
+        node: "Node" = self
+        found: bool = False
+        children: List[Node] = node._children
+        child: "Node"
+        for child in children:
             if sub_node is child:
                 found = True
                 break
         return found
 
     # Node.has_children():
-    def has_children(self):
+    def has_children(self) -> bool:
         # Return *True* if *node* (i.e. *self*) has one or more children:
-        node = self
-        children = node._children
-        has_children = len(children) > 0
+        node: "Node" = self
+        children: "List[Node]" = node._children
+        has_children: bool = len(children) > 0
         return has_children
 
     # Node.name_get():
-    def name_get(self, tracing=""):
-        # Verify argument types:
-        assert isinstance(tracing, str)
-
+    def name_get(self, tracing: str = "") -> str:
         # Grab *title* from *node* (i.e. *self*):
-        node = self
-        name = node.name
+        node: "Node" = self
+        name: str = node.name
         return name
 
     # Node.remove():
-    def remove(self, remove_node, tracing=""):
-        # Verify argument types:
-        assert isinstance(remove_node, Node)
-        assert isinstance(tracing, str)
-
-        node = self
-        children = node._children
-        for child_index, child_node in enumerate(children):
-            if child_node is remove_node:
-                del children[child_index]
+    def remove(self, remove_node: "Node", tracing: str = "") -> None:
+        node: "Node" = self
+        children: "List[Node]" = node._children
+        index: int
+        child: Node
+        for index, child in enumerate(children):
+            if child is remove_node:
+                del children[index]
                 remove_node.parent = None
                 break
         else:
-            assert False, ("Node '{0}' not in '{1}' remove failed".
-                           format(remove_node.name, node.name))
-
-    # Node.searches_root_get():
-    def searches_root_get(self):
-        # Ensure that we have a *parent* Node:
-        node = self
-        parent = node.parent
-        assert isinstance(parent, Node)
-
-        # Recursively go up the tree until we get a *searches_root*:
-        searches_root = parent.searches_root_get()
-
-        return searches_root
+            assert False, f"Node '{remove_node.name}' not in '{node.name}' remove failed"
 
     # Node.sort():
-    def sort(self, key_function):
-        # Verify argument types:
-        assert isinstance(key_function, callable)
-
+    def sort(self, key_function: Callable) -> None:
         # Sort the *children* of *node* (i.e. *self*) using *key_function*:
-        node = self
-        children = node._children
+        node: Node = self
+        children: List[Node] = node._children
         children.sort(key=key_function)
 
+    # Node.tables_get():
+    def tables_get(self) -> "List[Table]":
+        # This routine should never actuall be called:
+        node: Node = self
+        assert False, f"Node.tables_get() called with a node of type '{type(node)}'"
+
     # Node.row():
-    def row(self):
+    def row(self) -> int:
         # Return the index of *node* (i.e. *self*) from its parent children list:
-        node = self
-        parent = node.parent
-        result = 0 if parent is None else parent._children.index(node)
+        node: Node = self
+        parent: Optional[Node] = node.parent
+        assert isinstance(parent, Node)
+        parent_children: List[Node] = parent._children
+        result: int = parent_children.index(node)
         return result
 
 
@@ -1877,7 +1837,7 @@ class Node:
 class Directory(Node):
 
     # Directory.__init__():
-    def __init__(self, name, parent, tracing=""):
+    def __init__(self, name, parent, tracing="") -> None:
         # Verify argument types:
         assert isinstance(name, str)
         assert isinstance(parent, Node)
@@ -1889,61 +1849,54 @@ class Directory(Node):
         # Initlialize the *Node* super class for directory (i.e. *self*):
         super().__init__(name, parent)
 
-        directory = self
-        relative_path = directory.relative_path
+        # The parent *Node* class initialized *directory* (i.e. *self*) to have a *relative_path*:
+        directory: Directory = self
+        relative_path: str = directory.relative_path
         if tracing:
             print(f"{tracing}relative_path='{relative_path}'")
 
     # Directory.append():
-    def append(self, node):
+    def append(self, node: Node) -> None:
         assert isinstance(node, Directory) or isinstance(node, Table)
-        directory = self
+        directory: Directory = self
         directory.child_append(node)
 
     # Directory.can_fetch_more():
-    def can_fetch_more(self):
+    def can_fetch_more(self) -> bool:
         # The call to *Directiory.partial_load*, pre-loaded all of the sub-directories and
         # tables for *directory* (i.e. *self*).  That means there is nothing more to fetch.
         return False
 
     # Directory.clicked():
-    def clicked(self, gui, tracing=""):
-        # Verify argument types:
-        assert isinstance(gui, Gui)
-        assert isinstance(tracing, str)
-
+    def clicked(self, gui: Gui, tracing="") -> None:
         # Send the clicked event back to the *gui* along with *directory* (i.e. *self*):
-        directory = self
+        directory: Directory = self
         gui.directory_clicked(directory)
 
     # Directory.directories_get():
     def directories_get(self):
-        directory = self
-        directories = [directory]
+        directory: Directory = self
+        directories: List[Directory] = [directory]
+        node: Node
         for node in directory.children_get():
             directories.extend(node.directories_get())
         return directories
 
     # Directory.name_get():
-    def name_get(self, tracing=""):
-        # Verify argument types:
-        assert isinstance(tracing, str)
-
-        directory = self
-        name = directory.name
+    def name_get(self, tracing="") -> str:
+        directory: Directory = self
+        name: str = directory.name
         return name
 
     # Directory.partial_load():
-    def partial_load(self, tracing=""):
-        # Verify argument types:
-        assert isinstance(tracing, str)
-
+    def partial_load(self, tracing: str = "") -> None:
         # Compute the *full_path* for the *collection* sub-*directory*:
-        directory = self
-        relative_path = directory.relative_path
-        collection = directory.collection
-        collection_root = collection.collection_root
-        full_path = os.path.join(collection_root, relative_path)
+        directory: Directory = self
+        relative_path: str = directory.relative_path
+        assert isinstance(directory.collection, Collection)
+        collection: Collection = directory.collection
+        collection_root: str = collection.collection_root
+        full_path: str = os.path.join(collection_root, relative_path)
         if tracing:
             print(f"{tracing}collection_root='{collection_root}'")
             print(f"{tracing}relative_path='{relative_path}'")
@@ -1951,6 +1904,8 @@ class Directory(Node):
         assert os.path.isdir(full_path), f"Directory '{full_path}' does not exist.!"
 
         # Visit all of the files and directories in *directory_path*:
+        index: int
+        file_or_directory_name: str
         for index, file_or_directory_name in enumerate(sorted(list(os.listdir(full_path)))):
             if tracing:
                 print(f"{tracing}File_Name[{index}]:'{file_or_directory_name}'")
@@ -1958,44 +1913,39 @@ class Directory(Node):
             # Skip over any files/directories that start with '.':
             if not file_or_directory_name.startswith('.'):
                 # Recursively do a partial load for *full_path*:
-                sub_relative_path = os.path.join(relative_path, file_or_directory_name)
-                sub_full_path = os.path.join(full_path, file_or_directory_name)
+                sub_relative_path: str = os.path.join(relative_path, file_or_directory_name)
+                sub_full_path: str = os.path.join(full_path, file_or_directory_name)
                 if tracing:
                     print(f"{tracing}sub_relative_path='{sub_relative_path}'")
                     print(f"{tracing}sub_full_path='{sub_full_path}'")
                 if os.path.isdir(sub_full_path):
                     # *full_path* is a directory:
-                    name = Encode.from_file_name(file_or_directory_name)
-                    sub_directory = Directory(name, directory)
+                    name: str = Encode.from_file_name(file_or_directory_name)
+                    sub_directory: Directory = Directory(name, directory)
                     assert directory.has_child(sub_directory)
                     sub_directory.partial_load()
                 elif sub_full_path.endswith(".xml"):
                     # Full path is a *Table* `.xml` file:
                     name = Encode.from_file_name(file_or_directory_name[:-4])
-                    url = "bogus URL"
-                    table = Table(name, directory, url)
+                    url: str = "bogus URL"
+                    table: Table = Table(name, directory, url)
                     assert directory.has_child(table)
                     sub_relative_path = os.path.join(relative_path, name)
                     table.partial_load()
                 else:
                     assert False, f"'{full_path}' is neither an .xml nor a directory"
 
-        # Wrap up any requested *tracing*:
-        if tracing:
-            print(f"{tracing}<=Directory.partial_load('{directory.name}')")
-
     # Directory.tables_append():
-    def tables_get(self):
-        directory = self
-        tables = list()
+    def tables_get(self) -> "List[Table]":
+        directory: Directory = self
+        tables: List[Table] = list()
+        node: Node
         for node in directory.children_get():
             tables.extend(node.tables_get())
         return tables
 
     # Directory.type_letter_get():
-    def type_letter_get(self):
-        assert not isinstance(self, Collection)
-        # print("Directory.type_letter_get():name='{}'".format(self.name))
+    def type_letter_get(self) -> str:
         return 'D'
 
 
@@ -2004,96 +1954,86 @@ class Collection(Node):
 
     # Collection.__init__():
     @trace(1)
-    def __init__(self, name, parent, collection_root, searches_root, gui, tracing=""):
-        # Verify argument types:
-        assert isinstance(name, str)
-        assert isinstance(parent, Collections)
-        assert isinstance(collection_root, str)
-        assert isinstance(searches_root, str)
-        assert isinstance(gui, Gui)
-        assert isinstance(tracing, str)
-
+    def __init__(self, name: str, parent: Node,
+                 collection_root: str, searches_root: str, gui: Gui, tracing: str = "") -> None:
         # Intialize the *Node* super class of *collection* (i.e. *self*).
-        collection = self
+        collection: Collection = self
         super().__init__(name, parent, gui=gui)
         if tracing:
             print(f"{tracing}collection.relative_path='{collection.relative_path}'")
 
-        # Do some additional checktin on *collections* (i.e. *parent*):
-        collections = parent
-        assert isinstance(collections, Collections)
+        # Do some additional checking on *collections* (i.e. *parent*):
+        assert isinstance(parent, Collections)
+        collections: Collections = parent
         assert collections.has_child(collection)
 
         # Stuff some additional values into *collection*:
-        collection.collection_root = collection_root
-        collection.plugin = None
-        collection.searches_root = searches_root
-        collection.searches_table = dict()
-        collection.gui = collections.gui
+        self.collection_root: str = collection_root
+        self.plugin: Optional[Callable] = None
+        self.searches_root: str = searches_root
+        self.searches_table: Dict[str, Search] = dict()
+        self.gui: Gui = collections.gui
 
         # Ensure that *type_letter_get()* returns 'C' for Collection:
         assert collection.type_letter_get() == 'C'
 
     # Collection.actual_parts_lookup():
     @trace(1)
-    def actual_parts_lookup(self, choice_part, tracing=""):
-        # Verify argument types:
-        assert isinstance(choice_part, ChoicePart)
-        assert isinstance(tracing, str)
-
+    def actual_parts_lookup(self, choice_part: "ChoicePart", tracing: str = "") -> List[ActualPart]:
         # Grab some values from *collection* (i.e. *self*) and *choice_part*:
-        collection = self
-        searches_table = collection.searches_table
-        searches_root = collection.searches_root
-        search_name = choice_part.name
+        collection: Collection = self
+        searches_table: Dict[str, Search] = collection.searches_table
+        searches_root: str = collection.searches_root
+        choice_part_name: str = choice_part.name
 
         # Get some time values:
-        stale_time = 2 * 24 * 60 * 60  # 2 days in seconds
-        now = time.time()
+        stale_time: int = 2 * 24 * 60 * 60  # 2 days in seconds
+        now: int = int(time.time())
 
         # FIXME: This code should be in Search.actual_parts_lookup()!!!
 
-        actual_parts = []
+        actual_parts: List[ActualPart] = []
         # Build up *actual_parts* from *collection* (i.e. *self*):
-        if search_name in searches_table:
+        if choice_part_name in searches_table:
             # We have a *search* that matches *search_name*:
-            search = searches_table[search_name]
+            search = searches_table[choice_part_name]
 
             # Force *search* to read in all of its information from its associated `.xml` file:
             search.file_load()
 
             # Grab some values from *search*:
-            collection = search.collection
-            search_name = search.name
-            search_url = search.url
-            relative_path = search.relative_path
+            assert isinstance(search.collection, Collection)
+            search_name: str = search.name
+            search_url: str = search.url
+            relative_path: str = search.relative_path
             if tracing:
                 print(f"{tracing}search_name='{search_name}'")
                 print(f"{tracing}search_url='{search_url}'")
                 print(f"{tracing}relative_path='relative_path'")
+            assert search_name == choice_part_name
 
             # Compute the *csv_file_name* of where the `.csv` file associated with *search_url*
             # is (or will be) stored:
-            csv_file_name = os.path.join(searches_root, relative_path + ".csv")
+            csv_file_name: str = os.path.join(searches_root, relative_path + ".csv")
             if tracing:
                 print(f"{tracing}csv_file_name='{csv_file_name}'")
 
             # Compute *the
-            csv_modification_time = (os.path.getmtime(csv_file_name)
-                                     if os.path.isfile(csv_file_name)
-                                     else 0)
-            now = time.time()
-            stale_time = 2 * 24 * 60 * 60  # 2 days in seconds
+            csv_modification_time: int = (int(os.path.getmtime(csv_file_name))
+                                          if os.path.isfile(csv_file_name) else 0)
             if csv_modification_time + stale_time < now:
                 assert isinstance(collection, Collection)
                 collection.csv_fetch(search_url, csv_file_name)
 
             # Read in the *csv_file_name*:
             assert os.path.isfile(csv_file_name)
-            data_rows = []
-            column_names = None
+            data_rows: List[List[str]] = []
+            column_names: List[str] = []
+            csv_file: IO[str]
             with open(csv_file_name) as csv_file:
                 csv_reader = csv.reader(csv_file, delimiter=',', quotechar='"')
+                row_index: int
+                row: List[str]
                 for row_index, row in enumerate(csv_reader):
                     # print(f"[{index}]: {row}")
                     if row_index == 0:
@@ -2103,136 +2043,108 @@ class Collection(Node):
 
             if tracing:
                 print(f"len(data_rows)={len(data_rows)} ; excludes header")
-            manufacturer_part_number_index = column_names.index("Manufacturer Part Number")
+            manufacturer_part_number_index: int = column_names.index("Manufacturer Part Number")
             assert manufacturer_part_number_index >= 0
-            manufacturer_index = column_names.index("Manufacturer")
+            manufacturer_index: int = column_names.index("Manufacturer")
             assert manufacturer_index >= 0
-            duplicate_removal_table = dict()
+            duplicate_removal_table: Dict[Tuple[str, str], Tuple[str, str]] = dict()
+            manufacturer: str
+            manufacturer_part_number: str
+            pair: Tuple[str, str]
             for index, data_row in enumerate(data_rows):
                 manufacturer = data_row[manufacturer_index]
                 manufacturer_part_number = data_row[manufacturer_part_number_index]
                 pair = (manufacturer, manufacturer_part_number)
                 duplicate_removal_table[pair] = pair
                 # print(f"Row[{index}]: '{manufacturer} : '{manufacturer_part_number}'")
-            pairs = list(duplicate_removal_table.keys())
+            pairs: List[Tuple[str, str]] = list(duplicate_removal_table.keys())
 
             for index, pair in enumerate(pairs):
                 manufacturer, part_number = pair
                 if tracing:
                     print(f"{tracing}Unique_Actual_Part[{index}]: '{manufacturer}': "
                           f"'{part_number}'")
-                actual_part = ActualPart(manufacturer, part_number)
+                actual_part: ActualPart = ActualPart(manufacturer, part_number)
                 actual_parts.append(actual_part)
 
         return actual_parts
 
     # Collection.can_fetch_more():
-    def can_fetch_more(self):
+    def can_fetch_more(self) -> bool:
         # All of the directores for *collection* (i.e. *self*) have be previously found
         # using using *Collection.partial_load*().  So, there are no more *Directory*'s
         # to be loaded.
         return False
 
     # Collection.directories_get():
-    def directories_get(self):
-        collection = self
-        directories = list()
+    def directories_get(self) -> List[Directory]:
+        collection: Collection = self
+        directories: List[Directory] = list()
+        node: Node
         for node in collection.children_get():
             directories.extend(node.directories_get())
         return directories
 
     # Collection.partial_load():
     @trace(1)
-    def partial_load(self, tracing=""):
-        # Verify argument types:
-        assert isinstance(tracing, str)
-
+    def partial_load(self, tracing: str = "") -> None:
         # Visit all of the directories and files in *collection_root*:
-        collection = self
-        collection_root = collection.collection_root
-        relative_path = collection.relative_path
-        directory_path = os.path.join(collection_root, relative_path)
+        collection: Collection = self
+        collection_root: str = collection.collection_root
+        relative_path: str = collection.relative_path
+        directory_path: str = os.path.join(collection_root, relative_path)
         if tracing:
             print(f"{tracing}collection_root='{collection_root}'")
             print(f"{tracing}relative_path='{relative_path}'")
             print(f"{tracing}directory_path='{directory_path}'")
         assert os.path.isdir(directory_path)
 
+        index: int
+        base_name: str
         for index, base_name in enumerate(list(sorted(os.listdir(directory_path)))):
             if tracing:
                 print(f"{tracing}File_Name[{index}]:'{base_name}'")
 
             # Compute a *full_path* from *collection_root* and *base_name*:
-            full_path = os.path.join(directory_path, base_name)
+            full_path: str = os.path.join(directory_path, base_name)
             if tracing:
                 print(f"{tracing}full_path='{full_path}'")
             if not base_name.startswith('.'):
                 if base_name.endswith(".xml"):
                     assert False, "Top level tables not implemented yet"
                 elif os.path.isdir(full_path):
-                    name = Encode.from_file_name(base_name)
-                    directory = Directory(name, collection)
+                    name: str = Encode.from_file_name(base_name)
+                    directory: Directory = Directory(name, collection)
                     assert collection.has_child(directory)
                     directory.partial_load()
                 else:
                     assert False, f"'{base_name}' is neither an .xml file nor a directory"
 
     # Collection.search_find():
-    def search_find(self, search_name):
-        # Verify argument types:
-        assert isinstance(search_name, str)
-
+    def search_find(self, search_name: str) -> "Optional[Search]":
         # Grab some values from *collection* (i.e. *self*):
-        collection = self
-        searches_table = collection.searches_table
+        collection: Collection = self
+        searches_table: Dict[str, Search] = collection.searches_table
 
         # Find a *search* that matches *search_name*:
-        search = None
+        search: Optional[Search] = None
         if search_name in searches_table:
             search = searches_table[search_name]
         return search
 
     # Collection.tables_get():
-    def tables_get(self):
-        collection = self
-        tables = list()
+    def tables_get(self) -> "List[Table]":
+        collection: Collection = self
+        tables: List[Table] = list()
+        node: Node
         for node in collection.children_get():
             tables.extend(node.tables_get())
         return tables
 
     # Collection.type_leter_get()
-    def type_letter_get(self):
+    def type_letter_get(self) -> str:
         # print("Collection.type_letter_get(): name='{0}'".format(self.name))
         return 'C'
-
-    # Collection.url_load():
-    def url_load(self, url, output_file_name, tracing=""):
-        # Verify argument types:
-        assert isinstance(url, str)
-        assert isinstance(output_file_name, str)
-
-        assert False, "Old plugin code"
-        collection = self
-        plugin = collection.plugin
-        if plugin is None:
-            collection_root = collection.collection_root
-            if tracing:
-                print(f"{tracing}collection_root='{collection_root}'")
-            assert collection_root.endswith("ROOT")
-            package_directory = os.path.split(collection_root)[0]
-            if tracing:
-                print(f"{tracing}package_directory='{package_directory}'")
-            package_name = os.path.split(package_directory)[1]
-            if tracing:
-                print(f"{tracing}package_name='{package_name}'")
-            plugin_name = f"{package_name}.plugin"
-            if tracing:
-                print(f"{tracing}plug_name='{plugin_name}'")
-            # plugin_module = importlib.import_module(plugin_name)
-            # url_load = getattr(plugin_module, "url_load")
-            # assert callable(url_load)
-            # url_load(url, output_file_name)
-            # assert False
 
 
 # Collections:
@@ -2240,33 +2152,29 @@ class Collections(Node):
 
     # Collections.__init__():
     @trace(1)
-    def __init__(self, name, collection_directories, searches_root, gui, tracing=""):
-        # Verify argument types:
-        assert isinstance(name, str)
-        assert isinstance(collection_directories, list)
-        assert isinstance(searches_root, str)
-        assert isinstance(gui, Gui)
-        assert isinstance(tracing, str)
-
+    def __init__(self, name: str, collection_directories: List[str],
+                 searches_root: str, gui: Gui, tracing: str = "") -> None:
         # Intialize the *Node* super class of *collections* (i.e. *self*):
-        collections = self
+        collections: Collections = self
         super().__init__(name, None, gui=gui)
 
         # Stuff some values into *collections*:
-        collections.collection_directories = collection_directories
-        collections.searches_root = searches_root
-        collections.gui = gui
+        self.collection_directories = collection_directories
+        self.searches_root = searches_root
+        self.gui = gui
 
         # Construct the collections list:
-        entry_point_key = "bom_manager_collection_get"
+        entry_point_key: str = "bom_manager_collection_get"
+        index: int
+        entry_point: pkg_resources.EntryPoint
         for index, entry_point in enumerate(pkg_resources.iter_entry_points(entry_point_key)):
-            entry_point_name = entry_point.name
+            entry_point_name: str = entry_point.name
             if tracing:
                 print(f"{tracing}Collection_Entry_Point[{index}]: '{entry_point_name}'")
             assert entry_point_name == "collection_get"
-            collection_get = entry_point.load()
+            collection_get: Callable[[Collections, str, Gui], Collection] = entry_point.load()
             assert callable(collection_get)
-            collection = collection_get(collections, searches_root, gui)
+            collection: Collection = collection_get(collections, searches_root, gui)
             assert isinstance(collection, Collection)
             collection.partial_load()
             # collections.child_append(collection)
@@ -2282,25 +2190,25 @@ class Collections(Node):
         assert collections.type_letter_get() == 'R'
 
     # Collections.__str__():
-    def __str__(self):
+    def __str__(self) -> str:
         # collections = self
         return f"Collections('Collections')"
 
     # Collections.actual_parts_lookup():
     @trace(1)
-    def actual_parts_lookup(self, choice_part, tracing=""):
-        # Verify argument types:
-        assert isinstance(choice_part, ChoicePart)
-        assert isinstance(tracing, str)
-
+    def actual_parts_lookup(self, choice_part: "ChoicePart", tracing: str = "") -> List[ActualPart]:
         # Visit each *collection* in *collections* (i.e. *self*) and find any
         # *ActualPart*'s that match *search_name*:
-        collections = self
-        actual_parts = []
+        collections: Collections = self
+        actual_parts: List[ActualPart] = []
+        index: int
+        collection: Node
         for index, collection in enumerate(collections.children_get()):
+            assert isinstance(collection, Collection)
             if tracing:
                 print(f"{tracing}Collection[{index}]:{collection.name}")
-            actual_parts += collection.actual_parts_lookup(choice_part)
+            collection_actual_parts: List[ActualPart] = collection.actual_parts_lookup(choice_part)
+            actual_parts.extend(collection_actual_parts)
 
         # FIXME: Cull out duplicate acutal parts (i.e. for the same manufacturer.):
         pass
@@ -2308,26 +2216,23 @@ class Collections(Node):
         return actual_parts
 
     # Collections.can_fetch_more():
-    def can_fetch_more(self):
+    def can_fetch_more(self) -> bool:
         # The children of *collections* (i.e. self*) have already be preloade by
         # *Collections.partial_load*().  There is nothing more to fetch:
         return False
 
     # Collections.check():
-    def check(self, search_name, project_name, reference, tracing=""):
-        # Verify argument types:
-        assert isinstance(search_name, str)
-        assert isinstance(project_name, str)
-        assert isinstance(reference, str)
-        assert isinstance(tracing, str)
-
+    def check(self, search_name: str, project_name: str, reference: str,
+              tracing: str = "") -> None:
         # Find all *matching_searches* that matach *search_name* from *collections* (i.e. *self*):
-        collections = self
-        matching_searches = list()
+        collections: Collections = self
+        matching_searches: List[Search] = list()
+        collection: Node
         for collection in collections.children_get():
-            searches_table = collection.searches_table
+            assert isinstance(collection, Collection)
+            searches_table: Dict[str, Search] = collection.searches_table
             if search_name in searches_table:
-                matching_search = searches_table[search_name]
+                matching_search: Search = searches_table[search_name]
                 matching_searches.append(matching_search)
 
         # Output error if nothing is found:
@@ -2335,34 +2240,31 @@ class Collections(Node):
             print(f"{project_name}: {reference} '{search_name}' not found")
 
     # Collections.partial_load():
-    def partial_load(self, tracing=""):
-        # Verify argument types:
-        assert isinstance(tracing, str)
-
+    def partial_load(self, tracing: str = "") -> None:
         # Extract some values from *collections*:
-        collections = self
-        gui = collections.gui
-        collection_directories = collections.collection_directories
-        searches_root = collections.searches_root
+        collections: Collections = self
+        gui: Gui = collections.gui
+        collection_directories: List[str] = collections.collection_directories
+        searches_root: str = collections.searches_root
         if tracing:
             print(f"{tracing}collection_directories='{collection_directories}'")
             print(f"{tracing}searches_root='{searches_root}'")
 
         # Find all of the the *collections* by searching through install Python packages
         # for matching plugins:
-        entry_point_key = "bom_manager_collection_get"
+        entry_point_key: str = "bom_manager_collection_get"
+        index: int
+        entry_point: pkg_resources.EntryPoint
         for index, entry_point in enumerate(pkg_resources.iter_entry_points(entry_point_key)):
-            entry_point_name = entry_point.name
+            entry_point_name: str = entry_point.name
             if tracing:
                 print(f"{tracing}Entry_Point[{index}]:'{entry_point_name}'")
             assert entry_point_name == "collection_get", (f"'{entry_point_name}' is "
                                                           "not 'collection_get''")
-            collection_get = entry_point.load()
+            collection_get: Callable[[Collections, str, Gui], Collection] = entry_point.load()
 
             # Create *collection*:
-            collection = collection_get(collections, searches_root, gui)
-            # collection = Collection(name, collections, collection_root, searches_root, url_load,
-            #                         )
+            collection: Collection = collection_get(collections, searches_root, gui)
             assert isinstance(collection, Collection)
             assert collections.has_child(collection)
 
@@ -2370,6 +2272,7 @@ class Collections(Node):
             collection.partial_load()
 
         # Sweep through *path* finding directories (technically symbolic links):
+        collection_director: str
         for index, collection_directory in enumerate(sorted(collection_directories)):
             # Perform requested *tracing*:
             if tracing:
@@ -2378,16 +2281,17 @@ class Collections(Node):
             # Skip over Unix/Linux *collection_directory*'s that start with a '.':
             if not collection_directory.startswith('.'):
                 # Create *collection_root_path* and *searches_root*:
-                collection_directory_root = os.path.join(collection_directory, "ROOT")
+                collection_directory_root: str = os.path.join(collection_directory, "ROOT")
                 collection_directory_root = os.path.abspath(collection_directory_root)
                 if tracing:
                     print(f"{tracing}collection_directory_root='{collection_directory_root}'")
 
                 # Now find the directory under `ROOT`:
-                sub_directories = list(glob.glob(os.path.join(collection_directory_root, "*")))
+                sub_directories_glob: str = os.path.join(collection_directory_root, "*")
+                sub_directories: List[str] = list(glob.glob(sub_directories_glob))
                 assert len(sub_directories) == 1, f"sub_directories={sub_directories}"
-                base_name = os.path.basename(sub_directories[0])
-                name = Encode.from_file_name(base_name)
+                base_name: str = os.path.basename(sub_directories[0])
+                name: str = Encode.from_file_name(base_name)
                 # collection_root = os.path.join(collection_directory_root, base_name)
                 if tracing:
                     print(f"{tracing}base_name='{base_name}'")
@@ -2395,31 +2299,22 @@ class Collections(Node):
                     # print(f"{tracing}collection_root='{collection_root}'")
                     print(f"{tracing}searches_root='{searches_root}'")
 
-                # Create *collection*:
-                # collection = Collection(name, collections, collection_directory_root,
-                #                        searches_root, url_load)
-                # assert collections.has_child(collection)
-
                 # Recursively perfrom *partial_load*'s down from *collection*:
                 collection.partial_load()
 
-    # Collections.searches_root_get():
-    def searches_root_get(self):
-        collections = self
-        searches_root = collections.searches_root
-        return searches_root
-
     # Collections.searches_find():
     @trace(1)
-    def searches_find(self, search_name, tracing=""):
+    def searches_find(self, search_name: str, tracing: str = "") -> "List[Search]":
         # Verify argument types:
         assert isinstance(search_name, str)
 
         # Visit each *collection in *collections* (i.e. *self*) to see if it has *search_name*:
-        collections = self
-        searches = []
+        collections: Collections = self
+        searches: List[Search] = []
+        collection: Node
         for collection in collections.children_get():
-            search = collection.search_find(search_name)
+            assert isinstance(collection, Collection)
+            search: Optional[Search] = collection.search_find(search_name)
             if search is not None:
                 # We have a matching *search*:
                 assert search_name == search.name, f"'{search_name}'!='{search.name}'"
@@ -2427,7 +2322,7 @@ class Collections(Node):
         return searches
 
     # Collections.type_leter_get():
-    def type_letter_get(self):
+    def type_letter_get(self) -> str:
         # print("Collections.type_letter_get(): name='{0}'".format(self.name))
         return 'R'
 
@@ -2437,42 +2332,42 @@ class Search(Node):
 
     # FIXME: This tale belongs in *Units*:
     ISO_MULTIPLIER_TABLE = {
+      "E": 1.0e18,
+      "P": 1.0e15,
+      "T": 1.0e12,
+      "G": 1.0e9,
       "M": 1.0e6,
-      "K": 1.0e3,
+      "k": 1.0e3,
       "m": 1.0e-3,
+      "μ": 1.0e-6,
       "u": 1.0e-6,
       "n": 1.0e-9,
       "p": 1.0e-12,
+      "f": 1.0e-15,
+      "a": 1.0e-18,
     }
 
     # Search.__init__():
-    def __init__(self, name, parent, search_parent, url, tracing=""):
-        # Verify argument types:
-        assert isinstance(name, str)
-        assert isinstance(parent, Table)
-        assert isinstance(search_parent, Search) or search_parent is None
-        assert isinstance(url, str)
-        assert isinstance(tracing, str)
-
+    def __init__(self, name: str, parent: "Table", search_parent: "Optional[Search]",
+                 url: str, tracing: str = "") -> None:
         # Grab some values from *search* (i.e. *self*):
-        search = self
-
+        search: Search = self
         assert name.find("%3b") < 0
 
         # Ensure sure that non-template *name is not already in *searches_table*:
-        is_template = name.startswith('@')
-        collection = parent.collection
-        searches_table = collection.searches_table
+        is_template: bool = name.startswith('@')
+        collection: Optional[Collection] = parent.collection
+        assert isinstance(collection, Collection)
+        searches_table: Dict[str, Search] = collection.searches_table
         # assert (search_parent is None) == (name == "@ALL"), "Search parent problem"
         if not is_template:
             assert name not in searches_table, f"Attempt to duplicate search '{name}'"
 
         # Initialize the super class for *search* (i.e. *self*):
-        search = self
         super().__init__(name, parent)
 
         # The *parent* is known to be a *table* and must contain *search*:
-        table = parent
+        table: Table = parent
         assert table.has_child(search)
 
         # Mark that the *table* is no longer sorted, since the *Node.__init__()* just
@@ -2480,97 +2375,99 @@ class Search(Node):
         table.is_sorted = False
 
         # Stuff values into *search*:
-        search.comments = list()
-        search.loaded = False
-        search._relative_path = None
-        search.search_parent = search_parent
-        search.search_parent_name = None  # Used by *Search.tree_load*()
-        search.url = url
+        self.comments: List[SearchComment] = list()
+        self.loaded: bool = False
+        self._relative_path: str = ""
+        self.filters: List[Filter] = list()
+        self.search_parent: Optional[Search] = search_parent
+        self.search_parent_name: str = ""  # Used by *Search.tree_load*()
+        self.url: str = url
 
         # Stuff *search* into *searches_table* if is not *is_template*:
         if not is_template:
             searches_table[name] = search
 
+    # Search.__str__(self):
+    def __str__(self) -> str:
+        search: Search = self
+        name: str = "??"
+        if hasattr(search, name):
+            name = search.name
+        return f"Search('{name}')"
+
     # Search.can_fetch_more():
-    def can_fetch_more(self):
+    def can_fetch_more(self) -> bool:
         # Currently, all *Search* objects never have any childre.  Hence, there is nothing fetch:
         return False
 
     # Search.clicked()
-    def clicked(self, gui, tracing=""):
-        # Verify argument types:
-        assert isinstance(gui, Gui)
-        assert isinstance(tracing, str)
-
+    def clicked(self, gui: Gui, tracing: str = "") -> None:
         # Send the clicked event back to *gui* along with *search* (i.e. *self*):
-        search = self
+        search: Search = self
         gui.search_clicked(search)
 
     # Search.comments_append():
-    def comments_append(self, comments):
-        # Verify argument types:
-        assert isinstance(comments, list)
-        for comment in comments:
-            assert isinstance(comment, SearchComment)
-
+    def comments_append(self, comments: List[SearchComment]) -> None:
         # Tack *comments* onto the the comments list in *search* (i.e. *self*):
-        search = self
-        search.comments.extend(comments)
+        search: Search = self
+        search_comments: List[SearchComment] = search.comments
+        search_comments.extend(comments)
 
     # Search.file_load():
-    def file_load(self, tracing=""):
+    def file_load(self, tracing: str = "") -> None:
         # Verify argument types:
         assert isinstance(tracing, str)
 
         # Grab some informtation from parent *table* of *search*:
-        search = self
-        table = search.parent
+        search: Search = self
+        table: Optional[Node] = search.parent
+        assert table is not None
         assert isinstance(table, Table)
-        table_name = table.name
-        searches = table.children_get()
-        searches_size = len(searches)
+        table_name: str = table.name
+        searches: List[Node] = table.children_get()
+        searches_size: int = len(searches)
         # Only load *search* (i.e. *self*) if it is not already *loaded*:
-        loaded = search.loaded
+        loaded: bool = search.loaded
         if tracing:
             print(f"{tracing}loaded={loaded} table='{table_name}' searches_size={searches_size}")
         if not loaded:
             # Grab some values from *search*:
-            collection = search.collection
-            searches_root = collection.searches_root
-            relative_path = search.relative_path
-            search_full_file_name = os.path.join(searches_root, relative_path + ".xml")
+            collection: Optional[Collection] = search.collection
+            assert isinstance(collection, Collection)
+            searches_root: str = collection.searches_root
+            relative_path: str = search.relative_path
+            search_full_file_name: str = os.path.join(searches_root, relative_path + ".xml")
             if tracing:
                 print(f"{tracing}search_full_file_name={search_full_file_name}")
+            search_file: IO[str]
             with open(search_full_file_name, "r") as search_file:
                 # Read in *search_xml_text* from *search_file*:
-                search_xml_text = search_file.read()
+                search_xml_text: str = search_file.read()
 
                 # Parse the XML in *search_xml_text* into *search_tree*:
-                search_tree = etree.fromstring(search_xml_text)
+                search_tree: etree._Element = etree.fromstring(search_xml_text)
 
                 # Now process the contents of *search_tree* and stuff the result:
                 search.tree_load(search_tree)
 
                 # Mark that *table* is no longer sorted since we may updated the
                 # *search_parent* and *search_parent_title* fields:
-                table = search.parent
-                assert isinstance(table, Table)
                 table.is_sorted = False
 
             # Mark *search* as *loaded*:
             search.loaded = True
 
-    # Search.filters_refresh()
-    def filters_refresh(self, tracing=""):
+    # Search.filters_refresh():
+    def filters_refresh(self, tracing: str = "") -> None:
         # Verify argument types:
         assert isinstance(tracing, str)
 
         # Before we do anything we have to make sure that *search* has an associated *table*.
         # Frankly, it is should be impossible not to have an associated table, but we must
         # be careful:
-        search = self
-        table = search.table
-        assert isinstance(table, Table) or table is None
+        search: Search = self
+        table: Optional[Node] = search.parent
+        assert isinstance(table, Table)
         if table is not None:
             # Now we have to make sure that there is a *filter* for each *parameter* in
             # *parameters*.  We want to preserve the order of *filters*, so this is pretty
@@ -2579,10 +2476,12 @@ class Search(Node):
             # Step 1: Start by deleting any *filter* from *filters* that does not have a
             # matching *parameter* in parameters.  This algorithme is O(n^2), so it could
             # be improved:
-            filters = search.filters
-            parameters = table.parameters
-            new_filters = list()
+            filters: List[Filter] = search.filters
+            parameters: List[Parameter] = table.parameters
+            new_filters: List[Filter] = list()
+            filter: Filter
             for filter in filters:
+                parameter: Parameter
                 for parameter in parameters:
                     if filter.parameter is parameter:
                         new_filters.append(filter)
@@ -2593,12 +2492,13 @@ class Search(Node):
 
             # Step 2: Sweep through *parameters* and create a new *filter* for each *parameter*
             # that does not already have a matching *filter* in *filters*.  Again, O(n^2):
+            parameter_index: int
             for pararmeter_index, parameter in enumerate(parameters):
                 for filter in filters:
                     if filter.parameter is parameter:
                         break
                 else:
-                    filter = Filter(parameter=parameter, table=table, use=False, select="")
+                    filter: Filter = Filter(parameter=parameter, table=table, use=False, select="")
                     filters.append(filter)
 
     # Search.full_file_name_get():
@@ -2943,25 +2843,19 @@ class Search(Node):
 class Table(Node):
 
     # Table.__init__():
-    def __init__(self, name, parent, url, tracing=""):
-        # Verify argument types:
-        assert isinstance(name, str)
-        assert isinstance(parent, Directory) or isinstance(parent, Collection)
-        assert isinstance(url, str)
-        assert isinstance(tracing, str)
-
-        # Initialize the *Node* super-class for *table* (i.e. *self*)
-        table = self
+    def __init__(self, name: str, parent: Node, url: str, tracing: str = "") -> None:
+        # Initialize the parent class:
         super().__init__(name, parent)
 
-        # Load additional values into *table*:
-        table.comments = list()
-        table.is_sorted = False
-        table.loaded = False
-        table.parameters = list()
-        table._relative_path = None
-        table.searches_table = dict()
-        table.url = None
+        # Load additional values into *table* (i.e. *self*):
+        # table: Table = self
+        self.comments: List[TableComment] = list()
+        self.is_sorted: bool = False
+        self.loaded: bool = False
+        self.parameters: List[Parameter] = list()
+        self._relative_path: str = ""
+        self.searches_table: Dict[str, Search] = dict()
+        self.url: str = ""
 
     # Table.bind_parameters_from_imports():
     def bind_parameters_from_imports(self, tracing=""):
@@ -4544,7 +4438,7 @@ class Order:
         self.excluded_vendor_names[vendor_name] = None
 
     # Order.vendor_names_get():
-    def vendor_names_get(self, choice_parts, excluded_vendor_names):
+    def vendor_names_get(self, choice_parts, excluded_vendor_names) -> List[str]:
         """ *Order*: Return all possible vendor names for *choice_parts*:
         """
 
@@ -4553,13 +4447,13 @@ class Order:
         assert isinstance(excluded_vendor_names, dict)
 
         # Load up *vendor_names_table*:
-        vendor_names_table = {}
+        vendor_names_table: Dict[str, None] = {}
+        choice_part: ChoicePart
         for choice_part in choice_parts:
-            choice_part.vendor_names_load(
-              vendor_names_table, excluded_vendor_names)
+            choice_part.vendor_names_load(vendor_names_table, excluded_vendor_names)
 
         # Return the sorted list of vendor names:
-        return tuple(sorted(vendor_names_table.keys()))
+        return list(sorted(vendor_names_table.keys()))
 
     # Order.vendors_select():
     def vendors_select(self, selected_vendor_names):
@@ -4596,7 +4490,7 @@ class Panda:
 class Parameter:
 
     # Parameter.__init__():
-    def __init__(self, **arguments_table):
+    def __init__(self, **arguments_table) -> None:
         is_parameter_tree = "parameter_tree" in arguments_table
         if is_parameter_tree:
             assert len(arguments_table) == 1
@@ -4646,7 +4540,7 @@ class Parameter:
             assert len(comments_tree.attrib) == 0
             comments = list()
             for comment_tree in comments_tree:
-                comment = ParameterComment(comment_tree=comment_tree)
+                comment = ParameterComment.xml_parse(comment_tree)
                 comments.append(comment)
 
             enumerations = list()
@@ -4674,16 +4568,16 @@ class Parameter:
 
         # Load values into *parameter* (i.e. *self*):
         super().__init__()
-        parameter = self
-        parameter.comments = comments
-        parameter.csv = csv
-        parameter.csv_index = csv_index
-        parameter.default = default
-        parameter.enumerations = enumerations
-        parameter.name = name
-        parameter.optional = optional
-        parameter.type = type
-        parameter.use = False
+        # parameter: Parameter = self
+        self.comments: List[ParameterComment] = comments
+        self.csv: Any = csv
+        self.csv_index: int = csv_index
+        self.default: str = default
+        self.enumerations: List[Enumeration] = enumerations
+        self.name: str = name
+        self.optional: bool = optional
+        self.type: str = type
+        self.use: bool = False
         # print("Parameter('{0}'): optional={1}".format(name, optional))
         # print("Parameter(name='{0}', type='{1}', csv='{1}')".format(name, type, parameter.csv))
 
@@ -5645,11 +5539,11 @@ class ProjectPart:
         # else:
 
         # Stuff values into *project_part* (i.e. *self*):
-        project_part = self
-        project_part.name = name
-        project_part.projects = projects
-        project_part.pose_parts = []        # List[PosePart]
-        project_part.pose_parts_table = {}  # Dict[reference, PosePart]
+        # project_part = self
+        self.name: str = name
+        self.projects: List[Project] = projects
+        self.pose_parts: List[PosePart] = []
+        self.pose_parts_table: Dict[str, PosePart] = {}
 
     # ProjectPart.__format__():
     def __format__(self, format):
@@ -5786,13 +5680,13 @@ class ChoicePart(ProjectPart):
 
         # Fields used by algorithm:
         choice_part.fractional_parts = []
-        choice_part.selected_total_cost = -0.01
-        choice_part.selected_order_quantity = -1
-        choice_part.selected_actual_part = None
-        choice_part.selected_vendor_part = None
-        choice_part.selected_vendor_name = ""
-        choice_part.selected_price_break_index = -1
-        choice_part.selected_price_break = None
+        self.selected_total_cost: float = -0.01
+        self.selected_order_quantity: int = -1
+        self.selected_actual_part: Optional[ActualPart] = None
+        self.selected_vendor_part: Optional[VendorPart] = None
+        self.selected_vendor_name: str = ""
+        self.selected_price_break_index: int = -1
+        self.choice_part.selected_price_break: Optional[PriceBreak] = None
 
         # choice_part.description = description
         # choice_part.feeder_name = feeder_name

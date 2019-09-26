@@ -84,19 +84,20 @@ from bom_manager.bom import (command_line_arguments_process, Collection, Collect
 from bom_manager.tracing import trace  # Tracing decorator module:
 import csv                      # Parser for CSV (Comma Separated Values) files
 from functools import partial   # Needed for window events
-import lxml.etree as etree      # Parser for XML files
+import lxml.etree as etree      # type: ignore
 import os                       # General Operating system features:
 
 # All of the PySide2 stuff provides the GUI technology used by the GUI.
-from PySide2.QtUiTools import QUiLoader
-from PySide2.QtWidgets import (QApplication, QComboBox, QLineEdit, QMainWindow,
-                               QPlainTextEdit, QPushButton,
-                               QTableWidget, QTableWidgetItem, QWidget)  # QTreeView
-from PySide2.QtCore import (QAbstractItemModel, QCoreApplication, QFile, QItemSelectionModel,
-                            QModelIndex, Qt)
-from PySide2.QtGui import (QClipboard,)
+from PySide2.QtUiTools import QUiLoader  # type: ignore
+from PySide2.QtWidgets import (QApplication, QComboBox, QLineEdit, QMainWindow)  # type: ignore
+from PySide2.QtWidgets import (QPlainTextEdit, QPushButton)                      # type: ignore
+from PySide2.QtWidgets import (QTableWidget, QTableWidgetItem, QWidget)          # type: ignore
+from PySide2.QtCore import (QAbstractItemModel, QCoreApplication, QFile)         # type: ignore
+from PySide2.QtCore import (QItemSelectionModel, QModelIndex, Qt)                # type: ignore
+from PySide2.QtGui import (QClipboard,)                                          # type: ignore
 import re                       # Regular expressions
 import sys                      # System utilities
+from typing import Callable, Dict, List, Optional, Tuple
 import webbrowser               # Some tools to send messages to a web browser
 
 
@@ -121,7 +122,7 @@ class ComboEdit:
 
     # *WIDGET_CALLBACKS* is defined at the end of this class after all of the callback routines
     # are defined.
-    WIDGET_CALLBACKS = dict()
+    WIDGET_CALLBACKS: Dict[str, QWidget] = dict()
 
     # ComboEdit.__init__():
     def __init__(self, name, bom_gui, items,
