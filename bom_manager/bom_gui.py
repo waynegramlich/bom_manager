@@ -97,7 +97,7 @@ from PySide2.QtCore import (QItemSelectionModel, QModelIndex, Qt)               
 from PySide2.QtGui import (QClipboard,)                                          # type: ignore
 import re                       # Regular expressions
 import sys                      # System utilities
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Dict
 import webbrowser               # Some tools to send messages to a web browser
 
 
@@ -1026,8 +1026,9 @@ class BomGui(QMainWindow, Gui):
         # Create the *tree_model* needed for *collections* and stuff into *bom_gui*:
 
         # Create the *collections* and stuff into *bom_gui*:
+        partial_load: bool = True
         collections = Collections("Collections", collection_directories,
-                                  searches_root, bom_gui)
+                                  searches_root, partial_load, bom_gui)
         bom_gui.collections = collections
 
         # Now stuff *collections* into *tree_model*:

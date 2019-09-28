@@ -1,4 +1,4 @@
-# # BOM Manager
+# BOM Manager
 #
 # BOM Manager is a program for managing one or more Bill of Materials.
 #
@@ -251,8 +251,9 @@ import re                           # Regular expressions
 # import subprocess
 import sys
 import time                         # Time package
-from typing import Any, Callable, Dict, IO, List, Optional, Tuple
-ReCompiled = Any
+from typing import Any, Callable, Dict, IO, List, Optional, Tuple, Union
+Number = Union[int, float]
+PreCompiled = Any
 # import xmlschema
 
 # Data Structure and Algorithm Overview:
@@ -411,8 +412,9 @@ def main(tracing: str = "") -> int:
 
     gui: Gui = Gui()
 
-    collections: Collections = Collections("Collections",
-                                           collections_directories, searches_root, gui)
+    partial_load: bool = True
+    collections: Collections = Collections("Collections", collections_directories,
+                                           searches_root, partial_load, gui)
 
     order.process(collections)
 
@@ -583,7 +585,7 @@ class ActualPart:
     ACTUAL_PART_EXCHANGE_RATES: Dict[str, float] = dict()
 
     # ActualPart.__init__():
-    def __init__(self, manufacturer_name: str, manufacturer_part_name: str):
+    def __init__(self, manufacturer_name: str, manufacturer_part_name: str) -> None:
         """ *ActualPart*: Initialize *self* to contain *manufacturer* and
             *manufacturer_part_name*. """
 
@@ -767,7 +769,7 @@ class Comment:
         return equal
 
     # Comment.__str__():
-    def __str__(self):
+    def __str__(self) -> str:
         # Return a simple string since there is no need to expose the contents of the comment
         # (i.e. *self*):
         comment: Comment = self
@@ -776,19 +778,6 @@ class Comment:
             language = comment.language
         class_name: str = comment.__class__.__name__
         return f"{class_name}('{language}')"
-
-    # Comment.xml_parse():
-    @staticmethod
-    def xml_parse(comment_tree: etree._Element) -> "Comment":
-        # Grab the *language* from the *comment_tree* *attributes_table*:
-        attributes_table: Dict[str, str] = comment_tree.attrib
-        assert "language" in attributes_table
-        language: str = attributes_table["language"]
-
-        # Grab the *lines* from *comment_tree* and return the final *comment*:
-        lines: List[str] = Comment.xml_lines_get(comment_tree)
-        comment: Comment = Comment(language, lines)
-        return comment
 
     # Comment.xml_lines_append():
     def xml_lines_append(self, xml_lines: List[str], indent: str) -> None:
@@ -837,7 +826,7 @@ class EnumerationComment(Comment):
 
     # EnumerationComment.xml_parse():
     @staticmethod
-    def xml_parse(comment_tree: etree._element) -> "EnumerationComment":
+    def xml_parse(comment_tree: etree._Element) -> "EnumerationComment":
         # Grab some values from *comment_tree*):
         attributes_table: Dict[str, str]
         langauge: str
@@ -1230,37 +1219,8 @@ class Encode:
 class Enumeration:
 
     # Enumeration.__init__():
-    def __init__(self, **arguments_table) -> None:
-        is_enumeration_tree: bool = "enumeration_tree" in arguments_table
-        if is_enumeration_tree:
-            assert isinstance(arguments_table["enumeration_tree"], etree._Element)
-        else:
-            assert len(arguments_table) == 2
-            assert "name" in arguments_table
-            assert "comments" in arguments_table
-            comments: List[EnumerationComment] = arguments_table["comments"]
-            comment: EnumerationComment
-            for comment in comments:
-                assert isinstance(comment, EnumerationComment)
-
-        if is_enumeration_tree:
-            enumeration_tree = arguments_table["enumeration_tree"]
-            assert enumeration_tree.tag == "Enumeration"
-            attributes_table = enumeration_tree.attrib
-            assert len(attributes_table) == 1
-            assert "name" in attributes_table
-            name = attributes_table["name"]
-            comments_tree = list(enumeration_tree)
-            comments = list()
-            for comment_tree in comments_tree:
-                comment = EnumerationComment.xml_parse(comment_tree)
-                comments.append(comment)
-            assert len(comments) >= 1
-        else:
-            name = arguments_table["name"]
-            comments = arguments_table["comments"]
-
-        # Load value into *enumeration* (i.e. *self*):
+    def __init__(self, name: str, comments: List[EnumerationComment]) -> None:
+        # Load values into *enumeration* (i.e. *self*):
         # enumeration: Enumeration = self
         self.name: str = name
         self.comments: List[EnumerationComment] = comments
@@ -1278,10 +1238,6 @@ class Enumeration:
 
     # Enumeration.xml_lines_append():
     def xml_lines_append(self, xml_lines: List[str], indent: str) -> None:
-        # Verify argument types:
-        assert isinstance(xml_lines, list)
-        assert isinstance(indent, str)
-
         # Append an `<Enumeration>` element to *xml_lines*:
         enumeration: Enumeration = self
         name: str = enumeration.name
@@ -1292,111 +1248,92 @@ class Enumeration:
             comment.xml_lines_append(xml_lines, indent + "  ")
         xml_lines.append(f'{indent}</Enumeration>')
 
+    # Enumeration.xml_parse():
+    @staticmethod
+    def xml_parse(enumeration_tree: etree._Element) -> "Enumeration":
+        assert enumeration_tree.tag == "Enumeration"
+        attributes_table: Dict[str, str] = enumeration_tree.attrib
+        assert "name" in attributes_table
+        name: str = attributes_table["name"]
+        comments_tree: etree._Element = list(enumeration_tree)
+        comments: List[EnumerationComment] = list()
+        comment_tree: etree._Element
+        for comment_tree in comments_tree:
+            comment: EnumerationComment = EnumerationComment.xml_parse(comment_tree)
+            comments.append(comment)
+        assert comments
+        enumeration: Enumeration = Enumeration(name, comments)
+        return enumeration
+
 
 # Filter:
 class Filter:
 
     # Filter.__init__():
-    def __init__(self, ) -> None:
-        # Dispatch on *is_filter_tree*:
-        if is_filter_tree:
-            # Grab *tree* and *table* out of *arguments_table*:
-            tree = arguments_table["tree"]
-            assert isinstance(tree, etree._Element)
-            table = arguments_table["table"]
-            assert isinstance(table, Table)
-
-            # Grab the *parameter_name* and *use* from *filter_tree*:
-            attributes_table = tree.attrib
-            assert len(attributes_table) == 3
-
-            # Extrace *use* from *attributes_table*:
-            assert "use" in attributes_table
-            use_text = attributes_table["use"].lower()
-            if use_text == "true":
-                use = True
-            elif use_text == "false":
-                use = False
-            else:
-                assert False
-
-            # Extract the *match* from *attributes_table*:
-            assert "select" in attributes_table
-            select = attributes_table["select"]
-
-            # Extract *parameter* from *attributes_table* and *table*:
-            assert "name" in attributes_table
-            parameter_name = attributes_table["name"]
-            parameters = table.parameters
-            match_parameter = None
-            for parameter in parameters:
-                if parameter.name == parameter_name:
-                    match_parameter = parameter
-                    break
-            else:
-                assert False
-            parameter = match_parameter
-        else:
-            # Just grab *table*, *parameter*, *use*, and *select* directly from *arguments_table*:
-            table = arguments_table["table"]
-            assert isinstance(table, Table)
-            parameter = arguments_table["parameter"]
-            assert isinstance(parameter, Parameter)
-            use = arguments_table["use"]
-            assert isinstance(use, bool)
-            select = arguments_table["select"]
-            assert isinstance(select, str)
-
-            # Make sure that *parameter* is in *parameters*:
-            parameter_name = parameter.name
-            parameters = table.parameters
-            for parameter in parameters:
-                if parameter.name == parameter_name:
-                    break
-            else:
-                assert False
-
+    def __init__(self, table: "Table", parameter: "Parameter", use: bool, select: str) -> None:
         # Load up *filter* (i.e. *self*):
         # filter: Filter = self
+        self.table: Table = table
         self.parameter: Parameter = parameter
-        self.reg_ex: Any = None
         self.select: str = select
-        self.select_item: None = None
         self.use: bool = use
-        self.use_item: None = None
 
     # Filter.xml_lines_append():
     def xml_lines_append(self, xml_lines: List[str], indent: str, tracing: str = "") -> None:
-        # Verify argument types:
-        assert isinstance(xml_lines, list)
-        assert isinstance(indent, str)
-        assert isinstance(tracing, str)
-
-        # Perform any requested *tracing*:
-
-        # Start appending the `<Filter...>` element to *xml_lines*:
-        filter: Filter = self
+        # Grab some values from *filter* (i.e. *self*):
+        filter: "Filter" = self
         parameter: Parameter = filter.parameter
         use: bool = filter.use
         select: str = filter.select
         parameter_name: str = parameter.name
-        xml_lines.append(f'{indent}<Filter name="{parameter_name}" use="{use}" select="{select}">')
-        if tracing:
-            print(f"{tracing}name='{parameter_name}' Use='{use}' select='{select}'")
 
-        # Append any *enumerations*:
+        # Output the initial `<Filter ...>` XML element:
+        xml_lines.append(f'{indent}<Filter '
+                         f'name="{parameter_name}" '
+                         f'use="{use}" '
+                         f'select="{select}">')
+
+        # Append any *enumerations* from *parameter*:
         enumerations: List[Enumeration] = parameter.enumerations
-        if len(enumerations) >= 1:
+        if enumerations:
             xml_lines.append(f'{indent}  <FilterEnumerations>')
+            enumeration: Enumeration
             for enumeration in enumerations:
-                enumeration_name = enumeration.name
-                match = False
-                xml_lines.append(f'{indent}    <FilterEnumeration'
-                                 f' name="{enumeration_name}" match="{match}"/>')
+                enumeration_name: str = enumeration.name
+                match: bool = False
+                xml_lines.append(f'{indent}    <FilterEnumeration '
+                                 f'name="{enumeration_name}" '
+                                 f'match="{match}"/>')
             xml_lines.append(f'{indent}  </FilterEnumerations>')
 
         # Wrap up `<Filter...>` element:
         xml_lines.append(f'{indent}</Filter>')
+
+    # Filter.xml_parse()
+    @staticmethod
+    def xml_parse(filter_tree: etree._Element, table: "Table") -> "Filter":
+        # Grab the attributes from *filter_tree*:
+        attributes_table: Dict[str, str] = filter_tree.attrib
+        assert "name" in attributes_table
+        parameter_name: str = attributes_table["name"]
+        assert "match" in attributes_table
+        match_text: str = attributes_table["match"].lower()
+        assert match_text in ("true", "false")
+        use = match_text == "true"
+
+        parameters: List[Parameter] = table.parameters
+        parameter: Parameter
+        for parameter in parameters:
+            if parameter.name == parameter_name:
+                break
+        else:
+            assert False, f"No parameter name '{parameter_name}' not found"
+
+        # Create the resulting *filter* and return it:
+        select: str = ""
+        assert False, "What is select?"
+        filter: Filter = Filter(table, parameter, use, select)
+        return filter
 
 
 # Footprint:
@@ -1413,10 +1350,6 @@ class Footprint:
           holes on top.
         """
 
-        # Verify argument types:
-        assert isinstance(name, str)
-        assert isinstance(rotation, float) and 0.0 <= rotation <= 360.0 or rotation is None
-
         # Stuff values into *footprint* (i.e. *self*):
         # footprint: Footprint = self
         self.name = name
@@ -1431,11 +1364,7 @@ class Inventory:
         """ *Inventory*: Initialize *self* to contain *scheamtic_part* and
             *amount*. """
 
-        # Verify argument types:
-        assert isinstance(project_part, ProjectPart)
-        assert isinstance(amount, int)
-
-        # Load up *self*:
+        # Load up *inventory* (i.e. *self*):
         # inventory: Inventory = self
         self.project_part: ProjectPart = project_part
         self.amount: int = amount
@@ -1495,17 +1424,17 @@ class Gui:
         float_re_text: str = "-?([0-9]+\\.[0-9]*|\\.[0-9]+)"
         white_space_text: str = "[ \t]*"
         integer_re_text: str = "-?[0-9]+"
-        integer_re: ReCompiled = re.compile(integer_re_text + "$")
-        float_re: ReCompiled = re.compile(float_re_text + "$")
-        url_re: ReCompiled = re.compile("(https?://)|(//).*$")
-        empty_re: ReCompiled = re.compile("-?$")
-        funits_re: ReCompiled = re.compile(float_re_text +
-                                           white_space_text + si_units_re_text + "$")
-        iunits_re: ReCompiled = re.compile(integer_re_text + white_space_text +
-                                           si_units_re_text + "$")
-        range_re: ReCompiled = re.compile("[^~]+~[^~]+$")
-        list_re: ReCompiled = re.compile("([^,]+,)+[^,]+$")
-        re_table: Dict[str, ReCompiled] = {
+        integer_re: PreCompiled = re.compile(integer_re_text + "$")
+        float_re: PreCompiled = re.compile(float_re_text + "$")
+        url_re: PreCompiled = re.compile("(https?://)|(//).*$")
+        empty_re: PreCompiled = re.compile("-?$")
+        funits_re: PreCompiled = re.compile(float_re_text +
+                                            white_space_text + si_units_re_text + "$")
+        iunits_re: PreCompiled = re.compile(integer_re_text + white_space_text +
+                                            si_units_re_text + "$")
+        range_re: PreCompiled = re.compile("[^~]+~[^~]+$")
+        list_re: PreCompiled = re.compile("([^,]+,)+[^,]+$")
+        re_table: Dict[str, PreCompiled] = {
           "Empty": empty_re,
           "Float": float_re,
           "FUnits": funits_re,
@@ -1516,7 +1445,7 @@ class Gui:
           "URL": url_re,
         }
         # gui: Gui = self
-        self.re_table: Dict[str, ReCompiled] = re_table
+        self.re_table: Dict[str, PreCompiled] = re_table
 
     def __str__(self) -> str:
         return "GUI()"
@@ -1560,6 +1489,10 @@ class Gui:
     # Gui.search_clicked():
     def search_clicked(self, search: "Search") -> None:
         assert False, "Gui.search_clicked() should never be called"
+
+    # Gui.table_clicked():
+    def table_clicked(self, table: "Table") -> None:
+        assert False, "Gui.table_clicked() should never be callded"
 
 
 # Node:
@@ -1735,7 +1668,7 @@ class Node:
         assert False, f"Node.clicked() needs to be overridden for type ('{type(node)}')"
 
     # Node.csv_read_and_process():
-    def csv_read_and_process(self, csv_directory: str, bind: bool = False,
+    def csv_read_and_process(self, csv_directory: str, bind: bool,
                              tracing: str = "") -> None:
         # Fail with a more useful error message better than "no such method":
         node: Node = self
@@ -1809,12 +1742,12 @@ class Node:
         else:
             assert False, f"Node '{remove_node.name}' not in '{node.name}' remove failed"
 
-    # Node.sort():
-    def sort(self, key_function: Callable) -> None:
+    # Node.sort_helper():
+    def sort_helper(self, key_get: "Callable[[Node], Any]", tracing: str = "") -> None:
         # Sort the *children* of *node* (i.e. *self*) using *key_function*:
         node: Node = self
         children: List[Node] = node._children
-        children.sort(key=key_function)
+        children.sort(key=key_get)
 
     # Node.tables_get():
     def tables_get(self) -> "List[Table]":
@@ -1874,7 +1807,7 @@ class Directory(Node):
         gui.directory_clicked(directory)
 
     # Directory.directories_get():
-    def directories_get(self):
+    def directories_get(self) -> "List[Directory]":
         directory: Directory = self
         directories: List[Directory] = [directory]
         node: Node
@@ -1941,7 +1874,8 @@ class Directory(Node):
         tables: List[Table] = list()
         node: Node
         for node in directory.children_get():
-            tables.extend(node.tables_get())
+            node_tables: List[Table] = node.tables_get()
+            tables.extend(node_tables)
         return tables
 
     # Directory.type_letter_get():
@@ -2097,7 +2031,7 @@ class Collection(Node):
             print(f"{tracing}collection_root='{collection_root}'")
             print(f"{tracing}relative_path='{relative_path}'")
             print(f"{tracing}directory_path='{directory_path}'")
-        assert os.path.isdir(directory_path)
+        assert os.path.isdir(directory_path), f"'{directory_path}' is not a directory"
 
         index: int
         base_name: str
@@ -2153,7 +2087,7 @@ class Collections(Node):
     # Collections.__init__():
     @trace(1)
     def __init__(self, name: str, collection_directories: List[str],
-                 searches_root: str, gui: Gui, tracing: str = "") -> None:
+                 searches_root: str, partial_load: bool, gui: Gui, tracing: str = "") -> None:
         # Intialize the *Node* super class of *collections* (i.e. *self*):
         collections: Collections = self
         super().__init__(name, None, gui=gui)
@@ -2176,7 +2110,8 @@ class Collections(Node):
             assert callable(collection_get)
             collection: Collection = collection_get(collections, searches_root, gui)
             assert isinstance(collection, Collection)
-            collection.partial_load()
+            if partial_load:
+                collection.partial_load()
             # collections.child_append(collection)
 
         # Do some *tracing*:
@@ -2331,7 +2266,7 @@ class Collections(Node):
 class Search(Node):
 
     # FIXME: This tale belongs in *Units*:
-    ISO_MULTIPLIER_TABLE = {
+    ISO_MULTIPLIER_TABLE: Dict[str, float] = {
       "E": 1.0e18,
       "P": 1.0e15,
       "T": 1.0e12,
@@ -2380,6 +2315,7 @@ class Search(Node):
         self._relative_path: str = ""
         self.filters: List[Filter] = list()
         self.search_parent: Optional[Search] = search_parent
+        self.search_parent_title: str = ""
         self.search_parent_name: str = ""  # Used by *Search.tree_load*()
         self.url: str = url
 
@@ -2498,50 +2434,36 @@ class Search(Node):
                     if filter.parameter is parameter:
                         break
                 else:
-                    filter: Filter = Filter(parameter=parameter, table=table, use=False, select="")
+                    filter = Filter(table, parameter, use=False, select="")
                     filters.append(filter)
 
-    # Search.full_file_name_get():
-    def xxx_full_file_name_get(self):
-        # Grab some values from *search* (i.e. *self*):
-        search = self
-        collection = search.collection
-        name = search.name
-        relative_path = search.relative_path
-
-        # Compute *full_file_name*:
-        searches_root = collection.searches_root
-        xml_name = Encode.to_file_name(name) + ".xml"
-        # print(f"searches_root='{searches_root}' "
-        #       f"relative_path='{relative_path}; "
-        #       f"xml_name='{xml_name}'")
-        full_file_name = os.path.join(searches_root, relative_path, xml_name)
-        return full_file_name
-
     # Search.is_deletable():
-    def is_deletable(self, tracing=""):
+    def is_deletable(self, tracing: str = "") -> bool:
         # Verify argument types:
         assert isinstance(tracing, str)
 
         # Grab *search_name* from *search* (i.e. *self*):
-        search = self
+        search: Search = self
 
         # Search through *sibling_searches* of *table* to ensure that *search* is not
         # a parent of any *sibling_search* object:
-        table = search.parent
+        table: Optional[Node] = search.parent
         assert isinstance(table, Table)
-        sibling_searches = table.children_get()
+        sibling_searches: List[Node] = table.children_get()
 
         # Make sure that there are now *sibling_search*'s that depend upon *search*:
-        deletable = True
-        for index, sibling_search in enumerate(sibling_searches):
-            if sibling_search.search_parent is search:
+        deletable: bool = True
+        sibling_search: Node
+        for sibling_search in sibling_searches:
+            if sibling_search.parent is search:
                 deletable = False
                 break
         return deletable
 
     # Search.key():
-    def key(self):
+    # def key(self) -> Tuple[int, float, str]:
+    @staticmethod
+    def key(search: Node) -> Any:
         """ Return a sorting key for the *Search* object (i.e. *self*):
 
             The sorting key is a three tuple consisting of (*Depth*, *UnitsNumber*, *Text*), where:
@@ -2561,23 +2483,23 @@ class Search(Node):
         #    to top
 
         # Grab *table* and *searches_table* from *search* (i.e. *self*):
-        search = self
-        table = search.parent
+        assert isinstance(search, Search)
+        table: Optional[Node] = search.parent
         assert isinstance(table, Table)
-        searches_table = table.searches_table
-        assert isinstance(searches_table, dict)
 
         # Figure out template *depth*:
-        depth = 0
-        nested_search = search
+        depth: int = 0
+        nested_search: Search = search
         while nested_search.search_parent is not None:
             depth += 1
             nested_search = nested_search.search_parent
 
         # Sweep through the *search_name* looking for a number, optionally followed by an
         # ISO unit mulitplier.:
-        number_end_index = -1
-        search_name = search.name
+        number_end_index: int = -1
+        search_name: str = search.name
+        character_index: int
+        character: str
         for character_index, character in enumerate(search_name):
             if character in ".0123456789":
                 # We a *character* that "could" be part of a number:
@@ -2586,7 +2508,7 @@ class Search(Node):
                 break
 
         # Extract *number* from *search_name* if possible:
-        number = 0.0
+        number: float = 0.0
         if number_end_index >= 0:
             try:
                 number = float(search_name[0:number_end_index])
@@ -2594,130 +2516,54 @@ class Search(Node):
                 pass
 
         # Figure out the ISO *multiplier* and adjust *number* appropriately:
-        multiplier = 1.0
+        multiplier: float = 1.0
         if number_end_index >= 0 and number_end_index < len(search_name):
-
-            multiplier_character = search_name[number_end_index]
-            iso_multiplier_table = Search.ISO_MULTIPLIER_TABLE
+            multiplier_character: str = search_name[number_end_index]
+            iso_multiplier_table: Dict[str, float] = Search.ISO_MULTIPLIER_TABLE
             if character in iso_multiplier_table:
                 multiplier = iso_multiplier_table[multiplier_character]
         number *= multiplier
 
         # Return a tuple used for sorting:
-        rest = search_name if number_end_index < 0 else search_name[number_end_index:]
-        return (depth, number, rest)
-
-    # Search.file_save():
-    def file_save(self, tracing=""):
-        # Verify argument types:
-        assert isinstance(tracing, str)
-
-        # Create the *search_xml_text* from *search*:
-        search = self
-        search_xml_lines = list()
-        search.xml_lines_append(search_xml_lines, "")
-        search_xml_lines.append("")
-        search_xml_text = "\n".join(search_xml_lines)
-
-        # Construct XML *search_file_name*:
-        collection = search.collection
-        searches_root = collection.searches_root
-        relative_path = search.relative_path
-        search_file_name = os.path.join(searches_root, relative_path + ".xml")
-        if tracing:
-            print(f"{tracing}searches_root='{searches_root}'")
-            print(f"{tracing}relative_path='{relative_path}'")
-            print(f"{tracing}search_file_name='{search_file_name}'")
-
-        # Write *search_xml_text* out to *search_xml_file_name*:
-        search.directory_create(searches_root)
-        with open(search_file_name, "w") as search_file:
-            search_file.write(search_xml_text)
-
-        # Mark *search* as *loaded* since we just wrote out the contents:
-        search.loaded = True
-
-    # Search.partial_load():
-    # def partial_load(self, tracing=""):
-    #     # Verify argument types:
-    #     assert isinstance(tracing, str)
-    #     assert False
-
-    #     # Perform any requested *tracing*:
-    #     if tracing:
-    #         print(f"{tracing}=>Searches.populate(*)")
-
-    #     # Compute the *glob_pattern* for searching:
-    #     searches = self
-    #     path = searches.path
-    #     slash = os.sep
-    #     if tracing:
-    #         print(f"{tracing}glob_pattern='{glob_pattern}'")
-    #     #for index, file_name in enumerate(glob.glob(glob_pattern, recursive=True)):
-    #     #    print(f"Search[{index}]:'{file_name}'")
-
-    #     # Wrap up any requested *tracing*:
-    #     if tracing:
-    #         print(f"{tracing}<=Searches.populate(*)")
+        rest: str = search_name if number_end_index < 0 else search_name[number_end_index:]
+        key: Tuple[int, float, str] = (depth, number, rest)
+        return key
 
     # Search.search_parent_set():
-    def search_parent_set(self, search_parent):
-        # Verify argument types:
-        assert isinstance(search_parent, Search) or search_parent is None
-
+    def search_parent_set(self, search_parent: "Search", tracing: str = "") -> None:
         # Stuff *search_parent* into *search* (i.e. *self*):
-        search = self
-        print("Search.search_parent_set('{0}', {1})".format(search.name,
-              "None" if search_parent is None else "'{0}'".format(search_parent.name)))
+        search: Search = self
         search.search_parent = search_parent
 
     # Search.search_parent_title_set():
-    def search_parent_title_set(self, search_parent_title):
-        # Verify argument types:
-        assert isinstance(search_parent_title, str)
-
+    def search_parent_title_set(self, search_parent_title: str) -> None:
         # Stuff *search_parent_title* into *search* (i.e. *self*):
-        search = self
+        search: Search = self
         search.search_parent_title = search_parent_title
 
-    # Search.table_set():
-    def table_set(self, new_table, tracing=""):
-        # Verify argument types:
-        assert isinstance(new_table, Table) or new_table is None
-
-        search = self
-        search.table = new_table
-
     # Search.name_get():
-    def name_get(self, tracing=""):
-        # Verify argument types:
-        assert isinstance(tracing, str)
-
+    def name_get(self, tracing: str = "") -> str:
         # Grab some values from *search* (i.e. *self*):
-        search = self
-        search_name = search.name
-        table = search.parent
+        search: Search = self
+        search_name: str = search.name
+        table: Optional[Node] = search.parent
+        assert isinstance(table, Table)
 
         # Make sure that all *searches* associated with *table* are loaded from their
         # associated `.xml` files:
         table.searches_load()
 
         # Make sure that *table* is *sort*'ed:
-        table = search.parent
-        assert isinstance(table, Table)
         table.sort()
 
         # Construct the *name*:
-        search_parent = search.search_parent
-        name = search_name if search_parent is None else f"{search_name} ({search_parent.name})"
+        search_parent: Optional[Search] = search.search_parent
+        name: str = (search_name if search_parent is None
+                     else f"{search_name} ({search_parent.name})")
         return name
 
     # Search.tree_load():
-    def tree_load(self, search_tree, tracing=""):
-        # Verify argument types:
-        assert isinstance(search_tree, etree._Element)
-        assert isinstance(tracing, str)
-
+    def tree_load(self, search_tree: etree._Element, tracing: str = "") -> None:
         # The basic format of the *search_tree* is:
         #
         #        <Search name="..." parent="..." table="..." url="...">
@@ -2731,86 +2577,93 @@ class Search(Node):
         #          </Filters>
         #        </Search>
 
-        # Grab some values from *search* (i.e. *self*):
-        search = self
-        table = search.parent
-        assert isinstance(table, Table)
-        # table_name = table.name
-
         # Extract the attributes from *attributes_table* of the `<Search ...>` tag:
-        attributes_table = search_tree.attrib
+        attributes_table: Dict[str, str] = search_tree.attrib
         assert "name" in attributes_table
-        name = Encode.from_attribute(attributes_table["name"])
-        search_parent_name = (Encode.from_attribute(attributes_table["search_parent"])
-                              if "search_parent" in attributes_table else "")
+        name: str = Encode.from_attribute(attributes_table["name"])
+        search_parent_name: str = (Encode.from_attribute(attributes_table["search_parent"])
+                                   if "search_parent" in attributes_table else "")
         assert "url" in attributes_table, "attributes_table={0}".format(attributes_table)
-        url = attributes_table["url"]
+        url: str = attributes_table["url"]
 
-        # Extract the *comments* and *filters* from *search_tree*:
-        comments = list()
-        # filters = list()
-        # sub_trees = list(search_tree)
-        # assert len(sub_trees) == 2
-        # for sub_tree in sub_trees:
-        #     sub_tree_tag = sub_tree.tag
-        #     if sub_tree_tag == "SearchComments":
-        #         # We have `<SearchComments ...>`:
-        #         search_comment_trees = list(sub_tree)
-        #         for search_comment_tree in search_comment_trees:
-        #             # We should have `<SearchComment ...>... `:
-        #             assert search_comment_tree.tag == "SearchComment"
-        #             comment = SearchComment(comment_tree=search_comment_tree)
-        #             comments.append(comment)
-        #     elif sub_tree_tag == "Filters":
-        #         # We have `<Filters ...>...`:
-        #         filter_trees = list(sub_tree)
-        #         for filter_tree in filter_trees:
-        #             # We should have `<Filter ...>... `:
-        #             assert filter_tree.tag == "Filter"
-        #             filter = Filter(tree=filter_tree, table=table)
-        #             filters.append(filter)
-        #     else:
-        #         assert False, f"Unexpected tag <{sub_tree_tag}...> under <Search> tag"
+        # Extract the `<SearchComments>...</SearchComments>` XML:
+        search_tree_elements: List[etree._Element] = list(search_tree)
+        assert search_tree_elements, "No <SearchComments> found."
+        comments_tree: etree._Element = search_tree_elements[0]
+        assert comments_tree.tag == "SearchComments", (f"<{comments_tree.tag}> found "
+                                                       f"instead of <SearchComments>")
+        assert not comments_tree.attrib, "<SearchComments> should not have any attributes"
+        comments: List[SearchComment] = list()
+        comment_tree: etree._Element
+        for comment_tree in comments_tree:
+            comment: SearchComment = SearchComment.xml_parse(comment_tree)
+            comments.append(comment)
 
-        # Stuff new values into *search* (i.e. *self*):
-        search = self
+        # Load values from *search_tree* into *search* (i.e. *self*):
+        search: Search = self
         search.name = name
         search.comments[:] = comments[:]
         # search.filters[:] = filters[:]
-        search.search = None
+        search.search_parent = None  # This is filled in later on
         search.search_parent_name = search_parent_name
         search.url = url
 
     # Search.type_letter_get():
-    def type_letter_get(self):
+    def type_letter_get(self) -> str:
         return 'S'
 
     # Search.url_set():
-    def url_set(self, url):
-        # Verify argument types:
-        assert isinstance(url, str)
-
+    def url_set(self, url: str) -> None:
         # Stuff *url* into *search* (i.e. *self*):
-        search = self
+        search: Search = self
         search.url = url
 
-    # Search.xml_lines_append()
-    def xml_lines_append(self, xml_lines, indent, tracing=""):
-        # Verify argument types:
-        assert isinstance(xml_lines, list)
-        assert isinstance(indent, str)
-        assert isinstance(tracing, str)
+    # Search.xml_file_save():
+    def xml_file_save(self, tracing: str = "") -> None:
+        # Compute *xml_file_name* and the *xml_file_directory* starting from *search* (i.e. *self*):
+        search: Search = self
+        collection: Optional[Collection] = search.collection
+        assert isinstance(collection, Collection)
+        searches_root: str = collection.searches_root
+        relative_path: str = search.relative_path
+        xml_file_name: str = os.path.join(searches_root, relative_path + ".xml")
+        xml_directory: str = os.path.split(xml_file_name)[0]
+        if tracing:
+            print(f"{tracing}searches_root='{searches_root}'")
+            print(f"{tracing}relative_path='{relative_path}'")
+            print(f"{tracing}xml_file_name='{xml_file_name}'")
+            print(f"{tracing}xml_directory='{xml_directory}'")
 
+        # Create *xml_text* from *search*:
+        xml_lines: List[str] = list()
+        xml_lines.append('<?xml version="1.0"?>')
+        search.xml_lines_append(xml_lines, "")
+        xml_lines.append("")
+        xml_text: str = "\n".join(xml_lines)
+
+        # Ensure that *xml_directory* exists:
+        os.mkdir(xml_directory)
+
+        # Write *xml_text* out to *xml_file_name*:
+        xml_file: IO[str]
+        with open(xml_file_name, "w") as xml_file:
+            xml_file.write(xml_text)
+
+        # Mark *search* as *loaded* since we just wrote out the contents:
+        search.loaded = True
+
+    # Search.xml_lines_append()
+    def xml_lines_append(self, xml_lines: List[str], indent: str, tracing: str = "") -> None:
         # Grab some values from *search* (i.e. *self*):
-        search = self
-        table = search.parent
+        search: Search = self
+        table: Optional[Node] = search.parent
         assert isinstance(table, Table)
-        search_parent = search.search_parent
-        search_name = search.name
+        search_parent: Optional[Search] = search.search_parent
+        search_name: str = search.name
 
         # Figure out *search_parent_title* which is empty only for the `@ALL` *Search* object:
-        search_parent_text = ("" if search_parent is None
-                              else f'search_parent="{Encode.to_attribute(search_parent.name)}" ')
+        search_parent_text: str = ("" if search_parent is None else
+                                   f'search_parent="{Encode.to_attribute(search_parent.name)}" ')
 
         # Start the `<Search...>` element:
         xml_lines.append(f'{indent}<Search '
@@ -2821,19 +2674,11 @@ class Search(Node):
 
         # Append the `<SearchComments>` element:
         xml_lines.append(f'{indent}  <SearchComments>')
-        search_comments = search.comments
+        search_comments: List[SearchComment] = search.comments
         search_comment_indent = indent + "    "
         for search_comment in search_comments:
             search_comment.xml_lines_append(xml_lines, search_comment_indent)
         xml_lines.append(f'{indent}  </SearchComments>')
-
-        # Append the `<Filters>` element:
-        # filters = search.filters
-        # xml_lines.append(f'{indent}  <Filters>')
-        # filter_indent = indent + "    "
-        # for filter in filters:
-        #     filter.xml_lines_append(xml_lines, filter_indent)
-        # xml_lines.append(f'{indent}  </Filters>')
 
         # Wrap up the `<Search>` element:
         xml_lines.append(f'{indent}</Search>')
@@ -2850,6 +2695,9 @@ class Table(Node):
         # Load additional values into *table* (i.e. *self*):
         # table: Table = self
         self.comments: List[TableComment] = list()
+        self.import_column_triples: List[List[Tuple[int, str, str]]] = list()
+        self.import_headers: List[str] = list()     # Read from .csv file
+        self.import_rows: List[str] = list()        # Read from .csv file
         self.is_sorted: bool = False
         self.loaded: bool = False
         self.parameters: List[Parameter] = list()
@@ -2857,207 +2705,131 @@ class Table(Node):
         self.searches_table: Dict[str, Search] = dict()
         self.url: str = ""
 
-    # Table.bind_parameters_from_imports():
-    def bind_parameters_from_imports(self, tracing=""):
-        # Verify argument types:
-        assert isinstance(tracing, str)
-
-        # Update *current_table* an *parameters* from *tables_editor*:
-        table = self
-        parameters = table.parameters
-        headers = table.import_headers
-        column_triples = table.import_column_triples
-        for column_index, triples in enumerate(column_triples):
-            header = headers[column_index]
-            # Replace '&' with '+' so that we don't choke the evenutaly .xml file with
-            # an  XML entity (i.e. 'Rock & Roll' = > 'Rock + Roll'.  Entities are always
-            # "&name;".
-            header = header.replace('&', '+')
-            header = header.replace('<', '[')
-            header = header.replace('>', ']')
-
-            if len(triples) >= 1:
-                # We only care about the first *triple* in *triples*:
-                triple = triples[0]
-                count, name, value = triple
-
-                # See if an existing *parameter* matches *name* (not likely):
-                for parameter_index, parameter in enumerate(parameters):
-                    if parameter.csv == name:
-                        # This *parameter* already exists, so we done:
-                        break
-                else:
-                    # This is no preexisting *parameter* so we have to create one:
-
-                    # Create *scrunched_name* from *header*:
-                    scrunched_characters = list()
-                    in_word = False
-                    for character in header:
-                        if character.isalnum():
-                            if not in_word:
-                                character = character.upper()
-                            scrunched_characters.append(character)
-                            in_word = True
-                        else:
-                            in_word = False
-                    scrunched_name = "".join(scrunched_characters)
-
-                    # Create *parameter* and append to *parameters*:
-                    comments = [ParameterComment(language="EN",
-                                long_heading=scrunched_name, lines=list())]
-                    parameter = Parameter(name=scrunched_name, type=name, csv=header,
-                                          csv_index=column_index, comments=comments)
-                    parameters.append(parameter)
-
     # Table.can_fetch_more():
-    def can_fetch_more(self):
+    def can_fetch_more(self) -> bool:
         # Conceptually, every table as a default `@ALL` search.  We return *True* if
         # the `@ALL` search has not actually been created yet for *table* (i.e. *self*):
-        table = self
-        searches = table.children_get()
-        can_fetch_more = (len(searches) == 0)
+        table: Table = self
+        searches: List[Node] = table.children_get()
+        can_fetch_more: bool = (len(searches) == 0)
         return can_fetch_more
 
     # Table.clicked():
-    def clicked(self, gui, tracing=""):
-        # Verify argument types:
-        assert isinstance(gui, Gui)
-        assert isinstance(tracing, str)
-
+    def clicked(self, gui: Gui, tracing: str = "") -> None:
         # Forward clicked event back to *gui* along with *table* (i.e. *self*):
-        table = self
+        table: Table = self
         gui.table_clicked(table)
 
-    # Table.csv_read_and_process():
-    def csv_read_and_process(self, csv_directory, bind=False, tracing=""):
-        # Verify argument types:
-        assert isinstance(csv_directory, str)
-        assert isinstance(tracing, str)
+    # Table.column_tables_extract():
+    @trace(1)
+    def column_tables_extract(self, rows: List[List[str]],
+                              tracing: str = "") -> List[Dict[str, int]]:
+        # Create and return a *column_tables* which has one dictionary for each column in *rows*.
+        # Each *column_table* dictionary that contains an occurance count for each different
+        # value in the column.
 
-        # Grab *parameters* from *table* (i.e. *self*):
-        table = self
-        parameters = table.parameters
-        assert isinstance(parameters, list)
+        # Figure out how many *columns* there are for each row.  Each row is assumed
+        # to have the same number of *columns*:
+        assert rows, "No data to extract"
+        row0: List[str] = rows[0]
+        columns: int = len(row0)
 
-        # Open *csv_file_name* read in both *rows* and *headers*:
-        csv_full_name = table.csv_full_name_get()
-        assert isinstance(csv_full_name, str)
-        if tracing:
-            print(f"{tracing}csv_full_name='{csv_full_name}'")
+        # Create *column_tables* and fill in one *column_table* per *column*:
+        column_tables: List[Dict[str, int]] = list()
+        for column in range(columns):
+            column_table: Dict[str, int] = dict()
+            column_tables.append(column_table)
 
-        rows = None
-        headers = None
-        if not os.path.isfile(csv_full_name):
-            print(f"{tracing}csv_directory='{csv_directory}' csv_full_name='{csv_full_name}'")
-        with open(csv_full_name, newline="") as csv_file:
-            # Read in *csv_file* using *csv_reader*:
-            csv_reader = csv.reader(csv_file, delimiter=',', quotechar='"')
-            rows = list()
-            for row_index, row in enumerate(csv_reader):
-                if row_index == 0:
-                    headers = row
-                else:
-                    rows.append(row)
-
-        # Create *column_tables* which is used to process the following *row*'s:
-        column_tables = [dict() for header in headers]
-        for row in rows:
-            # Build up a count of each of the different data values in for a given column
-            # in *column_table*:
-            for column_index, value in enumerate(row):
-                column_table = column_tables[column_index]
+            # Sweep across each *row* in *rows* and fill in *column_table*:
+            for row in rows:
+                assert len(row) == columns
+                value: str = row[column]
                 if value in column_table:
-                    # We have seen *value* before, so increment its count:
+                    # We have seen *value* before in this *column*, so increment its count:
                     column_table[value] += 1
                 else:
-                    # This is the first time we seen *value*, so insert it into
-                    # *column_table* as the first one:
+                    # This is the first time we seen *value* in this *column*, so insert it
+                    # into *column_table* as the first one:
                     column_table[value] = 1
 
-        # Now *column_tables* has a list of tables (i.e. *dict*'s) where it entry
-        # has a count of the number of times that value occured in the column.
+        # Return *column_tables*:
+        return column_tables
 
-        # Now sweep through *column_tables* and build *column_triples*:
-        # re_table = gui.re_table
-        re_table = dict()
-        assert False
-        column_triples = list()
-        for column_index, column_table in enumerate(column_tables):
-            # FIXME: Does *column_list* really need to be sorted???!!!!
-            # Create *column_list* from *column_table* such that the most common value in the
-            # columns comes first and the least commone one comes last:
-            column_list = sorted(list(column_table.items()),
-                                 key=lambda pair: (pair[1], pair[0]), reverse=True)
+    # Table.csv_file_read():
+    @trace(1)
+    def csv_file_read(self, tracing: str = "") -> Tuple[List[str], List[List[str]]]:
+        # Grab some values from *table* (i.e. *self*):
+        table: Table = self
+        csv_full_name: str = table.csv_full_name_get()
 
-            # Build up *matches* which is the regular expressions that match best:
-            regex_table = dict()
-            regex_table["String"] = list()
-            total_count = 0
-            for value, count in column_list:
-                # print("Column[{0}]:'{1}': {2} ".format(column_index, value, count))
-                total_count += count
-                match_count = 0
-                for regex_name, regex in re_table.items():
-                    if not regex.match(value) is None:
-                        if regex_name in regex_table:
-                            regex_table[regex_name].append((value, count))
-                        else:
-                            regex_table[regex_name] = [(value, count)]
+        # Open *csv_full_name* and read in the *headers* and *rows*:
+        assert os.path.isfile(csv_full_name), "File '{csv_full_file_name}' does not exist."
+        headers: List[str]
+        rows: List[List[str]] = list()
+        csv_file: IO[str]
+        with open(csv_full_name, newline="") as csv_file:
+            row_index: int
+            row: List[str]
+            for row_index, row in enumerate(csv.reader(csv_file, delimiter=',', quotechar='"')):
+                if row_index == 0:
+                    # The first *row* is actually the *headers*:
+                    headers = row
+                else:
+                    # All others are data *rows*:
+                    rows.append(row)
 
-                        match_count += 1
-                if match_count == 0:
-                    regex_table["String"].append((value, count))
-            # assert total_count == len(rows), \
-            #  "total_count={0} len_rows={1}".format(total_count, len(rows))
+        # Return the resulting *headers* and *rows*:
+        return headers, rows
 
-            # if tracing:
-            #    print("{0}Column[{1}]: regex_table={2}".
-            #      format(tracing, column_index, regex_table))
+    # Table.csv_full_name_get():
+    def csv_full_name_get(self) -> str:
+        table: Table = self
+        class_name: str = table.__class__.__name__
+        assert False, f"{class_name}.csv_full_name_get() needs to be implemented."
+        return ""
 
-            # Now construct the *triples* list such containing of tuples that have
-            # three values -- *total_count*, *regex_name*, and *value* where,
-            # * *total_count*: is the number column values that the regular expression matched,
-            # * *regex_name*: is the name of the regular expression, and
-            # * *value*: is an example value that matches the regular expression.
-            triples = list()
-            for regex_name, pair_list in regex_table.items():
-                total_count = 0
-                value = ""
-                for pair in pair_list:
-                    value, count = pair
-                    total_count += count
-                triple = (total_count, regex_name, value)
-                triples.append(triple)
+    # Table.csv_read_and_process():
+    @trace(1)
+    def csv_read_and_process(self, csv_directory: str, bind: bool, gui: Gui,
+                             tracing: str = "") -> None:
+        # This delightful piece of code reads in a `.csv` file and attempts to catagorize
+        # each column of the table with a "type".  The types are stored in *re_table*
+        # (from *gui*) as dictionary of named pre compiled regualar expressions.
+        # If there is no good match for the table column contents, it is given a type
+        # of "String".  This code is actually pretty involved and convoluted.
 
-            # Sort *triples* such that the regular expression that maches the most entries comes
-            # first the least matches are at the end.  Tack *triples* onto *column_triples* list:
-            triples.sort(reverse=True)
-            column_triples.append(triples)
+        # Read the example `.csv` file associated with *table* (i.e. *self*) into *headers* and
+        # *rows*:
+        table: Table = self
+        headers: List[str]
+        rows: List[List[str]]
+        headers, rows = table.csv_file_read()
 
-        # Save some values into *tables_editor* for the update routine:
-        table.import_column_triples = column_triples
-        table.import_headers = headers
-        table.import_rows = rows
-        assert isinstance(column_triples, list)
-        assert isinstance(headers, list)
-        assert isinstance(rows, list)
+        # Extract *column_tables* which is a list of dictionaries where each dictionary
+        # has an occurence count for each unique value in a column:
+        column_tables: List[Dict[str, int]] = table.column_tables_extract(rows)
 
+        # Extract *type_tables* which is a list of dictionaries, where each dictionary
+        # has an occurence count for each unique type name in the column:
+        types_tables: List[Dict[str, int]] = table.type_tables_extract(column_tables, gui)
+
+        # If requested, bind the *types_tables* to *parameters*:
         if bind:
-            table.bind_parameters_from_imports()
-        table.file_save()
+            table.parameters_bind(headers, types_tables)
+
+        # We are done and can write out *table* now:
+        table.xml_file_save()
 
     # Table.directories_get():
-    def directories_get(self):
+    def directories_get(self) -> "List[Directory]":
+        # A *table* has no sub-directories, so the empty list is returned:
         return []
 
     # Table.fetch_more():
-    def fetch_more(self, tracing=""):
-        # Verify argument types:
-        assert isinstance(tracing, str)
-
+    def fetch_more(self, tracing: str = "") -> None:
         # Create *all_search* if it does not already exist (i.e. *searches_size* is 0):
-        table = self
-        searches = table.children_get()
+        table: Table = self
+        searches: List[Node] = table.children_get()
         searches_size = len(searches)
         if tracing:
             print(f"{tracing}1:searches_size={searches_size}")
@@ -3065,10 +2837,10 @@ class Table(Node):
             # Note that the call to the *Search*() has the side-effect of appending
             # *all_search* to the children of *table*:
             # base_name = Encode.to_file_name(name)
-            all_search = Search("@ALL", table, None, table.url)
+            all_search: Search = Search("@ALL", table, None, table.url)
             assert table.has_child(all_search)
             assert len(searches) == 1
-            all_search.file_save()
+            all_search.xml_file_save()
 
             # Make sure that *table* is fully loaded so we can grab the *url*:
             table.file_load()
@@ -3076,46 +2848,45 @@ class Table(Node):
             if tracing:
                 print(f"{tracing}2:searches_size={searches_size}")
             assert searches_size == 1
-            url = table.url
+            url: str = table.url
 
             # Fill in the rest of *all_search* from *table*:
-            comment = SearchComment(language="EN", lines=list())
+            comment: SearchComment = SearchComment(language="EN", lines=list())
             all_search.comments.append(comment)
             all_search.url = url
 
             # Force *all_search* out to the file system:
-            all_search.file_save()
+            all_search.xml_file_save()
             if tracing:
                 searches_size = len(searches)
                 print(f"{tracing}3:searches_size={searches_size}")
 
     # Table.file_load():
-    def file_load(self, tracing=""):
-        # Verify argument types:
-        assert isinstance(tracing, str)
-
+    def file_load(self, tracing: str = "") -> None:
         # Only load *table* (i.e. *self*) if it is not already *loaded*:
-        table = self
-        loaded = table.loaded
-        searches = table.children_get()
-        searches_size = len(searches)
+        table: Table = self
+        loaded: bool = table.loaded
+        searches: List[Node] = table.children_get()
+        searches_size: int = len(searches)
         if tracing:
             print(f"{tracing}loaded={loaded} searches_size={searches_size}")
         if not table.loaded:
             # Get *table_file_name* for *table*:
-            relative_path = table.relative_path
-            collection = table.collection
-            collection_root = collection.collection_root
-            table_file_name = os.path.join(collection_root, relative_path + ".xml")
+            relative_path: str = table.relative_path
+            collection: Optional[Collection] = table.collection
+            assert isinstance(collection, Collection)
+            collection_root: str = collection.collection_root
+            table_file_name: str = os.path.join(collection_root, relative_path + ".xml")
             assert os.path.exists(table_file_name), f"'{table_file_name}' does not exist"
 
             # Read *table_tree* in from *full_file_name*:
+            table_file: IO[str]
             with open(table_file_name) as table_file:
                 # Read in *table_xml_text* from *table_file*:
-                table_xml_text = table_file.read()
+                table_xml_text: str = table_file.read()
 
                 # Parse the XML in *table_xml_text* into *table_tree*:
-                table_tree = etree.fromstring(table_xml_text)
+                table_tree: etree._Element = etree.fromstring(table_xml_text)
                 # FIXME: Catch XML parsing errors here!!!
 
                 # Now process the contents of *table_tree* and stuff the results into *table*:
@@ -3124,22 +2895,8 @@ class Table(Node):
             # Mark *table* as *loaded*:
             table.loaded = True
 
-    # Table.full_file_name_get():
-    def xxx_full_file_name_get(self):
-        # Grab some values out of *table*:
-        table = self
-        collection = table.collection
-        name = table.name
-        relative_path = table.relative_path
-
-        # Compute *file_file_name*:
-        collection_root = collection.collection_root
-        file_base = Encode.to_file_name(name) + ".xml"
-        full_file_name = os.path.join(collection_root, relative_path, file_base)
-        return full_file_name
-
     # Table.has_children():
-    def has_children(self):
+    def has_children(self) -> bool:
         # This is a bit obscure.  A *Table* object conceptually always has an "@ALL" search.
         # *True* is returned even if the *table* (i.e. *self*) does not actually have
         # any children.  When *Table.fetch_more*() is called the "@ALL" search will auto-magically
@@ -3147,55 +2904,87 @@ class Table(Node):
         return True
 
     # Table.header_labels_get():
-    def header_labels_get(self):
-        table = self
-        parameters = table.parameters
-        parameters_size = len(parameters)
-        assert parameters_size >= 1
-        header_labels = list()
+    def header_labels_get(self) -> List[str]:
+        table: Table = self
+        parameters: List[Parameter] = table.parameters
+        parameters_size: int = len(parameters)
+        assert parameters_size >= 1, "Table is empty"
+        header_labels: List[str] = list()
         for parameter in parameters:
-            parameter_comments = parameter.comments
-            header_label = "?"
+            parameter_comments: List[ParameterComment] = parameter.comments
+            header_label: str = "?"
             if len(parameter_comments) >= 1:
-                parameter_comment = parameter_comments[0]
-                short_heading = parameter_comment.short_heading
-                long_heading = parameter_comment.long_heading
+                parameter_comment: ParameterComment = parameter_comments[0]
+                short_heading: str = parameter_comment.short_heading
+                long_heading: str = parameter_comment.long_heading
                 header_label = short_heading if short_heading is not None else long_heading
             header_labels.append(header_label)
         return header_labels
 
     # Table.name_get():
-    def name_get(self, tracing=""):
-        # Verify argument types:
-        assert isinstance(tracing, str)
-
+    def name_get(self, tracing: str = "") -> str:
         # Force *table* (i.e. *self*) *load* if it has not already been loaded:
-        table = self
-        name = table.name
+        table: Table = self
+        name: str = table.name
         table.file_load()
 
         # Augment *name* with the *searches_size*:
-        searches = table.children_get()
-        searches_size = len(searches)
+        searches: List[Node] = table.children_get()
+        searches_size: int = len(searches)
         if len(searches) >= 2:
             name += f" ({searches_size})"
         return name
 
-    # Table.partial_load():
-    def partial_load(self, tracing=""):
-        # Verify argument types:
-        assert isinstance(tracing, str)
+    # Table.parameters_bind():
+    @trace(1)
+    def parameters_bind(self, headers: List[str], type_tables: List[Dict[str, int]],
+                        tracing: str = "") -> None:
+        # Grab *parameters* from *table* and make sure that there is a 1-to-1 correspondance
+        # between *paramters* and *type_tables*:
+        table: Table = self
+        parameters: List[Parameter] = table.parameters
 
+        # Sweep through *Paramters* finding the *type_name* with the best match:
+        index: int
+        header: str
+        csv: str = ""
+        default: str = ""
+        optional: bool = False
+        for index, header in enumerate(headers):
+            # Convert *type_table* into *type_counts*:
+            type_table: Dict[str, int] = type_tables[index]
+            type_counts: List[Tuple[str, int]] = list(type_table.items())
+
+            # Sort *type_counts* based on count:
+            type_counts.sort(key=lambda name_count: (name_count[1], name_count[0]))
+
+            # Grab the *name_count_last* which will have the highest count, and stuff
+            # the associated *type_name* into *parameter*:
+            name_count_last: Tuple[str, int] = type_counts[-1]
+            type_name: str = name_count_last[0]
+
+            parameter: Parameter
+            if len(parameters) <= index:
+                comments: List[ParameterComment] = [ParameterComment("EN", [], header, "")]
+                enumerations: List[Enumeration] = list()
+                parameter = Parameter(header, type_name, csv, index, default, optional,
+                                      comments, enumerations)
+                parameters.append(parameter)
+            else:
+                parameter.type = type_name
+
+    # Table.partial_load():
+    def partial_load(self, tracing: str = "") -> None:
         # Grab some values from *table* (i.e. *self*):
-        table = self
-        # name = table.name
-        relative_path = table.relative_path
-        collection = table.collection
+        table: Table = self
+        relative_path: str = table.relative_path
+        collection: Optional[Collection] = table.collection
+        assert isinstance(collection, Collection)
 
         # Compute *searches_path* which is the directory that contains the *Search* `.xml` files:
-        collection_root = collection.collection_root
-        searches_root = collection.searches_root
-        searches_directory = os.path.join(searches_root, relative_path)
+        collection_root: str = collection.collection_root
+        searches_root: str = collection.searches_root
+        searches_directory: str = os.path.join(searches_root, relative_path)
         if tracing:
             print(f"{tracing}collection_root='{collection_root}'")
             print(f"{tracing}searches_root='{searches_root}'")
@@ -3205,6 +2994,8 @@ class Table(Node):
         # Scan through *searches_path* looking for `.xml` files:
         if os.path.isdir(searches_directory):
             # *searches_path* is a directory so we scan it:
+            index: int
+            search_file_name: str
             for index, search_file_name in enumerate(sorted(list(os.listdir(searches_directory)))):
                 # Preform requested *tracing*:
                 if tracing:
@@ -3213,35 +3004,35 @@ class Table(Node):
                 # Skip over any files that do not end with `.xml` suffix:
                 if search_file_name.endswith(".xml"):
                     # Extract *name* and *title* from *file_name* (ignoring the `.xml` suffix):
-                    file_base = search_file_name[:-4]
-                    search_name = Encode.from_file_name(file_base)
+                    file_base: str = search_file_name[:-4]
+                    search_name: str = Encode.from_file_name(file_base)
 
                     # Create *search* and then save it out to the file system:
-                    search = Search(search_name, table, None, "??")
+                    search: Search = Search(search_name, table, None, "??")
                     assert table.has_child(search)
                     search.loaded = False
 
     # Table.sort():
-    def sort(self, tracing=""):
-        # Verify argument types:
-        assert isinstance(tracing, str)
-
+    def sort(self, tracing: str = "") -> None:
         # Only sort *table* (i.e. *self*) if it is not *is_sorted*:
-        table = self
-        is_sorted = table.is_sorted
+        table: Table = self
+        is_sorted: bool = table.is_sorted
         if tracing:
             print(f"{tracing}is_sorted={is_sorted}")
         if not is_sorted:
             # Grab *searches* list from *table* (i.e. *self*):
-            searches = table.children_get()
-            searches_size = len(searches)
+            searches: List[Node] = table.children_get()
+            searches_size: int = len(searches)
             if tracing:
                 print(f"{tracing}searches_size={searches_size}")
 
             # Create a new *searches_table* that contains every *search* keyed by *search_name*:
-            searches_table = dict()
+            searches_table: Dict[str, Search] = dict()
+            index: int
+            search: Node
             for index, search in enumerate(searches):
-                search_name = search.name
+                assert isinstance(search, Search)
+                search_name: str = search.name
                 if search_name in searches_table:
                     assert searches_table[search_name] is search
                 else:
@@ -3276,57 +3067,40 @@ class Table(Node):
             # Mark that *table* *is_sorted*:
             table.is_sorted = True
 
-    # Table.save():
-    def save(self, tracing=""):
-        # Verify argument types:
-        assert isinstance(tracing, str)
-
-        # Write out *table* (i.e. *self*) to *file_name*:
-        table = self
-        output_file_name = table.file_name
-        xml_text = table.to_xml_string()
-        with open(output_file_name, "w") as output_file:
-            output_file.write(xml_text)
-
     # Table.search_directory_get():
-    def search_directory_get(self, tracing=""):
-        # Verify argument types:
-        assert isinstance(tracing, str)
+    # def search_directory_get(self, tracing: str = "") -> str:
+    #     # Compute *search_directory*:
+    #     table: Table = self
+    #     searches_root: str = table.searches_root_get()
+    #     relative_path: str = table.relative_path
+    #     table_name: str = table.name
+    #     table_base_name: str = Encode.to_file_name(table_name)
+    #     search_directory: str = os.path.join(searches_root, relative_path, table_base_name)
+    #     if tracing:
+    #         print(f"{tracing}searches_root='{searches_root}'")
+    #         print(f"{tracing}relative_path='{relative_path}'")
+    #         # print(f"{tracing}table__directory='{table_directory}'")
+    #         print(f"{tracing}search_directory='{search_directory}'")
 
-        # Compute *search_directory*:
-        table = self
-        searches_root = table.searches_root_get()
-        relative_path = table.relative_path
-        table_name = table.name
-        table_base_name = Encode.to_file_name(table_name)
-        search_directory = os.path.join(searches_root, relative_path, table_base_name)
-        if tracing:
-            print(f"{tracing}searches_root='{searches_root}'")
-            print(f"{tracing}relative_path='{relative_path}'")
-            # print(f"{tracing}table__directory='{table_directory}'")
-            print(f"{tracing}search_directory='{search_directory}'")
-
-        # Make sure *search_directory* exists:
-        if not os.path.isdir(search_directory):
-            os.makedirs(search_directory)
-            if tracing:
-                print(f"{tracing}Created directory '{search_directory}'")
-
-        return search_directory
+    #     # Make sure *search_directory* exists:
+    #     if not os.path.isdir(search_directory):
+    #         os.makedirs(search_directory)
+    #         if tracing:
+    #             print(f"{tracing}Created directory '{search_directory}'")
+    #     return search_directory
 
     # Table.searches_load():
-    def searches_load(self, tracing=""):
-        # Verify argument types:
-        assert isinstance(tracing, str)
-
+    def searches_load(self, tracing: str = "") -> None:
         # Grab some values from *table* (i.e. *self*):
-        table = self
-        table_searches = dict()
-        searches_loaded_count = 0
-        searches = table.children_get()
+        table: Table = self
+        table_searches: Dict[str, Search] = dict()
+        searches_loaded_count: int = 0
+        searches: List[Node] = table.children_get()
+        search: Node
         for search in searches:
             # Make sure *search* is *loaded*.  We test *loaded* up here to prevent
             # a lot of unnecessary calls to *file_load*:
+            assert isinstance(search, Search)
             if not search.loaded:
                 search.file_load()
                 assert search.loaded
@@ -3339,13 +3113,14 @@ class Table(Node):
         # Fix up the search parent links:
         if searches_loaded_count >= 1:
             for search in searches:
-                search_parent_name = search.search_parent_name
+                assert isinstance(search, Search)
+                search_parent_name: str = search.search_parent_name
                 if tracing:
                     print(f"Search '{search.name}' parent name is '{search_parent_name}'")
                 if search_parent_name != "":
                     assert search_parent_name in table_searches, (f"'{search_parent_name} '"
                                                                   f"not in {table_searches.keys()}")
-                    search_parent = table_searches[search_parent_name]
+                    search_parent: Search = table_searches[search_parent_name]
                     search.search_parent = search_parent
                     if tracing:
                         print(f"Setting search '{search.name}' "
@@ -3355,13 +3130,13 @@ class Table(Node):
                         print(f"Search '{search.name}' has no search parent.")
 
     # Table.searches_table_set():
-    def searches_table_set(self, searches_table):
-        # Verify argument types:
-        assert isinstance(searches_table, dict)
-
-        # Stuff *searches_table* into *table* (i.e. *self*):
-        table = self
-        table.searches_stable = searches_table
+    # def searches_table_set(self, searches_table):
+    #     # Verify argument types:
+    #     assert isinstance(searches_table, dict)
+    #
+    #     # Stuff *searches_table* into *table* (i.e. *self*):
+    #     table = self
+    #     table.searches_stable = searches_table
 
     # Table.tables_get():
     def tables_get(self):
@@ -3421,19 +3196,85 @@ class Table(Node):
         table.parameters[:] = parameters[:]
         table.url = url
 
-    # Table.to_xml_string():
-    def to_xml_string(self):
-        table = self
-        xml_lines = list()
-        xml_lines.append('<?xml version="1.0"?>')
-        table.xml_lines_append(xml_lines, "")
-        xml_lines.append("")
-        text = '\n'.join(xml_lines)
-        return text
+    # Table.type_tables_extract():
+    @trace(1)
+    def type_tables_extract(self, column_tables: List[Dict[str, int]], gui: Gui,
+                            tracing: str = "") -> List[Dict[str, int]]:
+        # The *re_table* comes from *gui* contains some regular expression for catagorizing
+        # values.  The key of *re_table* is the unique *type_name* associated with the regular
+        # expression that matches a given type.  The regular expressions are *PreCompiled*
+        # to improve efficiency:
+        re_table: Dict[str, PreCompiled] = gui.re_table
+
+        # Constuct *type_tables*, which is a list *type_table* that is 1-to-1 with the columns
+        # in *column_tables*.  Each *type_table* collects a count of the number of column entries
+        # that match a given *type_name*.  If none of the *type_names* match a given *value*,
+        # the default *type_name* of "String" is used:
+        type_tables: List[Dict[str, int]] = list()
+        column_table: Dict[str, int]
+        for column_table in column_tables:
+            # Create *type_table*, create the "String" *type_name*, and tack it onto *type_tables*:
+            type_table: Dict[str, int] = dict()
+            type_table["String"] = 0
+            type_tables.append(type_table)
+
+            # Sweep through *column_table* characterizing which values match which *type_names*:
+            value: str
+            count: int
+            for value, count in column_table.items():
+                type_name: str
+                regex: PreCompiled
+                match: bool = False
+                # Now test *value* against *re* to see if we have a match:
+                for type_name, regex in re_table.items():
+                    if regex.match(value) is not None:
+                        # We have a match, so make sure *type_name* is in *type_table*
+                        # update the count appropriately:
+                        if type_name in type_table:
+                            type_table[type_name] += count
+                        else:
+                            type_table[type_name] = count
+                        match = True
+
+                # If we did not *match*, mark the *value* as a "String" type:
+                if not match:
+                    type_table["String"] += count
+        return type_tables
 
     # Table.type_letter_get():
     def type_letter_get(self):
         return 'T'
+
+    # Table.xml_file_save():
+    def xml_file_save(self, tracing: str = "") -> None:
+        # Compute *xml_file_name* and *xml_directory* from *table* (i.e. *self*):
+        table: Table = self
+        relative_path: str = table.relative_path
+        collection: Optional[Collection] = table.collection
+        assert isinstance(collection, Collection)
+        collection_root: str = collection.collection_root
+        xml_file_name: str = os.path.join(collection_root, relative_path + ".xml")
+        xml_directory: str = os.path.split(xml_file_name)[0]
+        if tracing:
+            print("{tracing}relative_path='{relative_path}'")
+            print("{tracing}collection_root='{collection_root}'")
+            print("{tracing}xml_file_name='{xml_file_name}'")
+            print("{tracing}xml_directory='{xml_directory}'")
+
+        # Ensure that *xml_directory* exists:
+        os.mkdir(xml_directory)
+
+        # Construct the final *xml_lines*:
+        xml_lines: List[str] = list()
+        xml_lines.append('<?xml version="1.0"?>')
+        table.xml_lines_append(xml_lines, "")
+        xml_lines.append("")
+        xml_text: str = '\n'.join(xml_lines)
+
+        # Now write *xml_text* out to *xml_file_name*:
+        xml_file: IO[str]
+        with open(xml_file_name, "w") as xml_file:
+            xml_file.write(xml_text)
 
     # Table.xml_lines_append():
     def xml_lines_append(self, xml_lines, indent):
@@ -3798,7 +3639,8 @@ class Order:
 
             # Figure out what vendors are still available for *choice_parts*:
             base_vendor_names = self.vendor_names_get(choice_parts, excluded_vendor_names)
-            assert isinstance(base_vendor_names, tuple)
+            assert isinstance(base_vendor_names, list), ("type(base_vendor_names)="
+                                                          f"{type(base_vendor_names)}")
             # print("base: {0} {1}".format(base_cost, base_vendor_names))
 
             # For small designs, sometimes the algorithm will attempt to
@@ -4490,87 +4332,12 @@ class Panda:
 class Parameter:
 
     # Parameter.__init__():
-    def __init__(self, **arguments_table) -> None:
-        is_parameter_tree = "parameter_tree" in arguments_table
-        if is_parameter_tree:
-            assert len(arguments_table) == 1
-            assert isinstance(arguments_table["parameter_tree"], etree._Element)
-        else:
-            assert "name" in arguments_table
-            assert "type" in arguments_table
-            assert "csv" in arguments_table
-            assert "csv_index" in arguments_table
-            assert "comments" in arguments_table
-            arguments_count = 5
-            if "default" in arguments_table:
-                arguments_count += 1
-                assert isinstance(arguments_table["default"], str)
-            if "optional" in arguments_table:
-                assert isinstance(arguments_table["optional"], bool)
-                arguments_count += 1
-            if "enumerations" in arguments_table:
-                arguments_count += 1
-                enumerations = arguments_table["enumerations"]
-                for enumeration in enumerations:
-                    assert isinstance(enumeration, Enumeration)
-            assert len(arguments_table) == arguments_count, arguments_table
-
-        if is_parameter_tree:
-            parameter_tree = arguments_table["parameter_tree"]
-            assert parameter_tree.tag == "Parameter"
-            attributes_table = parameter_tree.attrib
-            assert "name" in attributes_table
-            name = attributes_table["name"]
-            assert "type" in attributes_table
-            type = attributes_table["type"].lower()
-            if "optional" in attributes_table:
-                optional_text = attributes_table["optional"].lower()
-                assert optional_text in ("true", "false")
-                optional = (optional_text == "true")
-            else:
-                optional = False
-            csv = attributes_table["csv"] if "csv" in attributes_table else ""
-            csv_index = (
-              int(attributes_table["csv_index"]) if "csv_index" in attributes_table else -1)
-            default = attributes_table["default"] if "default" in attributes_table else None
-            parameter_tree_elements = list(parameter_tree)
-            assert len(parameter_tree_elements) >= 1
-            comments_tree = parameter_tree_elements[0]
-            assert comments_tree.tag == "ParameterComments"
-            assert len(comments_tree.attrib) == 0
-            comments = list()
-            for comment_tree in comments_tree:
-                comment = ParameterComment.xml_parse(comment_tree)
-                comments.append(comment)
-
-            enumerations = list()
-            if type == "enumeration":
-                assert len(parameter_tree_elements) == 2
-                enumerations_tree = parameter_tree_elements[1]
-                assert len(enumerations_tree.attrib) == 0
-                assert enumerations_tree.tag == "Enumerations"
-                assert len(enumerations_tree) >= 1
-                for enumeration_tree in enumerations_tree:
-                    enumeration = Enumeration(enumeration_tree=enumeration_tree)
-                    enumerations.append(enumeration)
-            else:
-                assert len(parameter_tree_elements) == 1
-        else:
-            name = arguments_table["name"]
-            type = arguments_table["type"]
-            csv = arguments_table["csv"]
-            csv_index = arguments_table["csv_index"]
-            default = arguments_table["defualt"] if "default" in arguments_table else None
-            optional = arguments_table["optional"] if "optional" in arguments_table else False
-            comments = arguments_table["comments"] if "comments" in arguments_table else list()
-            enumerations = (
-              arguments_table["enumerations"] if "enumerations" in arguments_table else list())
-
+    def __init__(self, name: str, type: str, csv: str, csv_index: int, default: str, optional: bool,
+                 comments: List[ParameterComment], enumerations: List[Enumeration]) -> None:
         # Load values into *parameter* (i.e. *self*):
-        super().__init__()
         # parameter: Parameter = self
         self.comments: List[ParameterComment] = comments
-        self.csv: Any = csv
+        self.csv: str = csv
         self.csv_index: int = csv_index
         self.default: str = default
         self.enumerations: List[Enumeration] = enumerations
@@ -4578,8 +4345,6 @@ class Parameter:
         self.optional: bool = optional
         self.type: str = type
         self.use: bool = False
-        # print("Parameter('{0}'): optional={1}".format(name, optional))
-        # print("Parameter(name='{0}', type='{1}', csv='{1}')".format(name, type, parameter.csv))
 
     # Parameter.__equ__():
     def __eq__(self, parameter2):
@@ -4613,42 +4378,96 @@ class Parameter:
         return all_equal
 
     # Parameter.xml_lines_append():
-    def xml_lines_append(self, xml_lines, indent):
-        assert isinstance(xml_lines, list)
-        assert isinstance(indent, str)
-
+    def xml_lines_append(self, xml_lines: List[str], indent: str) -> None:
         # Grab some values from *parameter* (i.e. *self*):
-        parameter = self
-        default = parameter.default
-        optional = parameter.optional
+        parameter: Parameter = self
+        csv: str = parameter.csv
+        csv_index: int = parameter.csv_index
+        default: str = parameter.default
+        name: str = parameter.name
+        optional: bool = parameter.optional
+        type: str = parameter.type
 
-        # Start the *parameter* XML add in *optional* and *default* if needed:
-        xml_line = '{0}<Parameter name="{1}" type="{2}" csv="{3}" csv_index="{4}"'.format(
-          indent, parameter.name, parameter.type, parameter.csv, parameter.csv_index)
-        if optional:
-            xml_line += ' optional="true"'
-        if default is not None:
-            xml_line += ' default="{0}"'.format(default)
-        xml_line += '>'
+        # Start with the `<Parameter ...> XML element:
+        optional_text: str = ' optional="true"' if optional else ''
+        default_text: str = ' default="{default}"' if default else ''
+        xml_line: str = (f'{indent}<Parameter'
+                         f' name="{name}"'
+                         f' type="{type}"'
+                         f' csv="{csv}"'
+                         f' csv_index="{csv_index}"'
+                         f'{default_text}'
+                         f'{optional_text}'
+                         '>')
         xml_lines.append(xml_line)
 
         # Append all of the comments*:
-        comments = parameter.comments
+        comments: List[ParameterComment] = parameter.comments
+        comment: ParameterComment
+        comment_indent = indent + "    "
         for comment in comments:
-            xml_lines.append('{0}  <ParameterComments>'.format(indent))
-            comment.xml_lines_append(xml_lines)
-            xml_lines.append('{0}  </ParameterComments>'.format(indent))
+            xml_lines.append(f'{indent}  <ParameterComments>')
+            comment.xml_lines_append(xml_lines, comment_indent)
+            xml_lines.append(f'{indent}  </ParameterComments>')
 
         # Append all of the *enumerations*:
-        enumerations = parameter.enumerations
-        if len(enumerations) >= 1:
-            xml_lines.append('{0}  <Enumerations>'.format(indent))
+        enumerations: List[Enumeration] = parameter.enumerations
+        if enumerations:
+            xml_lines.append(f'{indent}  <Enumerations>')
+            enumeration_indent = indent + "    "
+            enumeration: Enumeration
             for enumeration in enumerations:
-                enumeration.xml_lines_append(xml_lines, indent + "    ")
-            xml_lines.append('{0}  </Enumerations>'.format(indent))
+                enumeration.xml_lines_append(xml_lines, enumeration_indent)
+            xml_lines.append(f'{indent}  </Enumerations>')
 
-        # Close out the *parameter*:
-        xml_lines.append('{0}</Parameter>'.format(indent))
+        # Close out with the `</Parameter>` XML element:
+        xml_lines.append(f'{indent}</Parameter>')
+
+    @staticmethod
+    def xml_parse(parameter_tree: etree._Element) -> "Parameter":
+        assert parameter_tree.tag == "Parameter"
+        attributes_table: Dict[str, str] = parameter_tree.attrib
+        assert "name" in attributes_table
+        name: str = attributes_table["name"]
+        assert "type" in attributes_table
+        type: str = attributes_table["type"].lower()
+        optional: bool = False
+        if "optional" in attributes_table:
+            optional_text: str = attributes_table["optional"].lower()
+            assert optional_text in ("true", "false")
+            optional = (optional_text == "true")
+        csv: str = attributes_table["csv"] if "csv" in attributes_table else ""
+        csv_index: int = (int(attributes_table["csv_index"])
+                          if "csv_index" in attributes_table else -1)
+        default: str = attributes_table["default"] if "default" in attributes_table else ""
+        parameter_tree_elements: List[etree._Element] = list(parameter_tree)
+        assert parameter_tree_elements
+        comments_tree: etree._Element = parameter_tree_elements[0]
+        assert comments_tree.tag == "ParameterComments"
+        assert not comments_tree.attrib
+        comments: List[ParameterComment] = list()
+        comment_tree: etree._Element
+        for comment_tree in comments_tree:
+            comment: ParameterComment = ParameterComment.xml_parse(comment_tree)
+            comments.append(comment)
+
+        enumerations: List[Enumeration] = list()
+        if type == "enumeration":
+            assert len(parameter_tree_elements) == 2
+            enumerations_tree: etree._Element = parameter_tree_elements[1]
+            assert len(enumerations_tree.attrib) == 0
+            assert enumerations_tree.tag == "Enumerations"
+            assert len(enumerations_tree) >= 1
+            for enumeration_tree in enumerations_tree:
+                enumeration: Enumeration = Enumeration.xml_parse(enumeration_tree)
+                enumerations.append(enumeration)
+        else:
+            assert len(parameter_tree_elements) == 1
+
+        # Finally, create *parameter* and return it:
+        parameter: Parameter = Parameter(name, type, csv, csv_index,
+                                         default, optional, comments, enumerations)
+        return parameter
 
 
 # PosePart:
@@ -5686,7 +5505,7 @@ class ChoicePart(ProjectPart):
         self.selected_vendor_part: Optional[VendorPart] = None
         self.selected_vendor_name: str = ""
         self.selected_price_break_index: int = -1
-        self.choice_part.selected_price_break: Optional[PriceBreak] = None
+        self.selected_price_break: Optional[PriceBreak] = None
 
         # choice_part.description = description
         # choice_part.feeder_name = feeder_name

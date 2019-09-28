@@ -28,7 +28,9 @@ download:
 	pip install --no-cache-dir --index-url $(REPO_URL) bom_kicad_plugin_waynegramlich
 
 lint:
+	mypy $(BOM_MANAGER)/bom_manager/bom.py
 	flake8 --max-line-length=100 $(BOM_MANAGER)/bom_manager/bom.py
+	mypy $(BOM_MANAGER)/bom_manager/bom_gui.py
 	flake8 --max-line-length=100 $(BOM_MANAGER)/bom_manager/bom_gui.py
 	flake8 --max-line-length=100 $(BOM_MANAGER)/bom_manager/tracing.py
 	flake8 --max-line-length=100 $(BOM_MANAGER)/bom_manager/__init__.py
