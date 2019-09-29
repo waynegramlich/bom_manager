@@ -237,7 +237,7 @@ import csv
 # from currency_converter import CurrencyConverter         # Currency converter
 # import fnmatch                    # File Name Matching
 import glob                         # Unix/Linux style command line file name pattern matching
-import io                           # I/O stuff
+# import io                           # I/O stuff
 import lxml.etree as etree  # type: ignore
 # import pickle                     # Python data structure pickle/unpickle
 import pkg_resources                # Used to find plug-ins.
@@ -254,6 +254,15 @@ import time                         # Time package
 from typing import Any, Callable, Dict, IO, List, Optional, Tuple, Union
 Number = Union[int, float]
 PreCompiled = Any
+Quad = Tuple[int, float, int, str]
+Quint = Tuple[float, int, int, int, int, int]
+# *Quint* is misnamed, it currently has 6 fields:
+# * Total Cost (float):
+# * Order Quantity (int):
+# * Actual Part Index (int):
+# * Vendor Part Index (int):
+# * Price Break Index (int):
+# * Price Breaks Size (int):
 # import xmlschema
 
 # Data Structure and Algorithm Overview:
@@ -399,9 +408,6 @@ PreCompiled = Any
 # main():
 @trace(1)
 def main(tracing: str = "") -> int:
-    # Verify argument types:
-    assert isinstance(tracing, str)
-
     # Run the *Encode* class unit tests:
     Encode.test()
 
@@ -547,9 +553,6 @@ def command_line_arguments_process(tracing: str = "") -> Tuple[List[str], str, "
 
 
 # def text2safe_attribute(text):
-#     # Verify argument types:
-#     assert isinstance(text, str)
-#
 #     # Sweep across *text* one *character* at a time performing any neccesary conversions:
 #     new_characters = list()
 #     for character in text:
@@ -569,11 +572,8 @@ def command_line_arguments_process(tracing: str = "") -> Tuple[List[str], str, "
 #     return safe_attribute
 
 
+# text_filter():
 def text_filter(text: str, function: Callable) -> str:
-    # Verify argument types:
-    assert isinstance(text, str)
-    assert callable(function)
-
     return "".join([character for character in text if function(character)])
 
 
@@ -588,11 +588,6 @@ class ActualPart:
     def __init__(self, manufacturer_name: str, manufacturer_part_name: str) -> None:
         """ *ActualPart*: Initialize *self* to contain *manufacturer* and
             *manufacturer_part_name*. """
-
-        # Verify argument_types:
-        assert isinstance(manufacturer_name, str)
-        assert isinstance(manufacturer_part_name, str)
-
         # Create the *key* for *actual_part* (i.e. *self*):
         # actual_part: ActualPart = self
         key: Tuple[str, str] = (manufacturer_name, manufacturer_part_name)
@@ -644,17 +639,12 @@ class ActualPart:
         vendor_parts.sort(key=sort_function)
         return vendor_parts
 
-    # ActualPart.vendor_names_restore():
+    # ActualPart.vendor_names_load():
     def vendor_names_load(self, vendor_names_table: Dict[str, None],
                           excluded_vendor_names: Dict[str, None]) -> None:
         """ *ActualPart*:*: Add each possible to vendor name for the
             *ActualPart* object (i.e. *self*) to *vendor_names_table*:
         """
-
-        # Verify argument types:
-        assert isinstance(vendor_names_table, dict)
-        assert isinstance(excluded_vendor_names, dict)
-
         # Add the possible vendor names for *vendor_part* to
         # *vendor_names_table*:
         vendor_part: VendorPart
@@ -666,30 +656,19 @@ class ActualPart:
     # ActualPart.vendor_part_append():
     def vendor_part_append(self, vendor_part: "VendorPart") -> None:
         """ *ActualPart: Append *vendor_part* to the vendor parts of *self*. """
-        # Verify argument types:
-        assert isinstance(vendor_part, VendorPart)
-
         # Append *vendor_part* to the *actual_part* (i.e. *self*):
         actual_part: ActualPart = self
         actual_part.vendor_parts.append(vendor_part)
 
     # ActualPart.vendor_parts_restore():
     def vendor_parts_restore(self, order: "Order", tracing: str = "") -> bool:
-        # Verify argument types:
-        assert isinstance(order, Order)
-        assert isinstance(tracing, str)
-
         # FIXME: What does this routine actually do?:
         assert False
         result: bool = False
         return result
 
     # ActualPart.xml_lines_append():
-    def xml_lines_append(self, xml_lines: List[str], indent: int) -> None:
-        # Verify argument types:
-        assert isinstance(xml_lines, list)
-        assert isinstance(indent, str)
-
+    def xml_lines_append(self, xml_lines: List[str], indent: str) -> None:
         # Grab some values from *actual_part* (i.e. *self*):
         actual_part: ActualPart = self
         manufacturer_name: str = actual_part.manufacturer_name
@@ -713,9 +692,6 @@ class ActualPart:
     # ActualPart.xml_parse():
     @staticmethod
     def xml_parse(actual_part_tree: etree._Element) -> "ActualPart":
-        # Verify argument types:
-        assert isinstance(actual_part_tree, etree._Element)
-
         # Grab the attribute information out of *actual_part_tree*:
         assert actual_part_tree.tag == "ActualPart"
         attributes_table: Dict[str, str] = actual_part_tree.attrib
@@ -740,10 +716,14 @@ class Cad:
 
     # Cad.__init__():
     def __init__(self, name: str, tracing: str = "") -> None:
-        # Verify argument types:
-        assert isinstance(name, str)
-        assert isinstance(tracing, str)
         pass  # This is just a place holder class that is sub-classed against.
+
+    # Cad.file_read():
+    def file_read(self, file_name: str, project: "Project") -> bool:
+        cad: Cad = self
+        class_name: str = cad.__class__.__name__
+        assert False, f"{class_name}.file_read() has not been implemented."
+        return False
 
 
 # Comment:
@@ -1021,9 +1001,6 @@ class Encode:
     # Encode.from_file_name():
     @staticmethod
     def from_file_name(file_name: str) -> str:
-        # Verify argument types:
-        assert isinstance(file_name, str)
-
         # Construct a list of *characters* one at a time to join together into final *text*:
         characters: List[str] = list()
         index: int = 0
@@ -1113,6 +1090,12 @@ class Encode:
         attribute: str = "".join(characters)
         return attribute
 
+    # Encode.to_csv():
+    @staticmethod
+    def to_csv(text: str) -> str:
+        updated_text: str = text.replace('"', '""')
+        return f'"{updated_text}"'
+
     # Encode.to_file_name():
     @staticmethod
     def to_file_name(text: str) -> str:
@@ -1188,10 +1171,6 @@ class Encode:
     # Encode.test_compare():
     @staticmethod
     def test_compare(text1: str, text2: str) -> None:
-        # Verify argument types:
-        assert isinstance(text1, str)
-        assert isinstance(text2, str)
-
         if text1 != text2:
             text1_size: int = len(text1)
             text2_size: int = len(text2)
@@ -1227,7 +1206,6 @@ class Enumeration:
 
     # Enumeration.__eq__():
     def __eq__(self, enumeration2: object) -> bool:
-        # Verify argument types:
         equal: bool = False
         if isinstance(enumeration2, Enumeration):
             enumeration1: Enumeration = self
@@ -1447,27 +1425,18 @@ class Gui:
         # gui: Gui = self
         self.re_table: Dict[str, PreCompiled] = re_table
 
+    # Gui.__str():
     def __str__(self) -> str:
         return "GUI()"
 
     # Gui.begin_rows_insert():
     def begin_rows_insert(self, node: "Node",
                           start_row_index: int, end_row_index: int, tracing: str = "") -> None:
-        # Verify argument types:
-        assert isinstance(node, Node)
-        assert isinstance(start_row_index, int)
-        assert isinstance(end_row_index, int)
-        assert isinstance(tracing, str)
         pass  # Do nothing for the non-GUI version of th code
 
     # Gui.begin_rows_remove():
     def begin_rows_remove(self, node: "Node",
                           start_row_index: int, end_row_index: int, tracing: str = "") -> None:
-        # Verify argument types:
-        assert isinstance(node, Node)
-        assert isinstance(start_row_index, int)
-        assert isinstance(end_row_index, int)
-        assert isinstance(tracing, str)
         pass  # Do nothing for the non-GUI version of th code
 
     # Gui.directory_clicked():
@@ -1476,14 +1445,10 @@ class Gui:
 
     # Gui.end_rows_insert():
     def end_rows_insert(self, tracing: str = "") -> None:
-        # Verify argument types:
-        assert isinstance(tracing, str)
         pass  # Do nothing for the non-GUI version of th code
 
     # Gui.end_rows_remove():
     def end_rows_remove(self, tracing: str = "") -> None:
-        # Verify argument types:
-        assert isinstance(tracing, str)
         pass  # Do nothing for the non-GUI version of th code
 
     # Gui.search_clicked():
@@ -1502,12 +1467,6 @@ class Node:
     # Node.__init__():
     def __init__(self, name: str, parent: "Optional[Node]",
                  gui: Optional[Gui] = None, tracing: str = "") -> None:
-        # Verify argument types:
-        assert isinstance(name, str)
-        assert isinstance(parent, Node) or parent is None
-        assert isinstance(gui, Gui) or gui is None
-        assert isinstance(tracing, str)
-
         # Do some additional checking for *node* (i.e. *self*):
         node: Node = self
         # is_collection: bool = isinstance(node, Collection)
@@ -1681,7 +1640,7 @@ class Node:
         return list()
 
     # Node.directory_create():
-    def directory_create(self, root_path: str, tracing="") -> None:
+    def directory_create(self, root_path: str, tracing: str = "") -> None:
         node: "Node" = self
         parent: Optional[Node] = node.parent
         if parent is not None:
@@ -1771,11 +1730,6 @@ class Directory(Node):
 
     # Directory.__init__():
     def __init__(self, name, parent, tracing="") -> None:
-        # Verify argument types:
-        assert isinstance(name, str)
-        assert isinstance(parent, Node)
-        assert isinstance(tracing, str)
-
         # Perform some additional checking on *parent*:
         assert isinstance(parent, Directory) or isinstance(parent, Collection)
 
@@ -2240,9 +2194,6 @@ class Collections(Node):
     # Collections.searches_find():
     @trace(1)
     def searches_find(self, search_name: str, tracing: str = "") -> "List[Search]":
-        # Verify argument types:
-        assert isinstance(search_name, str)
-
         # Visit each *collection in *collections* (i.e. *self*) to see if it has *search_name*:
         collections: Collections = self
         searches: List[Search] = []
@@ -2351,9 +2302,6 @@ class Search(Node):
 
     # Search.file_load():
     def file_load(self, tracing: str = "") -> None:
-        # Verify argument types:
-        assert isinstance(tracing, str)
-
         # Grab some informtation from parent *table* of *search*:
         search: Search = self
         table: Optional[Node] = search.parent
@@ -2395,9 +2343,6 @@ class Search(Node):
 
     # Search.filters_refresh():
     def filters_refresh(self, tracing: str = "") -> None:
-        # Verify argument types:
-        assert isinstance(tracing, str)
-
         # Before we do anything we have to make sure that *search* has an associated *table*.
         # Frankly, it is should be impossible not to have an associated table, but we must
         # be careful:
@@ -2439,9 +2384,6 @@ class Search(Node):
 
     # Search.is_deletable():
     def is_deletable(self, tracing: str = "") -> bool:
-        # Verify argument types:
-        assert isinstance(tracing, str)
-
         # Grab *search_name* from *search* (i.e. *self*):
         search: Search = self
 
@@ -3139,19 +3081,12 @@ class Table(Node):
     #     table.searches_stable = searches_table
 
     # Table.tables_get():
-    def tables_get(self):
-        table = self
+    def tables_get(self) -> "List[Table]":
+        table: Table = self
         return [table]
 
     # Table.tree_load():
-    def tree_load(self, table_tree, tracing=""):
-        # Verify argument types:
-        assert isinstance(table_tree, etree._Element)
-        assert isinstance(tracing, str)
-
-        # Verify that we have a "<Table ...> ... </Table>" at the top level of *table_tree*:
-        assert table_tree.tag == "Table"
-
+    def tree_load(self, table_tree: etree._Element, tracing: str = "") -> None:
         # The format of a *Table* `.xml` file is basically:
         #
         #        <Table name="..." url="...">
@@ -3164,33 +3099,36 @@ class Table(Node):
         #        </Table>
 
         # Extract the attributes from *attributes_table*:
-        attributes_table = table_tree.attrib
+        assert table_tree.tag == "Table"
+        attributes_table: Dict[str, str] = table_tree.attrib
         assert "name" in attributes_table
-        name = Encode.from_attribute(attributes_table["name"])
-        url = Encode.from_attribute(attributes_table["url"])
+        name: str = Encode.from_attribute(attributes_table["name"])
+        url: str = Encode.from_attribute(attributes_table["url"])
 
         # Extract the *comments* from *comments_tree_element*:
-        table_tree_elements = list(table_tree)
-        comments_tree = table_tree_elements[0]
+        table_tree_elements: List[etree._Element] = list(table_tree)
+        comments_tree: etree._Element = table_tree_elements[0]
         assert comments_tree.tag == "TableComments"
-        comments = list()
+        comments: List[TableComment] = list()
+        comment_tree: etree._Element
         for comment_tree in comments_tree:
-            comment = TableComment(comment_tree=comment_tree)
+            comment: TableComment = TableComment.xml_parse(comment_tree)
             comments.append(comment)
 
         # Extract the *parameters* from *parameters_tree_element*:
-        parameters = list()
-        parameters_tree = table_tree_elements[1]
+        parameters: List[Parameter] = list()
+        parameters_tree: etree._element = table_tree_elements[1]
         assert parameters_tree.tag == "Parameters"
+        parameter_tree: etree._element
         for parameter_tree in parameters_tree:
-            parameter = Parameter(parameter_tree=parameter_tree)
+            parameter: Parameter = Parameter.xml_parse(parameter_tree)
             parameters.append(parameter)
 
         # Ensure that there are no extra elements:
         assert len(table_tree_elements) == 2
 
         # Load the extracted information into *table* (i.e. *self*):
-        table = self
+        table: Table = self
         table.comments[:] = comments[:]
         table.name = name
         table.parameters[:] = parameters[:]
@@ -3242,7 +3180,7 @@ class Table(Node):
         return type_tables
 
     # Table.type_letter_get():
-    def type_letter_get(self):
+    def type_letter_get(self) -> str:
         return 'T'
 
     # Table.xml_file_save():
@@ -3277,27 +3215,28 @@ class Table(Node):
             xml_file.write(xml_text)
 
     # Table.xml_lines_append():
-    def xml_lines_append(self, xml_lines, indent):
-        # Verify argument types:
-        assert isinstance(xml_lines, list)
-        assert isinstance(indent, str)
-
+    def xml_lines_append(self, xml_lines: List[str], indent: str, tracing: str = "") -> None:
         # Start appending the `<Table...>` element:
-        table = self
+        table: Table = self
         xml_lines.append(f'{indent}<Table '
                          f'name="{Encode.to_attribute(table.name)}" '
                          f'url="{Encode.to_attribute(table.url)}">')
 
         # Append the `<TableComments>` element:
         xml_lines.append(f'{indent}  <TableComments>')
-        for comment in table.comments:
-            comment.xml_lines_append(xml_lines, indent + "    ")
+        table_comments: List[TableComment] = table.comments
+        table_comment: TableComment
+        next_indent: str = indent + "    "
+        for table_comment in table_comments:
+            table_comment.xml_lines_append(xml_lines, next_indent)
         xml_lines.append(f'{indent}  </TableComments>')
 
         # Append the `<Parameters>` element:
         xml_lines.append(f'{indent}  <Parameters>')
-        for parameter in table.parameters:
-            parameter.xml_lines_append(xml_lines, "    ")
+        parameters: List[Parameter] = table.parameters
+        parameter: Parameter
+        for parameter in parameters:
+            parameter.xml_lines_append(xml_lines, next_indent)
         xml_lines.append(f'{indent}  </Parameters>')
 
         # Close out the `<Table>` element:
@@ -3315,12 +3254,9 @@ class Order:
     # listed as well.
 
     # Order.__init__():
-    def __init__(self, order_root, cads, pandas, tracing=""):
+    def __init__(self, order_root: str, cads: List[Cad], pandas: "List[Panda]",
+                 tracing: str = "") -> None:
         """ *Order*: Initialize *self* for an order. """
-        # Verify argument types:
-        assert isinstance(order_root, str)
-        assert isinstance(cads, list)
-        assert isinstance(pandas, list)
 
         # Ensure that *order_root* exists:
         if not os.path.isdir(order_root):
@@ -3335,14 +3271,14 @@ class Order:
         assert os.path.isdir(order_root), f"'{order_root} is not a directory!'"
 
         # Create *vendor_searches_root*:
-        vendor_searches_root = os.path.join(order_root, "vendor_searches")
+        vendor_searches_root: str = os.path.join(order_root, "vendor_searches")
         if not os.path.isdir(vendor_searches_root):
             os.mkdir(vendor_searches_root)
         assert os.path.isdir(vendor_searches_root)
 
         # Priorities 0-9 are for vendors with significant minimum
         # order amounts or trans-oceanic shipping costs:
-        vendor_priorities = {}
+        vendor_priorities: Dict[str, int] = {}
         vendor_priorities["Verical"] = 0
         vendor_priorities["Chip1Stop"] = 1
         vendor_priorities["Farnell element14"] = 2
@@ -3359,59 +3295,49 @@ class Order:
         vendor_priorities["Mouser"] = 1003
         vendor_priorities["Digi-Key"] = 1004
 
+        vendor_minimums: Dict[str, float] = {}
+
         # Stuff values into *order* (i.e. *self*):
-        order = self
-        order.cads = cads
-        order.excluded_vendor_names = {}    # Dict[String, List[str]]: Excluded vendors
-        order.final_choice_parts = []
-        order.inventories = []              # List[Inventory]: Existing inventoried parts
-        order.order_root = order_root
-        order.pandas = pandas
-        order.projects = []                 # List[Project]
-        order.projects_table = {}           # Dict[Net_File_Name, Project]
-        order.selected_vendor_names = None
-        order.stale = 2 * 7 * 24 * 60 * 60  # 2 weeks
-        order.requests = []                 # List[Request]: Additional requested parts
-        order.vendor_priorities = vendor_priorities
-        order.vendor_priority = 10
-        order.vendor_searches_root = vendor_searches_root
+        # order: Order = self
+        self.cads: List[Cad] = cads
+        self.excluded_vendor_names: Dict[str, None] = {}  # Excluded vendors
+        self.final_choice_parts: List[ChoicePart] = []
+        self.inventories: List[Inventory] = []      # List[Inventory]: Existing inventoried parts
+        self.order_root: str = order_root
+        self.pandas: List[Panda] = pandas
+        self.projects: List[Project] = []                 # List[Project]
+        self.projects_table: Dict[str, Project] = {}      # Dict[Net_File_Name, Project]
+        self.selected_vendor_names: List[str] = []
+        self.stale: int = 2 * 7 * 24 * 60 * 60  # 2 weeks
+        # self.requests: List[Request] = []           # List[Request]: Additional requested parts
+        self.vendor_minimums: Dict[str, float] = vendor_minimums
+        self.vendor_priorities: Dict[str, int] = vendor_priorities
+        self.vendor_priority: int = 10
+        self.vendor_searches_root: str = vendor_searches_root
 
     # Order.__str__():
-    def __str__(self):
-        # Grab some values from *order* (i.e. *self*):
-        # order = self
-        # order_root = order.order_root
-        # vendor_searches_root = order.vendor_searches_root
-        # result = (f"Order(order_root='...{order_root[-10:]}', "
-        #         f"vendor_searches_root='...{vendor_searches_root[-10:]}'))")
+    def __str__(self) -> str:
         result = "Order()"
         return result
 
     # Order.project_create():
-    def project_create(self, name, revision, net_file_name, count,
-                       positions_file_name=None, tracing=""):
+    def project_create(self, name: str, revision: str, net_file_name: str, count: int,
+                       positions_file_name: str = "", tracing: str = "") -> "Project":
         """ *Order*: Create a *Project* containing *name*, *revision*,
             *net_file_name* and *count*. """
 
-        # Verify argument types:
-        assert isinstance(name, str)
-        assert isinstance(revision, str)
-        assert isinstance(net_file_name, str)
-        assert isinstance(count, int)
-        assert isinstance(positions_file_name, str) or positions_file_name is None
-        assert isinstance(tracing, str)
-
         # Grab some values from *order* (i.e. *self*):
-        order = self
-        projects = order.projects
-        projects_table = order.projects_table
+        order: Order = self
+        projects: List[Project] = order.projects
+        projects_table: Dict[str, Project] = order.projects_table
 
         # Ignore duplicate *net_file_names*:
         if net_file_name in projects_table:
             print(f"Duplicate .net file '{net_file_name}' specified.")
         else:
             # Create the new *project* and stuff into the appropriate data structures:
-            project = Project(name, revision, net_file_name, count, order, positions_file_name)
+            project: Project = Project(name, revision, net_file_name, count,
+                                       order, positions_file_name)
             projects_table[net_file_name] = project
             projects.append(project)
 
@@ -3419,21 +3345,17 @@ class Order:
 
     # Order.bom_write():
     @trace(1)
-    def bom_write(self, bom_file_name, key_function, tracing=""):
+    def bom_write(self, bom_file_name: str, key_function: "Callable[[ChoicePart], Any]",
+                  tracing: str = "") -> None:
         """ *Order*: Write out the BOM (Bill Of Materials) for the
             *Order* object (i.e. *self*) to *bom_file_name* ("" for stdout)
             using *key_function* to provide the sort key for each
             *ChoicePart*.
         """
-
-        # Verify argument types:
-        assert isinstance(bom_file_name, str)
-        assert callable(key_function)
-
         # Grab some values from *order* (i.e. *self*):
-        order = self
-        excluded_vendor_names = order.excluded_vendor_names
-        final_choice_parts = order.final_choice_parts
+        order: Order = self
+        excluded_vendor_names: Dict[str, None] = order.excluded_vendor_names
+        final_choice_parts: List[ChoicePart] = order.final_choice_parts
         if tracing:
             print(f"{tracing}len(final_choice_parts)={len(final_choice_parts)}")
 
@@ -3441,35 +3363,35 @@ class Order:
         final_choice_parts.sort(key=key_function)
 
         # Open *bom_file*
+        bom_file: IO[str]
         with (sys.stdout if bom_file_name == "" else open(bom_file_name, "w")) as bom_file:
             # Now generate a BOM summary:
-            total_cost = 0.0
+            total_cost: float = 0.0
+            choice_part: ChoicePart
             for choice_part in final_choice_parts:
-                # Make sure that nonething nasty got into *final_choice_parts*:
-                assert isinstance(choice_part, ChoicePart)
-
                 # Sort the *pose_parts* by *project* followed by reference:
-                pose_parts = choice_part.pose_parts
+                pose_parts: List[PosePart] = choice_part.pose_parts
                 pose_parts.sort(key=lambda pose_part:
                                 (pose_part.project.name, pose_part.reference.upper(),
                                  int(text_filter(pose_part.reference, str.isdigit))))
 
                 # Write the first line out to *bom_file*:
-                part_name = choice_part.name
-                part_footprint = "FOOTPRINT"  # choice_part.kicad_footprint,
-                part_description = "DESCRIPTION"  # choice_part.description
-                part_count = choice_part.count_get()
-                part_references_text = choice_part.references_text_get()
+                part_name: str = choice_part.name
+                part_footprint: str = choice_part.footprint
+                part_description: str = choice_part.description
+                part_count: int = choice_part.count_get()
+                part_references_text: str = choice_part.references_text_get()
                 bom_file.write(f"  {part_name}:{part_footprint};{part_description}"
                                f" {part_count}:{part_references_text}\n")
 
                 # Select the vendor_part and associated quantity/cost
                 choice_part.select(excluded_vendor_names, True)
                 # selected_actual_part = choice_part.selected_actual_part
-                selected_vendor_part = choice_part.selected_vendor_part
-                selected_order_quantity = choice_part.selected_order_quantity
-                selected_total_cost = choice_part.selected_total_cost
-                selected_price_break_index = choice_part.selected_price_break_index
+                selected_vendor_part: Optional[VendorPart] = choice_part.selected_vendor_part
+                assert isinstance(selected_vendor_part, VendorPart)
+                selected_order_quantity: int = choice_part.selected_order_quantity
+                selected_total_cost: float = choice_part.selected_total_cost
+                selected_price_break_index: int = choice_part.selected_price_break_index
 
                 # It should be impossible not to have a *VendorPart*:
                 if isinstance(selected_vendor_part, VendorPart):
@@ -3479,30 +3401,32 @@ class Order:
 
                     # Show the *price breaks* on each side of the
                     # *selected_price_breaks_index*:
-                    price_breaks = selected_vendor_part.price_breaks
+                    price_breaks: List[PriceBreak] = selected_vendor_part.price_breaks
                     # print("len(price_breaks)={0} selected_price_break_index={1}".
                     #  format(len(price_breaks), selected_price_break_index))
-                    selected_price_break = price_breaks[selected_price_break_index]
-                    minimum_index = max(selected_price_break_index - 1, 0)
-                    maximum_index = min(selected_price_break_index + 2, len(price_breaks))
+                    selected_price_break: PriceBreak = price_breaks[selected_price_break_index]
+                    minimum_index: int = max(selected_price_break_index - 1, 0)
+                    maximum_index: int = min(selected_price_break_index + 2, len(price_breaks))
                     price_breaks = price_breaks[minimum_index: maximum_index]
 
                     # Compute the *price_breaks_text*:
-                    price_breaks_text = ""
+                    price_breaks_text: str = ""
+                    price_break: PriceBreak
                     for price_break in price_breaks[minimum_index: maximum_index]:
                         price_breaks_text += "{0}/${1:.3f} ".format(
                           price_break.quantity, price_break.price)
 
                     # Print out the line:
-                    selected_actual_key = selected_vendor_part.actual_part_key
-                    selected_manufacturer_name = selected_actual_key[0]
-                    selected_manufacturer_part_name = selected_actual_key[1]
-                    bom_file.write("    {0}:{1} [{2}: {3}] {4}\n".format(
-                                   selected_vendor_part.vendor_name,
-                                   selected_vendor_part.vendor_part_name,
-                                   selected_manufacturer_name,
-                                   selected_manufacturer_part_name,
-                                   price_breaks_text))
+                    selected_actual_key: Tuple[str, str] = selected_vendor_part.actual_part_key
+                    selected_manufacturer_name: str = selected_actual_key[0]
+                    selected_manufacturer_part_name: str = selected_actual_key[1]
+                    vendor_name: str = selected_vendor_part.vendor_name
+                    vendor_part_name: str = selected_vendor_part.vendor_part_name
+                    bom_file.write(f"    {vendor_name}:"
+                                   f"{vendor_part_name} "
+                                   f"[{selected_manufacturer_name}: "
+                                   f"{selected_manufacturer_part_name}] "
+                                   f"{price_breaks_text}\n")
 
                     # Print out the result:
                     bom_file.write("        {0}@({1}/${2:.3f})={3:.2f}\n".format(
@@ -3520,28 +3444,24 @@ class Order:
 
     # Order.check():
     @trace(1)
-    def check(self, collections, tracing=""):
-        # Verify argument types:
-        assert isinstance(collections, Collections)
-
+    def check(self, collections: Collections, tracing: str = "") -> None:
         # Check each of the *projects* in *order* (i.e. *self*):
-        order = self
-        projects = order.projects
+        order: Order = self
+        projects: List[Project] = order.projects
+        project: Project
         for project in projects:
             project.check(collections)
 
     # Order.csvs_write():
     @trace(1)
-    def csv_write(self, tracing=""):
+    def csv_write(self, tracing: str = "") -> None:
         """ *Order*: Write out the *Order* object (i.e. *self) BOM (Bill Of Materials)
             for each vendor as a .csv (Comma Seperated Values).
         """
-        # Verify argument types:
-
         # Grab some values from *order* (i.e. *self*):
-        order = self
-        excluded_vendor_names = order.excluded_vendor_names
-        final_choice_parts = order.final_choice_parts
+        order: Order = self
+        excluded_vendor_names: Dict[str, None] = order.excluded_vendor_names
+        final_choice_parts: List[ChoicePart] = order.final_choice_parts
 
         # Sort *final_choice_parts*:
         final_choice_parts.sort(key=lambda choice_part:
@@ -3549,98 +3469,90 @@ class Order:
                                  choice_part.selected_total_cost,
                                  choice_part.name))
 
-        vendor_boms = {}
+        vendor_boms: Dict[str, List[str]] = {}
+        choice_part: ChoicePart
         for choice_part in final_choice_parts:
-            assert isinstance(choice_part, ChoicePart)
-
             # Sort the *pose_parts* by *project* followed by reference:
-            pose_parts = choice_part.pose_parts
+            pose_parts: List[PosePart] = choice_part.pose_parts
             pose_parts.sort(key=lambda pose_part:
                             (pose_part.project.name, pose_part.reference.upper(),
                              int(text_filter(pose_part.reference, str.isdigit))))
 
             # Select the vendor_part and associated quantity/cost
             choice_part.select(excluded_vendor_names, True)
-            selected_actual_part = choice_part.selected_actual_part
-            selected_vendor_part = choice_part.selected_vendor_part
-            selected_order_quantity = choice_part.selected_order_quantity
+            selected_actual_part: Optional[ActualPart] = choice_part.selected_actual_part
+            selected_vendor_part: Optional[VendorPart] = choice_part.selected_vendor_part
+            selected_order_quantity: int = choice_part.selected_order_quantity
 
-            if isinstance(selected_vendor_part, VendorPart):
+            if selected_vendor_part is not None and selected_actual_part is not None:
                 # Grab the *vendor_name* and *vendor_part_name*:
-                assert isinstance(selected_vendor_part, VendorPart)
-                vendor_name = selected_vendor_part.vendor_name
+                vendor_name: str = selected_vendor_part.vendor_name
                 # vendor_part_name = selected_vendor_part.vendor_name
 
                 # Make sure we have a *vendor_bom* line list:
                 if vendor_name not in vendor_boms:
                     vendor_boms[vendor_name] = []
-                lines = vendor_boms[vendor_name]
+                lines: List[str] = vendor_boms[vendor_name]
 
                 # Create *line* and append it to *vendor_bom*:
-                line = ('"{0}","{1}","{2}","{3}","{4}"'.format(
-                        selected_order_quantity,
-                        selected_vendor_part.vendor_part_name,
-                        selected_actual_part.manufacturer_name,
-                        selected_actual_part.manufacturer_part_name,
-                        choice_part.name))
+                line: str = (f'"{selected_order_quantity}",'
+                             f'"{selected_vendor_part.vendor_part_name},"'
+                             f'"{selected_actual_part.manufacturer_name},"'
+                             f'"{selected_actual_part.manufacturer_part_name},"'
+                             f'"{choice_part.name}"')
                 lines.append(line)
 
         # Wrap up the *bom_file*:
-        order_root = order.order_root
+        order_root: str = order.order_root
         for vendor_name in vendor_boms.keys():
             # Create the *vendor_text*:
-            vendor_lines = vendor_boms[vendor_name]
-            vendor_text = '\n'.join(vendor_lines) + '\n'
+            vendor_lines: List[str] = vendor_boms[vendor_name]
+            vendor_text: str = '\n'.join(vendor_lines) + '\n'
 
             # Write *vendor_text* out to *vendor_full_file*:
-            vendor_base_name = Encode.to_file_name(vendor_name) + ".csv"
-            vendor_full_name = os.path.join(order_root, vendor_base_name)
+            vendor_base_name: str = Encode.to_file_name(vendor_name) + ".csv"
+            vendor_full_name: str = os.path.join(order_root, vendor_base_name)
+            vendor_file: IO[str]
             with open(vendor_full_name, "w") as vendor_file:
                 # Write out each line in *lines*:
                 print(f"Writing '{vendor_full_name}'")
                 vendor_file.write(vendor_text)
 
     # Order.exclude_vendors_to_reduce_shipping_costs():
-    def exclude_vendors_to_reduce_shipping_costs(self, choice_parts, excluded_vendor_names,
-                                                 reduced_vendor_messages, tracing=""):
+    def exclude_vendors_to_reduce_shipping_costs(self, choice_parts: "List[ChoicePart]",
+                                                 excluded_vendor_names: Dict[str, None],
+                                                 reduced_vendor_messages: List[str],
+                                                 tracing: str = "") -> None:
         """ *Order*: Sweep through *choice_parts* and figure out which vendors
             to add to *excluded_vendor_names* to reduce shipping costs.
         """
-        # Verify argument types:
-        assert isinstance(choice_parts, list)
-        assert isinstance(excluded_vendor_names, dict)
-        assert isinstance(reduced_vendor_messages, list)
-        assert isinstance(tracing, str)
-
         # First figure out the total *missing_parts*.  We will stop if
         # excluding a vendor increases above the *missing_parts* number:
-        quad = self.quad_compute(choice_parts, excluded_vendor_names, "")
-        missing_parts = quad[0]
+        order: Order = self
+        quad: Quad = order.quad_compute(choice_parts, excluded_vendor_names, "")
+        missing_parts: int = quad[0]
 
         # Sweep through and figure out what vendors to order from:
-        done = False
+        done: bool = False
         while not done:
             # Get the base cost for the current *excluded_vendor_names*:
-            base_quad = \
-              self.quad_compute(choice_parts, excluded_vendor_names, "")
+            base_quad: Quad = \
+              order.quad_compute(choice_parts, excluded_vendor_names, "")
             # print(">>>>base_quad={0}".format(base_quad))
 
             # If the *base_missing_parts* increases, we need to stop because
             # excluding additional vendors will cause the order to become
             # incomplete:
-            base_missing_parts = base_quad[0]
-            assert isinstance(base_missing_parts, int)
+            base_missing_parts: int = base_quad[0]
             if base_missing_parts > missing_parts:
                 break
 
             # Grab *base_cost*:
-            base_cost = base_quad[1]
-            assert isinstance(base_cost, float)
+            base_cost: float = base_quad[1]
 
             # Figure out what vendors are still available for *choice_parts*:
-            base_vendor_names = self.vendor_names_get(choice_parts, excluded_vendor_names)
-            assert isinstance(base_vendor_names, list), ("type(base_vendor_names)="
-                                                          f"{type(base_vendor_names)}")
+            base_vendor_names: List[str] = order.vendor_names_get(choice_parts,
+                                                                  excluded_vendor_names)
             # print("base: {0} {1}".format(base_cost, base_vendor_names))
 
             # For small designs, sometimes the algorithm will attempt to
@@ -3651,17 +3563,17 @@ class Order:
 
             # Iterate through *vendor_names*, excluding one *vendor_name*
             # at a time:
-            trial_quads = []
+            trial_quads: List[Quad] = []
             for vendor_name in base_vendor_names:
                 # Create *trial_excluded_vendor_names* which is a copy
                 # of *excluded_vendor_names* plus *vendor_name*:
-                trial_excluded_vendor_names = dict(excluded_vendor_names)
+                trial_excluded_vendor_names: Dict[str, None] = dict(excluded_vendor_names)
                 trial_excluded_vendor_names[vendor_name] = None
 
                 # Get the base cost for *trial_excluded_vendor_names*
                 # and tack it onto *trial_quads*:
-                trial_quad = self.quad_compute(choice_parts, trial_excluded_vendor_names,
-                                               vendor_name)
+                trial_quad: Quad = order.quad_compute(choice_parts, trial_excluded_vendor_names,
+                                                      vendor_name)
                 trial_quads.append(trial_quad)
 
                 # For debugging only:
@@ -3670,8 +3582,7 @@ class Order:
                 # print("    {0:.2f} with {1} excluded".
                 #  format(trial_cost, trial_vendor_name))
 
-            # Sort the *trial_quads* to bring the most interesting one to the
-            # front:
+            # Sort the *trial_quads* to bring the most interesting one to the front:
             trial_quads.sort(key=lambda quad: (quad[0], quad[1]))
             # For debugging:
             # for trial_quad in trial_quads:
@@ -3713,7 +3624,8 @@ class Order:
             if savings < 15.0 and len(trial_quads) >= 2 and lowest_vendor_name != "Digi-Key":
                 # The shipping costs are too high and there at least one
                 # vendor left; exclude this vendor:
-                message = "Excluding '{0}': only saves {1:.2f}".format(lowest_vendor_name, savings)
+                message: str = ("Excluding '{0}': only saves {1:.2f}".
+                                format(lowest_vendor_name, savings))
                 reduced_vendor_messages.append(message + '\n')
                 if tracing:
                     print(message)
@@ -3724,26 +3636,23 @@ class Order:
                 done = True
 
     # Order.exclude_vendors_with_high_minimums():
-    def exclude_vendors_with_high_minimums(self, choice_parts, excluded_vendor_names,
-                                           reduced_vendor_messages, tracing=""):
+    def exclude_vendors_with_high_minimums(self, choice_parts: "List[ChoicePart]",
+                                           excluded_vendor_names: Dict[str, None],
+                                           reduced_vendor_messages: List[str],
+                                           tracing: str = "") -> None:
         """ *Order*: Sweep through *choice* parts and figure out if the
             vendors with large minimum orders can be dropped:
         """
-
-        # Verify argument types:
-        assert isinstance(choice_parts, list)
-        assert isinstance(excluded_vendor_names, dict)
-        assert isinstance(reduced_vendor_messages, list)
-
-        # Grab the talb eof *vendor_minimums*:
-        database = self.database
-        vendor_minimums = database.vendor_minimums
+        # Grab table of *vendor_minimums* from *order*:
+        order: Order = self
+        vendor_minimums: Dict[str, float] = order.vendor_minimums
 
         # Now visit each vendor a decide if we should dump them because
         # they cost too much:
+        vendor_name: str
         for vendor_name in vendor_minimums.keys():
             # Grab the *vendor_minimum_cost*:
-            vendor_minimum_cost = vendor_minimums[vendor_name]
+            vendor_minimum_cost: float = vendor_minimums[vendor_name]
 
             # Compute *vendor_total_cost* by visiting each *choice_part*
             # to figure out if it has be selected to from *vendor_name*:
@@ -3758,44 +3667,43 @@ class Order:
             if vendor_total_cost < vendor_minimum_cost:
                 excluded_vendor_names[vendor_name] = None
                 reduced_vendor_messages.append(
-                  "Excluding '{0}': needed order {1} < minimum order {2}\n".
-                  format(vendor_name, vendor_total_cost, vendor_minimum_cost))
+                    f"{tracing}Excluding '{vendor_name}': needed order {vendor_total_cost}"
+                    f" < minimum order {vendor_minimum_cost}\n")
 
     # Order.final_choice_parts_compute():
     @trace(1)
-    def final_choice_parts_compute(self, collections, tracing=""):
+    def final_choice_parts_compute(self, collections: Collections,
+                                   tracing: str = "") -> "List[ChoicePart]":
         """ *Order*: Return a list of final *ChoicePart* objects to order
             for the the *Order* object (i.e. *self*).  This routine also
             has the side effect of looking up the vendor information for
             each selected *ChoicePart* object.
         """
-
-        # Verify argument types:
-        assert isinstance(collections, Collections)
-        assert isinstance(tracing, str)
-
         # Grab the some values from *order* (i.e. *self*):
-        order = self
-        # pandas = order.pandas
-        projects = order.projects
-        excluded_vendor_names = order.excluded_vendor_names
+        order: Order = self
+        projects: List[Project] = order.projects
+        excluded_vendor_names: Dict[str, None] = order.excluded_vendor_names
 
         # Construct *project_parts_table* table (Dict[name, List[ProjectPart]]) so that every
         # we have a name to a List[ProjectPart] mapping.
-        project_parts_table = {}
+        project_parts_table: Dict[str, List[ProjectPart]] = {}
+        project_index: int
+        project: Project
         for project_index, project in enumerate(projects):
             if tracing:
                 print(f"{tracing}Project[{project_index}]:'{project.name}'")
 
             # Make sure that each *project_part* in *project* is on a list somewhere
             # in the *project_parts_table*:
-            project_parts = project.project_parts
+            project_parts: List[ProjectPart] = project.project_parts
+            project_part_index: int
+            project_part: ProjectPart
             for project_part_index, project_part in enumerate(project_parts):
                 assert isinstance(project_part, ProjectPart), (f"type(project_part)="
                                                                f"{type(project_part)}")
                 if tracing:
                     print(f"{tracing}ProjectPart[{project_part_index}]:'{project_part.name}'")
-                project_part_name = project_part.name
+                project_part_name: str = project_part.name
                 if project_part_name not in project_parts_table:
                     project_parts_table[project_part_name] = [project_part]
                 else:
@@ -3804,22 +3712,24 @@ class Order:
         # Now construct the *final_choice_parts* list, where each *choice_part* on
         # the list consisists of a list of *project_parts* and *searches* where
         # all their names match *search_name*:
-        final_choice_parts = []
-        pairs = list(project_parts_table.items())
+        final_choice_parts: List[ChoicePart] = []
+        pairs: List[Tuple[str, List[ProjectPart]]] = list(project_parts_table.items())
         pairs.sort(key=lambda pair: pair[0])
+        search_name: str
         for search_name, project_parts in pairs:
             if tracing:
                 print(f"{tracing}search_name='{search_name}'")
             assert len(project_parts) >= 1
-            searches = collections.searches_find(search_name)
+            searches: List[Search] = collections.searches_find(search_name)
             if searches:
                 assert len(project_parts) >= 1, "Empty project_parts?"
+                search: Search
                 for search in searches:
                     assert search.name == search_name
                 for project_part in project_parts:
                     assert project_part.name == search_name, (f"'{search_name}'!="
                                                               f"'{project_part.name}'")
-                choice_part = ChoicePart(search_name, project_parts, searches)
+                choice_part: ChoicePart = ChoicePart(search_name, project_parts, searches)
                 final_choice_parts.append(choice_part)
             else:
                 print(f"{tracing}Could not find a search that matches part '{search_name}'")
@@ -3827,18 +3737,19 @@ class Order:
         # Now load the associated *actual_parts* into each *choice_part* from *final_choice_parts*:
         for choice_part in final_choice_parts:
             # Refresh the vendor part cache for each *actual_part*:
-            new_actual_parts = collections.actual_parts_lookup(choice_part)
+            new_actual_parts: List[ActualPart] = collections.actual_parts_lookup(choice_part)
 
             # Get reasonably up-to-date pricing and availability information about
             # each *ActualPart* in actual_parts.  *order* is needed to loccate where
             # the cached information is:
-            choice_part_name = choice_part.name
+            choice_part_name: str = choice_part.name
             choice_part.vendor_parts_refresh(new_actual_parts, order, choice_part_name)
 
         # Stuff *final_choice_parts* back into *order*:
         final_choice_parts.sort(key=lambda final_choice_part: final_choice_part.name)
-        order.final_choice_part = final_choice_parts
+        order.final_choice_parts = final_choice_parts
 
+        final_choice_part: ChoicePart
         for final_choice_part in final_choice_parts:
             final_choice_part.select(excluded_vendor_names, True)
 
@@ -3903,11 +3814,10 @@ class Order:
         return final_choice_parts
 
     # Order.footprints_check():
-    def footprints_check(self, final_choice_parts):
+    def footprints_check(self, final_choice_parts: "List[ChoicePart]", tracing: str = "") -> None:
         """ *Order*: Verify that footprints exist. """
 
-        # Verify argument types:
-        assert isinstance(final_choice_parts, list)
+        assert False, "Old Code"
 
         # Visit each *project_part* in all of the *projects*:
         kicad_footprints = {}
@@ -3957,32 +3867,28 @@ class Order:
                       format(footprint_path, kicad_footprints[footprint_name]))
 
     # Order.positions_process():
-    def positions_process(self):
+    def positions_process(self) -> None:
         """ *Order*: Process any Pick and Place `.csv` or `.pos` file.
         """
 
-        order = self
-        database = order.database
+        order: Order = self
         projects = order.projects
+        project: Project
         for project in projects:
-            project.positions_process(database)
+            project.positions_process()
 
     # Order.process():
     @trace(1)
-    def process(self, collections, tracing=""):
+    def process(self, collections: Collections, tracing: str = "") -> None:
         """ *Order*: Process the *Order* object (i.e. *self*.) """
-        # Verify argument types:
-        assert isinstance(collections, Collections)
-        assert isinstance(tracing, str)
-
         # Grab some values from *order* (i.e. *self*):
-        order = self
-        excluded_vendor_names = order.excluded_vendor_names
+        order: Order = self
+        excluded_vendor_names: Dict[str, None] = order.excluded_vendor_names
 
         # print("=>Order.process()")
 
         # Collect the messages from each vendor reduction operation into *reduced_vendor_messages*:
-        reduced_vendor_messages = []
+        reduced_vendor_messages: List[str] = []
 
         # We need to contruct a list of *ChoicePart* objects.  This
         # will land in *final_choice_parts* below.   Only *ChoicePart*
@@ -3992,7 +3898,7 @@ class Order:
         # converted to *ChoicePart* objects.  Once we have
         # *final_choice_parts* it can be sorted various different ways
         # (by vendor, by cost, by part_name, etc.)
-        final_choice_parts = order.final_choice_parts_compute(collections)
+        final_choice_parts: List[ChoicePart] = order.final_choice_parts_compute(collections)
         if tracing:
             print(f"{tracing}A:len(final_choice_parts)={len(final_choice_parts)}")
 
@@ -4013,36 +3919,32 @@ class Order:
         #     #order.exclude_vendors_with_high_minimums(
         #     #  final_choice_parts, excluded_vendor_names, reduced_vendor_messages)
         #     pass
-
         if tracing:
             print(f"{tracing}B:len(final_choice_parts)={len(final_choice_parts)}")
 
         # order.exclude_vendors_with_high_minimums(final_choice_parts, excluded_vendor_names,
         #                                          reduced_vendor_messages)
         order.exclude_vendors_to_reduce_shipping_costs(final_choice_parts, excluded_vendor_names,
-                                                       reduced_vendor_messages,
-                                                       )
-
+                                                       reduced_vendor_messages)
         if tracing:
             print(f"{tracing}C:len(final_choice_parts)={len(final_choice_parts)}")
 
         # Write out *reduced_vendor_messages* to a report file:
-        order_root = order.order_root
+        order_root: str = order.order_root
         reduced_vendor_messages_file_name = os.path.join(order_root, "vendor_reduction_report.txt")
+        reduced_vendor_messages_file: IO[str]
         with open(reduced_vendor_messages_file_name, "w") as reduced_vendor_messages_file:
+            reduced_vendor_message: str
             for reduced_vendor_message in reduced_vendor_messages:
                 reduced_vendor_messages_file.write(reduced_vendor_message)
-            reduced_vendor_messages_file.close()
-
         if tracing:
             print(f"{tracing}D:len(final_choice_parts)={len(final_choice_parts)}")
 
         # Let the user know how many vendors were eliminated:
-        reduced_vendor_messages_size = len(reduced_vendor_messages)
+        reduced_vendor_messages_size: int = len(reduced_vendor_messages)
         if reduced_vendor_messages_size >= 1:
-            print(f"{reduced_vendor_messages_size} vendors eliminated.  "
+            print(f"{tracing}{reduced_vendor_messages_size} vendors eliminated.  "
                   f"See '{reduced_vendor_messages_file_name}' file for why.")
-
         if tracing:
             print(f"{tracing}E:len(final_choice_parts)={len(final_choice_parts)}")
 
@@ -4052,12 +3954,10 @@ class Order:
 
         if tracing:
             print(f"{tracing}F:len(final_choice_parts)={len(final_choice_parts)}")
-
         # Print out the final selected vendor summary:
         order.summary_print(final_choice_parts, excluded_vendor_names)
 
         # Generate the bom file reports for *self.final_choice_parts*:
-        order_root = order.order_root
         order.final_choice_parts = final_choice_parts
         order.bom_write(os.path.join(order_root, "bom_by_price.txt"), lambda choice_part:
                         (choice_part.selected_total_cost,
@@ -4074,6 +3974,7 @@ class Order:
         order.csv_write()
 
         # Write a part summary file for each project:
+        project: Project
         for project in order.projects:
             project.assembly_summary_write(final_choice_parts, order)
 
@@ -4146,8 +4047,9 @@ class Order:
                 csv_file.close()
 
     # Order.quad_compute():
-    def quad_compute(self, choice_parts, excluded_vendor_names,
-                     excluded_vendor_name, trace=False):
+    def quad_compute(self, choice_parts: "List[ChoicePart]",
+                     excluded_vendor_names: Dict[str, None],
+                     excluded_vendor_name: str, trace: str = "") -> Quad:
         """ *Order*: Return quad tuple of the form:
                (*missing_parts*, *total_cost*,
                 *vendor_priority*, *excluded_vendor_name*) where:
@@ -4160,26 +4062,11 @@ class Order:
             The returned key is structured to sort so that most interesting
             vendor to exclude sorts to the first item.
         """
-
-        # Verify argument types:
-        assert isinstance(choice_parts, list)
-        assert isinstance(excluded_vendor_names, dict)
-        assert isinstance(excluded_vendor_name, str)
-        assert isinstance(trace, bool)
-
-        # *trace* is set to *True* to debug stuff:
-        if trace:
-            print("=>quad_compute({0}, {1}, '{2}')".format(
-              [choice_part.name for choice_part in choice_parts],
-              excluded_vendor_names.keys(), excluded_vendor_name))
-
-        order = self
-        missing_parts = 0
-        total_cost = 0.0
+        order: Order = self
+        missing_parts: int = 0
+        total_cost: float = 0.0
+        choice_part: ChoicePart
         for choice_part in choice_parts:
-            # Make sure *choice_part* is actually a *ChoicePart*:
-            assert isinstance(choice_part, ChoicePart)
-
             # Perform the vendor selection excluding all vendors in
             # *excluded_vendor_names*:
             missing_parts += choice_part.select(excluded_vendor_names, False)
@@ -4192,7 +4079,7 @@ class Order:
             total_cost += selected_total_cost
 
         # Figure out *vendor_priority* for *excluded_vendor_name*:
-        vendor_priorities = order.vendor_priorities
+        vendor_priorities: Dict[str, int] = order.vendor_priorities
         if excluded_vendor_name in vendor_priorities:
             # Priority already assigned to *excluded_vendor_name*:
             vendor_priority = vendor_priorities[excluded_vendor_name]
@@ -4203,57 +4090,21 @@ class Order:
             order.vendor_priority += 1
 
         # Return the final *quad*:
-        quad = (missing_parts, total_cost, vendor_priority, excluded_vendor_name)
-
-        # *trace* for debugging:
-        if trace:
-            print("<=quad_compute({0}, {1}, '{2}')=>{3}".format(
-              [choice_part.name for choice_part in choice_parts],
-              excluded_vendor_names.keys(), excluded_vendor_name, quad))
-
+        quad: Quad = (missing_parts, total_cost, vendor_priority, excluded_vendor_name)
         return quad
-
-    # Order.xxxrequest():
-    def xxxrequest(self, name, amount):
-        """ *Order*: Request *amount* parts named *name*. """
-
-        assert isinstance(name, str)
-        assert isinstance(amount, int)
-        # inventory = Inventory(name, str)
-
-        assert False
-        final_vendor_names = None
-        # final_vendor_names = \
-        #  self.vendor_names_get(final_choice_parts, excluded_vendor_names)
-        print("Final selected vendors:")
-        for vendor_name in final_vendor_names:
-            print("    {0}".format(vendor_name))
-
-        # Print the fianl *total_cost*:
-        total_cost = 0.0
-        final_choice_parts = None
-        excluded_vendor_names = None
-        for choice_part in final_choice_parts:
-            choice_part.select(excluded_vendor_names, False)
-            total_cost += choice_part.selected_total_cost
-        print("Total Cost: {0}".format(total_cost))
 
     # Order.summary_print():
     @trace(1)
-    def summary_print(self, choice_parts, excluded_vendor_names, tracing=""):
+    def summary_print(self, choice_parts: "List[ChoicePart]",
+                      excluded_vendor_names: Dict[str, None], tracing: str = "") -> None:
         """ *Order*: Print a summary of the selected vendors.
         """
-
-        # Verify argument types:
-        assert isinstance(choice_parts, list)
-        assert isinstance(excluded_vendor_names, dict)
-        assert isinstance(tracing, str)
-
         # Let the user know what we winnowed the vendor list down to:
-        final_vendor_names = self.vendor_names_get(choice_parts, excluded_vendor_names)
+        final_vendor_names: List[str] = self.vendor_names_get(choice_parts, excluded_vendor_names)
 
         # Print the final *total_cost*:
-        total_cost = 0.0
+        total_cost: float = 0.0
+        choice_part: ChoicePart
         for choice_part in choice_parts:
             choice_part.select(excluded_vendor_names, False)
             total_cost += choice_part.selected_total_cost
@@ -4261,33 +4112,26 @@ class Order:
 
         # Print out the sub-totals for each vendor:
         print("Final selected vendors:")
+        venodr_name: str
         for vendor_name in final_vendor_names:
-            vendor_cost = 0.0
+            vendor_cost: float = 0.0
             for choice_part in choice_parts:
                 if choice_part.selected_vendor_name == vendor_name:
                     vendor_cost += choice_part.selected_total_cost
             print("    {0}: ${1:.2f}".format(vendor_name, vendor_cost))
 
     # Order.vendor_exclude():
-    def vendor_exclude(self, vendor_name):
+    def vendor_exclude(self, vendor_name: str) -> None:
         """ *Order*: Exclude *vendor_name* from the *Order* object (i.e. *self*)
         """
-
-        # Verify argument typees:
-        assert isinstance(vendor_name, str)
-
         # Mark *vendor_name* from being selectable:
         self.excluded_vendor_names[vendor_name] = None
 
     # Order.vendor_names_get():
-    def vendor_names_get(self, choice_parts, excluded_vendor_names) -> List[str]:
+    def vendor_names_get(self, choice_parts: "List[ChoicePart]",
+                         excluded_vendor_names: Dict[str, None]) -> List[str]:
         """ *Order*: Return all possible vendor names for *choice_parts*:
         """
-
-        # Verify argument types:
-        assert isinstance(choice_parts, list)
-        assert isinstance(excluded_vendor_names, dict)
-
         # Load up *vendor_names_table*:
         vendor_names_table: Dict[str, None] = {}
         choice_part: ChoicePart
@@ -4298,18 +4142,13 @@ class Order:
         return list(sorted(vendor_names_table.keys()))
 
     # Order.vendors_select():
-    def vendors_select(self, selected_vendor_names):
+    def vendors_select(self, selected_vendor_names: List[str]) -> None:
         """ *Order*: Force the selected vendors for the *order* object (i.e. *self*)
             to *selected_vendors.
         """
 
-        # Use *order* instead of *self*:
-        order = self
-
-        # Verify argument types:
-        assert isinstance(selected_vendor_names, list) or isinstance(selected_vendor_names, tuple)
-
-        # Stuff *selected_vendors* into *order*:
+        # Stuff *selected_vendor_names* into *order* (i.e. *self*):
+        order: Order = self
         order.selected_vendor_names = selected_vendor_names
 
 
@@ -4318,14 +4157,25 @@ class Panda:
     # Panda stands for Pricing AND Availability:
 
     # Panda.__init__():
-    def __init__(self, name, tracing=""):
-        # Verify argument types:
-        assert isinstance(name, str)
-        assert isinstance(tracing, str)
-
+    def __init__(self, name: str, tracing: str = "") -> None:
         # Stuff values into *panda* (i.e. *self*):
-        panda = self
-        panda.name = name
+        # panda = self
+        self.name = name
+
+    # Panda.__str__():
+    def __str__(self) -> str:
+        panda: Panda = self
+        name: str = "??"
+        if hasattr(panda, "name"):
+            name = panda.name
+        return f"Panda({name})"
+
+    # Panda.vendor_parts_lookup():
+    def vendor_parts_lookup(self, actual_part, part_name, tracing: str = "") -> "List[VendorPart]":
+        panda: Panda = self
+        class_name: str = panda.__class__.__name__
+        assert False, f"{class_name}.vendor_parts_lookup() has not been implemented"
+        return list()
 
 
 # Parameter():
@@ -4347,24 +4197,22 @@ class Parameter:
         self.use: bool = False
 
     # Parameter.__equ__():
-    def __eq__(self, parameter2):
+    def __eq__(self, parameter2: object) -> bool:
         # print("=>Parameter.__eq__()")
-
-        # Verify argument types:
-        assert isinstance(parameter2, Parameter)
 
         # Compare each field of *parameter1* (i.e. *self*) with the corresponding field
         # of *parameter2*:
-        parameter1 = self
-        name_equal = (parameter1.name == parameter2.name)
-        default_equal = (parameter1.default == parameter2.default)
-        type_equal = (parameter1.type == parameter2.type)
-        optional_equal = (parameter1.optional == parameter2.optional)
-        comments_equal = (parameter1.comments == parameter2.comments)
-        enumerations_equal = (parameter1.enumerations == parameter2.enumerations)
-        all_equal = (
-          name_equal and default_equal and type_equal and
-          optional_equal and comments_equal and enumerations_equal)
+        equal: bool = False
+        if isinstance(parameter2, Parameter):
+            parameter1: Parameter = self
+            name_equal: bool = (parameter1.name == parameter2.name)
+            default_equal: bool = (parameter1.default == parameter2.default)
+            type_equal: bool = (parameter1.type == parameter2.type)
+            optional_equal: bool = (parameter1.optional == parameter2.optional)
+            comments_equal: bool = (parameter1.comments == parameter2.comments)
+            enumerations_equal: bool = (parameter1.enumerations == parameter2.enumerations)
+            equal = (name_equal and default_equal and type_equal and
+                     optional_equal and comments_equal and enumerations_equal)
 
         # Debugging code:
         # print("name_equal={0}".format(name_equal))
@@ -4375,7 +4223,7 @@ class Parameter:
         # print("enumerations_equal={0}".format(enumerations_equal))
         # print("<=Parameter.__eq__()=>{0}".format(all_equal))
 
-        return all_equal
+        return equal
 
     # Parameter.xml_lines_append():
     def xml_lines_append(self, xml_lines: List[str], indent: str) -> None:
@@ -4423,6 +4271,7 @@ class Parameter:
         # Close out with the `</Parameter>` XML element:
         xml_lines.append(f'{indent}</Parameter>')
 
+    # Parameter.xml_parse():
     @staticmethod
     def xml_parse(parameter_tree: etree._Element) -> "Parameter":
         assert parameter_tree.tag == "Parameter"
@@ -4477,40 +4326,38 @@ class PosePart:
     # be unique for a given project.
 
     # PosePart.__init__():
-    def __init__(self, project, project_part, reference, comment):
+    def __init__(self, project: "Project", project_part: "ProjectPart", reference: str,
+                 comment: str, tracing: str = "") -> None:
         """ Initialize *PosePart* object (i.e. *self*) to contain *project*,
             *project_part*, *reference*, and *comment*.
         """
-
-        # Verify argument types:
-        assert isinstance(project, Project)
-        assert isinstance(project_part, ProjectPart)
-        assert isinstance(reference, str)
-        assert isinstance(comment, str)
-
         # Load up *pose_part* (i.e. *self*):
-        pose_part = self
-        pose_part.project = project
-        pose_part.project_part = project_part
-        pose_part.reference = reference
-        pose_part.comment = comment
-        pose_part.install = (comment != "DNI")
+        # pose_part: PosePart = self
+        self.project: Project = project
+        self.project_part: ProjectPart = project_part
+        self.reference: str = reference
+        self.comment: str = comment
+        self.install: bool = (comment != "DNI")
+
+    # PosePart.__str__():
+    def __str__(self) -> str:
+        reference: str = "??"
+        pose_part: PosePart = self
+        if hasattr(pose_part, "reference"):
+            reference = pose_part.reference
+        return f"PosePart('{reference}')"
 
     # PosePart.check():
-    def check(self, collections, tracing=""):
-        # Verify argument types:
-        assert isinstance(collections, Collections)
-        assert isinstance(tracing, str)
-
+    def check(self, collections: Collections, tracing: str = "") -> None:
         # Grab some values from *pose_part* (i.e. *self*):
-        pose_part = self
-        reference = pose_part.reference
-        project = pose_part.project
-        project_name = project.name
+        pose_part: PosePart = self
+        reference: str = pose_part.reference
+        project: Project = pose_part.project
+        project_name: str = project.name
 
         # Check the underlying *project_part*:
-        project_part = pose_part.project_part
-        search_name = project_part.name
+        project_part: ProjectPart = pose_part.project_part
+        search_name: str = project_part.name
         collections.check(search_name, project_name, reference)
 
 
@@ -4519,57 +4366,47 @@ class PositionRow:
     """ PositionRow: Represents one row of data for a *PositionsTable*: """
 
     # PositionRow.__init__():
-    def __init__(self, reference, value, package, x, y,
-                 rotation, feeder_name, pick_dx, pick_dy, side, part_height):
+    def __init__(self, reference: str, value: str, package: str, x: float, y: float,
+                 rotation: float, feeder_name: str, pick_dx: float, pick_dy: float,
+                 side: str, part_height: float, tracing: str = "") -> None:
         """ *PositionRow*: ...
         """
 
-        # Verify argument types:
-        assert isinstance(reference, str)
-        assert isinstance(value, str)
-        assert isinstance(package, str)
-        assert isinstance(x, float)
-        assert isinstance(y, float)
-        assert isinstance(rotation, float) and 0.0 <= rotation <= 360.0
-        assert isinstance(feeder_name, str)
-        assert isinstance(pick_dx, float)
-        assert isinstance(pick_dy, float)
-        assert isinstance(side, str)
-        assert isinstance(part_height, float)
-
-        # if package.startswith("DPAK"):
-        #    print("Rotation={0}".format(rotation))
-
         # Load up *position_row* (i.e. *self*):
-        position_row = self
-        position_row.package = package
-        position_row.part_height = part_height
-        position_row.feeder_name = feeder_name
-        position_row.rotation = rotation
-        position_row.reference = reference
-        position_row.side = side
-        position_row.value = value
-        position_row.x = x - pick_dx
-        position_row.y = y - pick_dy
-        position_row.pick_dx = pick_dx
-        position_row.pick_dy = pick_dx
+        # position_row: PositionRow = self
+        self.package: str = package
+        self.part_height: float = part_height
+        self.feeder_name: str = feeder_name
+        self.rotation: float = rotation
+        self.reference: str = reference
+        self.side: str = side
+        self.value: str = value
+        self.x: float = x - pick_dx
+        self.y: float = y - pick_dy
+        self.pick_dx: float = pick_dx
+        self.pick_dy: float = pick_dx
+
+    # PositionRow:__str__():
+    def __str__(self) -> str:
+        reference = "??"
+        position_row: PositionRow = self
+        if hasattr(position_row, "reference"):
+            reference = position_row.reference
+        return f"PositionRow('{reference}')"
 
     # PositionsRow.as_strings():
-    def as_strings(self, mapping, feeders):
+    def as_strings(self, mapping: List[int], feeders: Dict[str, None],
+                   tracing: str = "") -> List[str]:
         """ *PositionsRow*: Return a list of formatted strings.
 
         The arguments are:
         * *mapping*: The order to map the strings in.
         """
 
-        # Verify argument types:
-        assert isinstance(mapping, list) and len(mapping) == 7, "mapping={0}".format(mapping)
-        assert isinstance(feeders, dict)
-
-        positions_row = self
-        value = positions_row.value
+        positions_row: PositionRow = self
+        value: str = positions_row.value
         if value not in feeders:
-            print("There is no feeder for '{0}'".format(value))
+            print(f"There is no feeder for '{value}'")
         row_strings = [""] * 7
         row_strings[mapping[0]] = positions_row.reference
         row_strings[mapping[1]] = positions_row.value
@@ -4581,372 +4418,379 @@ class PositionRow:
         return row_strings
 
     # PositionsRow.part_rotate():
-    def part_rotate(self, rotation_adjust):
+    def part_rotate(self, rotation_adjust: float, tracing: str = "") -> None:
         """ *PostitionRow*: """
-
-        assert isinstance(rotation_adjust, float)
-
-        row = self
-        rotation = row.rotation
+        position_row: PositionRow = self
+        rotation: float = position_row.rotation
         rotation -= rotation_adjust
         while rotation < 0.0:
             rotation += 360.0
         while rotation > 360.0:
             rotation -= 360.0
-        row.rotation = rotation
+        position_row.rotation = rotation
 
     # PositionsRow.translate():
-    def translate(self, dx, dy):
+    def translate(self, dx: float, dy: float) -> None:
         """
         """
 
-        row = self
-        row.x += dx
-        row.y += dy
+        position_row: PositionRow = self
+        position_row.x += dx
+        position_row.y += dy
 
 
 # PositionsTable:
 class PositionsTable:
-    """ PositionsTable: Represents a part positining table for a Pick and Place machine. """
+    def __init__(self, positions_file_name: str, tracing: str = "") -> None:
+        # positions_table: PositionsTable = self
+        self.positions_file_name: str = positions_file_name
 
-    # PositionsTable.__init__():
-    def __init__(self, file_name, database):
-        """ *PositionsTable*: Initialize the *PositionsTable* object read in from *file_name*:
+#    """ PositionsTable: Represents a part positining table for a Pick and Place machine. """
+#
+#    # PositionsTable.__init__():
+#    def __init__(self, file_name: str, database):
+#        """ *PositionsTable*: Initialize the *PositionsTable* object read in from *file_name*:
+#
+#        The arguments are:
+#        * *file_name*: The file name to read positions table from.  *file_name* must
+#          have one of the following suffixes:
+#          * `.csv`: A comma separated value format.
+#          * `.pos`: A text file with the columns separated by one or more spaces.
+#            Usually the columns are aligned virtically when viewe using a fixed
+#            pitch font.
+#        """
+#
+#        # Verify argument types:
+#        assert isinstance(file_name, str) and (
+#          file_name.endswith(".csv") or file_name.endswith(".pos"))
+#
+#        #
+#        positions_table = self
+#        comments = list()
+#        heading_indices = dict()
+#        rows = list()
+#        row_table = dict()
+#        mapping = list()
+#        trailers = list()
+#        headings_line = None
+#        headings = list()
+#        headings_size = 0
+#        part_heights = dict()
+#
+#        # Process `.pos` and `.csv` *file_name*'s differently:
+#        if file_name.endswith(".pos"):
+#            # `.pos` suffix:
+#
+#            # Read in *file_name* and break it into a *lines* list with no carriage returns:
+#            with open(file_name, "r") as positions_file:
+#                content = positions_file.read().replace('\r', "")
+#                lines = content.split('\n')
+#
+#                # Start parsing the file *lines*:
+#                for line_number, line in enumerate(lines):
+#                    # Dispatch on the beginning of the *line*:
+#                    if line.startswith("##"):
+#                        # Lines starting with "##" or "###" are just *comments*:
+#                        if headings_size <= 0:
+#                            comments.append(line)
+#                        else:
+#                            trailers.append(line)
+#                        # print("comment='{0}'".format(line))
+#                    elif line.startswith("# "):
+#                        # Lines that start with "# " are the column headings:
+#                        assert headings_size <= 0
+#                        headings_line = line
+#                        headings = line[2:].split()
+#                        headings_size = len(headings)
+#                        assert headings_size > 0
+#                        for heading_index, heading in enumerate(headings):
+#                            heading_indices[heading] = heading_index
+#                            # print("key='{0}' index={1}".format(key, heading_index))
+#
+#                        # Create the *mapping* used for formatting the output table:
+#                        heading_keys = ("Ref", "Val", "Package", "PosX", "PosY", "Rot", "Side")
+#                        for heading in heading_keys:
+#                            heading_index = heading_indices[heading]
+#                            mapping.append(heading_index)
+#                        # print("mapping={0}".format(mapping))
+#                    else:
+#                        # Assume that everything else is a row of data:
+#                        columns = line.split()
+#                        columns_size = len(columns)
+#                        if columns_size == headings_size:
+#                            # print("row={0}".format(row))
+#                            reference = columns[heading_indices["Ref"]]
+#                            value = columns[heading_indices["Val"]]
+#                            value = value.replace('\\', "")
+#                            part = database.lookup(value)
+#                            if isinstance(part, ChoicePart):
+#                                choice_part = part
+#                                feeder_name = choice_part.feeder_name
+#                                part_height = choice_part.part_height
+#                                pick_dx = choice_part.pick_dx
+#                                pick_dy = choice_part.pick_dy
+#                                if isinstance(feeder_name, str) and isinstance(part_height, float):
+#                                    # print("'{0}'=>'{1}''".format(value, feeder_name))
+#                                    value = feeder_name
+#                                    part_heights[value] = part_height
+#                                # print("part_heights['{0}'] = {1}".format(value, part_height))
+#                            elif isinstance(part, AliasPart):
+#                                alias_part = part
+#                                feeder_name = alias_part.feeder_name
+#                                part_height = alias_part.part_height
+#                                pick_dx = alias_part.pick_dx
+#                                pick_dy = alias_part.pick_dy
+#                                if isinstance(feeder_name, str) and isinstance(part_height, float):
+#                                    # print("'{0}'=>'{1}''".format(value, feeder_name))
+#                                    value = feeder_name
+#                                    part_heights[value] = part_height
+#                                # print("part_heights['{0}'] = {1}".format(value, part_height))
+#                            package = columns[heading_indices["Package"]]
+#                            x = float(columns[heading_indices["PosX"]])
+#                            y = float(columns[heading_indices["PosY"]])
+#                            rotation = float(columns[heading_indices["Rot"]])
+#                            side = columns[heading_indices["Side"]]
+#                            if isinstance(part_height, float):
+#                                row = PositionRow(reference, value, package, x, y, rotation,
+#                                                  feeder_name, pick_dx, pick_dy, side, part_height)
+#                                rows.append(row)
+#                                row_table[reference] = row
+#                            else:
+#                                print("Part '{0}' does not have a part_height".format(value))
+#                        elif columns_size != 0:
+#                            assert False, "Row/Header mismatch {0} {0}".format(row)  # , headers)
+#        elif file_name.endswith(".csv"):
+#            assert ".csv reader not implemented yet."
+#        else:
+#            assert "Bad file suffix for file: '{0}'".format(file_name)
+#
+#        feeders = {
+#         "1uF":        "E1",
+#         "2N7002":     "E2",
+#         "27K":        "E4",
+#         "0":          "E5",
+#         "33":         "E7",
+#         "4.7uF_?":    "E11",
+#         "1.0M":       "E14",
+#         "49.9K":      "E16",
+#         "200K":       "E19",
+#         "BAT54":      "E21",
+#         "0.1uF":      "W4",
+#         "49.9":       "W6",
+#         "20k":        "W7",
+#         "330":        "W10",
+#         "10K":        "W11",
+#         "100":        "W15",
+#         "100K":       "W16",
+#         "5.1K":       "W17",
+#         "GRN_LED":    "W14",
+#         "470":        "W20",
+#         "10uF":       "W21",
+#         "120":        "W22",
+#         "4.7k":       "W23",
+#         "220":        "W24",
+#
+#         "33nF":       "E100",
+#         "470nF":      "E101",
+#         "10nF":       "E102",
+#         "NFET_10A":   "E103",
+#         "330nF":      "E104",
+#         "18V_ZENER":  "E105",
+#         "SI8055":     "E106",
+#         "MC33883":    "E107",
+#         "MCP2562":    "E108",
+#         "18V_REG":    "E109",
+#         "74HC08":     "E110",
+#         "OPTOISO2":   "E111",
+#         "5V_REG/LDO": "E112",
+#         "3.3V_LDO":   "E113",
+#         "FID":        "E114",
+#         "10":         "E115",
+#        }
+#
+#        # Write out `feeders.txt`:
+#        footprints = database.footprints
+#        quintuples = list()
+#        for key in feeders.keys():
+#            feeder_name = feeders[key]
+#            part_height = "{0:.2f}".format(part_heights[key]) if key in part_heights else "----"
+#            rotation = int(footprints[key].rotation) if key in footprints else "----"
+#            quintuple = (feeder_name[0], int(feeder_name[1:]), key, part_height, rotation)
+#            quintuples.append(quintuple)
+#        quintuples.sort()
+#        order_root = None
+#        feeders_file_name = os.path.join(order_root, "feeders.txt")
+#        with open(feeders_file_name, "w") as feeders_file:
+#            feeders_file.write("Feeder\tHeight\tRotate\tValue\n")
+#            feeders_file.write(('=' * 50) + '\n')
+#            for quintuple in quintuples:
+#                side = quintuple[0]
+#                number = quintuple[1]
+#                value = quintuple[2]
+#                rotation = quintuple[2]
+#                part_height = quintuple[3]
+#                rotation = quintuple[4]
+#                feeders_file.write(f"{side}{number}:\t{part_height}\t{rotation}\t{value}\n")
+#
+#        # Fill in the value of *positions_table* (i.e. *self*):
+#        positions_table.comments = comments
+#        positions_table.headings_line = headings_line
+#        positions_table.headings = headings
+#        positions_table.headings_indices = heading_indices
+#        positions_table.feeders = feeders
+#        positions_table.file_name = file_name
+#        positions_table.mapping = mapping
+#        positions_table.rows = rows
+#        positions_table.row_table = row_table
+#        positions_table.trailers = trailers
+#
+#    # PositionsTable.footprints_rotate():
+#    def footprints_rotate(self, database):
+#        """ *Positions_Table: ..."""
+#
+#        order_root = None
+#        positions_table = self
+#        file_name = positions_table.file_name
+#        footprints = database.footprints
+#        rows = positions_table.rows
+#        for row_index, row in enumerate(rows):
+#            feeder_name = row.feeder_name
+#            debugging = False
+#            # debugging = package == "DPAK"
+#            # print("Row[{0}]: '{1}'".format(row_index, package))
+#            if feeder_name in footprints:
+#                # We have a match:
+#                footprint = footprints[feeder_name]
+#                rotation = footprint.rotation
+#                if debugging:
+#                    print("rotation={0}".format(rotation))
+#                if isinstance(rotation, float):
+#                    row.part_rotate(rotation)
+#                else:
+#                    print("Footprint '{0}' does not have a feeder rotation.".format(feeder_name))
+#            else:
+#                # No match:
+#                print("Could not find footprint '{0}' from file '{1}'".
+#                      format(feeder_name, file_name))
+#        positions_table.write(os.path.join(order_root, file_name))
+#
+#    # PositionsTable.reorigin():
+#    def reorigin(self, reference):
+#        """
+#        """
+#
+#        positions = self
+#        row_table = positions.row_table
+#        if reference in row_table:
+#            row = row_table[reference]
+#            dx = -row.x
+#            dy = -row.y
+#            positions.translate(dx, dy)
+#
+#    # PositionsTable.translate():
+#    def translate(self, dx, dy):
+#        """
+#        """
+#
+#        positions = self
+#        rows = positions.rows
+#        for row in rows:
+#            row.translate(dx, dy)
+#
+#    # PositionsTable.write():
+#    def write(self, file_name):
+#        """ *PositionsTable*: Write out the *PostionsTable* object to *file_name*.
+#
+#        The arguments are:
+#        * *file_name*: specifies the file to write out to.  It must of a suffix of:
+#          * `.csv`: Writes the file out in Comma Separated Values format.
+#          * `.pos`: Writes the file out as a text file with data separated by spaces.
+#        """
+#
+#        # Verify argument types:
+#        assert isinstance(file_name, str)
+#        assert len(file_name) >= 4 and file_name[-4:] in (".csv", ".pos")
+#
+#        # Unpack the *positions_table* (i.e. *self*):
+#        positions_table = self
+#        comments = positions_table.comments
+#        headings_line = positions_table.headings_line
+#        headings = positions_table.headings
+#        rows = positions_table.rows
+#        mapping = positions_table.mapping
+#        trailers = positions_table.trailers
+#        feeders = positions_table.feeders
+#
+#        # In order exactly match KiCAD output, the output formatting is adjusted based
+#        # on the column heading. *spaces_table* specifies the extra spaces to add to the column.
+#        # *aligns_table* specifies whether the data is left justified (i.e. "") or right
+#        # justified (i.e. ">"):
+#        extras_table = {"Ref": 5, "Val": 0, "Package": 1,
+#                        "PosX": 0, "PosY": 0, "Rot": 0, "Side": 0}
+#        aligns_table = {"Ref": "", "Val": "", "Package": "",
+#                        "PosX": ">", "PosY": ">", "Rot": ">", "Side": ""}
+#
+#        # Build up the final output as a list of *final_lines*:
+#        final_lines = list()
+#
+#        # Just copy the *comments* and *headings_line* into *final_lines*:
+#        final_lines.extend(comments)
+#        final_lines.append(headings_line)
+#
+#        # Dispatch on *file_name* suffix:
+#        if file_name.endswith(".pos"):
+#            # We have a `.pos` file:
+#
+#            # Populate *string_rows* with strings containing the data:
+#            string_rows = list()
+#            for row in rows:
+#                string_row = row.as_strings(mapping, feeders)
+#                string_rows.append(string_row)
+#
+#            # Figure out the maximum *sizes* for each column:
+#            sizes = [0] * len(headings)
+#            for string_row in string_rows:
+#                for column_index, column in enumerate(string_row):
+#                    sizes[column_index] = max(sizes[column_index], len(column))
+#
+#            # Convert *aligns_table* into a properly ordered list of *aligns*:
+#            aligns = list()
+#            for header_index, header in enumerate(headings):
+#                sizes[header_index] += extras_table[header]
+#                aligns.append(aligns_table[header])
+#
+#            # Create a *format_string* for outputing each row:
+#            format_columns = list()
+#            for size_index, size in enumerate(sizes):
+#                format_columns.append("{{{0}:{1}{2}}}"
+#                  .format(size_index, aligns[size_index], size))
+#                # format_columns.append("{" + str(size_index) +
+#                #  ":" + aligns[size_index] + str(size) + "}")
+#            format_string = "  ".join(format_columns)
+#            # print("format_string='{0}'".format(format_string))
+#
+#            # Now format each *string_row* and append the result to *final_lines*:
+#            for string_row in string_rows:
+#                final_line = format_string.format(*string_row)
+#                final_lines.append(final_line)
+#
+#            # Tack *trailers* and an empty line onto *final_lines*:
+#            final_lines.extend(trailers)
+#            final_lines.append("")
+#        elif file_name.endswith(".csv"):
+#            # File is a `.csv` file:
+#            assert False, ".csv file support not implemented yet."
+#        else:
+#            assert False, ("File name ('{0}') does not have a suffixe of .csv or .pos".
+#                           format(file_name))
+#
+#        # Write *final_lines* to *file_name*:
+#        with open(file_name, "w") as output_file:
+#            output_file.write("\r\n".join(final_lines))
 
-        The arguments are:
-        * *file_name*: The file name to read positions table from.  *file_name* must
-          have one of the following suffixes:
-          * `.csv`: A comma separated value format.
-          * `.pos`: A text file with the columns separated by one or more spaces.
-            Usually the columns are aligned virtically when viewe using a fixed
-            pitch font.
-        """
-
-        # Verify argument types:
-        assert isinstance(file_name, str) and (
-          file_name.endswith(".csv") or file_name.endswith(".pos"))
-
-        #
-        positions_table = self
-        comments = list()
-        heading_indices = dict()
-        rows = list()
-        row_table = dict()
-        mapping = list()
-        trailers = list()
-        headings_line = None
-        headings = list()
-        headings_size = 0
-        part_heights = dict()
-
-        # Process `.pos` and `.csv` *file_name*'s differently:
-        if file_name.endswith(".pos"):
-            # `.pos` suffix:
-
-            # Read in *file_name* and break it into a *lines* list with no carriage returns:
-            with open(file_name, "r") as positions_file:
-                content = positions_file.read().replace('\r', "")
-                lines = content.split('\n')
-
-                # Start parsing the file *lines*:
-                for line_number, line in enumerate(lines):
-                    # Dispatch on the beginning of the *line*:
-                    if line.startswith("##"):
-                        # Lines starting with "##" or "###" are just *comments*:
-                        if headings_size <= 0:
-                            comments.append(line)
-                        else:
-                            trailers.append(line)
-                        # print("comment='{0}'".format(line))
-                    elif line.startswith("# "):
-                        # Lines that start with "# " are the column headings:
-                        assert headings_size <= 0
-                        headings_line = line
-                        headings = line[2:].split()
-                        headings_size = len(headings)
-                        assert headings_size > 0
-                        for heading_index, heading in enumerate(headings):
-                            heading_indices[heading] = heading_index
-                            # print("key='{0}' index={1}".format(key, heading_index))
-
-                        # Create the *mapping* used for formatting the output table:
-                        heading_keys = ("Ref", "Val", "Package", "PosX", "PosY", "Rot", "Side")
-                        for heading in heading_keys:
-                            heading_index = heading_indices[heading]
-                            mapping.append(heading_index)
-                        # print("mapping={0}".format(mapping))
-                    else:
-                        # Assume that everything else is a row of data:
-                        columns = line.split()
-                        columns_size = len(columns)
-                        if columns_size == headings_size:
-                            # print("row={0}".format(row))
-                            reference = columns[heading_indices["Ref"]]
-                            value = columns[heading_indices["Val"]]
-                            value = value.replace('\\', "")
-                            part = database.lookup(value)
-                            if isinstance(part, ChoicePart):
-                                choice_part = part
-                                feeder_name = choice_part.feeder_name
-                                part_height = choice_part.part_height
-                                pick_dx = choice_part.pick_dx
-                                pick_dy = choice_part.pick_dy
-                                if isinstance(feeder_name, str) and isinstance(part_height, float):
-                                    # print("'{0}'=>'{1}''".format(value, feeder_name))
-                                    value = feeder_name
-                                    part_heights[value] = part_height
-                                # print("part_heights['{0}'] = {1}".format(value, part_height))
-                            elif isinstance(part, AliasPart):
-                                alias_part = part
-                                feeder_name = alias_part.feeder_name
-                                part_height = alias_part.part_height
-                                pick_dx = alias_part.pick_dx
-                                pick_dy = alias_part.pick_dy
-                                if isinstance(feeder_name, str) and isinstance(part_height, float):
-                                    # print("'{0}'=>'{1}''".format(value, feeder_name))
-                                    value = feeder_name
-                                    part_heights[value] = part_height
-                                # print("part_heights['{0}'] = {1}".format(value, part_height))
-                            package = columns[heading_indices["Package"]]
-                            x = float(columns[heading_indices["PosX"]])
-                            y = float(columns[heading_indices["PosY"]])
-                            rotation = float(columns[heading_indices["Rot"]])
-                            side = columns[heading_indices["Side"]]
-                            if isinstance(part_height, float):
-                                row = PositionRow(reference, value, package, x, y, rotation,
-                                                  feeder_name, pick_dx, pick_dy, side, part_height)
-                                rows.append(row)
-                                row_table[reference] = row
-                            else:
-                                print("Part '{0}' does not have a part_height".format(value))
-                        elif columns_size != 0:
-                            assert False, "Row/Header mismatch {0} {0}".format(row)  # , headers)
-        elif file_name.endswith(".csv"):
-            assert ".csv reader not implemented yet."
-        else:
-            assert "Bad file suffix for file: '{0}'".format(file_name)
-
-        feeders = {
-         "1uF":        "E1",
-         "2N7002":     "E2",
-         "27K":        "E4",
-         "0":          "E5",
-         "33":         "E7",
-         "4.7uF_?":    "E11",
-         "1.0M":       "E14",
-         "49.9K":      "E16",
-         "200K":       "E19",
-         "BAT54":      "E21",
-         "0.1uF":      "W4",
-         "49.9":       "W6",
-         "20k":        "W7",
-         "330":        "W10",
-         "10K":        "W11",
-         "100":        "W15",
-         "100K":       "W16",
-         "5.1K":       "W17",
-         "GRN_LED":    "W14",
-         "470":        "W20",
-         "10uF":       "W21",
-         "120":        "W22",
-         "4.7k":       "W23",
-         "220":        "W24",
-
-         "33nF":       "E100",
-         "470nF":      "E101",
-         "10nF":       "E102",
-         "NFET_10A":   "E103",
-         "330nF":      "E104",
-         "18V_ZENER":  "E105",
-         "SI8055":     "E106",
-         "MC33883":    "E107",
-         "MCP2562":    "E108",
-         "18V_REG":    "E109",
-         "74HC08":     "E110",
-         "OPTOISO2":   "E111",
-         "5V_REG/LDO": "E112",
-         "3.3V_LDO":   "E113",
-         "FID":        "E114",
-         "10":         "E115",
-        }
-
-        # Write out `feeders.txt`:
-        footprints = database.footprints
-        quintuples = list()
-        for key in feeders.keys():
-            feeder_name = feeders[key]
-            part_height = "{0:.2f}".format(part_heights[key]) if key in part_heights else "----"
-            rotation = int(footprints[key].rotation) if key in footprints else "----"
-            quintuple = (feeder_name[0], int(feeder_name[1:]), key, part_height, rotation)
-            quintuples.append(quintuple)
-        quintuples.sort()
-        order_root = None
-        feeders_file_name = os.path.join(order_root, "feeders.txt")
-        with open(feeders_file_name, "w") as feeders_file:
-            feeders_file.write("Feeder\tHeight\tRotate\tValue\n")
-            feeders_file.write(('=' * 50) + '\n')
-            for quintuple in quintuples:
-                side = quintuple[0]
-                number = quintuple[1]
-                value = quintuple[2]
-                rotation = quintuple[2]
-                part_height = quintuple[3]
-                rotation = quintuple[4]
-                feeders_file.write(f"{side}{number}:\t{part_height}\t{rotation}\t{value}\n")
-
-        # Fill in the value of *positions_table* (i.e. *self*):
-        positions_table.comments = comments
-        positions_table.headings_line = headings_line
-        positions_table.headings = headings
-        positions_table.headings_indices = heading_indices
-        positions_table.feeders = feeders
-        positions_table.file_name = file_name
-        positions_table.mapping = mapping
-        positions_table.rows = rows
-        positions_table.row_table = row_table
-        positions_table.trailers = trailers
-
-    # PositionsTable.footprints_rotate():
-    def footprints_rotate(self, database):
-        """ *Positions_Table: ..."""
-
-        order_root = None
-        positions_table = self
-        file_name = positions_table.file_name
-        footprints = database.footprints
-        rows = positions_table.rows
-        for row_index, row in enumerate(rows):
-            feeder_name = row.feeder_name
-            debugging = False
-            # debugging = package == "DPAK"
-            # print("Row[{0}]: '{1}'".format(row_index, package))
-            if feeder_name in footprints:
-                # We have a match:
-                footprint = footprints[feeder_name]
-                rotation = footprint.rotation
-                if debugging:
-                    print("rotation={0}".format(rotation))
-                if isinstance(rotation, float):
-                    row.part_rotate(rotation)
-                else:
-                    print("Footprint '{0}' does not have a feeder rotation.".format(feeder_name))
-            else:
-                # No match:
-                print("Could not find footprint '{0}' from file '{1}'".
-                      format(feeder_name, file_name))
-        positions_table.write(os.path.join(order_root, file_name))
-
-    # PositionsTable.reorigin():
-    def reorigin(self, reference):
-        """
-        """
-
-        positions = self
-        row_table = positions.row_table
-        if reference in row_table:
-            row = row_table[reference]
-            dx = -row.x
-            dy = -row.y
-            positions.translate(dx, dy)
-
-    # PositionsTable.translate():
-    def translate(self, dx, dy):
-        """
-        """
-
-        positions = self
-        rows = positions.rows
-        for row in rows:
-            row.translate(dx, dy)
-
-    # PositionsTable.write():
-    def write(self, file_name):
-        """ *PositionsTable*: Write out the *PostionsTable* object to *file_name*.
-
-        The arguments are:
-        * *file_name*: specifies the file to write out to.  It must of a suffix of:
-          * `.csv`: Writes the file out in Comma Separated Values format.
-          * `.pos`: Writes the file out as a text file with data separated by spaces.
-        """
-
-        # Verify argument types:
-        assert isinstance(file_name, str)
-        assert len(file_name) >= 4 and file_name[-4:] in (".csv", ".pos")
-
-        # Unpack the *positions_table* (i.e. *self*):
-        positions_table = self
-        comments = positions_table.comments
-        headings_line = positions_table.headings_line
-        headings = positions_table.headings
-        rows = positions_table.rows
-        mapping = positions_table.mapping
-        trailers = positions_table.trailers
-        feeders = positions_table.feeders
-
-        # In order exactly match KiCAD output, the output formatting is adjusted based
-        # on the column heading. *spaces_table* specifies the extra spaces to add to the column.
-        # *aligns_table* specifies whether the data is left justified (i.e. "") or right
-        # justified (i.e. ">"):
-        extras_table = {"Ref": 5, "Val": 0, "Package": 1, "PosX": 0, "PosY": 0, "Rot": 0, "Side": 0}
-        aligns_table = {"Ref": "", "Val": "", "Package": "",
-                        "PosX": ">", "PosY": ">", "Rot": ">", "Side": ""}
-
-        # Build up the final output as a list of *final_lines*:
-        final_lines = list()
-
-        # Just copy the *comments* and *headings_line* into *final_lines*:
-        final_lines.extend(comments)
-        final_lines.append(headings_line)
-
-        # Dispatch on *file_name* suffix:
-        if file_name.endswith(".pos"):
-            # We have a `.pos` file:
-
-            # Populate *string_rows* with strings containing the data:
-            string_rows = list()
-            for row in rows:
-                string_row = row.as_strings(mapping, feeders)
-                string_rows.append(string_row)
-
-            # Figure out the maximum *sizes* for each column:
-            sizes = [0] * len(headings)
-            for string_row in string_rows:
-                for column_index, column in enumerate(string_row):
-                    sizes[column_index] = max(sizes[column_index], len(column))
-
-            # Convert *aligns_table* into a properly ordered list of *aligns*:
-            aligns = list()
-            for header_index, header in enumerate(headings):
-                sizes[header_index] += extras_table[header]
-                aligns.append(aligns_table[header])
-
-            # Create a *format_string* for outputing each row:
-            format_columns = list()
-            for size_index, size in enumerate(sizes):
-                format_columns.append("{{{0}:{1}{2}}}".format(size_index, aligns[size_index], size))
-                # format_columns.append("{" + str(size_index) +
-                #  ":" + aligns[size_index] + str(size) + "}")
-            format_string = "  ".join(format_columns)
-            # print("format_string='{0}'".format(format_string))
-
-            # Now format each *string_row* and append the result to *final_lines*:
-            for string_row in string_rows:
-                final_line = format_string.format(*string_row)
-                final_lines.append(final_line)
-
-            # Tack *trailers* and an empty line onto *final_lines*:
-            final_lines.extend(trailers)
-            final_lines.append("")
-        elif file_name.endswith(".csv"):
-            # File is a `.csv` file:
-            assert False, ".csv file support not implemented yet."
-        else:
-            assert False, ("File name ('{0}') does not have a suffixe of .csv or .pos".
-                           format(file_name))
-
-        # Write *final_lines* to *file_name*:
-        with open(file_name, "w") as output_file:
-            output_file.write("\r\n".join(final_lines))
+    # PositionTable.__str__():
+    def __str__(self) -> str:
+        return "PositionsTable()"
 
 
 # PriceBreak:
@@ -4954,70 +4798,60 @@ class PriceBreak:
     # A price break is where a the pricing changes:
 
     # PriceBreak.__init__():
-    def __init__(self, quantity, price):
+    def __init__(self, quantity: int, price: float) -> None:
         """ *PriceBreak*: Initialize *self* to contain *quantity*
             and *price*.  """
+        # Load up *price_break* (i.e. *self*):
+        # price_break: PriceBreak = self
+        self.quantity: int = quantity
+        self.price: float = price
+        self.order_quantity: int = 0
+        self.order_price: float = 0.00
 
-        # Verify argument types:
-        assert isinstance(quantity, int)
-        assert isinstance(price, float)
-
-        # Load up *self*;
-        self.quantity = quantity
-        self.price = price
-        self.order_quantity = 0
-        self.order_price = 0.00
+    # PriceBreak.__eq__():
+    def __eq__(self, price_break2: object) -> bool:
+        equal: bool = False
+        if isinstance(price_break2, PriceBreak):
+            price_break1: PriceBreak = self
+            equal = (price_break1.quantity == price_break2.quantity and
+                     price_break1.price == price_break2.price)
+        return equal
 
     # PriceBreak.__format__():
-    def __format__(self, format):
+    def __format__(self, format: str) -> str:
         """ *PriceBreak*: Return the *PriceBreak* object as a human redable string.
         """
 
         # Grab some values from *price_break* (i.e. *self*):
-        price_break = self
+        price_break: PriceBreak = self
         quantity = price_break.quantity
         price = price_break.price
         result = "{0}/{1}".format(quantity, price)
         # print("Result='{0}'".format(result))
         return result
 
-    # PriceBreak.__eq__():
-    def __eq__(self, price_break2):
-        # Verify argument types:
-        assert isinstance(price_break2, PriceBreak)
-
-        price_break1 = self
-        price_breaks_equal = (price_break1.quantity == price_break2.quantity and
-                              price_break1.price == price_break2.price)
-        return price_breaks_equal
-
     # PriceBreak.__lt__():
-    def __lt__(self, price_break2):
-        # Verify argument types:
-        assert isinstance(price_break2, PriceBreak)
-
-        price_break1 = self
+    def __lt__(self, price_break2: "PriceBreak") -> bool:
+        price_break1: PriceBreak = self
         return price_break1.price < price_break2.price
 
+    # PriceBreak.__str__():
+    def __str__(self) -> str:
+        return "PriceBreak()"
+
     # PriceBreak.compute():
-    def compute(self, needed):
+    def compute(self, needed: int) -> None:
         """ *PriceBreak*: """
-
-        assert isinstance(needed, int)
-
-        self.order_quantity = order_quantity = max(needed, self.quantity)
-        self.order_price = order_quantity * self.price
+        price_break: PriceBreak = self
+        price_break.order_quantity = order_quantity = max(needed, price_break.quantity)
+        price_break.order_price = order_quantity * price_break.price
 
     # PriceBreak.xml_lines_append():
-    def xml_lines_append(self, xml_lines, indent):
-        # Verify argument types:
-        assert isinstance(xml_lines, list)
-        assert isinstance(indent, str)
-
+    def xml_lines_append(self, xml_lines: List[str], indent: str, tracing: str = "") -> None:
         # Grab some values from *price_break* (i.e. *self*):
-        price_break = self
-        quantity = price_break.quantity
-        price = price_break.price
+        price_break: PriceBreak = self
+        quantity: int = price_break.quantity
+        price: float = price_break.price
 
         # Output `<PriceBreak ...>` tag:
         xml_lines.append('{0}<PriceBreak quantity="{1}" price="{2:.6f}"/>'.
@@ -5025,58 +4859,45 @@ class PriceBreak:
 
     # PriceBreak.xml_parse():
     @staticmethod
-    def xml_parse(price_break_tree):
-        # Verify argument types:
-        assert isinstance(price_break_tree, etree._Element)
-        assert price_break_tree.tag == "PriceBreak"
-
+    def xml_parse(price_break_tree: etree._Element, tracing: str = "") -> "PriceBreak":
         # Grab some the attribute values from *price_break_tree*:
-        attributes_table = price_break_tree.attrib
-        quantity = int(attributes_table["quantity"])
-        price = float(attributes_table["price"])
+        attributes_table: Dict[str, str] = price_break_tree.attrib
+        quantity: int = int(attributes_table["quantity"])
+        price: float = float(attributes_table["price"])
 
         # Create and return the new *PriceBreak* object:
-        price_break = PriceBreak(quantity, price)
+        price_break: PriceBreak = PriceBreak(quantity, price)
         return price_break
 
 
 # Project:
 class Project:
-
     # Project.__init__():
-    def __init__(self, name, revision, cad_file_name, count, order,
-                 positions_file_name=None, tracing=""):
+    def __init__(self, name: str, revision: str, cad_file_name: str, count: int, order: Order,
+                 positions_file_name: str = "", tracing: str = "") -> None:
         """ Initialize a new *Project* object (i.e. *self*) containing *name*, *revision*,
             *net_file_name*, *count*, *order*, and optionally *positions_file_name.
         """
 
-        # Verify argument types:
-        assert isinstance(name, str)
-        assert isinstance(revision, str)
-        assert isinstance(cad_file_name, str)
-        assert isinstance(count, int)
-        assert isinstance(order, Order)
-        assert isinstance(positions_file_name, str) or positions_file_name is None
-        assert isinstance(tracing, str)
-
         # Load up *project* (i.e. *self*):
-        project = self
-        project.name = name
-        project.revision = revision
-        project.cad_file_name = cad_file_name
-        project.count = count
-        project.positions_file_name = positions_file_name
-        project.order = order
-        project.pose_parts_table = {}        # Dict[name, ProjectPart]
-        project.project_parts = []           # List[ProjectPart]
-        project.project_parts_table = {}     # Dict[name, ProjectPart]
-        project.all_pose_parts = []          # List[PosePart] of all project parts
-        project.installed_pose_parts = []    # List[PosePart] project parts to be installed
-        project.uninstalled_pose_parts = []  # List[PosePart] project parts not to be installed
+        project: Project = self
+        self.name: str = name                                  # Project name
+        self.revision: str = revision                          # Revision designator
+        self.cad_file_name: str = cad_file_name                # Cad/bom file name
+        self.count: int = count                                # Number of this project to order
+        self.positions_file_name: str = positions_file_name    # Positions Pick and Place file name
+        self.order: Order = order                              # Parent *Order*
+        self.pose_parts_table: Dict[str, PosePart] = {}        # PosePart name to *PosePart* table
+        self.project_parts: List[ProjectPart] = []             # List of *ProjectPart*'s
+        self.project_parts_table: Dict[str, ProjectPart] = {}  # ProjectPart name to *ProjectPart*
+        self.all_pose_parts: List[PosePart] = []               # All *ProjectPart*'s
+        self.installed_pose_parts: List[PosePart] = []         # *ProjectPart*'s to be installed
+        self.uninstalled_pose_parts: List[PosePart] = []       # *ProjectParts*'s not installed
 
-        # Read in the *cad_file_name*:
-        success = False
-        cads = order.cads
+        # Read all of the *cads* associated with *order*:
+        cads: List[Cad] = order.cads
+        success: bool = False
+        cad: Cad
         for cad in cads:
             success = cad.file_read(cad_file_name, project)
             if success:
@@ -5084,34 +4905,35 @@ class Project:
         assert success, f"Could not successfully read and process file '{cad_file_name}'!"
 
     # Project.__format__():
-    def __format__(self, format):
-        # Verify arugment_types:
-        assert isinstance(format, str)
-
+    def __format__(self, format) -> str:
         # Grab some values from *project* (i.e. *self*):
-        project = self
-        name = project.name
-        revision = project.revision
+        project: Project = self
+        name: str = project.name
+        revision: str = project.revision
         # Return *result*:
-        result = f"{name}.{revision}"
+        result: str = f"{name}.{revision}"
         return result
+
+    # Project.__str__():
+    def __str__(self) -> str:
+        name: str = "??"
+        project: Project = self
+        if hasattr(project, "name"):
+            name = project.name
+        return f"Project('{name}')"
 
     # Project.assembly_summary_write():
     @trace(1)
-    def assembly_summary_write(self, final_choice_parts, order, tracing=""):
+    def assembly_summary_write(self, final_choice_parts: "List[ChoicePart]",
+                               order: Order, tracing: str = "") -> None:
         """ Write out an assembly summary .csv file for the *Project* object (i.e. *self*)
             using *final_choice_parts*.
         """
-
-        # Verify argument types:
-        assert isinstance(final_choice_parts, list)
-        assert isinstance(order, Order)
-        assert isinstance(tracing, str)
-
         # Open *project_file* (i.e. *self*):
-        project = self
-        order_root = order.order_root
-        project_file_name = os.path.join(order_root, f"{project.name}.csv")
+        project: Project = self
+        order_root: str = order.order_root
+        project_file_name: str = os.path.join(order_root, f"{project.name}.csv")
+        project_file: IO[str]
         with open(project_file_name, "w") as project_file:
             # Write out the column headings:
             project_file.write(
@@ -5119,146 +4941,140 @@ class Project:
               '"Manufacturer","Manufacture PN","Vendor","Vendor PN"\n\n')
 
             # Output the installed parts:
-            has_fractional_parts1 = project.assembly_summary_write_helper(True, final_choice_parts,
-                                                                          project_file)
+            has_fractional_parts1: bool = project.assembly_summary_write_helper(True,
+                                                                                final_choice_parts,
+                                                                                project_file)
 
             # Output the uninstalled parts:
             project_file.write("\nDo Not Install\n")
 
             # Output the installed parts:
-            has_fractional_parts2 = project.assembly_summary_write_helper(False, final_choice_parts,
-                                                                          project_file)
+            has_fractional_parts2: bool = project.assembly_summary_write_helper(False,
+                                                                                final_choice_parts,
+                                                                                project_file)
 
             # Explain what a fractional part is:
             if has_fractional_parts1 or has_fractional_parts2:
                 project_file.write(
                   '"","\nFractional parts are snipped off of 1xN or 2xN break-way headers"\n')
 
-            # Close *project_file* and print out a summary announcement:
-
         # Write out a progress message:
-        print("Wrote out assembly file '{0}'".format(project_file_name))
+        print(f"Wrote out assembly file '{project_file_name}'")
 
     # Project.assembly_summary_write_helper():
-    def assembly_summary_write_helper(self, install, final_choice_parts, project_file):
+    def assembly_summary_write_helper(self, install: bool, final_choice_parts: "List[ChoicePart]",
+                                      csv_file: IO[str], tracing: str = "") -> bool:
         """ Write out an assembly summary .csv file for *Project* object (i.e. *self*)
             out to *project_file*.  *install* is set *True* to list the installable parts from
             *final_choice_parts* and *False* for an uninstallable parts listing.
-            This routine returns *True* if there are any fractional parts output to *project_file*.
+            This routine returns *True* if there are any fractional parts output to *csv_file*.
         """
-
-        # Verify argument types:
-        assert isinstance(install, bool)
-        assert isinstance(final_choice_parts, list)
-        assert isinstance(project_file, io.IOBase)
-
         # Each *final_choice_part* that is part of the project (i.e. *self*) will wind up
         # in a list in *pose_parts_table*.  The key is the *project_part_key*:
-        project = self
-        pose_parts_table = {}
+        project: Project = self
+        pose_parts_table: Dict[str, List[Tuple[PosePart, ChoicePart]]] = {}
+        final_choice_part: ChoicePart
         for final_choice_part in final_choice_parts:
             # Now figure out if final choice part is part of *pose_parts*:
-            pose_parts = final_choice_part.pose_parts
+            pose_parts: List[PosePart] = final_choice_part.pose_parts
+            pose_part: PosePart
             for pose_part in pose_parts:
                 # We only care care about *final_choice_part* if is used on *project* and
                 # it matches the *install* selector:
                 if pose_part.project is project and pose_part.install == install:
                     # We are on the project; create *schemati_part_key*:
-                    project_part = pose_part.project_part
-                    project_part_key = "{0};{1}".format(
-                      project_part.base_name, project_part.short_footprint)
+                    project_part: ProjectPart = pose_part.project_part
+                    project_part_key: str = (f"{project_part.base_name};"
+                                             f"{project_part.short_footprint}")
 
                     # Create/append a list to *pose_parts_table*, keyed on *project_part_key*:
                     if project_part_key not in pose_parts_table:
                         pose_parts_table[project_part_key] = []
-                    pairs_list = pose_parts_table[project_part_key]
+                    key: str = project_part_key
+                    pairs_list: List[Tuple[PosePart, ChoicePart]] = pose_parts_table[key]
 
                     # Append a pair of *pose_part* and *final_choice_part* onto *pairs_list*:
                     project_final_pair = (pose_part, final_choice_part)
                     pairs_list.append(project_final_pair)
 
         # Now organize everything around the *reference_list*:
-        reference_pose_parts = {}
+        reference_pose_parts: Dict[str, Tuple[PosePart, ChoicePart]] = {}
         for pairs_list in pose_parts_table.values():
             # We want to sort base on *reference_value* which is converted into *reference_text*:
-            reference_list = \
+            reference_list: List[str] = \
               [project_final_pair[0].reference.upper() for project_final_pair in pairs_list]
-            reference_text = ", ".join(reference_list)
+            reference_text: str = ", ".join(reference_list)
             # print("reference_text='{0}'".format(reference_text))
-            pose_part = pairs_list[0]
-            reference_pose_parts[reference_text] = pose_part
+            pair: Tuple[PosePart, ChoicePart] = pairs_list[0]
+            reference_pose_parts[reference_text] = pair
 
         # Sort the *reference_parts_keys*:
-        reference_pose_parts_keys = list(reference_pose_parts.keys())
+        reference_pose_parts_keys: List[str] = list(reference_pose_parts.keys())
         reference_pose_parts_keys.sort()
 
         # Now dig down until we have all the information we need for output the next
         # `.csv` file line:
-        has_fractional_parts = False
+        has_fractional_parts: bool = False
         for reference_pose_parts_key in reference_pose_parts_keys:
             # Extract the *pose_part* and *final_choice_part*:
-            project_final_pair = reference_pose_parts[reference_pose_parts_key]
+            key = reference_pose_parts_key
+            project_final_pair = reference_pose_parts[key]
             pose_part = project_final_pair[0]
             final_choice_part = project_final_pair[1]
-            assert isinstance(final_choice_part, ChoicePart)
 
             # Now get the corresponding *project_part*:
             project_part = pose_part.project_part
-            project_part_key = "{0};{1}".format(
-              project_part.base_name, project_part.short_footprint)
-            assert isinstance(project_part, ProjectPart)
+            project_part_key = f"{project_part.base_name};{project_part.short_footprint}"
 
             # Now get the *actual_part*:
-            actual_part = final_choice_part.selected_actual_part
+            actual_part: Optional[ActualPart] = final_choice_part.selected_actual_part
             if isinstance(actual_part, ActualPart):
 
                 # Now get the VendorPart:
-                manufacturer_name = actual_part.manufacturer_name
-                manufacturer_part_name = actual_part.manufacturer_part_name
-                vendor_part = final_choice_part.selected_vendor_part
+                manufacturer_name: str = actual_part.manufacturer_name
+                manufacturer_part_name: str = actual_part.manufacturer_part_name
+                vendor_part: Optional[VendorPart] = final_choice_part.selected_vendor_part
                 assert isinstance(vendor_part, VendorPart)
 
                 # Output the line for the .csv file:
-                vendor_name = vendor_part.vendor_name
-                vendor_part_name = vendor_part.vendor_part_name
-                quantity = final_choice_part.count_get()
-                fractional = "No"
+                vendor_name: str = vendor_part.vendor_name
+                vendor_part_name: str = vendor_part.vendor_part_name
+                quantity: int = final_choice_part.count_get()
+                fractional: str = "No"
                 if len(final_choice_part.fractional_parts) > 0:
                     fractional = "Yes"
                     has_fractional_parts = True
-                project_file.write('"{0} x","{1}","{2}","{3}","{4}","{5}","{6}","{7}","{8}"\n'.
-                                   format(quantity, reference_pose_parts_key,
-                                          project_part_key, final_choice_part.description,
-                                          fractional, manufacturer_name, manufacturer_part_name,
-                                          vendor_name, vendor_part_name))
+                csv_file.write(f'{Encode.to_csv(str(quantity))},'
+                               f'{Encode.to_csv(reference_pose_parts_key)},'
+                               f'{Encode.to_csv(project_part_key)},'
+                               f'{Encode.to_csv(final_choice_part.description)},'
+                               f'{Encode.to_csv(fractional)},'
+                               f'{Encode.to_csv(manufacturer_name)},'
+                               f'{Encode.to_csv(manufacturer_part_name)},'
+                               f'{Encode.to_csv(vendor_name)},'
+                               f'{Encode.to_csv(vendor_part_name)}\n')
             else:
-                print("Problems with actual_part", actual_part)
+                print(f"Problems with actual_part '{actual_part}'")
 
         return has_fractional_parts
 
     # Project.check():
-    def check(self, collections, tracing=""):
-        # Verify argument types:
-        assert isinstance(collections, Collections)
-
+    def check(self, collections: Collections, tracing: str = "") -> None:
         # Grab some values from *project* (i.e. *self*):
-        project = self
-        all_pose_parts = project.all_pose_parts
+        project: Project = self
+        all_pose_parts: List[PosePart] = project.all_pose_parts
 
         # Check *all_pose_parts*:
+        pose_part: PosePart
         for pose_part in all_pose_parts:
             pose_part.check(collections)
 
     # Project.project_part_append():
-    def pose_part_append(self, pose_part):
+    def pose_part_append(self, pose_part: PosePart) -> None:
         """ Append *pose_part* onto the *Project* object (i.e. *self*).
         """
-
-        # Verify argument types:
-        assert isinstance(pose_part, PosePart)
-
-        # Tack *pose_part* onto the appropriate lists inside of *project*:
-        project = self
+        # Tack *pose_part* onto the appropriate lists inside of *project* (i.e. *self*):
+        project: Project = self
         project.all_pose_parts.append(pose_part)
         if pose_part.install:
             project.installed_pose_parts.append(pose_part)
@@ -5266,51 +5082,46 @@ class Project:
             project.uninstalled_pose_parts.append(pose_part)
 
     # Project.pose_part_find():
-    def pose_part_find(self, name, reference):
-        # Verify argument types:
-        assert isinstance(name, str)
-        assert isinstance(reference, str)
-
+    def pose_part_find(self, name: str, reference: str) -> PosePart:
         # Grab some values from *project_part* (i.e. *self*):
-        project = self
-        all_pose_parts = project.all_pose_parts
-        pose_parts_table = project.pose_parts_table
+        project: Project = self
+        all_pose_parts: List[PosePart] = project.all_pose_parts
+        pose_parts_table: Dict[str, PosePart] = project.pose_parts_table
 
         # Find the *project_part* named *name* associated with *project*:
-        project_part = project.project_part_find(name)
+        project_part: ProjectPart = project.project_part_find(name)
 
         # Make sure that *reference* is not a duplicated:
+        pose_part: PosePart
         if reference in pose_parts_table:
             pose_part = pose_parts_table[reference]
             print(f"Project {project} has a duplicate '{reference}'?")
         else:
-            pose_part = PosePart(project_part, reference, "")
+            pose_part = PosePart(project, project_part, reference, "")
             pose_parts_table[reference] = pose_part
             all_pose_parts.append(pose_part)
         return pose_part
 
     # Project.positions_process():
-    def positions_process(self, database):
+    def positions_process(self) -> None:
         """ Reorigin the the contents of the positions table.
         """
-
-        project = self
-        positions_file_name = project.positions_file_name
-        positions_table = PositionsTable(positions_file_name, database)
-        positions_table.reorigin("FD1")
-        positions_table.footprints_rotate(database)
+        pass
+        # project: Project = self
+        # positions_file_name: str = project.positions_file_name
+        # positions_table: PositionsTable = PositionsTable(positions_file_name)
+        # positions_table.reorigin("FD1")
+        # positions_table.footprints_rotate()
 
     # Project.project_part_find():
-    def project_part_find(self, project_part_name):
-        # Verify argument types:
-        assert isinstance(project_part_name, str)
-
-        # Grab some values from *project*:
-        project = self
-        project_parts = project.project_parts
-        project_parts_table = project.project_parts_table
+    def project_part_find(self, project_part_name: str) -> "ProjectPart":
+        # Grab some values from *project* (i.e. *self*):
+        project: Project = self
+        project_parts: List[ProjectPart] = project.project_parts
+        project_parts_table: Dict[str, ProjectPart] = project.project_parts_table
 
         # Determine if we have a pre-existing *project_part* named *name*:
+        project_part: ProjectPart
         if project_part_name in project_parts_table:
             # Reuse the pre-existing *project_part* named *name*:
             project_part = project_parts_table[project_part_name]
@@ -5319,7 +5130,6 @@ class Project:
             project_part = ProjectPart(project_part_name, [project])
             project_parts.append(project_part)
             project_parts_table[project_part_name] = project_part
-        assert isinstance(project_part, ProjectPart)
         return project_part
 
 
@@ -5333,54 +5143,66 @@ class ProjectPart:
     # sub-classed by one of *ChoicePart*, *AliasPart*, or *FractionalPart*.
 
     # ProjectPart.__init__():
-    def __init__(self, name, projects):
+    def __init__(self, name: str, projects: List[Project], tracing: str = "") -> None:
         """ *ProjectPart*: Initialize *self* to contain
             *name*, and *kicad_footprint*. """
 
-        # Verify argument types:
-        assert isinstance(name, str)
-        assert isinstance(projects, list)
-        for project in projects:
-            assert isinstance(project, Project)
-
-        # Split *name" into *base_name* and *short_footprint*:
-        # base_name_short_footprint = name.split(';')
-        # if len(base_name_short_footprint) == 2:
-        #     base_name = base_name_short_footprint[0]
-        #     short_footprint = base_name_short_footprint[1]
-        #
-        #     # Load up *self*:
-        #     project_part.name = name
-        #     project_part.base_name = base_name
-        #     project_part.short_footprint = short_footprint
-        #     project_part.kicad_footprint = kicad_footprint
-        #     project_part.pose_parts = []
-        # else:
+        # Extract *base_name*, *short_footprint* and *comment* from *name* where
+        # *name* is formatted as '*base_name*;*short_footprint_name*:*comment*':
+        short_footprint: str = ""
+        comment: str = ""
+        base_name: str = ""
+        pieces: List[str] = [name]
+        if ':' in pieces[0]:
+            pieces = pieces[0].split(':')
+            pieces_size: int = len(pieces)
+            assert pieces_size <= 2, f"Too many colons (':') in '{name}'"
+            comment = pieces[1] if len(pieces) == 2 else ""
+        if ';' in pieces[0]:
+            pieces = pieces[0].split(';')
+            pieces_size = len(pieces)
+            assert pieces_size <= 2, f"Too many semi-colons (';') in '{name}'"
+            short_footprint = pieces[1] if pieces_size == 2 else ""
+        base_name = pieces[0]
 
         # Stuff values into *project_part* (i.e. *self*):
         # project_part = self
         self.name: str = name
-        self.projects: List[Project] = projects
+        self.base_name: str = base_name
+        self.comment: str = comment
         self.pose_parts: List[PosePart] = []
         self.pose_parts_table: Dict[str, PosePart] = {}
+        self.projects: List[Project] = projects
+        self.short_footprint: str = short_footprint
 
     # ProjectPart.__format__():
-    def __format__(self, format):
+    def __format__(self, format: str) -> str:
         """ *ProjectPart*: Format the *ProjectPart* object (i.e. *self*) using *format***. """
-        # Verify aregument types:
-        assert isinstance(format, str)
-
         # Grab some values from *project_part* (i.e. *self*):
-        project_part = self
-        name = project_part.name
-        project = project_part.project
+        project_part: ProjectPart = self
+        name: str = project_part.name
 
         # Return *result*' based on *format*:
-        result = f"{name}" if format == "s" else f"{project}:{name}"
+        result: str
+        if format == "s":
+            projects: List[Project] = project_part.projects
+            project_names: List[str] = [project.name for project in projects]
+            project_names_text: str = ":".join(project_names)
+            result = f"{project_names_text}:{name}"
+        else:
+            result = f"{name}"
         return result
 
+    # ProjectPart.__str__():
+    def __str__(self) -> str:
+        name: str = "??"
+        project_part: ProjectPart = self
+        if hasattr(project_part, "name"):
+            name = project_part.name
+        return f"ProjectPart('{name}')"
+
     # ProjectPart.footprints_check():
-    def footprints_check(self, kicad_footprints):
+    def footprints_check(self, footprints: Dict[str, str]) -> None:
         """ *ProjectPart*: Verify that all the footprints exist for the *ProjectPart* object
             (i.e. *self*.)
         """
@@ -5393,62 +5215,66 @@ class AliasPart(ProjectPart):
     # An *AliasPart* specifies one or more *ProjectParts* to use.
 
     # AliasPart.__init__():
-    def __init__(self, name, project_parts, kicad_footprint,
-                 feeder_name=None, part_height=None, pick_dx=0.0, pick_dy=0.0):
+    def __init__(self, name: str, project_parts: List[ProjectPart], footprint: str = "",
+                 feeder_name="", part_height=0.0, pick_dx=0.0, pick_dy=0.0,
+                 tracing: str = "") -> None:
         """ *AliasPart*: Initialize *self* to contain *name*,
             *kicad_footprint*, and *project_parts*. """
 
-        # Verify argument types:
-        assert isinstance(name, str)
-        assert isinstance(project_parts, list)
-        assert isinstance(feeder_name, str) or feeder_name is None
-        assert isinstance(part_height, float) or part_height is None
-        assert isinstance(pick_dx, float)
-        assert isinstance(pick_dy, float)
+        projects_table: Dict[str, Project] = {}
+        project_part: ProjectPart
         for project_part in project_parts:
-            assert isinstance(project_part, ProjectPart)
-
-        # assert len(project_parts) == 1, "project_parts={0}".format(project_parts)
+            projects: List[Project] = project_part.projects
+            project: Project
+            for project in projects:
+                project_name_revision: str = f"{project.name}.{project.revision}"
+                if project_name_revision not in projects_table:
+                    projects_table[project_name_revision] = project
+        union_projects: List[Project] = list(projects_table.values())
 
         # Load up *alias_part* (i.e *self*):
-        alias_part = self
-        super().__init__(name, kicad_footprint)
-        alias_part.project_parts = project_parts
-        alias_part.feeder_name = feeder_name
-        alias_part.part_height = part_height
-        alias_part.pick_dx = pick_dx
-        alias_part.pick_dy = pick_dy
+        super().__init__(name, union_projects)
+        # alias_part: AliasPart = self
+        self.project_parts: List[ProjectPart] = project_parts
+        self.feeder_name: str = feeder_name
+        self.footprint: str = footprint
+        self.part_height: float = part_height
+        self.pick_dx: float = pick_dx
+        self.pick_dy: float = pick_dy
+
+    # AliasPart.__str__():
+    def __str__(self) -> str:
+        name: str = "??"
+        alias_part: AliasPart = self
+        if hasattr(alias_part, "name"):
+            name = alias_part.name
+        return f"AliasPart('{name}')"
 
     # AliasPart.choice_parts():
-    def choice_parts(self):
+    def choice_parts(self) -> "List[ChoicePart]":
         """ *AliasPart*: Return a list of *ChoicePart*'s corresponding to *self*
         """
-
-        assert isinstance(self, AliasPart)
-        choice_parts = []
-        for project_part in self.project_parts:
-            choice_parts += project_part.choice_parts()
-
-        # assert False, \
-        #  "No choice parts for '{0}'".format(self.name)
-        return choice_parts
+        # choice_parts: List[ChoicePart] = []
+        # project_part: ProjectPart
+        # project_parts: List[ProjectPart]
+        # for project_part in project_parts:
+        #     choice_parts.extend(project_part.choice_parts)
+        # return choice_parts
+        assert False, "Fix this code"
+        return list()
 
     # AliasPart.footprints_check():
-    def footprints_check(self, kicad_footprints):
+    def footprints_check(self, footprints: Dict[str, str]) -> None:
         """ *AliasPart*: Verify that all the footprints exist for the *AliasPart* object
             (i.e. *self*.)
         """
 
-        # Use *alias_part* instead of *self*:
-        alias_part = self
-
-        # Verify argument types:
-        assert isinstance(kicad_footprints, dict)
-
-        # Visit all of the listed schematic parts:
-        project_parts = alias_part.project_parts
+        # Grab *project_parts* from *alias_part* (i.e. *self*):
+        alias_part: AliasPart = self
+        project_parts: List[ProjectPart] = alias_part.project_parts
+        project_part: ProjectPart
         for project_part in project_parts:
-            project_part.footprints_check(kicad_footprints)
+            project_part.footprints_check(footprints)
 
 
 # ChoicePart:
@@ -5456,18 +5282,38 @@ class ChoicePart(ProjectPart):
     # A *ChoicePart* specifies a list of *ActualPart*'s to choose from.
 
     # ChoicePart.__init__():
-    def __init__(self, name, project_parts, searches):
+    def __init__(self, name: str, project_parts: List[ProjectPart], searches: List[Search],
+                 tracing: str = "") -> None:
         """ *ChoicePart*: Initiailize *self* to contain *name*
             *kicad_footprint* and *actual_parts*. """
 
-        # Verify argument types:
-        assert isinstance(name, str)  # I.e. search name
-        assert isinstance(project_parts, list)
-        assert isinstance(searches, list)
+        # A *chice_part* (i.e. *self*) can have multiple *Project*'s associated with it.
+        # Thus, we need to compute the *union_projects* of all *Project*'s associated
+        # with *project parts*:
+        projects_table: Dict[str, Project] = {}
         for project_part in project_parts:
-            assert project_part.name == name
-        for search in searches:
-            assert search.name == name
+            projects: List[Project] = project_part.projects
+            project: Project
+            for project in projects:
+                cad_file_name: str = project.cad_file_name
+                projects_table[cad_file_name] = project
+        union_projects: List[Project] = list(projects_table.values())
+
+        # Load up *choice_part* (i.e. *self*):
+        super().__init__(name, union_projects)
+        self.actual_parts: List[ActualPart] = []
+        self.searches: List[Search] = searches
+        # Fields used by algorithm:
+        self.description: str = "DESCRIPTION"
+        self.footprint: str = "FOOTPRINT"
+        self.fractional_parts: List[FractionalPart] = []
+        self.selected_total_cost: float = 0.00
+        self.selected_order_quantity: int = -1
+        self.selected_actual_part: Optional[ActualPart] = None
+        self.selected_vendor_part: Optional[VendorPart] = None
+        self.selected_vendor_name: str = ""
+        self.selected_price_break_index: int = -1
+        self.selected_price_break: Optional[PriceBreak] = None
 
         # assert isinstance(kicad_footprint, str)
         # assert isinstance(location, str)
@@ -5478,36 +5324,6 @@ class ChoicePart(ProjectPart):
         # assert isinstance(feeder_name, str) or feeder_name is None
         # assert isinstance(part_height, float) or part_height is None
 
-        # Use *choice_part* instead of *self*:
-        choice_part = self
-
-        # A *chice_part* (i.e. *self*) can have multiple *Project*'s associated with it.
-        # Thus, we need to compute the *union_projects* of all *Project*'s associated
-        # with *project parts*:
-        projects_table = {}
-        for project_part in project_parts:
-            projects = project_part.projects
-            for project in projects:
-                cad_file_name = project.cad_file_name
-                projects_table[cad_file_name] = project
-        union_projects = list(projects_table.values())
-
-        # Load up *choice_part* (i.e. *self*):
-        super().__init__(name, union_projects)
-        choice_part.actual_parts = []
-        choice_part.searches = searches
-
-        # Fields used by algorithm:
-        choice_part.fractional_parts = []
-        self.selected_total_cost: float = -0.01
-        self.selected_order_quantity: int = -1
-        self.selected_actual_part: Optional[ActualPart] = None
-        self.selected_vendor_part: Optional[VendorPart] = None
-        self.selected_vendor_name: str = ""
-        self.selected_price_break_index: int = -1
-        self.selected_price_break: Optional[PriceBreak] = None
-
-        # choice_part.description = description
         # choice_part.feeder_name = feeder_name
         # choice_part.location = location
         # choice_part.part_height = part_height
@@ -5516,105 +5332,104 @@ class ChoicePart(ProjectPart):
         # choice_part.pick_dy = pick_dy
 
     # ChoicePart.__format__():
-    def __format__(self, format):
+    def __format__(self, format) -> str:
         """ *ChoicePart*: Return the *ChoicePart object (i.e. *self* as a string formatted by
             *format*.
         """
 
-        choice_part = self
+        choice_part: ChoicePart = self
         return choice_part.__str__()
 
     # ChoicePart.__str__():
-    def __str__(self):
-        choice_part = self
-        return f"ChoicePart('{choice_part.name}')"
+    def __str__(self) -> str:
+        choice_part: ChoicePart = self
+        name: str = "??"
+        if hasattr(choice_part, "name"):
+            name = choice_part.name
+        return f"ChoicePart('{name}')"
 
-    # ChoicePart.actual_part():
-    def actual_part(self, manufacturer_name, manufacturer_part_name, vendor_triples=[]):
-        """ *ChoicePart*: Create an *ActualPart* that contains *manufacturer_name* and
-            *manufacturer_part_name* and append it to the *ChoicePart* object (i.e. *self*.)
-            For parts whose prices are not available via screen scraping, it is possible to specify
-            vendor/pricing information as a list of vendor triples.  The vendor triples are a
-            *tuple* of consisting of (*vendor_name*, *vendor_part_name*, *price_pairs_text*),
-            where *vendor_name* is a distributor (i.e. "Newark", or "Pololu"), *vendor_part_name*
-            is a the vendors order number of the part, and *price_pairs_text* is a string of
-            the form "quant1/price1 quant2/price2 ... quantN/priceN".  *quantI* is an quantity
-            as an integer and *priceI* is a price in dollars.
-        """
+    # # ChoicePart.actual_part():
+    # def actual_part(self, manufacturer_name, manufacturer_part_name, vendor_triples=[]):
+    #     """ *ChoicePart*: Create an *ActualPart* that contains *manufacturer_name* and
+    #         *manufacturer_part_name* and append it to the *ChoicePart* object (i.e. *self*.)
+    #         For parts whose prices are not available via screen scraping, it is possible to
+    #         specify vendor/pricing information as a list of vendor triples.  The vendor triples
+    #         are a *tuple* of(*vendor_name*, *vendor_part_name*, *price_pairs_text*),
+    #         where *vendor_name* is a distributor (i.e. "Newark", or "Pololu"), *vendor_part_name*
+    #         is a the vendors order number of the part, and *price_pairs_text* is a string of
+    #         the form "quant1/price1 quant2/price2 ... quantN/priceN".  *quantI* is an quantity
+    #         as an integer and *priceI* is a price in dollars.
+    #     """
 
-        # Verify argument types:
-        assert isinstance(manufacturer_name, str)
-        assert isinstance(manufacturer_part_name, str)
-        assert isinstance(vendor_triples, list)
-        for vendor_triple in vendor_triples:
-            assert len(vendor_triple) == 3
-            assert isinstance(vendor_triple[0], str)
-            assert isinstance(vendor_triple[1], str)
-            assert isinstance(vendor_triple[2], str)
+    #     # Verify argument types:
+    #     assert isinstance(manufacturer_name, str)
+    #     assert isinstance(manufacturer_part_name, str)
+    #     assert isinstance(vendor_triples, list)
+    #     for vendor_triple in vendor_triples:
+    #         assert len(vendor_triple) == 3
+    #         assert isinstance(vendor_triple[0], str)
+    #         assert isinstance(vendor_triple[1], str)
+    #         assert isinstance(vendor_triple[2], str)
 
-        actual_part = ActualPart(manufacturer_name, manufacturer_part_name)
-        self.actual_parts.append(actual_part)
+    #     actual_part = ActualPart(manufacturer_name, manufacturer_part_name)
+    #     self.actual_parts.append(actual_part)
 
-        if True:
-            for vendor_triple in vendor_triples:
-                vendor_name = vendor_triple[0]
-                vendor_part_name = vendor_triple[1]
-                price_pairs_text = vendor_triple[2]
+    #     if True:
+    #         for vendor_triple in vendor_triples:
+    #             vendor_name = vendor_triple[0]
+    #             vendor_part_name = vendor_triple[1]
+    #             price_pairs_text = vendor_triple[2]
 
-                price_breaks = []
-                for price_pair_text in price_pairs_text.split():
-                    # Make sure we only have a price and a pair*:
-                    price_pair = price_pair_text.split('/')
-                    assert len(price_pair) == 2
+    #             price_breaks = []
+    #             for price_pair_text in price_pairs_text.split():
+    #                 # Make sure we only have a price and a pair*:
+    #                 price_pair = price_pair_text.split('/')
+    #                 assert len(price_pair) == 2
 
-                    # Extract the *quantity* from *price_pair*:
-                    quantity = 1
-                    try:
-                        quantity = int(price_pair[0])
-                    except ValueError:
-                        assert False, \
-                          "Quantity '{0}' is not an integer". \
-                          format(price_pair[0])
+    #                 # Extract the *quantity* from *price_pair*:
+    #                 quantity = 1
+    #                 try:
+    #                     quantity = int(price_pair[0])
+    #                 except ValueError:
+    #                     assert False, \
+    #                       "Quantity '{0}' is not an integer". \
+    #                       format(price_pair[0])
 
-                    # Extract the *price* from *price_pair*:
-                    price = 100.00
-                    try:
-                        price = float(price_pair[1])
-                    except ValueError:
-                        assert False, \
-                          "Price '{0}' is not a float".format(price_pair[1])
+    #                 # Extract the *price* from *price_pair*:
+    #                 price = 100.00
+    #                 try:
+    #                     price = float(price_pair[1])
+    #                 except ValueError:
+    #                     assert False, \
+    #                       "Price '{0}' is not a float".format(price_pair[1])
 
-                    # Construct the *price_break* and append to *price_breaks*:
-                    price_break = PriceBreak(quantity, price)
-                    price_breaks.append(price_break)
+    #                 # Construct the *price_break* and append to *price_breaks*:
+    #                 price_break = PriceBreak(quantity, price)
+    #                 price_breaks.append(price_break)
 
-                # Create the *vendor_part* and append it to *actual_part*:
-                assert len(price_breaks) > 0
-                vendor_part = VendorPart(actual_part,
-                                         vendor_name, vendor_part_name, 1000000, price_breaks)
-                actual_part.vendor_part_append(vendor_part)
-                # if tracing:
-                #    print("vendor_part_append called")
+    #             # Create the *vendor_part* and append it to *actual_part*:
+    #             assert len(price_breaks) > 0
+    #             vendor_part = VendorPart(actual_part,
+    #                                      vendor_name, vendor_part_name, 1000000, price_breaks)
+    #             actual_part.vendor_part_append(vendor_part)
+    #             # if tracing:
+    #             #    print("vendor_part_append called")
 
-                # print("ChoicePart.actual_part(): Explicit vendor_part specified={0}".
-                #  format(vendor_part))
+    #             # print("ChoicePart.actual_part(): Explicit vendor_part specified={0}".
+    #             #  format(vendor_part))
 
-        return self
+    #     return self
 
     # ChoicePart.pose_part_append():
-    def pose_part_append(self, pose_part):
+    def pose_part_append(self, pose_part: PosePart) -> None:
         """ *ChoicePart*: Store *pose_part* into the *ChoicePart* object
             (i.e. *self*.)
         """
-
-        # Verify argument types:
-        assert isinstance(pose_part, PosePart)
-
-        # Append *pose_part* to *pose_parts*:
-        self.pose_parts.append(pose_part)
+        choice_part: ChoicePart = self
+        choice_part.pose_parts.append(pose_part)
 
     # ChoicePart.pose_parts_sort():
-    def pose_parts_sort(self):
+    def pose_parts_sort(self) -> None:
         """ *ChoicePart*: Sort the *pose_parts* of the *ChoicePart* object
             (i.e. *self*.)
         """
@@ -5622,7 +5437,8 @@ class ChoicePart(ProjectPart):
         # Sort the *pose_parts* using a key of
         # (project_name, reference, reference_number).  A reference of
         # "SW123" gets conferted to (..., "SW123", 123):
-        pose_parts = self.pose_parts
+        choice_part: ChoicePart = self
+        pose_parts: List[PosePart] = choice_part.pose_parts
         pose_parts.sort(key=lambda pose_part:
                         (pose_part.project.name,
                          text_filter(pose_part.reference, str.isalpha).upper(),
@@ -5634,22 +5450,24 @@ class ChoicePart(ProjectPart):
         #  choice_part.count_get(), choice_part.references_text_get()))
 
     # ChoicePart.count_get():
-    def count_get(self):
+    def count_get(self) -> int:
         """ *ChoicePart*: Return the number of needed instances of *self*. """
-
-        count = 0
-
-        fractional_parts = self.fractional_parts
+        choice_part: ChoicePart = self
+        count: int = 0
+        fractional_part: FractionalPart
+        fractional_parts: List[FractionalPart] = choice_part.fractional_parts
+        pose_parts: List[PosePart] = choice_part.pose_parts
+        pose_part: PosePart
         if len(fractional_parts) == 0:
-            for pose_part in self.pose_parts:
+            for pose_part in pose_parts:
                 count += pose_part.project.count
         else:
             # for fractional_part in fractional_parts:
             #        print("{0}".format(fractional_part.name))
 
             # This code is not quite right:
-            first_fractional_part = fractional_parts[0]
-            denominator = first_fractional_part.denominator
+            first_fractional_part: FractionalPart = fractional_parts[0]
+            denominator: int = first_fractional_part.denominator
             for fractional_part in fractional_parts[1:]:
                 assert denominator == fractional_part.denominator, \
                   "'{0}' has a denominator of {1} and '{2}' has one of {3}". \
@@ -5659,13 +5477,13 @@ class ChoicePart(ProjectPart):
                          fractional_part.denominator)
 
             # Compute the *count*:
-            numerator = 0
-            for pose_part in self.pose_parts:
-                project_part = pose_part.project_part
+            numerator: int = 0
+            for pose_part in pose_parts:
+                project_part: ProjectPart = pose_part.project_part
                 # print("'{0}'".format(project_part.name))
                 if isinstance(project_part, AliasPart):
-                    alias_parts = project_part
-                    for project_part in alias_parts.project_parts:
+                    alias_part = project_part
+                    for project_part in alias_part.project_parts:
                         if isinstance(project_part, FractionalPart):
                             fractional_part = project_part
                 elif isinstance(project_part, FractionalPart):
@@ -5673,7 +5491,7 @@ class ChoicePart(ProjectPart):
                 else:
                     assert False, "Missing code"
 
-                fractional_numerator = fractional_part.numerator
+                fractional_numerator: int = fractional_part.numerator
                 for index in range(pose_part.project.count):
                     if numerator + fractional_numerator > denominator:
                         count += 1
@@ -5682,68 +5500,60 @@ class ChoicePart(ProjectPart):
             if numerator > 0:
                 numerator = 0
                 count += 1
-
         return count
 
     # ChoicePart.choice_parts():
-    def choice_parts(self):
+    def choice_parts(self) -> "List[ChoicePart]":
         """ *ChoicePart*: Return a list of *ChoicePart* corresponding
             to *self* """
-
-        assert isinstance(self, ChoicePart)
-        return [self]
+        choice_part: ChoicePart = self
+        return [choice_part]
 
     # ChoicePart.footprints_check():
-    def footprints_check(self, kicad_footprints):
+    def footprints_check(self, footprints: Dict[str, str]) -> None:
         """ *ChoicePart*: Verify that all the footprints exist for the *ChoicePart* object
             (i.e. *self*.)
         """
 
         # Use *choice_part* instead of *self*:
-        choice_part = self
-
-        # Verify argument types:
-        assert isinstance(kicad_footprints, dict)
-
-        kicad_footprint = choice_part.kicad_footprint
-        if kicad_footprint != "-":
-            kicad_footprints[kicad_footprint] = choice_part.name
+        choice_part: ChoicePart = self
+        footprint: str = choice_part.footprint
+        if footprint != "-":
+            footprints[footprint] = choice_part.name
             # rotation = choice_part.rotation
 
     # ChoicePart.references_text_get():
-    def references_text_get(self):
+    def references_text_get(self) -> str:
         """ *ChoicePart*: Return a string of references for *self*. """
 
-        references_text = ""
-        previous_project = None
-        is_first = True
-        for pose_part in self.pose_parts:
-            project = pose_part.project
+        choice_part: ChoicePart = self
+        references_text: str = ""
+        previous_project: Optional[Project] = None
+        is_first: bool = True
+        pose_part: PosePart
+        for pose_part in choice_part.pose_parts:
+            project: Project = pose_part.project
             if project != previous_project:
                 if not is_first:
                     references_text += "]"
-                references_text += "[{0}:".format(project.name)
+                references_text += f"[{project.name}"
             previous_project = project
             is_first = False
 
             # Now tack the reference to the end:
-            references_text += " {0}".format(pose_part.reference)
+            references_text += f" {pose_part.reference}"
         references_text += "]"
         return references_text
 
     # ChoicePart.select():
     @trace(2)
-    def select(self, excluded_vendor_names, announce=False, tracing=""):
+    def select(self, excluded_vendor_names: Dict[str, None], announce: bool = False,
+               tracing: str = "") -> int:
         """ *ChoicePart*: Select and return the best priced *ActualPart*
             for the *ChoicePart* (i.e. *self*) excluding any vendors
             in the *excluded_vendor_names* dictionary.
         """
-        # Verify argument types:
-        assert isinstance(excluded_vendor_names, dict)
-        assert isinstance(announce, bool)
-        assert isinstance(tracing, str)
-
-        trace_level = trace_level_get()
+        trace_level: int = trace_level_get()
 
         # This lovely piece of code basically brute forces the decision
         # process of figuring out which *vendor_part* to select and the
@@ -5755,29 +5565,35 @@ class ChoicePart(ProjectPart):
         # off the head of the list.
 
         # Grab some values from *choice_part* (i.e. *self*):
-        choice_part = self
-        required_quantity = choice_part.count_get()
-        actual_parts = choice_part.actual_parts
-        quints = []
+        choice_part: "ChoicePart" = self
+        required_quantity: int = choice_part.count_get()
+        actual_parts: List[ActualPart] = choice_part.actual_parts
+        quints: List[Quint] = []
 
+        actual_part_index: int
+        actual_part: ActualPart
         for actual_part_index, actual_part in enumerate(actual_parts):
             if tracing and trace_level >= 1:
-                manufacturer_name = actual_part.manufacturer_name
-                manufacturer_part_name = actual_part.manufacturer_part_name
+                manufacturer_name: str = actual_part.manufacturer_name
+                manufacturer_part_name: str = actual_part.manufacturer_part_name
                 print(f"{tracing} Manufacturer: '{manufacturer_name}' '{manufacturer_part_name}'")
-            vendor_parts = actual_part.vendor_parts
+            vendor_parts: List[VendorPart] = actual_part.vendor_parts
+            vendor_part_index: int
+            vendor_part: VendorPart
             for vendor_part_index, vendor_part in enumerate(vendor_parts):
                 # if tracing and trace_level >= 2
                 #     print(f"Vendor: {vendor_part.vendor_name}: "
                 #           f"'{vendor_part.vendor_part_name}':"
                 #           f":{vendor_part.quantity_available}")
                 if tracing and trace_level >= 2:
-                    vendor_name = vendor_part.vendor_name
-                    vendor_part_name = vendor_part.vendor_part_name
-                    quantity_available = vendor_part.quantity_available
+                    vendor_name: str = vendor_part.vendor_name
+                    vendor_part_name: str = vendor_part.vendor_part_name
+                    quantity_available: int = vendor_part.quantity_available
                     print(f"{tracing}  Vendor: {quantity_available} x "
                           f"'{vendor_name}': '{vendor_part_name}'")
-                price_breaks = vendor_part.price_breaks
+                price_breaks: List[PriceBreak] = vendor_part.price_breaks
+                price_break_index: int
+                price_break: PriceBreak
                 for price_break_index, price_break in enumerate(price_breaks):
                     # if tracing:
                     #        print("  B")
@@ -5785,17 +5601,17 @@ class ChoicePart(ProjectPart):
                     # We not have an *actual_part*, *vendor_part* and
                     # *price_break* triple.  Compute *order_quantity*
                     # and *total_cost*:
-                    price = price_break.price
-                    quantity = price_break.quantity
-                    order_quantity = max(required_quantity, quantity)
-                    total_cost = order_quantity * price
+                    price: float = price_break.price
+                    quantity: int = price_break.quantity
+                    order_quantity: int = max(required_quantity, quantity)
+                    total_cost: float = order_quantity * price
                     # if tracing:
                     #     print("   price={0:.2f} quant={1} order_quantity={2} total_cost={3:.2f}".
                     #           format(price, quantity, order_quantity, total_cost))
 
                     # Assemble the *quint* and append to *quints* if there
                     # enough parts available:
-                    is_excluded = vendor_part.vendor_name in excluded_vendor_names
+                    is_excluded: bool = vendor_part.vendor_name in excluded_vendor_names
                     # if trace_level:
                     #    print(f"quantity_available={vendor_part.quantity_available}, "
                     #          f"is_excluded={is_excluded}")
@@ -5805,9 +5621,9 @@ class ChoicePart(ProjectPart):
                               f"Is Excluded:{is_excluded}")
                     if not is_excluded and vendor_part.quantity_available >= order_quantity:
                         assert price_break_index < len(price_breaks)
-                        quint = (total_cost, order_quantity,
-                                 actual_part_index, vendor_part_index,
-                                 price_break_index, len(price_breaks))
+                        quint: Quint = (total_cost, order_quantity,
+                                        actual_part_index, vendor_part_index,
+                                        price_break_index, len(price_breaks))
                         quints.append(quint)
                         if tracing:
                             print(f"{tracing}    quint={quint}")
@@ -5860,50 +5676,42 @@ class ChoicePart(ProjectPart):
 
         # assert isinstance(selected_actual_part, ActualPart)
 
-        missing_part = 0
+        missing_part: int = 0
         if len(quints) == 0:
             missing_part = 1
 
         return missing_part
 
     # ChoicePart.vendor_names_load():
-    def vendor_names_load(self, vendor_names_table, excluded_vendor_names):
+    def vendor_names_load(self, vendor_names_table: Dict[str, None],
+                          excluded_vendor_names: Dict[str, None], tracing: str = "") -> None:
         """ *ChoicePart*: Add each possible vendor name possible for the
             *ChoicePart* object (i.e. *self*) to *vendor_names_table*
             provided it is not in *excluded_vendor_names*:
         """
-
-        # Verify argument types:
-        assert isinstance(vendor_names_table, dict)
-        assert isinstance(excluded_vendor_names, dict)
-
         # Visit each *actual_part* and add the vendor names to
         # *vendor_names_table*:
-        for actual_part in self.actual_parts:
-            actual_part.vendor_names_load(
-              vendor_names_table, excluded_vendor_names)
+        choice_part: ChoicePart = self
+        actual_parts: List[ActualPart] = choice_part.actual_parts
+        actual_part: ActualPart
+        for actual_part in actual_parts:
+            actual_part.vendor_names_load(vendor_names_table, excluded_vendor_names)
 
     # ChoicePart.vendor_parts_refresh():
     @trace(1)
-    def vendor_parts_refresh(self, proposed_actual_parts, order, part_name, tracing=""):
-        # Verify argument types:
-        assert isinstance(proposed_actual_parts, list)
-        assert isinstance(order, Order)
-        assert isinstance(part_name, str)
-        assert isinstance(tracing, str)
-
+    def vendor_parts_refresh(self, proposed_actual_parts: List[ActualPart],
+                             order: Order, part_name: str, tracing: str = "") -> None:
         # Grab some values from *choice_part* (i.e. *self*) and *order*:
-        choice_part = self
-        choice_part_name = choice_part.name
-        pandas = order.pandas
-        stale = order.stale
-        vendor_searches_root = order.vendor_searches_root
-
-        trace_level = trace_level_get()
+        choice_part: ChoicePart = self
+        choice_part_name: str = choice_part.name
+        pandas: List[Panda] = order.pandas
+        stale: int = order.stale
+        vendor_searches_root: str = order.vendor_searches_root
+        trace_level: int = trace_level_get()
 
         # Construct the file path for the `.xml` file associated *choice_part*:
-        xml_base_name = Encode.to_file_name(choice_part_name + ".xml")
-        xml_full_name = os.path.join(vendor_searches_root, xml_base_name)
+        xml_base_name: str = Encode.to_file_name(choice_part_name + ".xml")
+        xml_full_name: str = os.path.join(vendor_searches_root, xml_base_name)
         if tracing:
             print(f"{tracing}choice_part_name='{choice_part_name}'")
             print(f"{tracing}vendor_searches_root='{vendor_searches_root}'")
@@ -5913,20 +5721,21 @@ class ChoicePart(ProjectPart):
         # Open *xml_full_name*, read it in, and fill in *previous_actual_parts_table* with
         # the resulting *previous_actual_part* from the `.xml` file.  Mark *xml_save_required*
         # as *True* if *xml_full_file_name* does not exist:
-        xml_save_required = False
-        previous_actual_parts = list()
-        previous_actual_parts_table = dict()
+        xml_save_required: bool = False
+        previous_actual_parts: List[ActualPart] = list()
+        previous_actual_parts_table: Dict[Tuple[str, str], ActualPart] = dict()
         if os.path.isfile(xml_full_name):
             # Read in and parse the *xml_full_name* file:
+            xml_read_file: IO[str]
             with open(xml_full_name) as xml_read_file:
-                choice_part_xml_text = xml_read_file.read()
-                choice_part_tree = etree.fromstring(choice_part_xml_text)
+                choice_part_xml_text: str = xml_read_file.read()
+                choice_part_tree: etree._Element = etree.fromstring(choice_part_xml_text)
 
                 # Note that *previous_choice_part* is kind of busted since it
                 # its internal *project_parts* and *searches* lists are empty.
                 # This is OK, since we only need the *previous_actual_parts* list
                 # which is popluated with valid *ActualPart*'s:
-                previous_choice_part = ChoicePart.xml_parse(choice_part_tree)
+                previous_choice_part: ChoicePart = ChoicePart.xml_parse(choice_part_tree)
                 if tracing:
                     print(f"{tracing}Read in '{xml_full_name}'")
 
@@ -5947,9 +5756,10 @@ class ChoicePart(ProjectPart):
             previous_actual_parts.sort(key=lambda previous_actual_part: previous_actual_part.key)
 
             # Compute the *maximum_actual_parts_size*:
-            proposed_actual_parts_size = len(proposed_actual_parts)
-            previous_actual_parts_size = len(previous_actual_parts)
-            maximum_actual_parts_size = max(proposed_actual_parts_size, previous_actual_parts_size)
+            proposed_actual_parts_size: int = len(proposed_actual_parts)
+            previous_actual_parts_size: int = len(previous_actual_parts)
+            maximum_actual_parts_size: int = max(proposed_actual_parts_size,
+                                                 previous_actual_parts_size)
             print(f"{tracing}proposed_actual_parts_size={proposed_actual_parts_size}")
             print(f"{tracing}previous_actual_parts_size={previous_actual_parts_size}")
             print(f"{tracing}maximum_actual_parts_size={maximum_actual_parts_size}")
@@ -5958,30 +5768,31 @@ class ChoicePart(ProjectPart):
             # printing out the key values side by side:
             print(f"{tracing}Actual_Parts[xx]: (proposed)  (previous)")
             for index in range(maximum_actual_parts_size):
-                proposed_text = ("--------" if index >= proposed_actual_parts_size
-                                 else proposed_actual_parts[index].key)
-                previous_text = ("--------" if index >= previous_actual_parts_size
-                                 else previous_actual_parts[index].key)
+                proposed_text: str = ("--------" if index >= proposed_actual_parts_size
+                                      else str(proposed_actual_parts[index].key))
+                previous_text: str = ("--------" if index >= previous_actual_parts_size
+                                      else str(previous_actual_parts[index].key))
                 print(f"{tracing}Actual_Parts[{index}]:'{previous_text}'\t{proposed_text}")
 
         # We need to figure out when actual parts from the `.xml` are old (i.e. *stale*)
         # and refresh them.
-        now = int(time.time())
+        now: int = int(time.time())
         if tracing:
             print(f"{tracing}now={now} stale={stale} now-stale={now-stale}")
 
         # Now sweep through *proposed_actual_parts* and refresh any that are either missing or out
         # of date and construct the *final_actual_parts*:
-        final_actual_parts = list()
+        final_actual_parts: List[ActualPart] = list()
+        proposed_actual_part: ActualPart
         for index, proposed_actual_part in enumerate(proposed_actual_parts):
             # Grab the *proposed_actual_part_key*:
-            proposed_actual_part_key = proposed_actual_part.key
+            proposed_actual_part_key: Tuple[str, str] = proposed_actual_part.key
             if tracing:
                 print(f"{tracing}Proposed_Actual_Part[{index}]:'{proposed_actual_part.key}'")
 
             # Start by assuming that *lookup_is_required* and set to *False* if we can avoid
             # the lookup:
-            lookup_is_required = True
+            lookup_is_required: bool = True
             if proposed_actual_part_key in previous_actual_parts_table:
                 if tracing and trace_level >= 2:
                     print(f"{tracing}'{proposed_actual_part_key} is in previous_actual_parts_table")
@@ -5989,15 +5800,16 @@ class ChoicePart(ProjectPart):
                 # We have a *previous_actual_part* that matches *proposed_actual_part*.
                 # Now we see if can simply copy *previous_vendor_parts* over or
                 # whether we must trigger a vendor parts lookup:
-                previous_actual_part = previous_actual_parts_table[proposed_actual_part_key]
-                previous_vendor_parts = previous_actual_part.vendor_parts
+                key: Tuple[str, str] = proposed_actual_part_key
+                previous_actual_part = previous_actual_parts_table[key]
+                previous_vendor_parts: List[VendorPart] = previous_actual_part.vendor_parts
                 if tracing and trace_level >= 2:
                     print(f"{tracing}previous_actual_part.name="
                           f"'{previous_actual_part.manufacturer_part_name}'")
                     print(f"{tracing}len(previous_vendor_parts)={len(previous_vendor_parts)}")
 
                 # Compute the *minimum_time_stamp* across all *previous_vendor_parts*:
-                minimum_timestamp = now
+                minimum_timestamp: int = now
                 for previous_vendor_part in previous_vendor_parts:
                     minimum_timestamp = min(minimum_timestamp, previous_vendor_part.timestamp)
                 if tracing and trace_level >= 2:
@@ -6019,16 +5831,18 @@ class ChoicePart(ProjectPart):
             # If *lookup_is_required*, visit each *Panda* object in *pandas* and look up
             # *VendorPart*'s.  Assemble them all in the *new_vendor_parts* list:
             if lookup_is_required:
-                new_vendor_parts = list()
+                new_vendor_parts: List[VendorPart] = list()
+                panda: Panda
                 for panda in pandas:
-                    panda_vendor_parts = panda.vendor_parts_lookup(proposed_actual_part,
-                                                                   part_name)
+                    actual_part: ActualPart = proposed_actual_part
+                    panda_vendor_parts: List[VendorPart] = panda.vendor_parts_lookup(actual_part,
+                                                                                     part_name)
                     if tracing:
                         trace("{tracing}len(panda_vendor_parts)={len(panda_vendor_parts)}")
                     new_vendor_parts.extend(panda_vendor_parts)
                     if tracing:
-                        panda_vendor_parts_size = len(panda_vendor_parts)
-                        new_vendor_parts_size = len(new_vendor_parts)
+                        panda_vendor_parts_size: int = len(panda_vendor_parts)
+                        new_vendor_parts_size: int = len(new_vendor_parts)
                         print(f"{tracing}panda_vendor_parts_size={panda_vendor_parts_size}")
                         print(f"{tracing}new_vendor_parts_size={new_vendor_parts_size}")
                 if len(new_vendor_parts) >= 0:
@@ -6039,10 +5853,11 @@ class ChoicePart(ProjectPart):
 
         # Figure out if we need to write out *final_actual_parts* by figuring out
         # whether or not they match *previous_actual_parts*:
+        TableType = Dict[Tuple[str, str], ActualPart]
         previous_actual_parts_table = {previous_actual_part.key: previous_actual_part
                                        for previous_actual_part in previous_actual_parts}
-        final_actual_parts_table = {final_actual_part.key: final_actual_part
-                                    for final_actual_part in final_actual_parts}
+        final_actual_parts_table: TableType = {final_actual_part.key: final_actual_part
+                                               for final_actual_part in final_actual_parts}
         xml_save_required &= len(previous_actual_parts_table) != len(final_actual_parts_table)
         if not xml_save_required:
             for final_actual_part_key, final_actual_part in final_actual_parts_table.items():
@@ -6079,21 +5894,18 @@ class ChoicePart(ProjectPart):
                 xml_write_file.write(xml_text)
 
     # ChoicePart.xml_lines_append():
-    def xml_lines_append(self, xml_lines, indent):
-        # Verify argument types:
-        assert isinstance(xml_lines, list)
-        assert isinstance(indent, str)
-
+    def xml_lines_append(self, xml_lines: List[str], indent: str, tracing: str = "") -> None:
         # Grab some values from *choice_part* (i.e. *self*):
-        choice_part = self
-        actual_parts = choice_part.actual_parts
-        name = choice_part.name
+        choice_part: ChoicePart = self
+        actual_parts: List[ActualPart] = choice_part.actual_parts
+        name: str = choice_part.name
 
         # Output the `<ChoicePart ... >` tag:
         xml_lines.append(f'{indent}<ChoicePart name="{Encode.to_attribute(name)}">')
 
         # Output the `<ActualPart ... >` tags:
-        next_indent = indent + " "
+        next_indent: str = indent + " "
+        actual_part: ActualPart
         for actual_part in actual_parts:
             actual_part.xml_lines_append(xml_lines, next_indent)
 
@@ -6102,20 +5914,18 @@ class ChoicePart(ProjectPart):
 
     # ChoicePart.xml_parse():
     @staticmethod
-    def xml_parse(choice_part_tree):
-        # Verify argument types:
-        assert isinstance(choice_part_tree, etree._Element)
-
+    def xml_parse(choice_part_tree: etree._Element) -> "ChoicePart":
         # Create *choice_part* (most of the values are no longer used...):
         assert choice_part_tree.tag == "ChoicePart"
-        attributes_table = choice_part_tree.attrib
-        name = attributes_table["name"]
-        choice_part = ChoicePart(name, [], [])
+        attributes_table: Dict[str, str] = choice_part_tree.attrib
+        name: str = attributes_table["name"]
+        choice_part: ChoicePart = ChoicePart(name, [], [])
 
         # Read in the *actual_parts* from *choice_part_tree* and return the resulting *choice_part*:
-        actual_parts = choice_part.actual_parts
+        actual_parts: List[ActualPart] = choice_part.actual_parts
+        actual_part_tree: etree._Element
         for actual_part_tree in list(choice_part_tree):
-            actual_part = ActualPart.xml_parse(actual_part_tree)
+            actual_part: ActualPart = ActualPart.xml_parse(actual_part_tree)
             actual_parts.append(actual_part)
         return choice_part
 
@@ -6126,26 +5936,30 @@ class FractionalPart(ProjectPart):
     # using a portion of another *ProjectPart*.
 
     # FractionalPart.__init__():
-    def __init__(self, name, kicad_footprint,
-                 choice_part, numerator, denominator, description):
+    def __init__(self, name: str, projects: List[Project], footprint: str, choice_part: ChoicePart,
+                 numerator: int, denominator: int, description: str, tracing: str = "") -> None:
         """ *FractionalPart*: Initialize *self* to contain
             *name*, *kicad_footprint*, *choie_part*,
             *numerator*, *denomoniator*, and *description*. """
-
-        # Verify argument types:
-        assert isinstance(name, str)
-        assert isinstance(kicad_footprint, str)
-        assert isinstance(choice_part, ChoicePart)
-
         # Load up *self*:
-        super().__init__(name, kicad_footprint)
-        self.choice_part = choice_part
-        self.numerator = numerator
-        self.denominator = denominator
-        self.description = description
+        super().__init__(name, projects)
+        # fractional_part: FractionPart = self
+        self.choice_part: ChoicePart = choice_part
+        self.footprint: str = footprint
+        self.numerator: int = numerator
+        self.denominator: int = denominator
+        self.description: str = description
+
+    # FractionalPart.__str__()
+    def __str__(self) -> str:
+        name: str = "??"
+        fractional_part: FractionalPart = self
+        if hasattr(fractional_part, "name"):
+            name = fractional_part.name
+        return f"FractionalPart('{name}')"
 
     # FractionalPart.choice_parts():
-    def choice_parts(self):
+    def choice_parts(self) -> List[ChoicePart]:
         """ *FractionalPart*: Return the *ChoicePart* objects associated
             with *self*.
         """
@@ -6155,42 +5969,42 @@ class FractionalPart(ProjectPart):
         return [choice_part]
 
     # FractionalPart.footprints_check():
-    def footprints_check(self, kicad_footprints):
+    def footprints_check(self, footprints: Dict[str, str]) -> None:
         """ *FractionalPart*: Verify that all the footprints exist for the *FractionalPart* object
             (i.e. *self*.)
         """
 
         # Use *fractional_part* instead of *self*:
-        fractional_part = self
-
-        # Verify argument types:
-        assert isinstance(kicad_footprints, dict)
+        fractional_part: FractionalPart = self
 
         # Record *kicad_footprint* into *kicad_footprints*:
-        kicad_footprint = fractional_part.kicad_footprint
-        if kicad_footprint != "-":
-            kicad_footprints[kicad_footprint] = fractional_part.name
+        footprint: str = fractional_part.footprint
+        if footprint != "-":
+            footprints[footprint] = fractional_part.name
 
 
 # Units:
 class Units:
     # Units.__init():
-    def __init__(self):
+    def __init__(self) -> None:
         pass
+
+    # Units.__str__():
+    def __str__(self) -> str:
+        return "Units()"
 
     # Units.si_units_re_text_get():
     @staticmethod
-    def si_units_re_text_get():
-        base_units = (
-          "s(ecs?)?", "seconds?", "m(eters?)?", "g(rams?)?", "[Aa](mps?)?", "[Kk](elvin)?",
-          "mol(es?)?", "cd", "candelas?")
-        derived_units = ("rad", "sr", "[Hh]z", "[Hh]ertz", "[Nn](ewtons?)?", "Pa(scals?)?",
-                         "J(oules?)?", "W(atts?)?", "°C", "V(olts?)?", "F(arads?)?", "Ω",
-                         "O(hms?)?", "S", "Wb", "T(eslas?)?", "H", "degC", "lm", "lx", "Bq",
-                         "Gy", "Sv", "kat")
-        all_units = base_units + derived_units
-        all_units_re_text = "(" + "|".join(all_units) + ")"
-        prefixes = (
+    def si_units_re_text_get() -> str:
+        base_units: List[str] = ["s(ecs?)?", "seconds?", "m(eters?)?", "g(rams?)?", "[Aa](mps?)?",
+                                 "[Kk](elvin)?", "mol(es?)?", "cd", "candelas?"]
+        derived_units: List[str] = ["rad", "sr", "[Hh]z", "[Hh]ertz", "[Nn](ewtons?)?",
+                                    "Pa(scals?)?", "J(oules?)?", "W(atts?)?", "°C", "V(olts?)?",
+                                    "F(arads?)?", "Ω", "O(hms?)?", "S", "Wb", "T(eslas?)?", "H",
+                                    "degC", "lm", "lx", "Bq", "Gy", "Sv", "kat"]
+        all_units: List[str] = base_units + derived_units
+        all_units_re_text: str = "(" + "|".join(all_units) + ")"
+        prefixes: List[Tuple[str, float]] = [
           ("Y", 1e24),
           ("Z", 1e21),
           ("E", 1e18),
@@ -6209,14 +6023,15 @@ class Units:
           ("a", 1e-18),
           ("z", 1e-21),
           ("y", 1e-24)
-        )
-        single_letter_prefixes = [prefix[0] for prefix in prefixes if len(prefix[0]) == 1]
-        single_letter_re_text = "[" + "".join(single_letter_prefixes) + "]"
-        multi_letter_prefixes = [prefix[0] for prefix in prefixes if len(prefix[0]) >= 2]
-        letter_prefixes = [single_letter_re_text] + multi_letter_prefixes
-        prefix_re_text = "(" + "|".join(letter_prefixes) + ")"
+        ]
+        single_letter_prefixes: List[str] = [prefix[0] for prefix in prefixes
+                                             if len(prefix[0]) == 1]
+        single_letter_re_text: str = "[" + "".join(single_letter_prefixes) + "]"
+        multi_letter_prefixes: List[str] = [prefix[0] for prefix in prefixes if len(prefix[0]) >= 2]
+        letter_prefixes: List[str] = [single_letter_re_text] + multi_letter_prefixes
+        prefix_re_text: str = "(" + "|".join(letter_prefixes) + ")"
         # print("prefix_re_text='{0}'".format(prefix_re_text))
-        si_units_re_text = prefix_re_text + "?" + all_units_re_text
+        si_units_re_text: str = prefix_re_text + "?" + all_units_re_text
         # print("si_units_re_text='{0}'".format(si_units_re_text))
         return si_units_re_text
 
@@ -6226,21 +6041,10 @@ class VendorPart:
     # A vendor part represents a part that can be ordered from a vendor.
 
     # VendorPart.__init__():
-    def __init__(self, actual_part, vendor_name, vendor_part_name,
-                 quantity_available, price_breaks, timestamp=0):
+    def __init__(self, actual_part: ActualPart, vendor_name: str, vendor_part_name: str,
+                 quantity_available: int, price_breaks: List[PriceBreak],
+                 timestamp: int = 0, tracing: str = "") -> None:
         """ *VendorPart*: Initialize *self* to contain *actual_part"""
-
-        # print("vendor_part_name=", vendor_part_name)
-
-        # Check argument types:
-        assert isinstance(actual_part, ActualPart)
-        assert isinstance(vendor_name, str)
-        assert isinstance(vendor_part_name, str)
-        assert isinstance(quantity_available, int), f"quantity_available={quantity_available}"
-        assert isinstance(price_breaks, list)
-        assert isinstance(timestamp, int)
-        for price_break in price_breaks:
-            assert isinstance(price_break, PriceBreak)
 
         # Clean up *vendor_name*:
         # original_vendor_name = vendor_name
@@ -6257,114 +6061,77 @@ class VendorPart:
 
         # Sort *price_breakes* and convert to a tuple:
         price_breaks.sort(key=lambda price_break: (price_break.quantity, price_break.price))
-        price_breaks = tuple(price_breaks)
 
         # Load up *self*:
-        self.actual_part_key = actual_part.key
-        self.quantity_available = quantity_available
-        self.price_breaks = price_breaks
-        self.timestamp = timestamp
-        self.vendor_key = (vendor_name, vendor_part_name)
-        self.vendor_name = vendor_name
-        self.vendor_part_name = vendor_part_name
+        # vendor_part: VendorPart = self
+        self.actual_part_key: Tuple[str, str] = actual_part.key
+        self.quantity_available: int = quantity_available
+        self.price_breaks: List[PriceBreak] = price_breaks
+        self.timestamp: int = timestamp
+        self.vendor_key: Tuple[str, str] = (vendor_name, vendor_part_name)
+        self.vendor_name: str = vendor_name
+        self.vendor_part_name: str = vendor_part_name
 
         # Append *self* to the vendor parts of *actual_part*:
         actual_part.vendor_part_append(self)
 
     # VendorPart.__eq__():
-    def __eq__(self, vendor_part2):
-        # Verify argument types:
-        assert isinstance(vendor_part2, VendorPart)
+    def __eq__(self, vendor_part2: object) -> bool:
+        equal: bool = False
+        if isinstance(vendor_part2, VendorPart):
+            # Compare *vendor_part1* to *vendor_part2*:
+            vendor_part1: VendorPart = self
+            actual_part_key_equal: bool = (vendor_part1.actual_part_key ==
+                                           vendor_part2.actual_part_key)
+            quantity_available_equal: bool = (vendor_part1.quantity_available ==
+                                              vendor_part2.quantity_available)
+            timestamp_equal: bool = vendor_part1.timestamp == vendor_part2.timestamp
+            vendor_key_equal: bool = vendor_part1.vendor_key == vendor_part2.vendor_key
 
-        # Compare *vendor_part1* to *vendor_part2*:
-        vendor_part1 = self
-        actual_part_key_equal = vendor_part1.actual_part_key == vendor_part2.actual_part_key
-        quantity_available_equal = (vendor_part1.quantity_available ==
-                                    vendor_part2.quantity_available)
-        timestamp_equal = vendor_part1.timestamp == vendor_part2.timestamp
-        vendor_key_equal = vendor_part1.vendor_key == vendor_part2.vendor_key
+            # Compute whether *price_breaks1* is equal to *price_breaks2*:
+            price_breaks_equal: bool = vendor_part1.price_breaks == vendor_part2.price_breaks
 
-        # Compute whether *price_breaks1* is equal to *price_breaks2*:
-        price_breaks1 = vendor_part1.price_breaks
-        price_breaks2 = vendor_part2.price_breaks
-        price_breaks1_size = len(price_breaks1)
-        price_breaks2_size = len(price_breaks2)
-        price_breaks_equal = price_breaks1_size == price_breaks2_size
-        if price_breaks_equal:
-            for index in range(price_breaks1_size):
-                price_break1 = price_breaks1[index]
-                price_break2 = price_breaks2[index]
-                price_breaks_equal = price_breaks_equal and (price_break1 == price_break2)
-
-        # Compute *vendor_parts_equal* which is only *True* if all the other fields are equal:
-        vendor_parts_equal = (actual_part_key_equal and quantity_available_equal and
-                              timestamp_equal and vendor_key_equal and price_breaks_equal)
-        return vendor_parts_equal
+            equal = (actual_part_key_equal and quantity_available_equal and
+                     timestamp_equal and vendor_key_equal and price_breaks_equal)
+        return equal
 
     # VendorPart.__format__():
-    def __format__(self, format):
+    def __format__(self, format: str) -> str:
         """ *VendorPart*: Print out the information of the *VendorPart* (i.e. *self*):
         """
-
         vendor_part = self
         vendor_name = vendor_part.vendor_name
         vendor_part_name = vendor_part.vendor_part_name
         # price_breaks = vendor_part.price_breaks
         return "'{0}':'{1}'".format(vendor_name, vendor_part_name)
 
+    # VendorPart.__str__():
     def __str__(self):
-        vendor_part = self
+        vendor_part: VendorPart = self
         return f"VendorPart('{vendor_part.vendor_name}':'{vendor_part.vendor_part_name}')"
 
-    # VendorPart.dump():
-    def dump(self, out_stream, indent):
-        """ *VendorPart*: Dump the *VendorPart* (i.e. *self*) out to
-            *out_stream* in human readable form indented by *indent* spaces.
-        """
-
-        # Verify argument types:
-        assert isinstance(out_stream, io.IOBase)
-        assert isinstance(indent, int)
-
-        # Dump out *self*:
-        out_stream.write("{0}ActualPart_Key:{1}\n".
-                         format(" " * indent, self.actual_part_key))
-        out_stream.write("{0}Vendor_Key:{1}\n".
-                         format(" " * indent, self.vendor_key))
-        out_stream.write("{0}Vendor_Name:{1}\n".
-                         format(" " * indent, self.vendor_name))
-        out_stream.write("{0}VendorPart_Name:{1}\n".
-                         format(" " * indent, self.vendor_part_name))
-        out_stream.write("{0}Quantity_Available:{1}\n".
-                         format(" " * indent, self.quantity_available))
-        out_stream.write("{0}PriceBreaks: (skip)\n".
-                         format(" " * indent))
-
     # VendorPart.price_breaks_text_get():
-    def price_breaks_text_get(self):
+    def price_breaks_text_get(self) -> str:
         """ *VendorPart*: Return the prices breaks for the *VendorPart*
             object (i.e. *self*) as a text string:
         """
 
-        price_breaks_text = ""
+        price_breaks_texts: List[str] = list()
         for price_break in self.price_breaks:
-            price_breaks_text += "{0}/${1:.3f} ".format(
-              price_break.quantity, price_break.price)
+            price_breaks_texts.append("{0}/${1:.3f}".
+                                      format(price_break.quantity, price_break.price))
+        price_breaks_text: str = " ".join(price_breaks_texts)
         return price_breaks_text
 
     # VendorPart.xml_lines_append():
-    def xml_lines_append(self, xml_lines, indent):
-        # Verify argument types:
-        assert isinstance(xml_lines, list)
-        assert isinstance(indent, str)
-
+    def xml_lines_append(self, xml_lines: List[str], indent: str, tracing: str = "") -> None:
         # Grab some values from *vendor_part* (i.e. *self*):
-        vendor_part = self
-        quantity_available = vendor_part.quantity_available
-        price_breaks = vendor_part.price_breaks
-        vendor_name = vendor_part.vendor_name
-        vendor_part_name = vendor_part.vendor_part_name
-        timestamp = vendor_part.timestamp
+        vendor_part: VendorPart = self
+        quantity_available: int = vendor_part.quantity_available
+        price_breaks: List[PriceBreak] = vendor_part.price_breaks
+        vendor_name: str = vendor_part.vendor_name
+        vendor_part_name: str = vendor_part.vendor_part_name
+        timestamp: int = vendor_part.timestamp
 
         # Output the `<VendorPart ...>` tag first:
         xml_lines.append(f'{indent}<VendorPart '
@@ -6374,7 +6141,8 @@ class VendorPart:
                          f'vendor_part_name="{Encode.to_attribute(vendor_part_name)}">')
 
         # Output the nested `<PriceBreak ...>` tags:
-        next_indent = indent + " "
+        next_indent: str = indent + " "
+        price_break: PriceBreak
         for price_break in price_breaks:
             price_break.xml_lines_append(xml_lines, next_indent)
 
@@ -6384,380 +6152,25 @@ class VendorPart:
     # VendorPart.xml_parse():
     @staticmethod
     @trace(2)
-    def xml_parse(vendor_part_tree, actual_part, tracing=""):
-        # Verify argument types:
-        assert isinstance(vendor_part_tree, etree._Element)
-        assert isinstance(actual_part, ActualPart)
-        assert isinstance(tracing, str)
-        assert vendor_part_tree.tag == "VendorPart"
-
+    def xml_parse(vendor_part_tree: etree._Element, actual_part: ActualPart,
+                  tracing: str = "") -> "VendorPart":
         # Pull out the attribute values:
-        attributes_table = vendor_part_tree.attrib
-        timestamp = int(float(attributes_table["timestamp"]))
-        vendor_name = attributes_table["vendor_name"]
-        vendor_part_name = attributes_table["vendor_part_name"]
-        quantity_available = int(attributes_table["quantity_available"])
+        attributes_table: Dict[str, str] = vendor_part_tree.attrib
+        timestamp: int = int(float(attributes_table["timestamp"]))
+        vendor_name: str = attributes_table["vendor_name"]
+        vendor_part_name: str = attributes_table["vendor_part_name"]
+        quantity_available: int = int(attributes_table["quantity_available"])
 
-        price_breaks = []
-        price_break_trees = list(vendor_part_tree)
+        price_breaks: List[PriceBreak] = []
+        price_break_trees: List[etree._Element] = list(vendor_part_tree)
+        price_break_tree: etree._Element
         for price_break_tree in price_break_trees:
-            price_break = PriceBreak.xml_parse(price_break_tree)
+            price_break: PriceBreak = PriceBreak.xml_parse(price_break_tree)
             price_breaks.append(price_break)
 
-        vendor_part = VendorPart(actual_part, vendor_name, vendor_part_name,
-                                 quantity_available, price_breaks, timestamp)
+        vendor_part: VendorPart = VendorPart(actual_part, vendor_name, vendor_part_name,
+                                             quantity_available, price_breaks, timestamp)
         return vendor_part
-
-# class XXXAttribute:
-#    def __init__(self, name, type, default, optional, documentations, enumerates):
-#        # Verify argument types:
-#        assert isinstance(name, str) and len(name) > 0
-#        assert isinstance(type, str)
-#        assert isinstance(default, str) or default == None
-#        assert isinstance(optional, bool)
-#        assert isinstance(documentations, list)
-#        for documentation in documentations:
-#            assert isinstance(documentation, Documentation)
-#        assert isinstance(enumerates, list)
-#        for enumerate in enumerates:
-#            assert isinstance(enumerate, Enumerate)
-#
-#        # Stuff arguments into *attribute* (i.e. *self*):
-#        attribute = self
-#        attribute.name = name
-#        attribute.type = type
-#        attribute.default = default
-#        attribute.enumerates = enumerates
-#        attribute.optional = optional
-#        attribute.documentations = documentations
-#
-#    def __eq__(self, attribute2):
-#        # Verify argument types:
-#        assert isinstance(attribute2, Attribute)
-#        attribute1 = self
-#
-#        is_equal = (
-#          attribute1.name == attribute2.name and
-#          attribute1.type == attribute2.type and
-#          attribute1.default == attribute2.default and
-#          attribute1.optional == attribute2.optional)
-#
-#        documentations1 = attribute1.documentations
-#        documentations2 = attribute1.documentations
-#        if len(documentations1) == len(documentations2):
-#            for index in range(len(documentations1)):
-#                documentation1 = documentations1[index]
-#                documentation2 = documentations2[index]
-#                if documentation1 != documentation2:
-#                    is_result = False
-#                    break
-#        else:
-#            is_equal = False
-#        return is_equal
-#
-#    def copy(self):
-#        attribute = self
-#
-#        new_documentations = list()
-#        for documentation in attribute.documentations:
-#            new_documentations.append(documentation.copy())
-#        new_attribute = Attribute(attribute.name,
-#          attribute.type, attribute.default, attribute.optional, new_documentations, list())
-#        return new_attribute
-#
-# class XXXDocumentation:
-#    def __init__(self, language, xml_lines):
-#        # Verify argument types:
-#        assert isinstance(language, str)
-#        assert isinstance(xml_lines, list)
-#        for line in xml_lines:
-#           assert isinstance(line, str)
-#
-#        # Load arguments into *documentation* (i.e. *self*):
-#        documentation = self
-#        documentation.language = language
-#        documentation.xml_lines = xml_lines
-#
-#    def __equ__(self, documentation2):
-#        # Verify argument types:
-#        assert isinstance(documentation2, Documenation)
-#
-#        documentation1 = self
-#        is_equal = documentation1.langauge == documentation2.language
-#
-#        # Determine wheter *xml_lines1* is equal to *xml_lines2*:
-#        xml_lines1 = documentation1.xml_lines
-#        xml_lines2 = documentation2.xml_lines
-#        if len(xml_lines1) == len(line2):
-#            for index, line1 in enumerate(xml_lines1):
-#                line2 = xml_lines2[index]
-#                if line1 != line2:
-#                    is_equal = False
-#                    break
-#        else:
-#            is_equal = False
-#        return is_equal
-#
-#    def copy(self):
-#        documentation = self
-#        new_documentation = Documentation(documentation.language, list(documentation.xml_lines))
-#        return new_documentation
-#
-# class XEnumeration:
-#    """ An *Enumeration* object represents a single enumeration possibility for an attribute.
-#    """
-#
-#    # Class: Enumeration
-#    def __init__(self, **arguments_table):
-#        """
-#        """
-#        # Verify argument types:
-#        assert isinstance(name, str, documents)
-#        assert isinstace(documentations, list)
-#        for documentation in documentations:
-#            assert isinstance(documentation, Documentation)
-#
-#        # Stuff *name* value into *enumeration* (i.e. *self*):
-#        enumeration.name = name
-#        enumeration.documents = documents
-#
-# class XXXSchema:
-#    def __init__(self, schema_text=None):
-#        # Veritfy argument types:
-#        assert isinstance(schema_text, str) or schema_text == None
-#
-#        # Create an empty *schema*:
-#        target_name_space = ""
-#        attributes = list()
-#        if isinstance(schema_text, str):
-#            # Convert *schema_text* from XML format into *schema_root* (an *etree._element*):
-#            schema_root = etree.fromstring(schema_text)
-#            assert isinstance(schema_root, etree._Element)
-#
-#            xml_name_space = "{http://www.w3.org/XML/1998/namespace}"
-#
-#            assert schema_root.tag.endswith("}schema")
-#            attributes_table = schema_root.attrib
-#            assert "targetNamespace" in attributes_table
-#            target_name_space = attributes_table["targetNamespace"]
-#            xsd_elements = list(schema_root)
-#
-#            assert len(xsd_elements) == 1
-#            table_element = xsd_elements[0]
-#            assert isinstance(table_element, etree._Element)
-#            table_element_name = table_element.tag
-#            assert table_element_name.endswith("}element")
-#
-#            table_complex_types = list(table_element)
-#            assert len(table_complex_types) == 1
-#            table_complex_type = table_complex_types[0]
-#            assert isinstance(table_complex_type, etree._Element)
-#            assert table_complex_type.tag.endswith("}complexType")
-#
-#            sequences = list(table_complex_type)
-#            assert len(sequences) == 1
-#            sequence = sequences[0]
-#            assert isinstance(sequence, etree._Element)
-#            assert sequence.tag.endswith("}sequence"), sequence.tag
-#
-#            item_elements = list(sequence)
-#            assert len(item_elements) == 1
-#            item_element = item_elements[0]
-#            assert isinstance(item_element, etree._Element)
-#            assert item_element.tag.endswith("}element")
-#
-#            item_complex_types = list(item_element)
-#            assert len(item_complex_types) == 1
-#            item_complex_type = item_complex_types[0]
-#            assert isinstance(item_complex_type, etree._Element)
-#            assert item_complex_type.tag.endswith("}complexType")
-#
-#            item_attributes = list(item_complex_type)
-#            assert len(item_attributes) >= 1
-#            for attribute_child in item_attributes:
-#                # Extract the attributes of `<attribute ...>`:
-#                assert attribute_child.tag.endswith("}attribute")
-#                attributes_table = attribute_child.attrib
-#                assert "name" in attributes_table
-#                name = attributes_table["name"]
-#                #assert "type" in attributes_table  # Not present for an enumeration
-#                type = attributes_table["type"]
-#                assert type in ("xs:boolean",
-#                  "xs:enumeration", "xs:float", "xs:integer", "xs:string")
-#                optional = True
-#                if "use" in attributes_table:
-#                    use = attributes_table["use"]
-#                    assert use == "required"
-#                    optional = False
-#                default = None
-#                if "default" in attributes_table:
-#                    default = attributes_table["default"]
-#                # print("default={0}".format(default))
-#
-#                annotation_children = list(attribute_child)
-#                assert len(annotation_children) == 1
-#                annotation_child = annotation_children[0]
-#                assert isinstance(annotation_child, etree._Element)
-#
-#                # Iterate over *documentation_children* and build of a list of *Docuemtation*
-#                # objects in *documentations*:
-#                documentations = list()
-#                documentations_children = list(annotation_child)
-#                for documentation_child in documentations_children:
-#                    # Verify that that *documentation_child* has exactly on attribute named `lang`:
-#                    assert isinstance(documentation_child, etree._Element)
-#                    attributes_table = documentation_child.attrib
-#                    assert len(attributes_table) == 1
-#                    # print("attributes_table=", attributes_table)
-#                    key = xml_name_space + "lang"
-#                    assert key in attributes_table
-#
-#                    # Extract the *language* attribute value:
-#                    language = attributes_table[key]
-#
-#                    # Grab the *text* from *documentation_children*:
-#                    text = documentation_child.text.strip()
-#                    xml_lines = [line.strip().replace("<", "&lt;") for line in text.split('\n')]
-#
-#                    # Create the *documentation* and append to *documentations*:
-#                    documentation = Documentation(language, xml_lines)
-#                    documentations.append(documentation)
-#
-#                # Create *attribute* and append to *attributes*:
-#                enumerates = list()
-#                attribute = Attribute(name, type, default, optional, documentations, enumerates)
-#                attributes.append(attribute)
-#
-#        # Construct the final *schema* (i.e. *self*):
-#        schema = self
-#        schema.target_name_space = target_name_space
-#        schema.attributes = attributes
-#
-#    def __eq__(self, schema2):
-#        assert isinstance(schema2, Schema)
-#        schema1 = self
-#        attributes1 = schema1.attributes
-#        attributes2 = schema2.attributes
-#        is_equal = len(attributes1) == len(attributes2)
-#        if is_equal:
-#            for index, attribute1 in enumerate(attributes1):
-#                attribute2 = attributes2[index]
-#                if attribute1 != attribute2:
-#                    is_equal = False
-#                    break
-#        return is_equal
-#
-#    def copy(self):
-#        schema = self
-#        new_schema = Schema()
-#        new_schema.target_name_space = schema.target_name_space
-#        new_schema_attributes = new_schema.attributes
-#        assert len(new_schema_attributes) == 0
-#        for attribute in schema.attributes:
-#            new_schema_attributes.append(attribute.copy())
-#        return new_schema
-#
-#    def to_string(self):
-#        schema = self
-#        attributes = schema.attributes
-#        target_name_space = schema.target_name_space
-#
-#        xml_lines = list()
-#        xml_lines.append('<?xml version="1.0"?>')
-#        xml_lines.append('<xs:schema')
-#        xml_lines.append(' targetNamespace="{0}"'.format(target_name_space))
-#        xml_lines.append(' xmlns:xs="{0}"'.format("http://www.w3.org/2001/XMLSchema"))
-#        xml_lines.append(' xmlns="{0}">'.
-#          format("file://home/wayne/public_html/projects/manufactory_project"))
-#        xml_lines.append('  <xs:element name="{0}">'.format("drillBits"))
-#        xml_lines.append('    <xs:complexType>')
-#        xml_lines.append('      <xs:sequence>')
-#        xml_lines.append('        <xs:element name="{0}">'.format("drillBit"))
-#        xml_lines.append('          <xs:complexType>')
-#
-#        for attribute in attributes:
-#            # Unpack the values from *attribute*:
-#            name = attribute.name
-#            type = attribute.type
-#            default = attribute.default
-#            optional = attribute.optional
-#            documentations = attribute.documentations
-#
-#            xml_lines.append('            <xs:attribute')
-#            xml_lines.append('             name="{0}"'.format(name))
-#            if isinstance(default, str):
-#                xml_lines.append('             default="{0}"'.format(default))
-#            if not optional:
-#                xml_lines.append('             use="required"')
-#            xml_lines.append('             type="{0}">'.format(type))
-#            xml_lines.append('              <xs:annotation>')
-#            for document in documentations:
-#                language = document.language
-#                documentation_xml_lines = document.xml_lines
-#                xml_lines.append('                <xs:documentation xml:lang="{0}">'.
-#                  format(language))
-#                for documentation_line in documentation_xml_lines:
-#                    xml_lines.append('                  {0}'.format(documentation_line))
-#                xml_lines.append('                </xs:documentation>')
-#            xml_lines.append('              </xs:annotation>')
-#            xml_lines.append('            </xs:attribute>')
-#        xml_lines.append('          </xs:complexType>')
-#        xml_lines.append('        </xs:element>')
-#        xml_lines.append('      </xs:sequence>')
-#        xml_lines.append('    </xs:complexType>')
-#        xml_lines.append('  </xs:element>')
-#        xml_lines.append('</xs:schema>')
-#
-#        xml_lines.append("")
-#        text = '\n'.join(xml_lines)
-#        return text
-#
-#
-# https://stackoverflow.com/questions/5226091/checkboxes-in-a-combobox-using-pyqt?rq=1
-# https://stackoverflow.com/questions/24961383/how-to-see-the-value-of-pyside-qtcore-qt-itemflag
-# /usr/local/lib/python3.6/dist-packages/PySide2/examples/widgets/itemviews/stardelegate
-# https://stackoverflow.com/questions/8422760/combobox-of-checkboxes
-#
-# [Python Virtual Environments](https://realpython.com/python-virtual-environments-a-primer/)
-#
-# * Use [Virtual Environment Wrapper](https://virtualenvwrapper.readthedocs.io/en/latest/)
-#   to make life easier.
-#
-# * Add to `~/.bashrc`:
-#
-#        # Setup for Python virtual enviroments:
-#        export WORKON_HOME=$HOME/.virtualenvs             # Standard place to store virtual env.'s
-#        export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3  # Make sure you point to correct Python
-#        export VIRTUALENVWRAPPER_WORKON_CD=1              # Forces `workon` to cd to project dir.
-#        source /usr/local/bin/virtualenvwrapper.sh        # Actually `which virtualenvwrapper.sh`
-#
-# * Run the following commands in your shell:
-#
-#        sudo -H pip3 install virtualenv                   # Should already be installed
-#        sudo -H pip3 install virtualenvwrapper            # This makes life easier.
-#        source ~/.bashrc
-#
-# * The following shell commands now exist:
-#   * mkvirtualenv -a *project_directory* *env_name*: Create new virtual environment named
-#     *env_name* with *project_directory* as the home directory to go to when initially
-#     activated.  (Requires `export VIRTUALENVWRAPPER_WORKON_CD=1` to be set in `~/.bashrc`.
-#   * workon: List all available virtual environments.
-#   * workon *env_name*: Switch over to virtual environment *env_name*.
-#   * lssitepackages: List the packages installed in the current virtual environment.
-#   * Read the documentation for more commands.
-#
-# * There is a section about "Using Different Versions of Python" that looks interesting.
-#
-# Python Packaging Tutorial (2.x):
-#     https://python-packaging.readthedocs.io/en/latest/
-# [Python Packaging](https://packaging.python.org/tutorials/packaging-projects/)
-#   *
-# Another URL (talks about PyPlace accounts -- dated 2009, Python 2.6):
-#     https://pythonhosted.org/an_example_pypi_project/setuptools.html
-# [Configuring `~/.pypirc`](https://truveris.github.io/articles/configuring-pypirc/)
-# [Python Plugins](https://packaging.python.org/guides/creating-and-discovering-plugins/)
-# [Python Plugins Tutorial](https://amir.rachum.com/blog/2017/07/28/python-entry-points/)
-# [Python Tracing Decorator](https://cscheid.net/2017/12/11/minimal-tracing-decorator-python-3.html)
 
 
 if __name__ == "__main__":
