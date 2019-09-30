@@ -1439,8 +1439,16 @@ class Gui:
                           start_row_index: int, end_row_index: int, tracing: str = "") -> None:
         pass  # Do nothing for the non-GUI version of th code
 
+    # Gui.collection_clicked():
+    def collection_clicked(self, collection: "Collection", tracing: str = "") -> None:
+        assert False, "Gui.collection_clicked() shoud never be called"
+
+    # Gui.collections_clicked():
+    def collections_clicked(self, collections: "Collections", tracing: str = "") -> None:
+        assert False, "Gui.collections_clicked() shoud never be called"
+
     # Gui.directory_clicked():
-    def directory_clicked(self, directory: "Directory") -> None:
+    def directory_clicked(self, directory: "Directory", tracing: str = "") -> None:
         assert False, "Gui.directory_clicked() should never be called"
 
     # Gui.end_rows_insert():
@@ -1452,11 +1460,11 @@ class Gui:
         pass  # Do nothing for the non-GUI version of th code
 
     # Gui.search_clicked():
-    def search_clicked(self, search: "Search") -> None:
+    def search_clicked(self, search: "Search", tracing: str = "") -> None:
         assert False, "Gui.search_clicked() should never be called"
 
     # Gui.table_clicked():
-    def table_clicked(self, table: "Table") -> None:
+    def table_clicked(self, table: "Table", tracing: str = "") -> None:
         assert False, "Gui.table_clicked() should never be callded"
 
 
@@ -1527,6 +1535,13 @@ class Node:
         # Force *node* to be a child of *parent*:
         if parent is not None:
             parent.child_append(node)
+
+    # Node.can_fetch_more():
+    def can_fetch_more(self, tracing: str = "") -> bool:
+        node: Node = self
+        class_name: str = node.__class__.__name__
+        assert False, f"{class_name}.can_fetch_more() needs to be implemented"
+        return True
 
     # Node.child():
     def child(self, index: int) -> "Node":
@@ -1651,6 +1666,12 @@ class Node:
                 if tracing:
                     print(f"{tracing}Created directory '{directory_path}'")
 
+    # Node.fetch_more():
+    def fetch_more(self, tracing: str = "") -> None:
+        node: Node = self
+        class_name: str = node.__class__.__name__
+        assert False, f"{class_name}.fetch_more() has not been implmented yet."
+
     # Node.gui_get():
     def gui_get(self) -> Gui:
         # Return *gui* for *node* (i.e. *self*):
@@ -1701,6 +1722,16 @@ class Node:
         else:
             assert False, f"Node '{remove_node.name}' not in '{node.name}' remove failed"
 
+    # Node.row():
+    def row(self) -> int:
+        # Return the index of *node* (i.e. *self*) from its parent children list:
+        node: Node = self
+        parent: Optional[Node] = node.parent
+        assert isinstance(parent, Node)
+        parent_children: List[Node] = parent._children
+        result: int = parent_children.index(node)
+        return result
+
     # Node.sort_helper():
     def sort_helper(self, key_get: "Callable[[Node], Any]", tracing: str = "") -> None:
         # Sort the *children* of *node* (i.e. *self*) using *key_function*:
@@ -1714,15 +1745,12 @@ class Node:
         node: Node = self
         assert False, f"Node.tables_get() called with a node of type '{type(node)}'"
 
-    # Node.row():
-    def row(self) -> int:
-        # Return the index of *node* (i.e. *self*) from its parent children list:
+    # Node.type_letter_get():
+    def type_letter_get(self, tracing: str = "") -> str:
         node: Node = self
-        parent: Optional[Node] = node.parent
-        assert isinstance(parent, Node)
-        parent_children: List[Node] = parent._children
-        result: int = parent_children.index(node)
-        return result
+        class_name: str = node.__class__.__name__
+        assert False, f"{class_name}.type_lettet_get() has not been implemented yet."
+        return "N"
 
 
 # Directory:
@@ -1749,13 +1777,13 @@ class Directory(Node):
         directory.child_append(node)
 
     # Directory.can_fetch_more():
-    def can_fetch_more(self) -> bool:
+    def can_fetch_more(self, tracing: str = "") -> bool:
         # The call to *Directiory.partial_load*, pre-loaded all of the sub-directories and
         # tables for *directory* (i.e. *self*).  That means there is nothing more to fetch.
         return False
 
     # Directory.clicked():
-    def clicked(self, gui: Gui, tracing="") -> None:
+    def clicked(self, gui: Gui, tracing: str = "") -> None:
         # Send the clicked event back to the *gui* along with *directory* (i.e. *self*):
         directory: Directory = self
         gui.directory_clicked(directory)
@@ -1833,7 +1861,7 @@ class Directory(Node):
         return tables
 
     # Directory.type_letter_get():
-    def type_letter_get(self) -> str:
+    def type_letter_get(self, tracing: str = "") -> str:
         return 'D'
 
 
@@ -1958,11 +1986,16 @@ class Collection(Node):
         return actual_parts
 
     # Collection.can_fetch_more():
-    def can_fetch_more(self) -> bool:
+    def can_fetch_more(self, tracing: str = "") -> bool:
         # All of the directores for *collection* (i.e. *self*) have be previously found
         # using using *Collection.partial_load*().  So, there are no more *Directory*'s
         # to be loaded.
         return False
+
+    # Collection.clicked():
+    def clicked(self, gui: Gui, tracing: str = "") -> None:
+        collection: Collection = self
+        gui.collection_clicked(collection)
 
     # Collection.directories_get():
     def directories_get(self) -> List[Directory]:
@@ -2030,7 +2063,7 @@ class Collection(Node):
         return tables
 
     # Collection.type_leter_get()
-    def type_letter_get(self) -> str:
+    def type_letter_get(self, tracing: str = "") -> str:
         # print("Collection.type_letter_get(): name='{0}'".format(self.name))
         return 'C'
 
@@ -2045,7 +2078,6 @@ class Collections(Node):
         # Intialize the *Node* super class of *collections* (i.e. *self*):
         collections: Collections = self
         super().__init__(name, None, gui=gui)
-
         # Stuff some values into *collections*:
         self.collection_directories = collection_directories
         self.searches_root = searches_root
@@ -2105,8 +2137,8 @@ class Collections(Node):
         return actual_parts
 
     # Collections.can_fetch_more():
-    def can_fetch_more(self) -> bool:
-        # The children of *collections* (i.e. self*) have already be preloade by
+    def can_fetch_more(self, tracing: str = "") -> bool:
+        # The children of *collections* (i.e. self*) have already be preloaded by
         # *Collections.partial_load*().  There is nothing more to fetch:
         return False
 
@@ -2127,6 +2159,11 @@ class Collections(Node):
         # Output error if nothing is found:
         if not matching_searches:
             print(f"{project_name}: {reference} '{search_name}' not found")
+
+    # Collections.clicked():
+    def clicked(self, gui: Gui, tracing: str = "") -> None:
+        collections: Collections = self
+        gui.collections_clicked(collections)
 
     # Collections.partial_load():
     def partial_load(self, tracing: str = "") -> None:
@@ -2208,7 +2245,7 @@ class Collections(Node):
         return searches
 
     # Collections.type_leter_get():
-    def type_letter_get(self) -> str:
+    def type_letter_get(self, tracing: str = "") -> str:
         # print("Collections.type_letter_get(): name='{0}'".format(self.name))
         return 'R'
 
@@ -2283,7 +2320,7 @@ class Search(Node):
         return f"Search('{name}')"
 
     # Search.can_fetch_more():
-    def can_fetch_more(self) -> bool:
+    def can_fetch_more(self, tracing: str = "") -> bool:
         # Currently, all *Search* objects never have any childre.  Hence, there is nothing fetch:
         return False
 
@@ -2551,7 +2588,7 @@ class Search(Node):
         search.url = url
 
     # Search.type_letter_get():
-    def type_letter_get(self) -> str:
+    def type_letter_get(self, tracing: str = "") -> str:
         return 'S'
 
     # Search.url_set():
@@ -2648,7 +2685,7 @@ class Table(Node):
         self.url: str = ""
 
     # Table.can_fetch_more():
-    def can_fetch_more(self) -> bool:
+    def can_fetch_more(self, tracing: str = "") -> bool:
         # Conceptually, every table as a default `@ALL` search.  We return *True* if
         # the `@ALL` search has not actually been created yet for *table* (i.e. *self*):
         table: Table = self
@@ -3180,7 +3217,7 @@ class Table(Node):
         return type_tables
 
     # Table.type_letter_get():
-    def type_letter_get(self) -> str:
+    def type_letter_get(self, tracing: str = "") -> str:
         return 'T'
 
     # Table.xml_file_save():
