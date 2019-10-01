@@ -132,18 +132,20 @@
 
 import inspect     # Python object inspection library used by *trace*:
 import functools   # Clean up some introspection stuff with wrapper:
+from typing import (Any, Callable, Dict, List)
 
 # This module uses a couple of global variables for easy access:
 global trace_level, tracing
-trace_level = 0
-tracing = ""
+trace_level: int = 0
+tracing: str = ""
 
 
-def trace(level):
-    def value2text(value):
+def trace(level: int) -> Callable:
+    def value2text(value: object) -> str:
         """Convert a value to a human readable string."""
         # Start with *text* to something weird to start with:
-        text = "?"
+        text: str = "?"
+        value_size: int = -1
 
         # Dispatch on type of *value*:
         if isinstance(value, list):
@@ -152,7 +154,7 @@ def trace(level):
             if value_size == 0:
                 text = "[]"
             else:
-                elipsis = "" if value_size <= 1 else ",..."
+                elipsis: str = "" if value_size <= 1 else ",..."
                 text = f"{value_size}:[{value2text(value[0])}{elipsis}]"
         elif isinstance(value, tuple):
             # We have a *tuple* and need to set *text* to "()", "(value0,)", or "(value0,...)":
@@ -171,6 +173,7 @@ def trace(level):
             else:
                 elipsis = "" if value_size <= 1 else ",..."
                 for key in value:
+                    # Remember "{{" is converted to a single '{" in a formatted string:
                     text = (f"{value_size}:"
                             f"{{{value2text(key)}:{value2text(value[key])}){elipsis}}}")
         elif isinstance(value, str):
@@ -179,39 +182,43 @@ def trace(level):
             value_size = len(value)
             text = f'"{value[:10]}...{value[-10:]}"' if value_size >= 20 else f'"{value}"'
         else:
-            # All others just use the standard conversion:
+            # All others just use the standard *__str__* conversion:
             text = f"{value}"
         return text
 
-    def decorator_wrapper(function):
+    def decorator_wrapper(function: Callable) -> Callable:
         @functools.wraps(function)
-        def wrapper(*arguments, **keyword_arguments):
+        def wrapper(*arguments: List[Any], **keyword_arguments: Dict[str, Any]) -> Any:
             global trace_level
             global tracing
 
             # A *trace_level* of 0, means no tracing:
+            results = Any
             if trace_level <= 0:
                 results = function(*arguments, **keyword_arguments)
             else:
                 # A *trace_level* greater than zero means tracing:
-                signature = inspect.signature(function)
+                signature: inspect.Signature = inspect.signature(function)
                 tracing += " "
-                function_name = function.__name__
-                arguments_size = len(arguments)
-                parameters_values = list(signature.parameters.values())
+                function_name: str = function.__name__
+                arguments_size: int = len(arguments)
+                parameters_values: List[Any] = list(signature.parameters.values())
 
                 # Compute a list of *value_texts* for each *parameter_value* in *parameter_values*:
-                value_texts = list()
+                value_texts: List[str] = list()
+                index: int
+                parameter_value: Any
                 for index, parameter_value in enumerate(parameters_values):
                     # Dispatch on *index* to fetch the *value* from either *arguments* or
                     # *keyword_arguments*:
+                    value: Any
                     if index < arguments_size:
                         # Grab *value* from *arguments* and append it to *value_texts*:
                         value = arguments[index]
                         value_texts.append(value2text(value))
                     else:
                         # Grab *value* from *keyword_arguments* and append it to *value_texts*:
-                        parameter_name = parameter_value.name
+                        parameter_name: str = parameter_value.name
                         if parameter_name in keyword_arguments:
                             value = keyword_arguments[parameter_name]
                             value_texts.append(f"{parameter_name}={value2text(value)}")
@@ -221,18 +228,19 @@ def trace(level):
                             value_texts.append(f"{parameter_name}=??")
 
                 # Construct the final comma separated *arguments_text* string:
-                arguments_text = ",".join(value_texts)
+                arguments_text: str = ",".join(value_texts)
 
                 # Print out the call trace line:
                 print(f"{tracing}=>{function_name}({arguments_text})")
 
                 # Call *function* with its positional *arguments* and its *keyword_arguments*)
                 # and save the *results*:
-                keyword_arguments["tracing"] = tracing
+                any_tracing: Any = tracing
+                keyword_arguments["tracing"] = any_tracing
                 results = function(*arguments, **keyword_arguments)
 
                 # Now construct the *results_text* and print out the return line:
-                results_text = ""
+                results_text: str = ""
                 if results is not None:
                     results_text = f"=>{value2text(results)}"
                 print(f"{tracing}<={function_name}({arguments_text}){results_text}")
@@ -250,12 +258,12 @@ def trace(level):
     return decorator_wrapper
 
 
-def trace_level_get():
+def trace_level_get() -> int:
     global trace_level
     return trace_level
 
 
-def trace_level_set(new_trace_level):
+def trace_level_set(new_trace_level: int) -> None:
     global trace_level, tracing
     trace_level = new_trace_level
     tracing = "" if trace_level <= 0 else " "

@@ -28,13 +28,17 @@ download:
 	pip install --no-cache-dir --index-url $(REPO_URL) bom_kicad_plugin_waynegramlich
 
 lint:
-	mypy $(BOM_MANAGER)/bom_manager/bom.py
+	mypy                         $(BOM_MANAGER)/bom_manager/bom.py
 	flake8 --max-line-length=100 $(BOM_MANAGER)/bom_manager/bom.py
-	mypy $(BOM_MANAGER)/bom_manager/bom_gui.py
+	mypy                         $(BOM_MANAGER)/bom_manager/bom_gui.py
 	flake8 --max-line-length=100 $(BOM_MANAGER)/bom_manager/bom_gui.py
+	mypy                         $(BOM_MANAGER)/bom_manager/tracing.py
 	flake8 --max-line-length=100 $(BOM_MANAGER)/bom_manager/tracing.py
+	mypy                         $(BOM_MANAGER)/bom_manager/__init__.py
 	flake8 --max-line-length=100 $(BOM_MANAGER)/bom_manager/__init__.py
+	mypy                         $(BOM_MANAGER)/setup.py
 	flake8 --max-line-length=100 $(BOM_MANAGER)/setup.py
+	mypy                         $(BOM_DIGIKEY_PLUGIN)/bom_digikey_plugin/digikey.py
 	flake8 --max-line-length=100 $(BOM_DIGIKEY_PLUGIN)/bom_digikey_plugin/digikey.py
 	flake8 --max-line-length=100 $(BOM_DIGIKEY_PLUGIN)/bom_digikey_plugin/__init__.py
 	flake8 --max-line-length=100 $(BOM_DIGIKEY_PLUGIN)/setup.py
@@ -57,3 +61,6 @@ upload: dist_build
 	(cd $(BOM_FINDCHIPS_PLUGIN); twine upload --verbose -r testpypi dist/*)
 	(cd $(BOM_KICAD_PLUGIN);     twine upload --verbose -r testpypi dist/*)
 
+# [CI/CD Actions on GitHub](https://github.com/features/actions)
+# [CI/CD Pipelines on GitHub]https://docs.gitlab.com/ee/ci/pipelines.html
+# [Hugo on gitlab](https://gohugo.io/hosting-and-deployment/hosting-on-gitlab/)

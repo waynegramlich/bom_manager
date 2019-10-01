@@ -29,14 +29,16 @@ from bom_manager import bom, bom_gui
 
 
 # main():
-def main():
+def main() -> int:
     """Non-GUI entry point for the BOM Manager."""
     # Forward to *bom.main*:
-    bom.main()
+    result: int = bom.main()
+    return result
 
 
 # gui_main():
-def gui_main():
+def gui_main() -> int:
     """GUI entry point for the BOM Manager."""
     # Forward to *bom_gui.main*:
-    bom_gui.main()
+    result: int = bom_gui.main()
+    return result

@@ -20,20 +20,22 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import setuptools
 import os
+import setuptools  # type: ignore
+from typing import TextIO
 
 
-def long_description_read():
+def long_description_read() -> str:
+    readme_file: TextIO
     with open("README.md") as readme_file:
-        long_description = readme_file.read()
+        long_description: str = readme_file.read()
     return long_description
 
 
-environment = os.environ
+environment: os._Environ[str] = os.environ
 assert "BOM_VERSION" in environment, "BOM_VERSION environment variable is not set"
-version = environment["BOM_VERSION"]
-is_test = version.startswith("0.0.")
+version: str = environment["BOM_VERSION"]
+is_test: bool = version.startswith("0.0.")
 
 # Arguments to *setup*() are in alphabetical order:
 setuptools.setup(

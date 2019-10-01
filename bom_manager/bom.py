@@ -1641,8 +1641,15 @@ class Node:
         node: Node = self
         assert False, f"Node.clicked() needs to be overridden for type ('{type(node)}')"
 
+    # Node.csvs_download():
+    def csvs_download(self, csvs_directory: str, downloads_count: int, tracing: str = "") -> int:
+        node: Node = self
+        class_name: str = node.__class__.__name__
+        assert False, f"{class_name}.csvs_download() has not been implmented yet!"
+        return 0
+
     # Node.csv_read_and_process():
-    def csv_read_and_process(self, csv_directory: str, bind: bool,
+    def csv_read_and_process(self, csv_directory: str, bind: bool, gui: Gui,
                              tracing: str = "") -> None:
         # Fail with a more useful error message better than "no such method":
         node: Node = self
@@ -5875,7 +5882,7 @@ class ChoicePart(ProjectPart):
                     panda_vendor_parts: List[VendorPart] = panda.vendor_parts_lookup(actual_part,
                                                                                      part_name)
                     if tracing:
-                        trace("{tracing}len(panda_vendor_parts)={len(panda_vendor_parts)}")
+                        print(f"{tracing}len(panda_vendor_parts)={len(panda_vendor_parts)}")
                     new_vendor_parts.extend(panda_vendor_parts)
                     if tracing:
                         panda_vendor_parts_size: int = len(panda_vendor_parts)
