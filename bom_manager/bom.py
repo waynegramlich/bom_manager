@@ -6219,3 +6219,53 @@ class VendorPart:
 
 if __name__ == "__main__":
     main()
+
+#
+# Notes on using tab widgets:
+# * Tabs are actually named in the parent tab widget (1 level up.)
+# * To add a tab, hover the mouse over an existing tab, right click mouse, and select
+#   Insert page.
+
+
+# PySide2 TableView Video: https://www.youtube.com/watch?v=4PkPezdpO90
+# Associatied repo: https://github.com/vfxpipeline/filebrowser
+
+# [Python Virtual Environments](https://realpython.com/python-virtual-environments-a-primer/)
+#
+# * Use [Virtual Environment Wrapper](https://virtualenvwrapper.readthedocs.io/en/latest/)
+#   to make life easier.
+#
+# * Add to `~/.bashrc`:
+#
+#        # Setup for Python virtual enviroments:
+#        export WORKON_HOME=$HOME/.virtualenvs             # Standard place to store virtual env.'s
+#        export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3  # Make sure you point to correct Python
+#        export VIRTUALENVWRAPPER_WORKON_CD=1              # Forces `workon` to cd to project dir.
+#        source /usr/local/bin/virtualenvwrapper.sh        # Actually `which virtualenvwrapper.sh`
+#
+# * Run the following commands in your shell:
+#
+#        sudo -H pip3 install virtualenv                   # Should already be installed
+#        sudo -H pip3 install virtualenvwrapper            # This makes life easier.
+#        source ~/.bashrc
+#
+# * The following shell commands now exist:
+#   * mkvirtualenv -a *project_directory* *env_name*: Create new virtual environment named
+#     *env_name* with *project_directory* as the home directory to go to when initially
+#     activated.  (Requires `export VIRTUALENVWRAPPER_WORKON_CD=1` to be set in `~/.bashrc`.
+#   * workon: List all available virtual environments.
+#   * workon *env_name*: Switch over to virtual environment *env_name*.
+#   * lssitepackages: List the packages installed in the current virtual environment.
+#   * Read the documentation for more commands.
+#
+# * There is a section about "Using Different Versions of Python" that looks interesting.
+#
+# Python Packaging Tutorial (2.x):
+#     https://python-packaging.readthedocs.io/en/latest/
+# [Python Packaging](https://packaging.python.org/tutorials/packaging-projects/)
+#   *
+# Another URL (talks about PyPlace accounts -- dated 2009, Python 2.6):
+#     https://pythonhosted.org/an_example_pypi_project/setuptools.html
+# [Configuring `~/.pypirc`](https://truveris.github.io/articles/configuring-pypirc/)
+# [Python Plugins](https://packaging.python.org/guides/creating-and-discovering-plugins/)
+# [Python Plugins Tutorial](https://amir.rachum.com/blog/2017/07/28/python-entry-points/)

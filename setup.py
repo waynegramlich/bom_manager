@@ -22,7 +22,7 @@
 
 import os
 import setuptools  # type: ignore
-from typing import TextIO
+from typing import Dict, TextIO
 
 
 def long_description_read() -> str:
@@ -32,7 +32,7 @@ def long_description_read() -> str:
     return long_description
 
 
-environment: os._Environ[str] = os.environ
+environment: Dict[str, str] = dict(os.environ)
 assert "BOM_VERSION" in environment, "BOM_VERSION environment variable is not set"
 version: str = environment["BOM_VERSION"]
 is_test: bool = version.startswith("0.0.")

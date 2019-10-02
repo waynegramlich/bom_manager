@@ -1091,3 +1091,19 @@ if __name__ == "__main__":
 #    def itemChecked(self, index):
 #        item = self.model().item(i,0)
 #        return item.checkState() == QtCore.Qt.Checked
+
+
+# https://stackoverflow.com/questions/5226091/checkboxes-in-a-combobox-using-pyqt?rq=1
+# https://stackoverflow.com/questions/24961383/how-to-see-the-value-of-pyside-qtcore-qt-itemflag
+# /usr/local/lib/python3.6/dist-packages/PySide2/examples/widgets/itemviews/stardelegate
+# https://stackoverflow.com/questions/8422760/combobox-of-checkboxes
+
+
+# Qt Designer application Notes:
+# * Use grid layouts for everything.  This easier said than done since the designer
+#   user interface is kind of clunky:
+#   1. Just drop one or more widgets into the area.
+#   2. Using the tree view, select the widgets using left mouse button and [Control] key.
+#   3. Using right mouse button, get a drop-down, and set the grid layout.
+#   4. You are not done until all the widgets with layouts are grids with no red circle
+#      that indicate that now layout is active.
