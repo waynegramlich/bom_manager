@@ -86,16 +86,16 @@ from functools import partial   # Needed for window events
 import os                       # General Operating system features:
 
 # All of the PySide2 stuff provides the GUI technology used by the GUI.
-from PySide2.QtUiTools import QUiLoader                                            # type: ignore
-from PySide2.QtWidgets import (QApplication, QLineEdit, QMainWindow, QPushButton)  # type: ignore
-from PySide2.QtWidgets import (QTableWidget, QTabWidget, QTableWidgetItem)         # type: ignore
-from PySide2.QtWidgets import (QTreeView,)                                         # type: ignore
-from PySide2.QtCore import (QAbstractItemModel, QCoreApplication, QFile)           # type: ignore
-from PySide2.QtCore import (QItemSelectionModel, QModelIndex, Qt)                  # type: ignore
-from PySide2.QtGui import (QClipboard,)                                            # type: ignore
+from PySide2.QtUiTools import QUiLoader                                               # type: ignore
+from PySide2.QtWidgets import (QApplication, QLabel, QLineEdit, QMainWindow)          # type: ignore
+from PySide2.QtWidgets import (QPushButton, QStackedWidget, QTableWidget)             # type: ignore
+from PySide2.QtWidgets import (QTabWidget, QTableWidgetItem, QTreeView, QWidget)      # type: ignore
+from PySide2.QtCore import (QAbstractItemModel, QCoreApplication, QFile)              # type: ignore
+from PySide2.QtCore import (QItemSelectionModel, QModelIndex, Qt)                     # type: ignore
+from PySide2.QtGui import (QClipboard,)                                               # type: ignore
 # import re                       # Regular expressions
 import sys                      # System utilities
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 import webbrowser               # Some tools to send messages to a web browser
 
 
@@ -124,7 +124,7 @@ def main(tracing: str = "") -> int:
 class BomGui(QMainWindow, Gui):
 
     # BomGui.__init__()
-    @trace(1)
+    # @trace(1)
     def __init__(self, tables: List[Table], collection_directories: List[str],
                  searches_root: str, order: Order, tracing: str = "") -> None:
         # Create the *application* first.  The set attribute makes a bogus warning message
@@ -176,30 +176,28 @@ class BomGui(QMainWindow, Gui):
 
         tree_model: TreeModel = TreeModel()
 
+        # Initialze both the *QMainWindow* and *Gui* super classes:
+        super().__init__()
+
         # Load all values into *bom_gui*:
         current_table: Optional[Table] = tables[0] if len(tables) >= 1 else None
         bom_gui: BomGui = self
         self.application: QApplication = application
         self.clicked_model_index: QModelIndex = QModelIndex()
         self.collection_directories: List[str] = collection_directories
-        bom_gui.current_comment = None
-        bom_gui.current_enumeration = None
-        bom_gui.current_model_index = None
-        bom_gui.current_parameter = None
-        bom_gui.current_search = None
+        self.current_collection: Optional[Collection] = None
+        self.current_model_index: Optional[QModelIndex] = None
+        self.current_node: Optional[Node] = None
+        self.current_search: Optional[Search] = None
         self.current_table: Optional[Table] = current_table
-        bom_gui.current_tables = tables
         self.in_signal: bool = True
-        bom_gui.main_window = main_window
+        self.main_window: QMainWindow = main_window
         self.order: Order = order
         self.searches_root: str = searches_root
         self.searches: List[Search] = list()
         self.tree_model: TreeModel = tree_model
-        bom_gui.tab_unload = None
+        self.tab_unload: Optional[Callable] = None
         self.tables: List[Table] = tables
-
-        # Initialze both the *QMainWindow* and *Gui* super classes:
-        super().__init__()
 
         # Perform some global signal connections to *main_window* (abbreviated as *mw*):
         mw: QMainWindow = main_window
@@ -211,7 +209,9 @@ class BomGui(QMainWindow, Gui):
         mw.collections_tree.clicked.connect(bom_gui.collections_tree_clicked)
         # mw.collections_delete.clicked.connect(bom_gui.collections_delete_clicked)
         # mw.collections_delete.setEnabled(False)
-        mw.root_tabs.currentChanged.connect(bom_gui.tab_changed)
+        mw.tree_tabs.currentChanged.connect(bom_gui.tab_changed)
+
+        bom_gui.panels_connect()
 
         # Grap *collections* and stuff into both *bom_gui* and *tree_model*:
         partial_load: bool = True
@@ -227,6 +227,8 @@ class BomGui(QMainWindow, Gui):
         # Now bind *tree_model* to the *collections_tree* widget:
         collections_tree: QTreeView = mw.collections_tree
         collections_tree.setModel(tree_model)
+        root_model_index: QModelIndex = tree_model.createIndex(0, 0, collections)
+        collections_tree.setRootIndex(root_model_index)
         collections_tree.setSortingEnabled(True)
 
         # FIXME: Used *bom_gui.current_update()* instead!!!
@@ -263,6 +265,7 @@ class BomGui(QMainWindow, Gui):
         return "BomGui()"
 
     # BomGui.begin_rows_insert():
+    @trace(1)
     def begin_rows_insert(self, node: Node, start_row_index: int, end_row_index: int,
                           tracing: str = "") -> None:
 
@@ -277,6 +280,7 @@ class BomGui(QMainWindow, Gui):
         tree_model.beginInsertRows(model_index, start_row_index, end_row_index)
 
     # BomGui.begin_rows_remove():
+    @trace(1)
     def begin_rows_remove(self, node: Node, start_row_index: int, end_row_index: int,
                           tracing: str = "") -> None:
 
@@ -301,10 +305,32 @@ class BomGui(QMainWindow, Gui):
         # Update the collections tab:
         bom_gui.update()
 
+    # BomGui.collection_panel_update():
+    @trace(1)
+    def collection_panel_update(self, collection: Collection, tracing: str = ""):
+        # Force the *panel_collection* widget to be displayed by *panels* stacked widget:
+        bom_gui: BomGui = self
+        main_window: QMainWindow = bom_gui.main_window
+        panels: QStackedWidget = main_window.panels
+        collection_panel: QWidget = main_window.collection_panel
+        panels.setCurrentWidget(collection_panel)
+
+        # As a sanity check make sure that *current_collection* is correct in *bom_gui*:
+        assert bom_gui.current_collection is collection
+
+        # Now update *panel_collection* name:
+        collection_panel_name: QLabel = main_window.collection_panel_name
+        name_text: str = f"Name: {collection.name}"
+        collection_panel_name.setText(name_text)
+
     # BomGui.collection_clicked():
+    @trace(1)
     def collection_clicked(self, collection: Collection, tracing: str = "") -> None:
         # Make sure that the current table and search are disabled for *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
+        bom_gui.current_collection = collection
+        bom_gui.current_directory = None
+        bom_gui.current_node = collection
         bom_gui.current_search = None
         bom_gui.current_table = None
 
@@ -420,7 +446,11 @@ class BomGui(QMainWindow, Gui):
 
         # Let the *node* know it has been clicked:
         bom_gui.clicked_model_index = model_index
+        if tracing:
+            print(f"{tracing}Calling {node.__class__.__name__}.clicked()")
         node.clicked(bom_gui)
+        if tracing:
+            print(f"{tracing}Returned from {node.__class__.__name__}.clicked()")
 
         # *Search* *node*'s get some additional treatment:
         if isinstance(node, Search):
@@ -440,6 +470,7 @@ class BomGui(QMainWindow, Gui):
         collections_delete: QPushButton = main_window.collections_delete
         collections_line: QLineEdit = main_window.collections_line
         collections_new: QPushButton = main_window.collections_new
+        collections_tab: QTabWidget = main_window.collections_tab
 
         # Grab the *current_search* object:
         current_search: Optional[Search] = bom_gui.current_search
@@ -448,7 +479,7 @@ class BomGui(QMainWindow, Gui):
                                         else f"'{current_search.name}'")
             print(f"{tracing}current_search={current_search_name}")
 
-        # Grab the *search_tile* from the *collections_line* widget*:
+        # Grab the *search_title* from the *collections_line* widget*:
         search_title: str = collections_line.text()
 
         # We can only create a search if:
@@ -509,6 +540,15 @@ class BomGui(QMainWindow, Gui):
 
         # Enable/disable *delete_button_enable* button widget:
         collections_delete.setEnabled(delete_button_enable)
+
+        # Force update of *collections_tab*:
+        if tracing:
+            print(f"{tracing}>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+            print(f"{tracing}collections_tab.update() called()")
+        collections_tab.update()
+        if tracing:
+            print(f"{tracing}collections_tab.update() returned()")
+            print(f"{tracing}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
         if tracing:
             print(f"{tracing}delete_button_enable={delete_button_enable} why='{delete_button_why}'")
 
@@ -619,10 +659,32 @@ class BomGui(QMainWindow, Gui):
         bom_gui.current_update()
 
     # BomGui.directory_clicked():
+    @trace(1)
     def directory_clicked(self, directory: Directory, tracing: str = "") -> None:
         # Mark the current search in *bom_gui* (i.e. *self*) as not active:
         bom_gui: BomGui = self
+        bom_gui.current_collection = directory.collection
+        bom_gui.current_directory = directory
+        bom_gui.current_node = directory
         bom_gui.current_search = None
+        bom_gui.current_table = None
+
+    # BomGui.directory_panel_update():
+    def directory_panel_update(self, directory: Directory, tracing: str = "") -> None:
+        # Force the *panels* stacked widget to display *panel_directory* widget:
+        bom_gui: BomGui = self
+        main_window: QMainWindow = bom_gui.main_window
+        panels: QStackedWidget = main_window.panels
+        directory_panel: QWidget = main_window.directory_panel
+        panels.setCurrentWidget(directory_panel)
+
+        # As a sanity check make sure that *current_directory* in *bom_gui* is correct:
+        assert bom_gui.current_directory is directory
+
+        # Now update the *panel_directory_name* field:
+        directory_panel_name: QLabel = main_window.directory_panel_name
+        name_text = f"Name: {directory.name}"
+        directory_panel_name.setText(name_text)
 
     # BomGui.end_rows_insert():
     def end_rows_insert(self, tracing: str = "") -> None:
@@ -639,6 +701,35 @@ class BomGui(QMainWindow, Gui):
         bom_gui: BomGui = self
         tree_model: TreeModel = bom_gui.tree_model
         tree_model.endRemoveRows()
+
+    # BomGui.panels_connect():
+    @trace(1)
+    def panels_connect(self, tracing: str = "") -> None:
+        bom_gui: BomGui = self
+        bom_gui.search_panel_connect()
+
+    # BomGui.panels_update():
+    @trace(1)
+    def panels_update(self, tracing: str = "") -> None:
+        # Dispatch on the *current_node* of *bom_gui* (i.e. *self*):
+        bom_gui: BomGui = self
+        current_node: Optional[Node] = bom_gui.current_node
+        if current_node is None:
+            # There is no *current_node* selected, so we display the *panel_none* widget:
+            if tracing:
+                print(f"{tracing}No Node currently set, show None panel")
+            main_window: QMainWindow = bom_gui.main_window
+            panels: QStackedWidget = main_window.panels
+            none_panel: QWidget = main_window.none_panel
+            panels.setCurrentWidget(none_panel)
+        else:
+            # There is a *current_node*, so invoke *panel_update* method which will
+            # dispatch to the appropriate method that updates the panel for *current_node*:
+            if tracing:
+                print(f"{tracing}Calling {current_node.__class__.__name__}.panel_update")
+            current_node.panel_update(bom_gui)
+            if tracing:
+                print(f"{tracing}Returned from {current_node.__class__.__name__}.panel_update")
 
     # BomGui.quit_button_clicked():
     def quit_button_clicked(self, tracing: str = "") -> None:
@@ -663,9 +754,27 @@ class BomGui(QMainWindow, Gui):
         sys.exit(application.exec_())
 
     # BomGui.search_clicked():
+    @trace(1)
     def search_clicked(self, search: Search, tracing: str = "") -> None:
-        # Grab some values from *bom_gui* (i.e. *self*):
+        # Grab some values from *search*:
+        current_table: Optional[Node] = search.parent
+        assert isinstance(current_table, Table)
+        current_directory: Optional[Node] = current_table.parent
+        assert isinstance(current_directory, Directory)
+        current_collection: Optional[Collection] = search.collection
+        assert isinstance(current_collection, Collection)
+
+        # Update the current nodes associated
         bom_gui: BomGui = self
+        bom_gui.current_collection = current_collection
+        bom_gui.current_directory = current_directory
+        bom_gui.current_node = search
+        bom_gui.current_table = current_table
+        bom_gui.current_search = search
+
+        # For now skip everything else:
+        return
+
         clicked_model_index: QModelIndex = bom_gui.clicked_model_index
         main_window: QMainWindow = bom_gui.main_window
         collections_tree: QTreeView = main_window.collections_tree
@@ -696,6 +805,233 @@ class BomGui(QMainWindow, Gui):
         # Force *search_name* into the *collections_line* widget:
         collections_line.setText(search_name)
 
+    # BomGui.search_panel_browser_get_clicked():
+    @trace(1)
+    def search_panel_browser_get_clicked(self, tracing: str = ""):
+        # Grab some values from *bom_gui* (i.e. *self*):
+        bom_gui: BomGui = self
+        current_search: Optional[Search] = bom_gui.current_search
+        main_window: QMainWindow = bom_gui.main_window
+        application: QApplication = bom_gui.application
+        application_clipboard: QClipboard = application.clipboard()
+
+        # As a sanity check, make sure *current_search* is valid:
+        assert isinstance(current_search, Search)
+
+        # Now grab both the *selection* and *clipboard* via *application_clipboard*:
+        selection: str = application_clipboard.text(QClipboard.Selection)
+        clipboard: str = application_clipboard.text(QClipboard.Clipboard)
+
+        # Decide whether we got a reasonble looking *url*:
+        url: str = ""
+        if selection.startswith("http"):
+            url = selection
+        elif clipboard.startswith("http"):
+            url = clipboard
+        if tracing:
+            print(f"{tracing}clipbboard='{clipboard}'")
+            print(f"{tracing}selection='{selection}'")
+            print(f"{tracing}url='{url}'")
+
+        # Now update the *search_panel_url*:
+        search_panel_url: QLineEdit = main_window.search_panel_url
+        search_panel_url.setText(f"URL: {url}")
+        search_panel_url.setCursorPosition(0)
+
+        # Force an update of the entire *bom_gui*:
+        bom_gui.update()
+
+    # BomGui.search_panel_browser_send_clicked():
+    @trace(1)
+    def search_panel_browser_send_clicked(self, tracing: str = ""):
+        bom_gui: BomGui = self
+        current_search: Optional[Search] = bom_gui.current_search
+        assert isinstance(current_search, Search)
+
+        # Force the *url* to open in the web browser:
+        url: str = current_search.url
+        webbrowser.open(url, new=0, autoraise=True)
+
+    # BomGui.search_panel_connect():
+    @trace(1)
+    def search_panel_connect(self, tracing: str = "") -> None:
+        # Grab the various search panel widgets from the *main_window* of *bom_gui* (i.e. *self*):
+        bom_gui: BomGui = self
+        main_window: QMainWindow = bom_gui.main_window
+        search_panel_browser_get: QPushButton = main_window.search_panel_browser_get
+        search_panel_browser_send: QPushButton = main_window.search_panel_browser_send
+        search_panel_create: QPushButton = main_window.search_panel_create
+        search_panel_delete: QPushButton = main_window.search_panel_delete
+        search_panel_line: QLineEdit = main_window.search_panel_line
+        assert isinstance(search_panel_line, QLineEdit)
+
+        # Connect the search panel events up to forwarding methods in *bom_gui*:
+        search_panel_browser_get.clicked.connect(bom_gui.search_panel_browser_get_clicked)
+        search_panel_browser_send.clicked.connect(bom_gui.search_panel_browser_send_clicked)
+        search_panel_create.clicked.connect(bom_gui.search_panel_create_clicked)
+        search_panel_delete.clicked.connect(bom_gui.search_panel_delete_clicked)
+        search_panel_line.textChanged.connect(bom_gui.search_panel_line_text_changed)
+
+    # BomGui.search_panel_create_clicked():
+    @trace(1)
+    def search_panel_create_clicked(self, tracing: str = "") -> None:
+        bom_gui: BomGui = self
+        current_search: Optional[Search] = bom_gui.current_search
+        assert isinstance(current_search, Search)
+        main_window: QMainWindow = bom_gui.main_window
+        search_panel_line: QLineEdit = main_window.search_panel_line
+        search_panel_url: QLineEdit = main_window.search_panel_url
+        new_search_name: str = search_panel_line.text()
+        url_text: str = search_panel_url.text()
+        url_prefix: str = "URL: http"
+        assert url_text.startswith(url_prefix)
+        url: str = url_text[len(url_prefix):]
+        if tracing:
+            print(f"{tracing}url='{url}'")
+        table: Optional[Node] = current_search.parent
+        assert isinstance(table, Table)
+        new_search: Search = Search(new_search_name, table, current_search, url)
+        new_search.xml_file_save()
+        bom_gui.update()
+
+    # BomGui.search_panel_delete_clicked():
+    @trace(1)
+    def search_panel_delete_clicked(self, tracing: str = "") -> None:
+        bom_gui: BomGui = self
+        current_search: Optional[Search] = bom_gui.current_search
+        assert isinstance(current_search, Search)
+        if tracing:
+            print("******************************************************************************")
+        collection: Optional[Collection] = current_search.collection
+        assert isinstance(collection, Collection)
+        current_search.file_delete()
+        current_search_name: str = current_search.name
+        collection.search_remove(current_search_name)
+        assert collection.search_find(current_search_name) is None
+        table: Optional[Node] = current_search.parent
+        assert isinstance(table, Table)
+        table.child_remove(current_search)
+        table_searches: List[Node] = table.children_get()
+        table_search: Node
+        for table_search in table_searches:
+            assert isinstance(table_search, Search)
+            assert table_search is not current_search, "Somehow the current search is not deleted"
+        bom_gui.current_search = None
+        bom_gui.current_node = None
+        bom_gui.update()
+
+    # BomGui.search_panel_line_text_changed():
+    # @trace(1)
+    def search_panel_line_text_changed(self, text: str, tracing: str = "") -> None:
+        bom_gui: BomGui = self
+        # current_search: Optional[Search] = bom_gui.current_search
+        # print(f"{tracing}text='{text}'")
+        bom_gui.update()
+
+    # BomGui.search_panel_update():
+    @trace(1)
+    def search_panel_update(self, search: Search, tracing: str = "") -> None:
+        # Force the *panel_search* stacked widget to be displayed by *bom_gui* (i.e. *self*):
+        bom_gui: BomGui = self
+        main_window: QMainWindow = bom_gui.main_window
+        panels: QStackedWidget = main_window.panels
+        search_panel: QWidget = main_window.search_panel
+        panels.setCurrentWidget(search_panel)
+
+        # As a sanity check, ensure that the *current_search* in *bom_gui* is correct*:
+        assert bom_gui.current_search is search
+
+        # Grab the interesting *search_panel* related widgets from *main_window*:
+        # search_panel_browser_get: QPushButton = main_window.search_panel_brower_get
+        # search_panel_browser_send: QPushButton = main_window.search_panel_brower_send
+        search_panel_create: QPushButton = main_window.search_panel_create
+        search_panel_create_why: QPushButton = main_window.search_panel_create_why
+        search_panel_delete: QPushButton = main_window.search_panel_delete
+        search_panel_delete_why: QLabel = main_window.search_panel_delete_why
+        search_panel_line: QLineEdit = main_window.search_panel_line
+        search_panel_name: QLabel = main_window.search_panel_name
+        search_panel_parent_name: QLabel = main_window.search_panel_parent_name
+
+        # We can only create a search if:
+        # * the search *search_line* not empty,
+        # * the search *search_line* is not named "@ALL",
+        # * there is a preexisting *current_search* to depend upon
+        # * the *search_name* is not a duplicate:
+        search_name: str = search.name
+        search_line: str = search_panel_line.text()
+        search_create_enable: bool = False
+        search_create_why: str = "Default off"
+        if search_line == "":
+            # Empty search names are not acceptable:
+            search_create_enable = False
+            search_create_why = "Empty Search name"
+        elif search_line == "@ALL":
+            # '@ALL' is not allowed:
+            search_create_enable = False
+            search_create_why = "@ALL is reserved"
+        else:
+            # Search *collection* for a match of *current_search_name*:
+            collection: Optional[Collection] = search.collection
+            assert isinstance(collection, Collection)
+            previous_search: Optional[Search] = collection.search_find(search_line)
+            if previous_search is None:
+                # Nothing matched, so this must be a new and unique search name:
+                search_create_enable = True
+                search_create_why = "Unique New Search Name"
+            else:
+                # We already have a *search* named *search_name*:
+                if tracing:
+                    print(f"previous_search.name='{previous_search.name}")
+                search_create_enable = False
+                search_create_why = "Duplicate Search"
+        if tracing:
+            print(f"{tracing}search_create_enable={search_create_enable}")
+            print(f"{tracing}search_create_why='{search_create_why}'")
+        search_panel_create.setEnabled(search_create_enable)
+        search_panel_create_why.setText(search_create_why)
+
+        # Update the *search_panel_name* and search_panel_parent_name:
+        name_text: str = f"Name: {search.name}"
+        search_panel_name.setText(name_text)
+        search_parent: Optional[Search] = search.search_parent
+        parent_name_text: str = "" if search_parent is None else search_parent.name
+        search_panel_parent_name.setText(f"Parent Name: {parent_name_text}")
+
+        # Figure out if we enable the [Delete] button and why we can or can not do so:
+        delete_enable: bool = False
+        delete_why: str = ""
+        assert search_name != "", "It should be impossible to have an empty search name"
+        if search_name == "@ALL":
+            delete_why = "'@ALL' is not deletable"
+        else:
+            table: Optional[Node] = search.parent
+            assert isinstance(table, Table)
+            table_searches: List[Node] = table.children_get()
+            table_search: Node
+            index: int
+            for index, table_search in enumerate(table_searches):
+                assert isinstance(table_search, Search)
+                table_search_parent: Optional[Search] = table_search.search_parent
+                table_search_parent_name: str = ("" if table_search_parent is None
+                                                 else table_search_parent.name)
+                if tracing:
+                    print(f"{tracing}[{index}]: '{table_search.name} "
+                          f"Parent: '{table_search_parent_name}'")
+                if isinstance(table_search_parent, Search) and table_search_parent is search:
+                    delete_why = f"'{table_search.name}' needs '{search_name}'"
+                    break
+            else:
+                delete_why = f"'{search.name}' deletable"
+                delete_enable = True
+        if tracing:
+            print(f"{tracing}delete_enable={delete_enable}")
+            print(f"{tracing}delete_why='{delete_why}'")
+        search_panel_delete.setEnabled(delete_enable)
+        search_panel_delete_why.setText(delete_why)
+
+        # Force the visual update of *search_panel* widget:
+        search_panel.update()
+
     # BomGui.tab_changed():
     def tab_changed(self, new_index: int, tracing: str = "") -> None:
         # Note: *new_index* is only used for debugging.
@@ -717,31 +1053,18 @@ class BomGui(QMainWindow, Gui):
             bom_gui.in_signal = False
 
     # BomGui.table_clicked():
+    @trace(1)
     def table_clicked(self, table: Table, tracing: str = "") -> None:
         # Grab some values from *BomGui*:
         bom_gui: BomGui = self
+        bom_gui.current_directory = table.parent
+        bom_gui.current_node = table
+        bom_gui.current_table = table
         bom_gui.current_search = None
-
-        # FIXME: Is this code needed any more???!!!:
-        # Sweep through *tables* to see if *table* (i.e. *self*) is in it:
-        tables = bom_gui.tables
-        for sub_table in tables:
-            if table is sub_table:
-                # We found a match, so we are done searching:
-                break
-        else:
-            # Nope, *table* is not in *tables*, so let's stuff it in:
-            if tracing:
-                print("{0}Before len(tables)={1}".format(tracing, len(tables)))
-            if tracing:
-                print("{0}After len(tables)={1}".format(tracing, len(tables)))
+        bom_gui.current_collection = table.collection
 
         # Force whatever is visible to be updated:
         bom_gui.update()
-
-        # Make *table* the current one:
-        bom_gui.current_table = table
-        bom_gui.current_search = None
 
     def table_is_active(self, tracing: str = "") -> bool:
         # The table combo box is always active, so we return *True*:
@@ -761,8 +1084,25 @@ class BomGui(QMainWindow, Gui):
 
         return table
 
+    # BomGui.table_panel_update():
+    def table_panel_update(self, table: Table, tracing: str = "") -> None:
+        # Force the *panel_directory* stacked widget to be shown by *bom_gui* (i.e. *self*):
+        bom_gui: BomGui = self
+        main_window: QMainWindow = bom_gui.main_window
+        panels: QStackedWidget = main_window.panels
+        table_panel: QWidget = main_window.table_panel
+        panels.setCurrentWidget(table_panel)
+
+        # As a sanity check, make sure that the *current_table* in *bom_gui* is correct:
+        assert bom_gui.current_table is table
+
+        # Now update the *panel_table_name*:
+        table_panel_name: QLabel = main_window.table_panel_name
+        name_text = f"Name: {table.name}"
+        table_panel_name.setText(name_text)
+
     # BomGui.table_setup():
-    def table_setup(self, tracing=""):
+    def table_setup(self, tracing: str = "") -> None:
         # Perform any tracing requested from *bom_gui* (i.e. *self*):
         bom_gui = self
 
@@ -791,17 +1131,19 @@ class BomGui(QMainWindow, Gui):
     # BomGui.update():
     @trace(1)
     def update(self, tracing: str = "") -> None:
-        # Perform any requested *tracing*:
         bom_gui: BomGui = self
 
-        # Only update the visible tabs based on *root_tabs_index*:
+        # Only update the visible tabs based on *tree_tabs_index*:
         main_window: QMainWindow = bom_gui.main_window
-        root_tabs: QTabWidget = main_window.root_tabs
-        root_tabs_index: int = root_tabs.currentIndex()
-        if root_tabs_index == 0:
+        tree_tabs: QTabWidget = main_window.tree_tabs
+        tree_tabs_index: int = tree_tabs.currentIndex()
+        if tree_tabs_index == 0:
             bom_gui.collections_update()
         else:
-            assert False, "Illegal tab index: {0}".format(root_tabs_index)
+            assert False, "Illegal tab index: {0}".format(tree_tabs_index)
+
+        # Update the *panels* stacked widget:
+        bom_gui.panels_update()
 
     # BomGui.search_update():
     def xxx_search_update(self, tracing=""):
@@ -930,6 +1272,7 @@ class TreeModel(QAbstractItemModel):
         return 2
 
     # TreeModel.data():
+    # @trace(1)
     def data(self, model_index: QModelIndex, role: int) -> Optional[str]:
         # Perform any *tracing* requested by *tree_model* (i.e. *self*):
         # tree_model: TreeModel = self

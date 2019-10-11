@@ -136,8 +136,8 @@ from typing import (Any, Callable, Dict, List)
 
 # This module uses a couple of global variables for easy access:
 global trace_level, tracing
-trace_level: int = 0
-tracing: str = ""
+trace_level = 0
+tracing = ""
 
 
 def trace(level: int) -> Callable:
@@ -237,12 +237,17 @@ def trace(level: int) -> Callable:
                 # and save the *results*:
                 any_tracing: Any = tracing
                 keyword_arguments["tracing"] = any_tracing
-                results = function(*arguments, **keyword_arguments)
+                try:
+                    results = function(*arguments, **keyword_arguments)
+                except TypeError:
+                    print(f"len(arguments)={len(arguments)}")
+                    print(f"len(keyword_arguments)={len(keyword_arguments)}")
+                    assert False
 
                 # Now construct the *results_text* and print out the return line:
                 results_text: str = ""
                 if results is not None:
-                    results_text = f"=>{value2text(results)}"
+                    results_text = f"==>{value2text(results)}"
                 print(f"{tracing}<={function_name}({arguments_text}){results_text}")
 
                 # Kludge to get an extra blank line for GUI's:

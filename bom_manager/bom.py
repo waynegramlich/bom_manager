@@ -1441,15 +1441,34 @@ class Gui:
 
     # Gui.collection_clicked():
     def collection_clicked(self, collection: "Collection", tracing: str = "") -> None:
-        assert False, "Gui.collection_clicked() shoud never be called"
+        gui: Gui = self
+        class_name: str = gui.__class__.__name__
+        assert False, f"{class_name}.collection_clicked() has not been implemented yet"
+
+    # Gui.collection_panel_update():
+    @trace(1)
+    def collection_panel_update(self, collection: "Collection", tracing: str = "") -> None:
+        gui: Gui = self
+        class_name: str = gui.__class__.__name__
+        assert False, f"{class_name}.collection_panel_update() has not been implmented yet"
 
     # Gui.collections_clicked():
     def collections_clicked(self, collections: "Collections", tracing: str = "") -> None:
-        assert False, "Gui.collections_clicked() shoud never be called"
+        gui: Gui = self
+        class_name: str = gui.__class__.__name__
+        assert False, f"{class_name}.collections_clicked() has not been implemented yet"
 
     # Gui.directory_clicked():
     def directory_clicked(self, directory: "Directory", tracing: str = "") -> None:
-        assert False, "Gui.directory_clicked() should never be called"
+        gui: Gui = self
+        class_name: str = gui.__class__.__name__
+        assert False, f"{class_name}.directory_clicked() has not been implemented yet"
+
+    # Gui.directory_panel_update():
+    def directory_panel_update(self, directory: "Directory", tracing: str = "") -> None:
+        gui: Gui = self
+        class_name: str = gui.__class__.__name__
+        assert False, f"{class_name}.directory_panel_update() has not been implemented yet"
 
     # Gui.end_rows_insert():
     def end_rows_insert(self, tracing: str = "") -> None:
@@ -1461,11 +1480,27 @@ class Gui:
 
     # Gui.search_clicked():
     def search_clicked(self, search: "Search", tracing: str = "") -> None:
-        assert False, "Gui.search_clicked() should never be called"
+        gui: Gui = self
+        class_name: str = gui.__class__.__name__
+        assert False, f"{class_name}.search_clicked() has not been implemented yet"
+
+    # Gui.search_panel_update()
+    def search_panel_update(self, search: "Search", tracing: str = "") -> None:
+        gui: Gui = self
+        class_name: str = gui.__class__.__name__
+        assert False, f"{class_name}.search_panel_update() has not been implmented yet."
 
     # Gui.table_clicked():
     def table_clicked(self, table: "Table", tracing: str = "") -> None:
-        assert False, "Gui.table_clicked() should never be callded"
+        gui: Gui = self
+        class_name: str = gui.__class__.__name__
+        assert False, f"{class_name}.table_clicked() has not been implemented yet"
+
+    # Gui.table_panel_update()
+    def table_panel_update(self, table: "Table", tracing: str = "") -> None:
+        gui: Gui = self
+        class_name: str = gui.__class__.__name__
+        assert False, f"{class_name}.table_panel_update() has not been implmented yet."
 
 
 # Node:
@@ -1715,6 +1750,13 @@ class Node:
         name: str = node.name
         return name
 
+    # Node.panel_update():
+    @trace(1)
+    def panel_update(self, gui: Gui, tracing: str = "") -> None:
+        node: Node = self
+        class_name: str = node.__class__.__name__
+        assert False, f"{class_name}.panel_update() is not implmented yet."
+
     # Node.remove():
     def remove(self, remove_node: "Node", tracing: str = "") -> None:
         node: "Node" = self
@@ -1856,6 +1898,12 @@ class Directory(Node):
                     table.partial_load()
                 else:
                     assert False, f"'{full_path}' is neither an .xml nor a directory"
+
+    # Directory.panel_update():
+    @trace(1)
+    def panel_update(self, gui: Gui, tracing: str = "") -> None:
+        directory: Directory = self
+        gui.directory_panel_update(directory)
 
     # Directory.tables_append():
     def tables_get(self) -> "List[Table]":
@@ -2385,6 +2433,21 @@ class Search(Node):
             # Mark *search* as *loaded*:
             search.loaded = True
 
+    # Search.file_delete
+    @trace(1)
+    def file_delete(self, tracing: str = "") -> None:
+        search: Search = self
+        collection: Optional[Collection] = search.collection
+        assert isinstance(collection, Collection)
+        searches_root: str = collection.searches_root
+        relative_path: str = search.relative_path
+        search_full_file_name: str = os.path.join(searches_root, relative_path + ".xml")
+        if tracing:
+            print(f"{tracing}search_full_file_name='{search_full_file_name}'")
+        if os.path.isfile(search_full_file_name):
+            os.remove(search_full_file_name)
+            assert not os.path.isfile(search_full_file_name)
+
     # Search.filters_refresh():
     def filters_refresh(self, tracing: str = "") -> None:
         # Before we do anything we have to make sure that *search* has an associated *table*.
@@ -2514,6 +2577,12 @@ class Search(Node):
         rest: str = search_name if number_end_index < 0 else search_name[number_end_index:]
         key: Tuple[int, float, str] = (depth, number, rest)
         return key
+
+    # Search.panel_update():
+    @trace(1)
+    def panel_update(self, gui: Gui, tracing: str = "") -> None:
+        search: Search = self
+        gui.search_panel_update(search)
 
     # Search.search_parent_set():
     def search_parent_set(self, search_parent: "Search", tracing: str = "") -> None:
@@ -2920,6 +2989,12 @@ class Table(Node):
         if len(searches) >= 2:
             name += f" ({searches_size})"
         return name
+
+    # Table.panel_update():
+    @trace(1)
+    def panel_update(self, gui: Gui, tracing: str = "") -> None:
+        table: Table = self
+        gui.table_panel_update(table)
 
     # Table.parameters_bind():
     @trace(1)

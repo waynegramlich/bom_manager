@@ -58,7 +58,7 @@ lint:
 	flake8 --max-line-length=100 $(BOM_KICAD_PLUGIN)/setup.py
 	mypy                         $(BOM_KICAD_PLUGIN)/setup.py
 
-pkg_install:
+pipinstall:
 	(cd $(BOM_MANAGER);          pip install .)
 	(cd $(BOM_DIGIKEY_PLUGIN);   pip install .)
 	(cd $(BOM_FINDCHIPS_PLUGIN); pip install .)
