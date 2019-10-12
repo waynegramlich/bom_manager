@@ -1942,6 +1942,7 @@ class Collection(Node):
         self.collection_root: str = collection_root
         self.plugin: Optional[Callable] = None
         self.searches_root: str = searches_root
+        self.urls_table: Dict[str, Search] = dict()
         self.searches_table: Dict[str, Search] = dict()
         self.gui: Gui = collections.gui
 
@@ -2096,8 +2097,8 @@ class Collection(Node):
                 else:
                     assert False, f"'{base_name}' is neither an .xml file nor a directory"
 
-    # Collection.search_find():
-    def search_find(self, search_name: str) -> "Optional[Search]":
+    # Collection.searches_find():
+    def searches_find(self, search_name: str, tracing: str = "") -> "Optional[Search]":
         # Grab some values from *collection* (i.e. *self*):
         collection: Collection = self
         searches_table: Dict[str, Search] = collection.searches_table
@@ -2107,6 +2108,24 @@ class Collection(Node):
         if search_name in searches_table:
             search = searches_table[search_name]
         return search
+
+    # Collection.searches_insert():
+    def searches_insert(self, search: "Search", tracing: str = "") -> None:
+        search_name: str = search.name
+        if search_name[0] != '@':
+            collection: Collection = self
+            searches_table: Dict[str, Search] = collection.searches_table
+            assert search_name not in searches_table, f"Search '{search_name}' already in table"
+            searches_table[search_name] = search
+
+    # Collection.searches_remove():
+    def searches_remove(self, search: "Search", tracing: str = "") -> None:
+        collection: Collection = self
+        searches_table: Dict[str, Search] = collection.searches_table
+        search_name: str = search.name
+        assert search_name[0] != '@', f"Trying to remove template '{search_name}' from table"
+        assert search_name in searches_table, "Search '{search_name} not found"
+        del searches_table[search_name]
 
     # Collection.tables_get():
     def tables_get(self) -> "List[Table]":
@@ -2121,6 +2140,33 @@ class Collection(Node):
     def type_letter_get(self, tracing: str = "") -> str:
         # print("Collection.type_letter_get(): name='{0}'".format(self.name))
         return 'C'
+
+    # Collection.url_find():
+    def url_find(self, url: str, tracing: str = "") -> "Optional[Search]":
+        # Grab some values from *collection* (i.e. *self*):
+        collection: Collection = self
+        urls_table: Dict[str, Search] = collection.urls_table
+
+        # Find a *search* that matches *search_name*:
+        search: Optional[Search] = None
+        if url in urls_table:
+            search = urls_table[url]
+        return search
+
+    # Collection.url_insert():
+    def url_insert(self, search: "Search", tracing: str = "") -> None:
+        collection: Collection = self
+        urls_table: Dict[str, Search] = collection.urls_table
+        url: str = search.url
+        assert url not in urls_table, f"URL is already in table '{url}'"
+        urls_table[url] = search
+
+    # Collection.url_remove():
+    def url_remove(self, url: str, tracing: str = "") -> None:
+        collection: Collection = self
+        urls_table: Dict[str, Search] = collection.urls_table
+        assert url in urls_table, f"URL not in table '{url}'"
+        del urls_table[url]
 
 
 # Collections:
@@ -2332,15 +2378,6 @@ class Search(Node):
         search: Search = self
         assert name.find("%3b") < 0
 
-        # Ensure sure that non-template *name is not already in *searches_table*:
-        is_template: bool = name.startswith('@')
-        collection: Optional[Collection] = parent.collection
-        assert isinstance(collection, Collection)
-        searches_table: Dict[str, Search] = collection.searches_table
-        # assert (search_parent is None) == (name == "@ALL"), "Search parent problem"
-        if not is_template:
-            assert name not in searches_table, f"Attempt to duplicate search '{name}'"
-
         # Initialize the super class for *search* (i.e. *self*):
         super().__init__(name, parent)
 
@@ -2362,15 +2399,16 @@ class Search(Node):
         self.search_parent_name: str = ""  # Used by *Search.tree_load*()
         self.url: str = url
 
-        # Stuff *search* into *searches_table* if is not *is_template*:
-        if not is_template:
-            searches_table[name] = search
+        # Collect global information about the search *name* and *url*:
+        collection: Optional[Collection] = parent.collection
+        assert isinstance(collection, Collection)
+        collection.searches_insert(search)
 
     # Search.__str__(self):
     def __str__(self) -> str:
         search: Search = self
         name: str = "??"
-        if hasattr(search, name):
+        if hasattr(search, "name"):
             name = search.name
         return f"Search('{name}')"
 
@@ -2378,6 +2416,25 @@ class Search(Node):
     def can_fetch_more(self, tracing: str = "") -> bool:
         # Currently, all *Search* objects never have any childre.  Hence, there is nothing fetch:
         return False
+
+    # Search.children_count():
+    def children_count(self, tracing: str = "") -> Tuple[int, int]:
+        search: Search = self
+        table: Optional[Node] = search.parent
+        assert isinstance(table, Table)
+        children: List[Node] = table.children_get()
+        child: Node
+        immediate_children: int = 0
+        all_children: int = 0
+        for child in children:
+            assert isinstance(child, Search)
+            distance: int = child.distance(search)
+            if distance == 1:
+                immediate_children += 1
+                all_children += 1
+            elif distance >= 2:
+                all_children += 1
+        return (immediate_children, all_children)
 
     # Search.clicked()
     def clicked(self, gui: Gui, tracing: str = "") -> None:
@@ -2391,6 +2448,20 @@ class Search(Node):
         search: Search = self
         search_comments: List[SearchComment] = search.comments
         search_comments.extend(comments)
+
+    # Search.distance():
+    def distance(self, target_search: "Search", tracing: str = "") -> int:
+        search: Search = self
+        distance: int = 0
+        while search is not target_search:
+            search_parent: Optional[Node] = search.search_parent
+            if search_parent is None:
+                distance = -1
+                break
+            assert isinstance(search_parent, Search)
+            distance += 1
+            search = search_parent
+        return distance
 
     # Search.file_load():
     def file_load(self, tracing: str = "") -> None:
@@ -2697,7 +2768,8 @@ class Search(Node):
         xml_text: str = "\n".join(xml_lines)
 
         # Ensure that *xml_directory* exists:
-        os.mkdir(xml_directory)
+        if not os.path.isdir(xml_directory):
+            os.makedirs(xml_directory)
 
         # Write *xml_text* out to *xml_file_name*:
         xml_file: IO[str]

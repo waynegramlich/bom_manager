@@ -805,9 +805,202 @@ class BomGui(QMainWindow, Gui):
         # Force *search_name* into the *collections_line* widget:
         collections_line.setText(search_name)
 
-    # BomGui.search_panel_browser_get_clicked():
+    # BomGui.search_panel_connect():
     @trace(1)
-    def search_panel_browser_get_clicked(self, tracing: str = ""):
+    def search_panel_connect(self, tracing: str = "") -> None:
+        # Grab the various search panel widgets from the *main_window* of *bom_gui* (i.e. *self*):
+        bom_gui: BomGui = self
+        main_window: QMainWindow = bom_gui.main_window
+        search_panel_new: QPushButton = main_window.search_panel_new
+        search_panel_new_name_line: QLineEdit = main_window.search_panel_new_name_line
+        search_panel_remove: QPushButton = main_window.search_panel_remove
+        search_panel_rename: QPushButton = main_window.search_panel_rename
+        search_panel_url_get: QPushButton = main_window.search_panel_url_get
+        search_panel_url_send: QPushButton = main_window.search_panel_url_send
+
+        # Connect the search panel events up to forwarding methods in *bom_gui*:
+        search_panel_new.clicked.connect(bom_gui.search_panel_new_clicked)
+        search_panel_new_name_line.textChanged.connect(bom_gui.search_panel_new_name_line_changed)
+        search_panel_remove.clicked.connect(bom_gui.search_panel_remove_clicked)
+        search_panel_rename.clicked.connect(bom_gui.search_panel_rename_clicked)
+        search_panel_url_get.clicked.connect(bom_gui.search_panel_url_get_clicked)
+        search_panel_url_send.clicked.connect(bom_gui.search_panel_url_send_clicked)
+
+    # BomGui.search_panel_new_clicked():
+    @trace(1)
+    def search_panel_new_clicked(self, tracing: str = "") -> None:
+        bom_gui: BomGui = self
+        current_search: Optional[Search] = bom_gui.current_search
+        assert isinstance(current_search, Search)
+        main_window: QMainWindow = bom_gui.main_window
+        search_panel_new_name_line: QLineEdit = main_window.search_panel_new_name_line
+        search_panel_url: QLineEdit = main_window.search_panel_url
+        new_name: str = search_panel_new_name_line.text()
+        url: str = search_panel_url.text()
+        assert url.startswith("http")
+        table: Optional[Node] = current_search.parent
+        assert isinstance(table, Table)
+        new_search: Search = Search(new_name, table, current_search, url)
+        collection: Optional[Collection] = current_search.collection
+        assert isinstance(collection, Collection)
+        collection.url_insert(new_search)
+        new_search.xml_file_save()
+        bom_gui.update()
+
+    # BomGui.search_panel_name_line_changed():
+    # @trace(1)
+    def search_panel_new_name_line_changed(self, text: str, tracing: str = "") -> None:
+        bom_gui: BomGui = self
+        # current_search: Optional[Search] = bom_gui.current_search
+        # print(f"{tracing}text='{text}'")
+        bom_gui.update()
+
+    # BomGui.search_panel_remove_clicked():
+    @trace(1)
+    def search_panel_remove_clicked(self, tracing: str = "") -> None:
+        bom_gui: BomGui = self
+        current_search: Optional[Search] = bom_gui.current_search
+        assert isinstance(current_search, Search)
+        if tracing:
+            print("******************************************************************************")
+        collection: Optional[Collection] = current_search.collection
+        assert isinstance(collection, Collection)
+        current_search.file_delete()
+        current_search_name: str = current_search.name
+        collection.search_remove(current_search_name)
+        assert collection.search_find(current_search_name) is None
+        table: Optional[Node] = current_search.parent
+        assert isinstance(table, Table)
+        table.child_remove(current_search)
+        table_searches: List[Node] = table.children_get()
+        table_search: Node
+        for table_search in table_searches:
+            assert isinstance(table_search, Search)
+            assert table_search is not current_search, "Somehow the current search is not deleted"
+        bom_gui.current_search = None
+        bom_gui.current_node = None
+        bom_gui.update()
+
+    # BomGui.search_panel_rename_clicked():
+    @trace(1)
+    def search_panel_rename_clicked(self, tracing: str = "") -> None:
+        bom_gui: BomGui = self
+        bom_gui.update()
+
+    # BomGui.search_panel_update():
+    @trace(1)
+    def search_panel_update(self, search: Search, tracing: str = "") -> None:
+        # Force the *panel_search* stacked widget to be displayed by *bom_gui* (i.e. *self*):
+        bom_gui: BomGui = self
+        main_window: QMainWindow = bom_gui.main_window
+        panels: QStackedWidget = main_window.panels
+        search_panel: QWidget = main_window.search_panel
+        panels.setCurrentWidget(search_panel)
+
+        # As a sanity check, ensure that the *current_search* in *bom_gui* is correct*:
+        assert bom_gui.current_search is search
+
+        # *search_panel_type* does not need to be updated, since it never changes:
+        # search_panel_type: QLable = main_window.search_panel_type
+
+        # Update the *search_panel_name*:
+        search_panel_name: QLabel = main_window.search_panel_name
+        search_panel_name.setText(f"Name: {search.name}")
+
+        # Update *search_panel_parent_name*:
+        search_parent: Optional[Search] = search.search_parent
+        parent_name_text: str = "" if search_parent is None else search_parent.name
+        main_window.search_panel_parent_name.setText(f"Parent Name: {parent_name_text}")
+
+        # Update the *search_panel_children_counts:
+        search_panel_children_counts: QLabel = main_window.search_panel_children_counts
+        immediate_children: int
+        all_children: int
+        immediate_children, all_children = search.children_count()
+        search_panel_children_counts.setText(f"Children: Immediate={immediate_children} "
+                                             f"All={all_children}")
+
+        # *search_panel_url_send*, *search_panel_get* do not need since they are always active:
+        # search_panel_url_get: QPushButton = main_window.search_panel_url_get
+        # search_panel_url_send: QPushButton = main_window.search_panel_url_send
+
+        # Compute *search_panel_new_enable* and *search_panel_why_text*:
+        # url: str = main_window.search_panel_url.text()
+        search_name: str = search.name
+        new_enable: bool = False
+        new_name: str = main_window.search_panel_new_name_line.text()
+        new_why: str = "?"
+        rename_enable: bool = False
+        rename_why: str = "?"
+        if new_name == "":
+            # Empty search names are not acceptable:
+            new_why = rename_why = "No Search Name"
+        elif new_name == "@ALL":
+            # '@ALL' is not allowed:
+            new_why = rename_why = "@ALL Reserved"
+        else:
+            # First verify that *search_name* does not match any of the *search* siblings:
+            table: Optional[Node] = search.parent
+            assert isinstance(table, Table)
+            siblings: List[Node] = table.children_get()
+            sibling: Node
+            for sibling in siblings:
+                if sibling.name == new_name:
+                    new_why = rename_why = "Local Duplicate"
+                    break
+            else:
+                # Now make sure there is no matching search in the overall *collection*:
+                collection: Optional[Collection] = search.collection
+                assert isinstance(collection, Collection)
+                prior_search: Optional[Search] = collection.searches_find(new_name)
+                if prior_search is None:
+                    # There are no matches for *new_name*.  Now verify that there is no
+                    # URL conflict:
+                    url: str = main_window.search_panel_url.text()
+                    if url.startswith("http"):
+                        # *url* appears to be kind of valid; now figure out if it is
+                        # already in use:
+                        url_search: Optional[Search] = collection.url_find(url)
+                        if url_search is None:
+                            # *url* is not used by another search:
+                            new_enable = rename_enable = True
+                            new_why = rename_why = "Search Name OK"
+                        else:
+                            new_why = f"URL matches '{url_search.name}'"
+                            rename_enable = True
+                            rename_why = "Search Name OK"
+                    else:
+                        # URL appears to be invalid:
+                        url_text = url if len(url) < 10 else url[:10] + "..."
+                        new_why = f"Invalid URL '{url_text}'"
+                        rename_enable = True
+                        rename_why = "Search Name OK"
+                else:
+                    new_why = rename_why = "Global Duplicate"
+        if tracing:
+            print(f"{tracing}new_enable={new_enable}")
+            print(f"{tracing}rename_enable={rename_enable}")
+            print(f"{tracing}new_why='{new_why}'")
+            print(f"{tracing}rename_whye='{rename_why}'")
+        main_window.search_panel_new.setEnabled(new_enable)
+        main_window.search_panel_new_why.setText(new_why)
+        main_window.search_panel_rename.setEnabled(rename_enable)
+        main_window.search_panel_rename_why.setText(rename_why)
+
+        remove_enable: bool = False
+        remove_why: str = "@ALL Reserved"
+        if search_name != "@ALL":
+            remove_enable = True
+            remove_why = "Remove Allowed"
+        main_window.search_panel_remove.setEnabled(remove_enable)
+        main_window.search_panel_remove_why.setText(remove_why)
+
+        # Force the visual update of *search_panel* widget:
+        search_panel.update()
+
+    # BomGui.search_panel_url_get_clicked():
+    @trace(1)
+    def search_panel_url_get_clicked(self, tracing: str = ""):
         # Grab some values from *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
         current_search: Optional[Search] = bom_gui.current_search
@@ -835,15 +1028,15 @@ class BomGui(QMainWindow, Gui):
 
         # Now update the *search_panel_url*:
         search_panel_url: QLineEdit = main_window.search_panel_url
-        search_panel_url.setText(f"URL: {url}")
+        search_panel_url.setText(url)
         search_panel_url.setCursorPosition(0)
 
         # Force an update of the entire *bom_gui*:
         bom_gui.update()
 
-    # BomGui.search_panel_browser_send_clicked():
+    # BomGui.search_panel_url_send_clicked():
     @trace(1)
-    def search_panel_browser_send_clicked(self, tracing: str = ""):
+    def search_panel_url_send_clicked(self, tracing: str = ""):
         bom_gui: BomGui = self
         current_search: Optional[Search] = bom_gui.current_search
         assert isinstance(current_search, Search)
@@ -851,186 +1044,6 @@ class BomGui(QMainWindow, Gui):
         # Force the *url* to open in the web browser:
         url: str = current_search.url
         webbrowser.open(url, new=0, autoraise=True)
-
-    # BomGui.search_panel_connect():
-    @trace(1)
-    def search_panel_connect(self, tracing: str = "") -> None:
-        # Grab the various search panel widgets from the *main_window* of *bom_gui* (i.e. *self*):
-        bom_gui: BomGui = self
-        main_window: QMainWindow = bom_gui.main_window
-        search_panel_browser_get: QPushButton = main_window.search_panel_browser_get
-        search_panel_browser_send: QPushButton = main_window.search_panel_browser_send
-        search_panel_create: QPushButton = main_window.search_panel_create
-        search_panel_delete: QPushButton = main_window.search_panel_delete
-        search_panel_line: QLineEdit = main_window.search_panel_line
-        assert isinstance(search_panel_line, QLineEdit)
-
-        # Connect the search panel events up to forwarding methods in *bom_gui*:
-        search_panel_browser_get.clicked.connect(bom_gui.search_panel_browser_get_clicked)
-        search_panel_browser_send.clicked.connect(bom_gui.search_panel_browser_send_clicked)
-        search_panel_create.clicked.connect(bom_gui.search_panel_create_clicked)
-        search_panel_delete.clicked.connect(bom_gui.search_panel_delete_clicked)
-        search_panel_line.textChanged.connect(bom_gui.search_panel_line_text_changed)
-
-    # BomGui.search_panel_create_clicked():
-    @trace(1)
-    def search_panel_create_clicked(self, tracing: str = "") -> None:
-        bom_gui: BomGui = self
-        current_search: Optional[Search] = bom_gui.current_search
-        assert isinstance(current_search, Search)
-        main_window: QMainWindow = bom_gui.main_window
-        search_panel_line: QLineEdit = main_window.search_panel_line
-        search_panel_url: QLineEdit = main_window.search_panel_url
-        new_search_name: str = search_panel_line.text()
-        url_text: str = search_panel_url.text()
-        url_prefix: str = "URL: http"
-        assert url_text.startswith(url_prefix)
-        url: str = url_text[len(url_prefix):]
-        if tracing:
-            print(f"{tracing}url='{url}'")
-        table: Optional[Node] = current_search.parent
-        assert isinstance(table, Table)
-        new_search: Search = Search(new_search_name, table, current_search, url)
-        new_search.xml_file_save()
-        bom_gui.update()
-
-    # BomGui.search_panel_delete_clicked():
-    @trace(1)
-    def search_panel_delete_clicked(self, tracing: str = "") -> None:
-        bom_gui: BomGui = self
-        current_search: Optional[Search] = bom_gui.current_search
-        assert isinstance(current_search, Search)
-        if tracing:
-            print("******************************************************************************")
-        collection: Optional[Collection] = current_search.collection
-        assert isinstance(collection, Collection)
-        current_search.file_delete()
-        current_search_name: str = current_search.name
-        collection.search_remove(current_search_name)
-        assert collection.search_find(current_search_name) is None
-        table: Optional[Node] = current_search.parent
-        assert isinstance(table, Table)
-        table.child_remove(current_search)
-        table_searches: List[Node] = table.children_get()
-        table_search: Node
-        for table_search in table_searches:
-            assert isinstance(table_search, Search)
-            assert table_search is not current_search, "Somehow the current search is not deleted"
-        bom_gui.current_search = None
-        bom_gui.current_node = None
-        bom_gui.update()
-
-    # BomGui.search_panel_line_text_changed():
-    # @trace(1)
-    def search_panel_line_text_changed(self, text: str, tracing: str = "") -> None:
-        bom_gui: BomGui = self
-        # current_search: Optional[Search] = bom_gui.current_search
-        # print(f"{tracing}text='{text}'")
-        bom_gui.update()
-
-    # BomGui.search_panel_update():
-    @trace(1)
-    def search_panel_update(self, search: Search, tracing: str = "") -> None:
-        # Force the *panel_search* stacked widget to be displayed by *bom_gui* (i.e. *self*):
-        bom_gui: BomGui = self
-        main_window: QMainWindow = bom_gui.main_window
-        panels: QStackedWidget = main_window.panels
-        search_panel: QWidget = main_window.search_panel
-        panels.setCurrentWidget(search_panel)
-
-        # As a sanity check, ensure that the *current_search* in *bom_gui* is correct*:
-        assert bom_gui.current_search is search
-
-        # Grab the interesting *search_panel* related widgets from *main_window*:
-        # search_panel_browser_get: QPushButton = main_window.search_panel_brower_get
-        # search_panel_browser_send: QPushButton = main_window.search_panel_brower_send
-        search_panel_create: QPushButton = main_window.search_panel_create
-        search_panel_create_why: QPushButton = main_window.search_panel_create_why
-        search_panel_delete: QPushButton = main_window.search_panel_delete
-        search_panel_delete_why: QLabel = main_window.search_panel_delete_why
-        search_panel_line: QLineEdit = main_window.search_panel_line
-        search_panel_name: QLabel = main_window.search_panel_name
-        search_panel_parent_name: QLabel = main_window.search_panel_parent_name
-
-        # We can only create a search if:
-        # * the search *search_line* not empty,
-        # * the search *search_line* is not named "@ALL",
-        # * there is a preexisting *current_search* to depend upon
-        # * the *search_name* is not a duplicate:
-        search_name: str = search.name
-        search_line: str = search_panel_line.text()
-        search_create_enable: bool = False
-        search_create_why: str = "Default off"
-        if search_line == "":
-            # Empty search names are not acceptable:
-            search_create_enable = False
-            search_create_why = "Empty Search name"
-        elif search_line == "@ALL":
-            # '@ALL' is not allowed:
-            search_create_enable = False
-            search_create_why = "@ALL is reserved"
-        else:
-            # Search *collection* for a match of *current_search_name*:
-            collection: Optional[Collection] = search.collection
-            assert isinstance(collection, Collection)
-            previous_search: Optional[Search] = collection.search_find(search_line)
-            if previous_search is None:
-                # Nothing matched, so this must be a new and unique search name:
-                search_create_enable = True
-                search_create_why = "Unique New Search Name"
-            else:
-                # We already have a *search* named *search_name*:
-                if tracing:
-                    print(f"previous_search.name='{previous_search.name}")
-                search_create_enable = False
-                search_create_why = "Duplicate Search"
-        if tracing:
-            print(f"{tracing}search_create_enable={search_create_enable}")
-            print(f"{tracing}search_create_why='{search_create_why}'")
-        search_panel_create.setEnabled(search_create_enable)
-        search_panel_create_why.setText(search_create_why)
-
-        # Update the *search_panel_name* and search_panel_parent_name:
-        name_text: str = f"Name: {search.name}"
-        search_panel_name.setText(name_text)
-        search_parent: Optional[Search] = search.search_parent
-        parent_name_text: str = "" if search_parent is None else search_parent.name
-        search_panel_parent_name.setText(f"Parent Name: {parent_name_text}")
-
-        # Figure out if we enable the [Delete] button and why we can or can not do so:
-        delete_enable: bool = False
-        delete_why: str = ""
-        assert search_name != "", "It should be impossible to have an empty search name"
-        if search_name == "@ALL":
-            delete_why = "'@ALL' is not deletable"
-        else:
-            table: Optional[Node] = search.parent
-            assert isinstance(table, Table)
-            table_searches: List[Node] = table.children_get()
-            table_search: Node
-            index: int
-            for index, table_search in enumerate(table_searches):
-                assert isinstance(table_search, Search)
-                table_search_parent: Optional[Search] = table_search.search_parent
-                table_search_parent_name: str = ("" if table_search_parent is None
-                                                 else table_search_parent.name)
-                if tracing:
-                    print(f"{tracing}[{index}]: '{table_search.name} "
-                          f"Parent: '{table_search_parent_name}'")
-                if isinstance(table_search_parent, Search) and table_search_parent is search:
-                    delete_why = f"'{table_search.name}' needs '{search_name}'"
-                    break
-            else:
-                delete_why = f"'{search.name}' deletable"
-                delete_enable = True
-        if tracing:
-            print(f"{tracing}delete_enable={delete_enable}")
-            print(f"{tracing}delete_why='{delete_why}'")
-        search_panel_delete.setEnabled(delete_enable)
-        search_panel_delete_why.setText(delete_why)
-
-        # Force the visual update of *search_panel* widget:
-        search_panel.update()
 
     # BomGui.tab_changed():
     def tab_changed(self, new_index: int, tracing: str = "") -> None:

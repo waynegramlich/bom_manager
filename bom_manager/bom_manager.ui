@@ -27,6 +27,60 @@
     </sizepolicy>
    </property>
    <layout class="QGridLayout" name="gridLayout_9" columnstretch="0,0">
+    <item row="0" column="0">
+     <widget class="QTabWidget" name="tree_tabs">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>1</horstretch>
+        <verstretch>1</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <widget class="QWidget" name="collections_tab">
+       <attribute name="title">
+        <string>Collections</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_12">
+        <item row="3" column="0">
+         <widget class="QPushButton" name="collections_check">
+          <property name="text">
+           <string>Order Check</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="2">
+         <widget class="QPushButton" name="collections_process">
+          <property name="text">
+           <string>Order Process</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0" colspan="3">
+         <widget class="QTreeView" name="collections_tree"/>
+        </item>
+        <item row="2" column="0">
+         <widget class="QPushButton" name="collections_new">
+          <property name="text">
+           <string>New Search</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QLineEdit" name="collections_line"/>
+        </item>
+        <item row="2" column="2">
+         <widget class="QPushButton" name="collections_delete">
+          <property name="text">
+           <string>Delete</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
     <item row="0" column="1">
      <widget class="QStackedWidget" name="panels">
       <property name="currentIndex">
@@ -41,8 +95,15 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
+        <item row="2" column="0">
          <widget class="QListView" name="none_panel_list"/>
+        </item>
+        <item row="1" column="0">
+         <widget class="Line" name="none_panel_horizontal_line">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>
@@ -62,8 +123,15 @@
           </property>
          </widget>
         </item>
-        <item row="2" column="0">
+        <item row="3" column="0">
          <widget class="QTableView" name="collection_panel_table"/>
+        </item>
+        <item row="2" column="0">
+         <widget class="Line" name="collection_panel_horizontal_line">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>
@@ -83,6 +151,13 @@
          <widget class="QLabel" name="directory_panel_type">
           <property name="text">
            <string>Type: Directory</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="Line" name="directiory_panel_horizontal_line">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
           </property>
          </widget>
         </item>
@@ -113,80 +188,105 @@
           </property>
          </widget>
         </item>
+        <item row="2" column="0">
+         <widget class="Line" name="table_panel_horizontal_line">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
        </layout>
       </widget>
       <widget class="QWidget" name="search_panel">
        <layout class="QGridLayout" name="gridLayout">
-        <item row="8" column="0">
-         <widget class="QPushButton" name="search_panel_create">
+        <item row="11" column="1">
+         <widget class="QLabel" name="search_panel_new_why">
           <property name="text">
-           <string>Search Create</string>
+           <string>New Why</string>
           </property>
          </widget>
         </item>
-        <item row="0" column="0">
-         <widget class="QLabel" name="search_panel_type">
-          <property name="text">
-           <string>Type: Search</string>
+        <item row="13" column="0" colspan="2">
+         <widget class="QLineEdit" name="search_panel_new_name_line">
+          <property name="placeholderText">
+           <string>New Search Name:</string>
           </property>
          </widget>
         </item>
-        <item row="10" column="0">
-         <widget class="QTableView" name="search_panel_view"/>
+        <item row="11" column="0">
+         <widget class="QPushButton" name="search_panel_new">
+          <property name="text">
+           <string>New Search</string>
+          </property>
+         </widget>
         </item>
-        <item row="1" column="0">
+        <item row="16" column="0">
+         <widget class="QPushButton" name="search_panel_remove">
+          <property name="text">
+           <string>Remove Search</string>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="0" colspan="2">
+         <widget class="Line" name="search_panel_horizontal_line2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+        <item row="7" column="0">
+         <widget class="QPushButton" name="search_panel_url_send">
+          <property name="text">
+           <string>URL Send</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0" colspan="2">
+         <widget class="Line" name="search_panel_horizontal_line1">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0" colspan="2">
          <widget class="QLabel" name="search_panel_name">
           <property name="text">
            <string>Name:</string>
           </property>
          </widget>
         </item>
-        <item row="5" column="0">
-         <widget class="QLineEdit" name="search_panel_line"/>
-        </item>
-        <item row="11" column="0">
-         <widget class="QPushButton" name="search_panel_delete">
+        <item row="7" column="1">
+         <widget class="QPushButton" name="search_panel_url_get">
           <property name="text">
-           <string>Search Delete</string>
+           <string>URL Get</string>
           </property>
          </widget>
         </item>
-        <item row="4" column="0">
-         <widget class="QLabel" name="search_panel_new">
-          <property name="text">
-           <string>Current Search Name:</string>
+        <item row="17" column="0" colspan="2">
+         <widget class="Line" name="search_panel_horizontal_line5">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
           </property>
          </widget>
         </item>
-        <item row="3" column="0">
-         <widget class="QPushButton" name="search_panel_browser_send">
+        <item row="0" column="0" colspan="2">
+         <widget class="QLabel" name="search_panel_type">
           <property name="text">
-           <string>Browser Send</string>
+           <string>Type: Search</string>
           </property>
          </widget>
         </item>
-        <item row="6" column="0">
-         <widget class="QPushButton" name="search_panel_browser_get">
-          <property name="text">
-           <string>Browser Get</string>
-          </property>
-         </widget>
+        <item row="21" column="0" colspan="2">
+         <widget class="QTableView" name="search_panel_view"/>
         </item>
-        <item row="9" column="0">
-         <widget class="QLabel" name="search_panel_create_why">
-          <property name="text">
-           <string>Search Create Why</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="0">
+        <item row="4" column="0" colspan="2">
          <widget class="QLabel" name="search_panel_parent_name">
           <property name="text">
            <string>Parent:</string>
           </property>
          </widget>
         </item>
-        <item row="7" column="0">
+        <item row="9" column="0" colspan="2">
          <widget class="QLineEdit" name="search_panel_url">
           <property name="enabled">
            <bool>true</bool>
@@ -199,64 +299,45 @@
           </property>
          </widget>
         </item>
+        <item row="16" column="1">
+         <widget class="QLabel" name="search_panel_remove_why">
+          <property name="text">
+           <string>Remove Why</string>
+          </property>
+         </widget>
+        </item>
+        <item row="14" column="0" colspan="2">
+         <widget class="Line" name="search_panel_horizontal_line4">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+        <item row="10" column="0" colspan="2">
+         <widget class="Line" name="search_panel_horizontal_line3">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
         <item row="12" column="0">
-         <widget class="QLabel" name="search_panel_delete_why">
+         <widget class="QPushButton" name="search_panel_rename">
           <property name="text">
-           <string>Search Delete Why</string>
+           <string>Rename Search</string>
           </property>
          </widget>
         </item>
-       </layout>
-      </widget>
-     </widget>
-    </item>
-    <item row="0" column="0">
-     <widget class="QTabWidget" name="tree_tabs">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-        <horstretch>1</horstretch>
-        <verstretch>1</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="currentIndex">
-       <number>0</number>
-      </property>
-      <widget class="QWidget" name="collections_tab">
-       <attribute name="title">
-        <string>Collections</string>
-       </attribute>
-       <layout class="QGridLayout" name="gridLayout_12">
-        <item row="1" column="0" colspan="3">
-         <widget class="QTreeView" name="collections_tree"/>
-        </item>
-        <item row="2" column="0">
-         <widget class="QPushButton" name="collections_check">
+        <item row="12" column="1">
+         <widget class="QLabel" name="search_panel_rename_why">
           <property name="text">
-           <string>Order Check</string>
+           <string>Rename Why</string>
           </property>
          </widget>
         </item>
-        <item row="2" column="2">
-         <widget class="QPushButton" name="collections_process">
+        <item row="3" column="0">
+         <widget class="QLabel" name="search_panel_children_counts">
           <property name="text">
-           <string>Order Process</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1">
-         <widget class="QLineEdit" name="collections_line"/>
-        </item>
-        <item row="0" column="2">
-         <widget class="QPushButton" name="collections_delete">
-          <property name="text">
-           <string>Delete</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0">
-         <widget class="QPushButton" name="collections_new">
-          <property name="text">
-           <string>New Search</string>
+           <string>Children: Imediate=? All=?</string>
           </property>
          </widget>
         </item>
