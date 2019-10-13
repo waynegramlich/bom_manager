@@ -242,7 +242,7 @@ import lxml.etree as etree  # type: ignore
 # import pickle                     # Python data structure pickle/unpickle
 import pkg_resources                # Used to find plug-ins.
 # import pkgutil
-from bom_manager.tracing import trace, trace_level_get, trace_level_set
+from bom_manager.tracing import trace, trace_level_get, trace_level_set, tracing_get
 import os
 import re                           # Regular expressions
 # import requests                   # HTML Requests
@@ -407,7 +407,7 @@ Quint = Tuple[float, int, int, int, int, int]
 
 # main():
 @trace(1)
-def main(tracing: str = "") -> int:
+def main() -> int:
     # Run the *Encode* class unit tests:
     Encode.test()
 
@@ -427,9 +427,11 @@ def main(tracing: str = "") -> int:
     return 0
 
 
+# command_line_arguments_process():
 @trace(1)
-def command_line_arguments_process(tracing: str = "") -> Tuple[List[str], str, "Order"]:
+def command_line_arguments_process() -> Tuple[List[str], str, "Order"]:
     # Set up command line *parser* and parse it into *parsed_arguments* dict:
+    tracing: str = tracing_get()
     parser: ArgumentParser = ArgumentParser(description="Bill of Materials (BOM) Manager.")
     parser.add_argument("-b", "--bom", action="append", default=[],
                         help="Bom file (.csv, .net). Preceed with 'NUMBER:' to increase count. ")
@@ -509,7 +511,7 @@ def command_line_arguments_process(tracing: str = "") -> Tuple[List[str], str, "
                 print(f"revision_letter='{revision_letter}'")
 
             # Create an order project:
-            order.project_create(name, revision_letter, bom_file_name, count, tracing=tracing)
+            order.project_create(name, revision_letter, bom_file_name, count)
         else:
             print(f"Ignoring file '{bom_file_name}' does not with '.net' or '.csv' suffix.")
     if tracing:
@@ -603,7 +605,7 @@ class ActualPart:
         self.selected_vendor_part: Optional[VendorPart] = None
 
     # ActualPart.__eq__():
-    def __eq__(self, actual_part2: object, tracing: str = "") -> bool:
+    def __eq__(self, actual_part2: object) -> bool:
         equal: bool = False
         if isinstance(actual_part2, ActualPart):
             actual_part1: ActualPart = self
@@ -661,7 +663,7 @@ class ActualPart:
         actual_part.vendor_parts.append(vendor_part)
 
     # ActualPart.vendor_parts_restore():
-    def vendor_parts_restore(self, order: "Order", tracing: str = "") -> bool:
+    def vendor_parts_restore(self, order: "Order") -> bool:
         # FIXME: What does this routine actually do?:
         assert False
         result: bool = False
@@ -715,7 +717,7 @@ class Cad:
     # Cad Stands for Computer Aided Design:
 
     # Cad.__init__():
-    def __init__(self, name: str, tracing: str = "") -> None:
+    def __init__(self, name: str) -> None:
         pass  # This is just a place holder class that is sub-classed against.
 
     # Cad.file_read():
@@ -1257,7 +1259,7 @@ class Filter:
         self.use: bool = use
 
     # Filter.xml_lines_append():
-    def xml_lines_append(self, xml_lines: List[str], indent: str, tracing: str = "") -> None:
+    def xml_lines_append(self, xml_lines: List[str], indent: str) -> None:
         # Grab some values from *filter* (i.e. *self*):
         filter: "Filter" = self
         parameter: Parameter = filter.parameter
@@ -1431,80 +1433,77 @@ class Gui:
 
     # Gui.begin_rows_insert():
     def begin_rows_insert(self, node: "Node",
-                          start_row_index: int, end_row_index: int, tracing: str = "") -> None:
+                          start_row_index: int, end_row_index: int) -> None:
         pass  # Do nothing for the non-GUI version of the code:
 
     # Gui.begin_rows_remove():
     def begin_rows_remove(self, node: "Node",
-                          start_row_index: int, end_row_index: int, tracing: str = "") -> None:
+                          start_row_index: int, end_row_index: int) -> None:
         pass  # Do nothing for the non-GUI version of the code:
 
     # Gui.collection_clicked():
-    def collection_clicked(self, collection: "Collection", tracing: str = "") -> None:
+    def collection_clicked(self, collection: "Collection") -> None:
         gui: Gui = self
         class_name: str = gui.__class__.__name__
         assert False, f"{class_name}.collection_clicked() has not been implemented yet"
 
     # Gui.collection_panel_update():
     @trace(1)
-    def collection_panel_update(self, collection: "Collection", tracing: str = "") -> None:
+    def collection_panel_update(self, collection: "Collection") -> None:
         gui: Gui = self
         class_name: str = gui.__class__.__name__
         assert False, f"{class_name}.collection_panel_update() has not been implmented yet"
 
     # Gui.collections_clicked():
-    def collections_clicked(self, collections: "Collections", tracing: str = "") -> None:
+    def collections_clicked(self, collections: "Collections") -> None:
         gui: Gui = self
         class_name: str = gui.__class__.__name__
         assert False, f"{class_name}.collections_clicked() has not been implemented yet"
 
     # Gui.data_changed():
-    def data_changed(self, node: "Node", start_index: int, end_index: int,
-                     tracing: str = "") -> None:
+    def data_changed(self, node: "Node", start_index: int, end_index: int) -> None:
         pass  # Do nothing for the non-GUI version of the code:
 
     # Gui.directory_clicked():
-    def directory_clicked(self, directory: "Directory", tracing: str = "") -> None:
+    def directory_clicked(self, directory: "Directory") -> None:
         gui: Gui = self
         class_name: str = gui.__class__.__name__
         assert False, f"{class_name}.directory_clicked() has not been implemented yet"
 
     # Gui.directory_panel_update():
-    def directory_panel_update(self, directory: "Directory", tracing: str = "") -> None:
+    def directory_panel_update(self, directory: "Directory") -> None:
         gui: Gui = self
         class_name: str = gui.__class__.__name__
         assert False, f"{class_name}.directory_panel_update() has not been implemented yet"
 
     # Gui.end_rows_insert():
-    def end_rows_insert(self, node: "Node", start_row_index: int, end_row_index: int,
-                        tracing: str = "") -> None:
+    def end_rows_insert(self, node: "Node", start_row_index: int, end_row_index: int) -> None:
         pass  # Do nothing for the non-GUI version of the code:
 
     # Gui.end_rows_remove():
-    def end_rows_remove(self, node: "Node", start_row_index: int, end_row_index: int,
-                        tracing: str = "") -> None:
+    def end_rows_remove(self, node: "Node", start_row_index: int, end_row_index: int) -> None:
         pass  # Do nothing for the non-GUI version of the code:
 
     # Gui.search_clicked():
-    def search_clicked(self, search: "Search", tracing: str = "") -> None:
+    def search_clicked(self, search: "Search") -> None:
         gui: Gui = self
         class_name: str = gui.__class__.__name__
         assert False, f"{class_name}.search_clicked() has not been implemented yet"
 
     # Gui.search_panel_update()
-    def search_panel_update(self, search: "Search", tracing: str = "") -> None:
+    def search_panel_update(self, search: "Search") -> None:
         gui: Gui = self
         class_name: str = gui.__class__.__name__
         assert False, f"{class_name}.search_panel_update() has not been implmented yet."
 
     # Gui.table_clicked():
-    def table_clicked(self, table: "Table", tracing: str = "") -> None:
+    def table_clicked(self, table: "Table") -> None:
         gui: Gui = self
         class_name: str = gui.__class__.__name__
         assert False, f"{class_name}.table_clicked() has not been implemented yet"
 
     # Gui.table_panel_update()
-    def table_panel_update(self, table: "Table", tracing: str = "") -> None:
+    def table_panel_update(self, table: "Table") -> None:
         gui: Gui = self
         class_name: str = gui.__class__.__name__
         assert False, f"{class_name}.table_panel_update() has not been implmented yet."
@@ -1515,8 +1514,7 @@ class Node:
     """ Represents a single *Node* suitable for use in a *QTreeView* tree. """
 
     # Node.__init__():
-    def __init__(self, name: str, parent: "Optional[Node]",
-                 gui: Optional[Gui] = None, tracing: str = "") -> None:
+    def __init__(self, name: str, parent: "Optional[Node]", gui: Optional[Gui] = None) -> None:
         # Do some additional checking for *node* (i.e. *self*):
         node: Node = self
         # is_collection: bool = isinstance(node, Collection)
@@ -1579,7 +1577,7 @@ class Node:
             parent.child_append(node)
 
     # Node.can_fetch_more():
-    def can_fetch_more(self, tracing: str = "") -> bool:
+    def can_fetch_more(self) -> bool:
         node: Node = self
         class_name: str = node.__class__.__name__
         assert False, f"{class_name}.can_fetch_more() needs to be implemented"
@@ -1595,7 +1593,7 @@ class Node:
 
     # Node.child_append():
     @trace(1)
-    def child_append(self, child: "Node", tracing: str = "") -> None:
+    def child_append(self, child: "Node") -> None:
         # FIXME: This should just call *child_insert*() with a position of len(children)!!!
 
         # Grab some values from *node* (i.e. *self*):
@@ -1616,14 +1614,14 @@ class Node:
         gui.end_rows_insert(node, insert_row_index, insert_row_index)
 
     # Node.child_count():
-    def child_count(self, tracing: str = "") -> int:
+    def child_count(self) -> int:
         # Return the number of children associated with *node* (i.e. *self*):
         node: Node = self
         count: int = len(node._children)
         return count
 
     # Node.child_delete():
-    def child_delete(self, index: int, tracing: str = "") -> None:
+    def child_delete(self, index: int) -> None:
         # Grab some values out of *node* (i.e. *self*):
         node = self
         children = node._children
@@ -1663,7 +1661,7 @@ class Node:
         gui.end_rows_insert(node, index, index)
 
     # Node.child_remove()
-    def child_remove(self, child: "Node", tracing="") -> None:
+    def child_remove(self, child: "Node") -> None:
         # Find the *index* of *child* in *node* (i.e. *self*) and delete it:
         node: Node = self
         children: List[Node] = node._children
@@ -1679,21 +1677,20 @@ class Node:
         return children
 
     # Node.clicked():
-    def clicked(self, gui: Gui, tracing: str = "") -> None:
+    def clicked(self, gui: Gui) -> None:
         # Fail with a more useful error message better than "no such method":
         node: Node = self
         assert False, f"Node.clicked() needs to be overridden for type ('{type(node)}')"
 
     # Node.csvs_download():
-    def csvs_download(self, csvs_directory: str, downloads_count: int, tracing: str = "") -> int:
+    def csvs_download(self, csvs_directory: str, downloads_count: int) -> int:
         node: Node = self
         class_name: str = node.__class__.__name__
         assert False, f"{class_name}.csvs_download() has not been implmented yet!"
         return 0
 
     # Node.csv_read_and_process():
-    def csv_read_and_process(self, csv_directory: str, bind: bool, gui: Gui,
-                             tracing: str = "") -> None:
+    def csv_read_and_process(self, csv_directory: str, bind: bool, gui: Gui) -> None:
         # Fail with a more useful error message better than "no such method":
         node: Node = self
         assert False, f"Node sub-class '{type(node)}' does not implement csv_read_and_process"
@@ -1705,7 +1702,7 @@ class Node:
         return list()
 
     # Node.directory_create():
-    def directory_create(self, root_path: str, tracing: str = "") -> None:
+    def directory_create(self, root_path: str) -> None:
         node: "Node" = self
         parent: Optional[Node] = node.parent
         if parent is not None:
@@ -1713,11 +1710,12 @@ class Node:
             directory_path: str = os.path.join(root_path, parent_relative_path)
             if not os.path.isdir(directory_path):
                 os.makedirs(directory_path)
+                tracing: str = tracing_get()
                 if tracing:
                     print(f"{tracing}Created directory '{directory_path}'")
 
     # Node.fetch_more():
-    def fetch_more(self, tracing: str = "") -> None:
+    def fetch_more(self) -> None:
         node: Node = self
         class_name: str = node.__class__.__name__
         assert False, f"{class_name}.fetch_more() has not been implmented yet."
@@ -1752,7 +1750,7 @@ class Node:
         return has_children
 
     # Node.name_get():
-    def name_get(self, tracing: str = "") -> str:
+    def name_get(self) -> str:
         # Grab *title* from *node* (i.e. *self*):
         node: "Node" = self
         name: str = node.name
@@ -1760,13 +1758,13 @@ class Node:
 
     # Node.panel_update():
     @trace(1)
-    def panel_update(self, gui: Gui, tracing: str = "") -> None:
+    def panel_update(self, gui: Gui) -> None:
         node: Node = self
         class_name: str = node.__class__.__name__
         assert False, f"{class_name}.panel_update() is not implmented yet."
 
     # Node.remove():
-    def remove(self, remove_node: "Node", tracing: str = "") -> None:
+    def remove(self, remove_node: "Node") -> None:
         node: "Node" = self
         children: "List[Node]" = node._children
         index: int
@@ -1791,7 +1789,7 @@ class Node:
 
     # Node.sort_helper():
     @trace(1)
-    def sort_helper(self, key_get: "Callable[[Node], Any]", tracing: str = "") -> None:
+    def sort_helper(self, key_get: "Callable[[Node], Any]") -> None:
         # Sort the *children* of *node* (i.e. *self*) using *key_function*:
         node: Node = self
         children: List[Node] = node._children
@@ -1809,7 +1807,7 @@ class Node:
         assert False, f"Node.tables_get() called with a node of type '{type(node)}'"
 
     # Node.type_letter_get():
-    def type_letter_get(self, tracing: str = "") -> str:
+    def type_letter_get(self) -> str:
         node: Node = self
         class_name: str = node.__class__.__name__
         assert False, f"{class_name}.type_lettet_get() has not been implemented yet."
@@ -1820,7 +1818,7 @@ class Node:
 class Directory(Node):
 
     # Directory.__init__():
-    def __init__(self, name, parent, tracing="") -> None:
+    def __init__(self, name, parent) -> None:
         # Perform some additional checking on *parent*:
         assert isinstance(parent, Directory) or isinstance(parent, Collection)
 
@@ -1830,6 +1828,7 @@ class Directory(Node):
         # The parent *Node* class initialized *directory* (i.e. *self*) to have a *relative_path*:
         directory: Directory = self
         relative_path: str = directory.relative_path
+        tracing: str = tracing_get()
         if tracing:
             print(f"{tracing}relative_path='{relative_path}'")
 
@@ -1840,13 +1839,13 @@ class Directory(Node):
         directory.child_append(node)
 
     # Directory.can_fetch_more():
-    def can_fetch_more(self, tracing: str = "") -> bool:
+    def can_fetch_more(self) -> bool:
         # The call to *Directiory.partial_load*, pre-loaded all of the sub-directories and
         # tables for *directory* (i.e. *self*).  That means there is nothing more to fetch.
         return False
 
     # Directory.clicked():
-    def clicked(self, gui: Gui, tracing: str = "") -> None:
+    def clicked(self, gui: Gui) -> None:
         # Send the clicked event back to the *gui* along with *directory* (i.e. *self*):
         directory: Directory = self
         gui.directory_clicked(directory)
@@ -1861,13 +1860,13 @@ class Directory(Node):
         return directories
 
     # Directory.name_get():
-    def name_get(self, tracing="") -> str:
+    def name_get(self) -> str:
         directory: Directory = self
         name: str = directory.name
         return name
 
     # Directory.partial_load():
-    def partial_load(self, tracing: str = "") -> None:
+    def partial_load(self) -> None:
         # Compute the *full_path* for the *collection* sub-*directory*:
         directory: Directory = self
         relative_path: str = directory.relative_path
@@ -1875,6 +1874,7 @@ class Directory(Node):
         collection: Collection = directory.collection
         collection_root: str = collection.collection_root
         full_path: str = os.path.join(collection_root, relative_path)
+        tracing: str = tracing_get()
         if tracing:
             print(f"{tracing}collection_root='{collection_root}'")
             print(f"{tracing}relative_path='{relative_path}'")
@@ -1915,7 +1915,7 @@ class Directory(Node):
 
     # Directory.panel_update():
     @trace(1)
-    def panel_update(self, gui: Gui, tracing: str = "") -> None:
+    def panel_update(self, gui: Gui) -> None:
         directory: Directory = self
         gui.directory_panel_update(directory)
 
@@ -1930,7 +1930,7 @@ class Directory(Node):
         return tables
 
     # Directory.type_letter_get():
-    def type_letter_get(self, tracing: str = "") -> str:
+    def type_letter_get(self) -> str:
         return 'D'
 
 
@@ -1940,10 +1940,11 @@ class Collection(Node):
     # Collection.__init__():
     @trace(1)
     def __init__(self, name: str, parent: Node,
-                 collection_root: str, searches_root: str, gui: Gui, tracing: str = "") -> None:
+                 collection_root: str, searches_root: str, gui: Gui) -> None:
         # Intialize the *Node* super class of *collection* (i.e. *self*).
         collection: Collection = self
         super().__init__(name, parent, gui=gui)
+        tracing: str = tracing_get()
         if tracing:
             print(f"{tracing}collection.relative_path='{collection.relative_path}'")
 
@@ -1965,7 +1966,7 @@ class Collection(Node):
 
     # Collection.actual_parts_lookup():
     @trace(1)
-    def actual_parts_lookup(self, choice_part: "ChoicePart", tracing: str = "") -> List[ActualPart]:
+    def actual_parts_lookup(self, choice_part: "ChoicePart") -> List[ActualPart]:
         # Grab some values from *collection* (i.e. *self*) and *choice_part*:
         collection: Collection = self
         searches_table: Dict[str, Search] = collection.searches_table
@@ -1978,6 +1979,7 @@ class Collection(Node):
 
         # FIXME: This code should be in Search.actual_parts_lookup()!!!
 
+        tracing: str = tracing_get()
         actual_parts: List[ActualPart] = []
         # Build up *actual_parts* from *collection* (i.e. *self*):
         if choice_part_name in searches_table:
@@ -2056,14 +2058,14 @@ class Collection(Node):
         return actual_parts
 
     # Collection.can_fetch_more():
-    def can_fetch_more(self, tracing: str = "") -> bool:
+    def can_fetch_more(self) -> bool:
         # All of the directores for *collection* (i.e. *self*) have be previously found
         # using using *Collection.partial_load*().  So, there are no more *Directory*'s
         # to be loaded.
         return False
 
     # Collection.clicked():
-    def clicked(self, gui: Gui, tracing: str = "") -> None:
+    def clicked(self, gui: Gui) -> None:
         collection: Collection = self
         gui.collection_clicked(collection)
 
@@ -2078,12 +2080,13 @@ class Collection(Node):
 
     # Collection.partial_load():
     @trace(1)
-    def partial_load(self, tracing: str = "") -> None:
+    def partial_load(self) -> None:
         # Visit all of the directories and files in *collection_root*:
         collection: Collection = self
         collection_root: str = collection.collection_root
         relative_path: str = collection.relative_path
         directory_path: str = os.path.join(collection_root, relative_path)
+        tracing: str = tracing_get()
         if tracing:
             print(f"{tracing}collection_root='{collection_root}'")
             print(f"{tracing}relative_path='{relative_path}'")
@@ -2112,7 +2115,7 @@ class Collection(Node):
                     assert False, f"'{base_name}' is neither an .xml file nor a directory"
 
     # Collection.searches_find():
-    def searches_find(self, search_name: str, tracing: str = "") -> "Optional[Search]":
+    def searches_find(self, search_name: str) -> "Optional[Search]":
         # Grab some values from *collection* (i.e. *self*):
         collection: Collection = self
         searches_table: Dict[str, Search] = collection.searches_table
@@ -2124,7 +2127,7 @@ class Collection(Node):
         return search
 
     # Collection.searches_insert():
-    def searches_insert(self, search: "Search", tracing: str = "") -> None:
+    def searches_insert(self, search: "Search") -> None:
         search_name: str = search.name
         if search_name[0] != '@':
             collection: Collection = self
@@ -2133,7 +2136,7 @@ class Collection(Node):
             searches_table[search_name] = search
 
     # Collection.searches_remove():
-    def searches_remove(self, search: "Search", tracing: str = "") -> None:
+    def searches_remove(self, search: "Search") -> None:
         collection: Collection = self
         searches_table: Dict[str, Search] = collection.searches_table
         search_name: str = search.name
@@ -2151,12 +2154,12 @@ class Collection(Node):
         return tables
 
     # Collection.type_leter_get()
-    def type_letter_get(self, tracing: str = "") -> str:
+    def type_letter_get(self) -> str:
         # print("Collection.type_letter_get(): name='{0}'".format(self.name))
         return 'C'
 
     # Collection.url_find():
-    def url_find(self, url: str, tracing: str = "") -> "Optional[Search]":
+    def url_find(self, url: str) -> "Optional[Search]":
         # Grab some values from *collection* (i.e. *self*):
         collection: Collection = self
         urls_table: Dict[str, Search] = collection.urls_table
@@ -2168,7 +2171,7 @@ class Collection(Node):
         return search
 
     # Collection.url_insert():
-    def url_insert(self, search: "Search", tracing: str = "") -> None:
+    def url_insert(self, search: "Search") -> None:
         collection: Collection = self
         urls_table: Dict[str, Search] = collection.urls_table
         url: str = search.url
@@ -2176,7 +2179,7 @@ class Collection(Node):
         urls_table[url] = search
 
     # Collection.url_remove():
-    def url_remove(self, url: str, tracing: str = "") -> None:
+    def url_remove(self, url: str) -> None:
         collection: Collection = self
         urls_table: Dict[str, Search] = collection.urls_table
         assert url in urls_table, f"URL not in table '{url}'"
@@ -2189,7 +2192,7 @@ class Collections(Node):
     # Collections.__init__():
     @trace(1)
     def __init__(self, name: str, collection_directories: List[str],
-                 searches_root: str, partial_load: bool, gui: Gui, tracing: str = "") -> None:
+                 searches_root: str, partial_load: bool, gui: Gui) -> None:
         # Intialize the *Node* super class of *collections* (i.e. *self*):
         collections: Collections = self
         super().__init__(name, None, gui=gui)
@@ -2199,6 +2202,7 @@ class Collections(Node):
         self.gui = gui
 
         # Construct the collections list:
+        tracing: str = tracing_get()
         entry_point_key: str = "bom_manager_collection_get"
         index: int
         entry_point: pkg_resources.EntryPoint
@@ -2232,11 +2236,12 @@ class Collections(Node):
 
     # Collections.actual_parts_lookup():
     @trace(1)
-    def actual_parts_lookup(self, choice_part: "ChoicePart", tracing: str = "") -> List[ActualPart]:
+    def actual_parts_lookup(self, choice_part: "ChoicePart") -> List[ActualPart]:
         # Visit each *collection* in *collections* (i.e. *self*) and find any
         # *ActualPart*'s that match *search_name*:
         collections: Collections = self
         actual_parts: List[ActualPart] = []
+        tracing: str = tracing_get()
         index: int
         collection: Node
         for index, collection in enumerate(collections.children_get()):
@@ -2252,14 +2257,13 @@ class Collections(Node):
         return actual_parts
 
     # Collections.can_fetch_more():
-    def can_fetch_more(self, tracing: str = "") -> bool:
+    def can_fetch_more(self) -> bool:
         # The children of *collections* (i.e. self*) have already be preloaded by
         # *Collections.partial_load*().  There is nothing more to fetch:
         return False
 
     # Collections.check():
-    def check(self, search_name: str, project_name: str, reference: str,
-              tracing: str = "") -> None:
+    def check(self, search_name: str, project_name: str, reference: str) -> None:
         # Find all *matching_searches* that matach *search_name* from *collections* (i.e. *self*):
         collections: Collections = self
         matching_searches: List[Search] = list()
@@ -2276,17 +2280,18 @@ class Collections(Node):
             print(f"{project_name}: {reference} '{search_name}' not found")
 
     # Collections.clicked():
-    def clicked(self, gui: Gui, tracing: str = "") -> None:
+    def clicked(self, gui: Gui) -> None:
         collections: Collections = self
         gui.collections_clicked(collections)
 
     # Collections.partial_load():
-    def partial_load(self, tracing: str = "") -> None:
+    def partial_load(self) -> None:
         # Extract some values from *collections*:
         collections: Collections = self
         gui: Gui = collections.gui
         collection_directories: List[str] = collections.collection_directories
         searches_root: str = collections.searches_root
+        tracing: str = tracing_get()
         if tracing:
             print(f"{tracing}collection_directories='{collection_directories}'")
             print(f"{tracing}searches_root='{searches_root}'")
@@ -2345,7 +2350,7 @@ class Collections(Node):
 
     # Collections.searches_find():
     @trace(1)
-    def searches_find(self, search_name: str, tracing: str = "") -> "List[Search]":
+    def searches_find(self, search_name: str) -> "List[Search]":
         # Visit each *collection in *collections* (i.e. *self*) to see if it has *search_name*:
         collections: Collections = self
         searches: List[Search] = []
@@ -2360,7 +2365,7 @@ class Collections(Node):
         return searches
 
     # Collections.type_leter_get():
-    def type_letter_get(self, tracing: str = "") -> str:
+    def type_letter_get(self) -> str:
         # print("Collections.type_letter_get(): name='{0}'".format(self.name))
         return 'R'
 
@@ -2388,7 +2393,7 @@ class Search(Node):
     # Search.__init__():
     @trace(1)
     def __init__(self, name: str, parent: "Table", search_parent: "Optional[Search]",
-                 url: str, tracing: str = "") -> None:
+                 url: str) -> None:
         # Grab some values from *search* (i.e. *self*):
         search: Search = self
         assert name.find("%3b") < 0
@@ -2429,12 +2434,12 @@ class Search(Node):
         return f"Search('{name}')"
 
     # Search.can_fetch_more():
-    def can_fetch_more(self, tracing: str = "") -> bool:
+    def can_fetch_more(self) -> bool:
         # Currently, all *Search* objects never have any childre.  Hence, there is nothing fetch:
         return False
 
     # Search.children_count():
-    def children_count(self, tracing: str = "") -> Tuple[int, int]:
+    def children_count(self) -> Tuple[int, int]:
         search: Search = self
         table: Optional[Node] = search.parent
         assert isinstance(table, Table)
@@ -2453,7 +2458,7 @@ class Search(Node):
         return (immediate_children, all_children)
 
     # Search.clicked()
-    def clicked(self, gui: Gui, tracing: str = "") -> None:
+    def clicked(self, gui: Gui) -> None:
         # Send the clicked event back to *gui* along with *search* (i.e. *self*):
         search: Search = self
         gui.search_clicked(search)
@@ -2466,7 +2471,7 @@ class Search(Node):
         search_comments.extend(comments)
 
     # Search.distance():
-    def distance(self, target_search: "Search", tracing: str = "") -> int:
+    def distance(self, target_search: "Search") -> int:
         search: Search = self
         distance: int = 0
         while search is not target_search:
@@ -2480,7 +2485,7 @@ class Search(Node):
         return distance
 
     # Search.file_load():
-    def file_load(self, tracing: str = "") -> None:
+    def file_load(self) -> None:
         # Grab some informtation from parent *table* of *search*:
         search: Search = self
         table: Optional[Node] = search.parent
@@ -2491,6 +2496,7 @@ class Search(Node):
         searches_size: int = len(searches)
         # Only load *search* (i.e. *self*) if it is not already *loaded*:
         loaded: bool = search.loaded
+        tracing: str = tracing_get()
         if tracing:
             print(f"{tracing}loaded={loaded} table='{table_name}' searches_size={searches_size}")
         if not loaded:
@@ -2522,13 +2528,14 @@ class Search(Node):
 
     # Search.file_delete
     @trace(1)
-    def file_delete(self, tracing: str = "") -> None:
+    def file_delete(self) -> None:
         search: Search = self
         collection: Optional[Collection] = search.collection
         assert isinstance(collection, Collection)
         searches_root: str = collection.searches_root
         relative_path: str = search.relative_path
         search_full_file_name: str = os.path.join(searches_root, relative_path + ".xml")
+        tracing: str = tracing_get()
         if tracing:
             print(f"{tracing}search_full_file_name='{search_full_file_name}'")
         if os.path.isfile(search_full_file_name):
@@ -2536,7 +2543,7 @@ class Search(Node):
             assert not os.path.isfile(search_full_file_name)
 
     # Search.filters_refresh():
-    def filters_refresh(self, tracing: str = "") -> None:
+    def filters_refresh(self) -> None:
         # Before we do anything we have to make sure that *search* has an associated *table*.
         # Frankly, it is should be impossible not to have an associated table, but we must
         # be careful:
@@ -2577,7 +2584,7 @@ class Search(Node):
                     filters.append(filter)
 
     # Search.is_deletable():
-    def is_deletable(self, tracing: str = "") -> bool:
+    def is_deletable(self) -> bool:
         # Grab *search_name* from *search* (i.e. *self*):
         search: Search = self
 
@@ -2667,12 +2674,12 @@ class Search(Node):
 
     # Search.panel_update():
     @trace(1)
-    def panel_update(self, gui: Gui, tracing: str = "") -> None:
+    def panel_update(self, gui: Gui) -> None:
         search: Search = self
         gui.search_panel_update(search)
 
     # Search.search_parent_set():
-    def search_parent_set(self, search_parent: "Search", tracing: str = "") -> None:
+    def search_parent_set(self, search_parent: "Search") -> None:
         # Stuff *search_parent* into *search* (i.e. *self*):
         search: Search = self
         search.search_parent = search_parent
@@ -2684,7 +2691,7 @@ class Search(Node):
         search.search_parent_title = search_parent_title
 
     # Search.name_get():
-    def name_get(self, tracing: str = "") -> str:
+    def name_get(self) -> str:
         # Grab some values from *search* (i.e. *self*):
         search: Search = self
         search_name: str = search.name
@@ -2703,7 +2710,7 @@ class Search(Node):
         return name
 
     # Search.tree_load():
-    def tree_load(self, search_tree: etree._Element, tracing: str = "") -> None:
+    def tree_load(self, search_tree: etree._Element) -> None:
         # The basic format of the *search_tree* is:
         #
         #        <Search name="..." parent="..." table="..." url="...">
@@ -2749,7 +2756,7 @@ class Search(Node):
         search.url = url
 
     # Search.type_letter_get():
-    def type_letter_get(self, tracing: str = "") -> str:
+    def type_letter_get(self) -> str:
         return 'S'
 
     # Search.url_set():
@@ -2759,7 +2766,7 @@ class Search(Node):
         search.url = url
 
     # Search.xml_file_save():
-    def xml_file_save(self, tracing: str = "") -> None:
+    def xml_file_save(self) -> None:
         # Compute *xml_file_name* and the *xml_file_directory* starting from *search* (i.e. *self*):
         search: Search = self
         collection: Optional[Collection] = search.collection
@@ -2768,6 +2775,7 @@ class Search(Node):
         relative_path: str = search.relative_path
         xml_file_name: str = os.path.join(searches_root, relative_path + ".xml")
         xml_directory: str = os.path.split(xml_file_name)[0]
+        tracing: str = tracing_get()
         if tracing:
             print(f"{tracing}searches_root='{searches_root}'")
             print(f"{tracing}relative_path='{relative_path}'")
@@ -2794,7 +2802,7 @@ class Search(Node):
         search.loaded = True
 
     # Search.xml_lines_append()
-    def xml_lines_append(self, xml_lines: List[str], indent: str, tracing: str = "") -> None:
+    def xml_lines_append(self, xml_lines: List[str], indent: str) -> None:
         # Grab some values from *search* (i.e. *self*):
         search: Search = self
         table: Optional[Node] = search.parent
@@ -2829,7 +2837,7 @@ class Search(Node):
 class Table(Node):
 
     # Table.__init__():
-    def __init__(self, name: str, parent: Node, url: str, tracing: str = "") -> None:
+    def __init__(self, name: str, parent: Node, url: str) -> None:
         # Initialize the parent class:
         super().__init__(name, parent)
 
@@ -2856,7 +2864,7 @@ class Table(Node):
         return f"Table('{name}')"
 
     # Table.can_fetch_more():
-    def can_fetch_more(self, tracing: str = "") -> bool:
+    def can_fetch_more(self) -> bool:
         # Conceptually, every table as a default `@ALL` search.  We return *True* if
         # the `@ALL` search has not actually been created yet for *table* (i.e. *self*):
         table: Table = self
@@ -2865,15 +2873,14 @@ class Table(Node):
         return can_fetch_more
 
     # Table.clicked():
-    def clicked(self, gui: Gui, tracing: str = "") -> None:
+    def clicked(self, gui: Gui) -> None:
         # Forward clicked event back to *gui* along with *table* (i.e. *self*):
         table: Table = self
         gui.table_clicked(table)
 
     # Table.column_tables_extract():
     @trace(1)
-    def column_tables_extract(self, rows: List[List[str]],
-                              tracing: str = "") -> List[Dict[str, int]]:
+    def column_tables_extract(self, rows: List[List[str]]) -> List[Dict[str, int]]:
         # Create and return a *column_tables* which has one dictionary for each column in *rows*.
         # Each *column_table* dictionary that contains an occurance count for each different
         # value in the column.
@@ -2907,7 +2914,7 @@ class Table(Node):
 
     # Table.csv_file_read():
     @trace(1)
-    def csv_file_read(self, tracing: str = "") -> Tuple[List[str], List[List[str]]]:
+    def csv_file_read(self) -> Tuple[List[str], List[List[str]]]:
         # Grab some values from *table* (i.e. *self*):
         table: Table = self
         csv_full_name: str = table.csv_full_name_get()
@@ -2940,8 +2947,7 @@ class Table(Node):
 
     # Table.csv_read_and_process():
     @trace(1)
-    def csv_read_and_process(self, csv_directory: str, bind: bool, gui: Gui,
-                             tracing: str = "") -> None:
+    def csv_read_and_process(self, csv_directory: str, bind: bool, gui: Gui) -> None:
         # This delightful piece of code reads in a `.csv` file and attempts to catagorize
         # each column of the table with a "type".  The types are stored in *re_table*
         # (from *gui*) as dictionary of named pre compiled regualar expressions.
@@ -2976,11 +2982,12 @@ class Table(Node):
         return []
 
     # Table.fetch_more():
-    def fetch_more(self, tracing: str = "") -> None:
+    def fetch_more(self) -> None:
         # Create *all_search* if it does not already exist (i.e. *searches_size* is 0):
         table: Table = self
         searches: List[Node] = table.children_get()
         searches_size = len(searches)
+        tracing: str = tracing_get()
         if tracing:
             print(f"{tracing}1:searches_size={searches_size}")
         if searches_size == 0:
@@ -3012,12 +3019,13 @@ class Table(Node):
                 print(f"{tracing}3:searches_size={searches_size}")
 
     # Table.file_load():
-    def file_load(self, tracing: str = "") -> None:
+    def file_load(self) -> None:
         # Only load *table* (i.e. *self*) if it is not already *loaded*:
         table: Table = self
         loaded: bool = table.loaded
         searches: List[Node] = table.children_get()
         searches_size: int = len(searches)
+        tracing: str = tracing_get()
         if tracing:
             print(f"{tracing}loaded={loaded} searches_size={searches_size}")
         if not table.loaded:
@@ -3072,7 +3080,7 @@ class Table(Node):
         return header_labels
 
     # Table.name_get():
-    def name_get(self, tracing: str = "") -> str:
+    def name_get(self) -> str:
         # Force *table* (i.e. *self*) *load* if it has not already been loaded:
         table: Table = self
         name: str = table.name
@@ -3087,14 +3095,13 @@ class Table(Node):
 
     # Table.panel_update():
     @trace(1)
-    def panel_update(self, gui: Gui, tracing: str = "") -> None:
+    def panel_update(self, gui: Gui) -> None:
         table: Table = self
         gui.table_panel_update(table)
 
     # Table.parameters_bind():
     @trace(1)
-    def parameters_bind(self, headers: List[str], type_tables: List[Dict[str, int]],
-                        tracing: str = "") -> None:
+    def parameters_bind(self, headers: List[str], type_tables: List[Dict[str, int]]) -> None:
         # Grab *parameters* from *table* and make sure that there is a 1-to-1 correspondance
         # between *paramters* and *type_tables*:
         table: Table = self
@@ -3130,12 +3137,13 @@ class Table(Node):
                 parameter.type = type_name
 
     # Table.partial_load():
-    def partial_load(self, tracing: str = "") -> None:
+    def partial_load(self) -> None:
         # Grab some values from *table* (i.e. *self*):
         table: Table = self
         relative_path: str = table.relative_path
         collection: Optional[Collection] = table.collection
         assert isinstance(collection, Collection)
+        tracing: str = tracing_get()
 
         # Compute *searches_path* which is the directory that contains the *Search* `.xml` files:
         collection_root: str = collection.collection_root
@@ -3170,7 +3178,7 @@ class Table(Node):
 
     # Table.sort():
     @trace(1)
-    def sort(self, tracing: str = "") -> None:
+    def sort(self) -> None:
         # Only sort *table* (i.e. *self*) if it is not *is_sorted*:
         table: Table = self
         if not table.searches_sorted:
@@ -3180,6 +3188,7 @@ class Table(Node):
 
         # Old bogus code:
         is_sorted: bool = table.is_sorted
+        tracing: str = tracing_get()
         if tracing:
             print(f"{tracing}is_sorted={is_sorted}")
         if not is_sorted:
@@ -3231,7 +3240,7 @@ class Table(Node):
             table.is_sorted = True
 
     # Table.search_directory_get():
-    # def search_directory_get(self, tracing: str = "") -> str:
+    # def search_directory_get(self) -> str:
     #     # Compute *search_directory*:
     #     table: Table = self
     #     searches_root: str = table.searches_root_get()
@@ -3254,8 +3263,9 @@ class Table(Node):
 
     # Table.searches_load():
     @trace(1)
-    def searches_load(self, tracing: str = "") -> None:
+    def searches_load(self) -> None:
         # Grab some values from *table* (i.e. *self*):
+        tracing: str = tracing_get()
         table: Table = self
         if not table.searches_loaded:
             table_searches: Dict[str, Search] = dict()
@@ -3317,7 +3327,7 @@ class Table(Node):
         return [table]
 
     # Table.tree_load():
-    def tree_load(self, table_tree: etree._Element, tracing: str = "") -> None:
+    def tree_load(self, table_tree: etree._Element) -> None:
         # The format of a *Table* `.xml` file is basically:
         #
         #        <Table name="..." url="...">
@@ -3367,8 +3377,8 @@ class Table(Node):
 
     # Table.type_tables_extract():
     @trace(1)
-    def type_tables_extract(self, column_tables: List[Dict[str, int]], gui: Gui,
-                            tracing: str = "") -> List[Dict[str, int]]:
+    def type_tables_extract(self, column_tables: List[Dict[str, int]],
+                            gui: Gui) -> List[Dict[str, int]]:
         # The *re_table* comes from *gui* contains some regular expression for catagorizing
         # values.  The key of *re_table* is the unique *type_name* associated with the regular
         # expression that matches a given type.  The regular expressions are *PreCompiled*
@@ -3411,11 +3421,11 @@ class Table(Node):
         return type_tables
 
     # Table.type_letter_get():
-    def type_letter_get(self, tracing: str = "") -> str:
+    def type_letter_get(self) -> str:
         return 'T'
 
     # Table.xml_file_save():
-    def xml_file_save(self, tracing: str = "") -> None:
+    def xml_file_save(self) -> None:
         # Compute *xml_file_name* and *xml_directory* from *table* (i.e. *self*):
         table: Table = self
         relative_path: str = table.relative_path
@@ -3424,6 +3434,7 @@ class Table(Node):
         collection_root: str = collection.collection_root
         xml_file_name: str = os.path.join(collection_root, relative_path + ".xml")
         xml_directory: str = os.path.split(xml_file_name)[0]
+        tracing: str = tracing_get()
         if tracing:
             print("{tracing}relative_path='{relative_path}'")
             print("{tracing}collection_root='{collection_root}'")
@@ -3446,7 +3457,7 @@ class Table(Node):
             xml_file.write(xml_text)
 
     # Table.xml_lines_append():
-    def xml_lines_append(self, xml_lines: List[str], indent: str, tracing: str = "") -> None:
+    def xml_lines_append(self, xml_lines: List[str], indent: str) -> None:
         # Start appending the `<Table...>` element:
         table: Table = self
         xml_lines.append(f'{indent}<Table '
@@ -3485,8 +3496,7 @@ class Order:
     # listed as well.
 
     # Order.__init__():
-    def __init__(self, order_root: str, cads: List[Cad], pandas: "List[Panda]",
-                 tracing: str = "") -> None:
+    def __init__(self, order_root: str, cads: List[Cad], pandas: "List[Panda]") -> None:
         """ *Order*: Initialize *self* for an order. """
 
         # Ensure that *order_root* exists:
@@ -3553,7 +3563,7 @@ class Order:
 
     # Order.project_create():
     def project_create(self, name: str, revision: str, net_file_name: str, count: int,
-                       positions_file_name: str = "", tracing: str = "") -> "Project":
+                       positions_file_name: str = "") -> "Project":
         """ *Order*: Create a *Project* containing *name*, *revision*,
             *net_file_name* and *count*. """
 
@@ -3576,8 +3586,7 @@ class Order:
 
     # Order.bom_write():
     @trace(1)
-    def bom_write(self, bom_file_name: str, key_function: "Callable[[ChoicePart], Any]",
-                  tracing: str = "") -> None:
+    def bom_write(self, bom_file_name: str, key_function: "Callable[[ChoicePart], Any]") -> None:
         """ *Order*: Write out the BOM (Bill Of Materials) for the
             *Order* object (i.e. *self*) to *bom_file_name* ("" for stdout)
             using *key_function* to provide the sort key for each
@@ -3587,6 +3596,7 @@ class Order:
         order: Order = self
         excluded_vendor_names: Dict[str, None] = order.excluded_vendor_names
         final_choice_parts: List[ChoicePart] = order.final_choice_parts
+        tracing: str = tracing_get()
         if tracing:
             print(f"{tracing}len(final_choice_parts)={len(final_choice_parts)}")
 
@@ -3675,7 +3685,7 @@ class Order:
 
     # Order.check():
     @trace(1)
-    def check(self, collections: Collections, tracing: str = "") -> None:
+    def check(self, collections: Collections) -> None:
         # Check each of the *projects* in *order* (i.e. *self*):
         order: Order = self
         projects: List[Project] = order.projects
@@ -3685,7 +3695,7 @@ class Order:
 
     # Order.csvs_write():
     @trace(1)
-    def csv_write(self, tracing: str = "") -> None:
+    def csv_write(self) -> None:
         """ *Order*: Write out the *Order* object (i.e. *self) BOM (Bill Of Materials)
             for each vendor as a .csv (Comma Seperated Values).
         """
@@ -3752,8 +3762,7 @@ class Order:
     # Order.exclude_vendors_to_reduce_shipping_costs():
     def exclude_vendors_to_reduce_shipping_costs(self, choice_parts: "List[ChoicePart]",
                                                  excluded_vendor_names: Dict[str, None],
-                                                 reduced_vendor_messages: List[str],
-                                                 tracing: str = "") -> None:
+                                                 reduced_vendor_messages: List[str]) -> None:
         """ *Order*: Sweep through *choice_parts* and figure out which vendors
             to add to *excluded_vendor_names* to reduce shipping costs.
         """
@@ -3764,6 +3773,7 @@ class Order:
         missing_parts: int = quad[0]
 
         # Sweep through and figure out what vendors to order from:
+        tracing: str = tracing_get()
         done: bool = False
         while not done:
             # Get the base cost for the current *excluded_vendor_names*:
@@ -3869,8 +3879,7 @@ class Order:
     # Order.exclude_vendors_with_high_minimums():
     def exclude_vendors_with_high_minimums(self, choice_parts: "List[ChoicePart]",
                                            excluded_vendor_names: Dict[str, None],
-                                           reduced_vendor_messages: List[str],
-                                           tracing: str = "") -> None:
+                                           reduced_vendor_messages: List[str]) -> None:
         """ *Order*: Sweep through *choice* parts and figure out if the
             vendors with large minimum orders can be dropped:
         """
@@ -3880,6 +3889,7 @@ class Order:
 
         # Now visit each vendor a decide if we should dump them because
         # they cost too much:
+        tracing: str = tracing_get()
         vendor_name: str
         for vendor_name in vendor_minimums.keys():
             # Grab the *vendor_minimum_cost*:
@@ -3903,8 +3913,7 @@ class Order:
 
     # Order.final_choice_parts_compute():
     @trace(1)
-    def final_choice_parts_compute(self, collections: Collections,
-                                   tracing: str = "") -> "List[ChoicePart]":
+    def final_choice_parts_compute(self, collections: Collections) -> "List[ChoicePart]":
         """ *Order*: Return a list of final *ChoicePart* objects to order
             for the the *Order* object (i.e. *self*).  This routine also
             has the side effect of looking up the vendor information for
@@ -3920,6 +3929,7 @@ class Order:
         project_parts_table: Dict[str, List[ProjectPart]] = {}
         project_index: int
         project: Project
+        tracing: str = tracing_get()
         for project_index, project in enumerate(projects):
             if tracing:
                 print(f"{tracing}Project[{project_index}]:'{project.name}'")
@@ -4045,7 +4055,7 @@ class Order:
         return final_choice_parts
 
     # Order.footprints_check():
-    def footprints_check(self, final_choice_parts: "List[ChoicePart]", tracing: str = "") -> None:
+    def footprints_check(self, final_choice_parts: "List[ChoicePart]") -> None:
         """ *Order*: Verify that footprints exist. """
 
         assert False, "Old Code"
@@ -4110,7 +4120,7 @@ class Order:
 
     # Order.process():
     @trace(1)
-    def process(self, collections: Collections, tracing: str = "") -> None:
+    def process(self, collections: Collections) -> None:
         """ *Order*: Process the *Order* object (i.e. *self*.) """
         # Grab some values from *order* (i.e. *self*):
         order: Order = self
@@ -4130,6 +4140,7 @@ class Order:
         # *final_choice_parts* it can be sorted various different ways
         # (by vendor, by cost, by part_name, etc.)
         final_choice_parts: List[ChoicePart] = order.final_choice_parts_compute(collections)
+        tracing: str = tracing_get()
         if tracing:
             print(f"{tracing}A:len(final_choice_parts)={len(final_choice_parts)}")
 
@@ -4327,7 +4338,7 @@ class Order:
     # Order.summary_print():
     @trace(1)
     def summary_print(self, choice_parts: "List[ChoicePart]",
-                      excluded_vendor_names: Dict[str, None], tracing: str = "") -> None:
+                      excluded_vendor_names: Dict[str, None]) -> None:
         """ *Order*: Print a summary of the selected vendors.
         """
         # Let the user know what we winnowed the vendor list down to:
@@ -4388,7 +4399,7 @@ class Panda:
     # Panda stands for Pricing AND Availability:
 
     # Panda.__init__():
-    def __init__(self, name: str, tracing: str = "") -> None:
+    def __init__(self, name: str) -> None:
         # Stuff values into *panda* (i.e. *self*):
         # panda = self
         self.name = name
@@ -4402,7 +4413,7 @@ class Panda:
         return f"Panda({name})"
 
     # Panda.vendor_parts_lookup():
-    def vendor_parts_lookup(self, actual_part, part_name, tracing: str = "") -> "List[VendorPart]":
+    def vendor_parts_lookup(self, actual_part, part_name) -> "List[VendorPart]":
         panda: Panda = self
         class_name: str = panda.__class__.__name__
         assert False, f"{class_name}.vendor_parts_lookup() has not been implemented"
@@ -4558,7 +4569,7 @@ class PosePart:
 
     # PosePart.__init__():
     def __init__(self, project: "Project", project_part: "ProjectPart", reference: str,
-                 comment: str, tracing: str = "") -> None:
+                 comment: str) -> None:
         """ Initialize *PosePart* object (i.e. *self*) to contain *project*,
             *project_part*, *reference*, and *comment*.
         """
@@ -4579,7 +4590,7 @@ class PosePart:
         return f"PosePart('{reference}')"
 
     # PosePart.check():
-    def check(self, collections: Collections, tracing: str = "") -> None:
+    def check(self, collections: Collections) -> None:
         # Grab some values from *pose_part* (i.e. *self*):
         pose_part: PosePart = self
         reference: str = pose_part.reference
@@ -4599,7 +4610,7 @@ class PositionRow:
     # PositionRow.__init__():
     def __init__(self, reference: str, value: str, package: str, x: float, y: float,
                  rotation: float, feeder_name: str, pick_dx: float, pick_dy: float,
-                 side: str, part_height: float, tracing: str = "") -> None:
+                 side: str, part_height: float) -> None:
         """ *PositionRow*: ...
         """
 
@@ -4626,8 +4637,7 @@ class PositionRow:
         return f"PositionRow('{reference}')"
 
     # PositionsRow.as_strings():
-    def as_strings(self, mapping: List[int], feeders: Dict[str, None],
-                   tracing: str = "") -> List[str]:
+    def as_strings(self, mapping: List[int], feeders: Dict[str, None]) -> List[str]:
         """ *PositionsRow*: Return a list of formatted strings.
 
         The arguments are:
@@ -4649,7 +4659,7 @@ class PositionRow:
         return row_strings
 
     # PositionsRow.part_rotate():
-    def part_rotate(self, rotation_adjust: float, tracing: str = "") -> None:
+    def part_rotate(self, rotation_adjust: float) -> None:
         """ *PostitionRow*: """
         position_row: PositionRow = self
         rotation: float = position_row.rotation
@@ -4672,7 +4682,7 @@ class PositionRow:
 
 # PositionsTable:
 class PositionsTable:
-    def __init__(self, positions_file_name: str, tracing: str = "") -> None:
+    def __init__(self, positions_file_name: str) -> None:
         # positions_table: PositionsTable = self
         self.positions_file_name: str = positions_file_name
 
@@ -5078,7 +5088,7 @@ class PriceBreak:
         price_break.order_price = order_quantity * price_break.price
 
     # PriceBreak.xml_lines_append():
-    def xml_lines_append(self, xml_lines: List[str], indent: str, tracing: str = "") -> None:
+    def xml_lines_append(self, xml_lines: List[str], indent: str) -> None:
         # Grab some values from *price_break* (i.e. *self*):
         price_break: PriceBreak = self
         quantity: int = price_break.quantity
@@ -5090,7 +5100,7 @@ class PriceBreak:
 
     # PriceBreak.xml_parse():
     @staticmethod
-    def xml_parse(price_break_tree: etree._Element, tracing: str = "") -> "PriceBreak":
+    def xml_parse(price_break_tree: etree._Element) -> "PriceBreak":
         # Grab some the attribute values from *price_break_tree*:
         attributes_table: Dict[str, str] = price_break_tree.attrib
         quantity: int = int(attributes_table["quantity"])
@@ -5105,7 +5115,7 @@ class PriceBreak:
 class Project:
     # Project.__init__():
     def __init__(self, name: str, revision: str, cad_file_name: str, count: int, order: Order,
-                 positions_file_name: str = "", tracing: str = "") -> None:
+                 positions_file_name: str = "") -> None:
         """ Initialize a new *Project* object (i.e. *self*) containing *name*, *revision*,
             *net_file_name*, *count*, *order*, and optionally *positions_file_name.
         """
@@ -5156,7 +5166,7 @@ class Project:
     # Project.assembly_summary_write():
     @trace(1)
     def assembly_summary_write(self, final_choice_parts: "List[ChoicePart]",
-                               order: Order, tracing: str = "") -> None:
+                               order: Order) -> None:
         """ Write out an assembly summary .csv file for the *Project* object (i.e. *self*)
             using *final_choice_parts*.
         """
@@ -5194,7 +5204,7 @@ class Project:
 
     # Project.assembly_summary_write_helper():
     def assembly_summary_write_helper(self, install: bool, final_choice_parts: "List[ChoicePart]",
-                                      csv_file: IO[str], tracing: str = "") -> bool:
+                                      csv_file: IO[str]) -> bool:
         """ Write out an assembly summary .csv file for *Project* object (i.e. *self*)
             out to *project_file*.  *install* is set *True* to list the installable parts from
             *final_choice_parts* and *False* for an uninstallable parts listing.
@@ -5290,7 +5300,7 @@ class Project:
         return has_fractional_parts
 
     # Project.check():
-    def check(self, collections: Collections, tracing: str = "") -> None:
+    def check(self, collections: Collections) -> None:
         # Grab some values from *project* (i.e. *self*):
         project: Project = self
         all_pose_parts: List[PosePart] = project.all_pose_parts
@@ -5374,7 +5384,7 @@ class ProjectPart:
     # sub-classed by one of *ChoicePart*, *AliasPart*, or *FractionalPart*.
 
     # ProjectPart.__init__():
-    def __init__(self, name: str, projects: List[Project], tracing: str = "") -> None:
+    def __init__(self, name: str, projects: List[Project]) -> None:
         """ *ProjectPart*: Initialize *self* to contain
             *name*, and *kicad_footprint*. """
 
@@ -5447,8 +5457,7 @@ class AliasPart(ProjectPart):
 
     # AliasPart.__init__():
     def __init__(self, name: str, project_parts: List[ProjectPart], footprint: str = "",
-                 feeder_name="", part_height=0.0, pick_dx=0.0, pick_dy=0.0,
-                 tracing: str = "") -> None:
+                 feeder_name="", part_height=0.0, pick_dx=0.0, pick_dy=0.0) -> None:
         """ *AliasPart*: Initialize *self* to contain *name*,
             *kicad_footprint*, and *project_parts*. """
 
@@ -5513,8 +5522,7 @@ class ChoicePart(ProjectPart):
     # A *ChoicePart* specifies a list of *ActualPart*'s to choose from.
 
     # ChoicePart.__init__():
-    def __init__(self, name: str, project_parts: List[ProjectPart], searches: List[Search],
-                 tracing: str = "") -> None:
+    def __init__(self, name: str, project_parts: List[ProjectPart], searches: List[Search]) -> None:
         """ *ChoicePart*: Initiailize *self* to contain *name*
             *kicad_footprint* and *actual_parts*. """
 
@@ -5778,13 +5786,13 @@ class ChoicePart(ProjectPart):
 
     # ChoicePart.select():
     @trace(2)
-    def select(self, excluded_vendor_names: Dict[str, None], announce: bool = False,
-               tracing: str = "") -> int:
+    def select(self, excluded_vendor_names: Dict[str, None], announce: bool = False) -> int:
         """ *ChoicePart*: Select and return the best priced *ActualPart*
             for the *ChoicePart* (i.e. *self*) excluding any vendors
             in the *excluded_vendor_names* dictionary.
         """
         trace_level: int = trace_level_get()
+        tracing: str = tracing_get()
 
         # This lovely piece of code basically brute forces the decision
         # process of figuring out which *vendor_part* to select and the
@@ -5915,7 +5923,7 @@ class ChoicePart(ProjectPart):
 
     # ChoicePart.vendor_names_load():
     def vendor_names_load(self, vendor_names_table: Dict[str, None],
-                          excluded_vendor_names: Dict[str, None], tracing: str = "") -> None:
+                          excluded_vendor_names: Dict[str, None]) -> None:
         """ *ChoicePart*: Add each possible vendor name possible for the
             *ChoicePart* object (i.e. *self*) to *vendor_names_table*
             provided it is not in *excluded_vendor_names*:
@@ -5931,7 +5939,7 @@ class ChoicePart(ProjectPart):
     # ChoicePart.vendor_parts_refresh():
     @trace(1)
     def vendor_parts_refresh(self, proposed_actual_parts: List[ActualPart],
-                             order: Order, part_name: str, tracing: str = "") -> None:
+                             order: Order, part_name: str) -> None:
         # Grab some values from *choice_part* (i.e. *self*) and *order*:
         choice_part: ChoicePart = self
         choice_part_name: str = choice_part.name
@@ -5943,6 +5951,7 @@ class ChoicePart(ProjectPart):
         # Construct the file path for the `.xml` file associated *choice_part*:
         xml_base_name: str = Encode.to_file_name(choice_part_name + ".xml")
         xml_full_name: str = os.path.join(vendor_searches_root, xml_base_name)
+        tracing: str = tracing_get()
         if tracing:
             print(f"{tracing}choice_part_name='{choice_part_name}'")
             print(f"{tracing}vendor_searches_root='{vendor_searches_root}'")
@@ -6125,7 +6134,7 @@ class ChoicePart(ProjectPart):
                 xml_write_file.write(xml_text)
 
     # ChoicePart.xml_lines_append():
-    def xml_lines_append(self, xml_lines: List[str], indent: str, tracing: str = "") -> None:
+    def xml_lines_append(self, xml_lines: List[str], indent: str) -> None:
         # Grab some values from *choice_part* (i.e. *self*):
         choice_part: ChoicePart = self
         actual_parts: List[ActualPart] = choice_part.actual_parts
@@ -6168,7 +6177,7 @@ class FractionalPart(ProjectPart):
 
     # FractionalPart.__init__():
     def __init__(self, name: str, projects: List[Project], footprint: str, choice_part: ChoicePart,
-                 numerator: int, denominator: int, description: str, tracing: str = "") -> None:
+                 numerator: int, denominator: int, description: str) -> None:
         """ *FractionalPart*: Initialize *self* to contain
             *name*, *kicad_footprint*, *choie_part*,
             *numerator*, *denomoniator*, and *description*. """
@@ -6274,7 +6283,7 @@ class VendorPart:
     # VendorPart.__init__():
     def __init__(self, actual_part: ActualPart, vendor_name: str, vendor_part_name: str,
                  quantity_available: int, price_breaks: List[PriceBreak],
-                 timestamp: int = 0, tracing: str = "") -> None:
+                 timestamp: int = 0) -> None:
         """ *VendorPart*: Initialize *self* to contain *actual_part"""
 
         # Clean up *vendor_name*:
@@ -6355,7 +6364,7 @@ class VendorPart:
         return price_breaks_text
 
     # VendorPart.xml_lines_append():
-    def xml_lines_append(self, xml_lines: List[str], indent: str, tracing: str = "") -> None:
+    def xml_lines_append(self, xml_lines: List[str], indent: str) -> None:
         # Grab some values from *vendor_part* (i.e. *self*):
         vendor_part: VendorPart = self
         quantity_available: int = vendor_part.quantity_available
@@ -6383,8 +6392,7 @@ class VendorPart:
     # VendorPart.xml_parse():
     @staticmethod
     @trace(2)
-    def xml_parse(vendor_part_tree: etree._Element, actual_part: ActualPart,
-                  tracing: str = "") -> "VendorPart":
+    def xml_parse(vendor_part_tree: etree._Element, actual_part: ActualPart) -> "VendorPart":
         # Pull out the attribute values:
         attributes_table: Dict[str, str] = vendor_part_tree.attrib
         timestamp: int = int(float(attributes_table["timestamp"]))

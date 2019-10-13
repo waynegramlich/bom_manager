@@ -79,7 +79,7 @@
 # are explicitly listed to make the flake8 linting program happier:
 from bom_manager.bom import (command_line_arguments_process, Collection, Collections, Directory,
                              Gui, Node, Order, Search, Table, TableComment)
-from bom_manager.tracing import trace  # Tracing decorator module:
+from bom_manager.tracing import trace, tracing_get  # Tracing decorator module:
 # import csv                      # Parser for CSV (Comma Separated Values) files
 from functools import partial   # Needed for window events
 # import lxml.etree as etree      # type: ignore
@@ -100,7 +100,7 @@ import webbrowser               # Some tools to send messages to a web browser
 
 
 # main():
-def main(tracing: str = "") -> int:
+def main() -> int:
     # Process command line arguments:
     collections_directores: List[str]
     searches_root: str
@@ -108,6 +108,7 @@ def main(tracing: str = "") -> int:
     collection_directories, searches_root, order = command_line_arguments_process()
 
     # Now create the *bom_gui* graphical user interface (GUI) and run it:
+    tracing: str = tracing_get()
     if tracing:
         print(f"{tracing}searches_root='{searches_root}'")
     tables: List[Table] = list()
@@ -126,7 +127,7 @@ class BomGui(QMainWindow, Gui):
     # BomGui.__init__()
     # @trace(1)
     def __init__(self, tables: List[Table], collection_directories: List[str],
-                 searches_root: str, order: Order, tracing: str = "") -> None:
+                 searches_root: str, order: Order) -> None:
         # Create the *application* first.  The set attribute makes a bogus warning message
         # printout go away:
         QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
@@ -136,6 +137,7 @@ class BomGui(QMainWindow, Gui):
         module_file_name: str = __file__
         module_directory: str = os.path.split(module_file_name)[0]
         ui_file_name: str = os.path.join(module_directory, "bom_manager.ui")
+        tracing: str = tracing_get()
         if tracing:
             print(f"{tracing}module_file_name='{module_file_name}'")
             print(f"{tracing}module_directory='{module_directory}'")
@@ -266,8 +268,7 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.begin_rows_insert():
     @trace(1)
-    def begin_rows_insert(self, node: Node, start_row_index: int, end_row_index: int,
-                          tracing: str = "") -> None:
+    def begin_rows_insert(self, node: Node, start_row_index: int, end_row_index: int) -> None:
 
         # Create a *model_index* for *node* and *insert_row_index* starting from
         # *bom_gui* (i.e. *self):
@@ -281,8 +282,7 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.begin_rows_remove():
     @trace(1)
-    def begin_rows_remove(self, node: Node, start_row_index: int, end_row_index: int,
-                          tracing: str = "") -> None:
+    def begin_rows_remove(self, node: Node, start_row_index: int, end_row_index: int) -> None:
 
         # Create a *model_index* for *node* and *insert_row_index* starting from
         # *bom_gui* (i.e. *self):
@@ -295,7 +295,7 @@ class BomGui(QMainWindow, Gui):
         tree_model.beginRemoveRows(model_index, start_row_index, end_row_index)
 
     # BomGui.comment_text_set()
-    def comment_text_set(self, new_text: str, tracing: str = "") -> None:
+    def comment_text_set(self, new_text: str) -> None:
         # Carefully set thet text:
         bom_gui: BomGui = self
         main_window: QMainWindow = bom_gui.main_window
@@ -307,7 +307,7 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.collection_panel_update():
     @trace(1)
-    def collection_panel_update(self, collection: Collection, tracing: str = ""):
+    def collection_panel_update(self, collection: Collection):
         # Force the *panel_collection* widget to be displayed by *panels* stacked widget:
         bom_gui: BomGui = self
         main_window: QMainWindow = bom_gui.main_window
@@ -325,7 +325,7 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.collection_clicked():
     @trace(1)
-    def collection_clicked(self, collection: Collection, tracing: str = "") -> None:
+    def collection_clicked(self, collection: Collection) -> None:
         # Make sure that the current table and search are disabled for *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
         bom_gui.current_collection = collection
@@ -336,15 +336,14 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.collections_line_changed():
     @trace(1)
-    def collections_line_changed(self, text: str, tracing: str = "") -> None:
+    def collections_line_changed(self, text: str) -> None:
         # Make sure that *bom_gui* (i.e. *self*) is updated:
         bom_gui: BomGui = self
         bom_gui.update()
 
     # BomGui.collections_new_clicked():
     @trace(1)
-    def collections_new_clicked(self, tracing: str = "") -> None:
-        # Perform any requested *tracing*:
+    def collections_new_clicked(self) -> None:
         bom_gui: BomGui = self
         # Grab some values from *bom_gui* (i.e. *self*):
         current_search: Optional[Search] = bom_gui.current_search
@@ -364,6 +363,7 @@ class BomGui(QMainWindow, Gui):
             url = selection
         elif clipboard.startswith("http"):
             url = clipboard
+        tracing: str = tracing_get()
         if tracing:
             print(f"{tracing}clipbboard='{clipboard}'")
             print(f"{tracing}selection='{selection}'")
@@ -406,7 +406,7 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.collections_check_clicked():
     @trace(1)
-    def collections_check_clicked(self, tracing: str = "") -> None:
+    def collections_check_clicked(self) -> None:
         # Grab some values from *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
         collections: Collections = bom_gui.collections
@@ -417,7 +417,7 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.collections_process_clicked():
     @trace(1)
-    def collections_process_clicked(self, tracing: str = "") -> None:
+    def collections_process_clicked(self) -> None:
         # Grab some values from *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
         collections: Collections = bom_gui.collections
@@ -428,12 +428,13 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.collections_tree_clicked():
     @trace(1)
-    def collections_tree_clicked(self, model_index: QModelIndex, tracing: str = "") -> None:
+    def collections_tree_clicked(self, model_index: QModelIndex) -> None:
         # Stuff *model_index* into *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
         bom_gui.current_model_index = model_index
 
         # If *tracing*, show the *row* and *column*:
+        tracing: str = tracing_get()
         if tracing:
             row: int = model_index.row()
             column: int = model_index.column()
@@ -463,7 +464,7 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.collections_update():
     @trace(1)
-    def collections_update(self, tracing: str = "") -> None:
+    def collections_update(self) -> None:
         # Grab some widgets from *bom_gui*:
         bom_gui: BomGui = self
         main_window: QMainWindow = bom_gui.main_window
@@ -474,6 +475,7 @@ class BomGui(QMainWindow, Gui):
 
         # Grab the *current_search* object:
         current_search: Optional[Search] = bom_gui.current_search
+        tracing: str = tracing_get()
         if tracing:
             current_search_name: str = ("None" if current_search is None
                                         else f"'{current_search.name}'")
@@ -553,7 +555,7 @@ class BomGui(QMainWindow, Gui):
             print(f"{tracing}delete_button_enable={delete_button_enable} why='{delete_button_why}'")
 
     # BomGui.current_update()
-    def current_update(self, tracing: str = "") -> None:
+    def current_update(self) -> None:
         # Make sure *current_table* is valid (or *None*):
         bom_gui = self
         tables = bom_gui.tables
@@ -575,6 +577,7 @@ class BomGui(QMainWindow, Gui):
         if current_table is None and tables_size >= 1:
             current_table = tables[0]
         bom_gui.current_table = current_table
+        tracing: str = tracing_get()
         if tracing:
             print("{0}current_table='{1}'".
                   format(tracing, "None" if current_table is None else current_table.name))
@@ -653,11 +656,11 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.data_changed():
     @trace(1)
-    def data_changed(self, node: Node, start_index: int, end_index: int, tracing: str = "") -> None:
+    def data_changed(self, node: Node, start_index: int, end_index: int) -> None:
         pass  # FIXME!!!
 
     # BomGui.data_update()
-    def data_update(self, tracing: str = "") -> None:
+    def data_update(self) -> None:
 
         # Make sure that the data for *bom_gui* (i.e. *self*) is up-to-date:
         bom_gui: BomGui = self
@@ -665,7 +668,7 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.directory_clicked():
     @trace(1)
-    def directory_clicked(self, directory: Directory, tracing: str = "") -> None:
+    def directory_clicked(self, directory: Directory) -> None:
         # Mark the current search in *bom_gui* (i.e. *self*) as not active:
         bom_gui: BomGui = self
         bom_gui.current_collection = directory.collection
@@ -675,7 +678,7 @@ class BomGui(QMainWindow, Gui):
         bom_gui.current_table = None
 
     # BomGui.directory_panel_update():
-    def directory_panel_update(self, directory: Directory, tracing: str = "") -> None:
+    def directory_panel_update(self, directory: Directory) -> None:
         # Force the *panels* stacked widget to display *panel_directory* widget:
         bom_gui: BomGui = self
         main_window: QMainWindow = bom_gui.main_window
@@ -693,8 +696,7 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.end_rows_insert():
     @trace(1)
-    def end_rows_insert(self, node: Node, start_row_index: int, end_row_index: int,
-                        tracing: str = "") -> None:
+    def end_rows_insert(self, node: Node, start_row_index: int, end_row_index: int) -> None:
         # Inform the *tree_model* associated with *bom_gui* (i.e. *self*) that we are
         # done inserting rows:
         bom_gui: BomGui = self
@@ -703,8 +705,7 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.end_rows_remove():
     @trace(1)
-    def end_rows_remove(self, node: Node, start_row_index: int, end_row_index: int,
-                        tracing: str = "") -> None:
+    def end_rows_remove(self, node: Node, start_row_index: int, end_row_index: int) -> None:
         # Inform the *tree_model* associated with *bom_gui* (i.e. *self*) that we are
         # done inserting rows:
         bom_gui: BomGui = self
@@ -713,16 +714,17 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.panels_connect():
     @trace(1)
-    def panels_connect(self, tracing: str = "") -> None:
+    def panels_connect(self) -> None:
         bom_gui: BomGui = self
         bom_gui.search_panel_connect()
 
     # BomGui.panels_update():
     @trace(1)
-    def panels_update(self, tracing: str = "") -> None:
+    def panels_update(self) -> None:
         # Dispatch on the *current_node* of *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
         current_node: Optional[Node] = bom_gui.current_node
+        tracing: str = tracing_get()
         if current_node is None:
             # There is no *current_node* selected, so we display the *panel_none* widget:
             if tracing:
@@ -741,8 +743,9 @@ class BomGui(QMainWindow, Gui):
                 print(f"{tracing}Returned from {current_node.__class__.__name__}.panel_update")
 
     # BomGui.quit_button_clicked():
-    def quit_button_clicked(self, tracing: str = "") -> None:
+    def quit_button_clicked(self) -> None:
         bom_gui: BomGui = self
+        tracing: str = tracing_get()
         if tracing:
             print(f"{tracing}BomGui.quit_button_clicked()")
         application: QApplication = bom_gui.application
@@ -750,7 +753,7 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.run():
     @trace(1)
-    def run(self, tracing: str = "") -> None:
+    def run(self) -> None:
         # Grab some values from *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
         main_window: QMainWindow = bom_gui.main_window
@@ -764,7 +767,7 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.search_clicked():
     @trace(1)
-    def search_clicked(self, search: Search, tracing: str = "") -> None:
+    def search_clicked(self, search: Search) -> None:
         # Grab some values from *search*:
         current_table: Optional[Node] = search.parent
         assert isinstance(current_table, Table)
@@ -795,6 +798,7 @@ class BomGui(QMainWindow, Gui):
         table: Optional[Node] = search.parent
         assert isinstance(table, Table)
         url: str = search.url
+        tracing: str = tracing_get()
         if tracing:
             print(f"{tracing}url='{url}' table.name='{table.name}'")
 
@@ -816,7 +820,7 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.search_panel_connect():
     @trace(1)
-    def search_panel_connect(self, tracing: str = "") -> None:
+    def search_panel_connect(self) -> None:
         # Grab the various search panel widgets from the *main_window* of *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
         main_window: QMainWindow = bom_gui.main_window
@@ -837,7 +841,7 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.search_panel_new_clicked():
     @trace(1)
-    def search_panel_new_clicked(self, tracing: str = "") -> None:
+    def search_panel_new_clicked(self) -> None:
         bom_gui: BomGui = self
         current_search: Optional[Search] = bom_gui.current_search
         assert isinstance(current_search, Search)
@@ -859,7 +863,7 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.search_panel_name_line_changed():
     # @trace(1)
-    def search_panel_new_name_line_changed(self, text: str, tracing: str = "") -> None:
+    def search_panel_new_name_line_changed(self, text: str) -> None:
         bom_gui: BomGui = self
         # current_search: Optional[Search] = bom_gui.current_search
         # print(f"{tracing}text='{text}'")
@@ -867,10 +871,11 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.search_panel_remove_clicked():
     @trace(1)
-    def search_panel_remove_clicked(self, tracing: str = "") -> None:
+    def search_panel_remove_clicked(self) -> None:
         bom_gui: BomGui = self
         current_search: Optional[Search] = bom_gui.current_search
         assert isinstance(current_search, Search)
+        tracing: str = tracing_get()
         if tracing:
             print("******************************************************************************")
         collection: Optional[Collection] = current_search.collection
@@ -893,13 +898,13 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.search_panel_rename_clicked():
     @trace(1)
-    def search_panel_rename_clicked(self, tracing: str = "") -> None:
+    def search_panel_rename_clicked(self) -> None:
         bom_gui: BomGui = self
         bom_gui.update()
 
     # BomGui.search_panel_update():
     @trace(1)
-    def search_panel_update(self, search: Search, tracing: str = "") -> None:
+    def search_panel_update(self, search: Search) -> None:
         # Force the *panel_search* stacked widget to be displayed by *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
         main_window: QMainWindow = bom_gui.main_window
@@ -987,6 +992,7 @@ class BomGui(QMainWindow, Gui):
                         rename_why = "Search Name OK"
                 else:
                     new_why = rename_why = "Global Duplicate"
+        tracing: str = tracing_get()
         if tracing:
             print(f"{tracing}new_enable={new_enable}")
             print(f"{tracing}rename_enable={rename_enable}")
@@ -1010,7 +1016,7 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.search_panel_url_get_clicked():
     @trace(1)
-    def search_panel_url_get_clicked(self, tracing: str = ""):
+    def search_panel_url_get_clicked(self):
         # Grab some values from *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
         current_search: Optional[Search] = bom_gui.current_search
@@ -1031,6 +1037,7 @@ class BomGui(QMainWindow, Gui):
             url = selection
         elif clipboard.startswith("http"):
             url = clipboard
+        tracing: str = tracing_get()
         if tracing:
             print(f"{tracing}clipbboard='{clipboard}'")
             print(f"{tracing}selection='{selection}'")
@@ -1046,7 +1053,7 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.search_panel_url_send_clicked():
     @trace(1)
-    def search_panel_url_send_clicked(self, tracing: str = ""):
+    def search_panel_url_send_clicked(self):
         bom_gui: BomGui = self
         current_search: Optional[Search] = bom_gui.current_search
         assert isinstance(current_search, Search)
@@ -1056,7 +1063,7 @@ class BomGui(QMainWindow, Gui):
         webbrowser.open(url, new=0, autoraise=True)
 
     # BomGui.tab_changed():
-    def tab_changed(self, new_index: int, tracing: str = "") -> None:
+    def tab_changed(self, new_index: int) -> None:
         # Note: *new_index* is only used for debugging.
 
         # Only deal with this siginal if we are not already *in_signal*:
@@ -1077,7 +1084,7 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.table_clicked():
     @trace(1)
-    def table_clicked(self, table: Table, tracing: str = "") -> None:
+    def table_clicked(self, table: Table) -> None:
         # Grab some values from *BomGui*:
         bom_gui: BomGui = self
         bom_gui.current_directory = table.parent
@@ -1089,7 +1096,7 @@ class BomGui(QMainWindow, Gui):
         # Force whatever is visible to be updated:
         bom_gui.update()
 
-    def table_is_active(self, tracing: str = "") -> bool:
+    def table_is_active(self) -> bool:
         # The table combo box is always active, so we return *True*:
         return True
 
@@ -1108,7 +1115,7 @@ class BomGui(QMainWindow, Gui):
         return table
 
     # BomGui.table_panel_update():
-    def table_panel_update(self, table: Table, tracing: str = "") -> None:
+    def table_panel_update(self, table: Table) -> None:
         # Force the *panel_directory* stacked widget to be shown by *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
         main_window: QMainWindow = bom_gui.main_window
@@ -1125,7 +1132,7 @@ class BomGui(QMainWindow, Gui):
         table_panel_name.setText(name_text)
 
     # BomGui.table_setup():
-    def table_setup(self, tracing: str = "") -> None:
+    def table_setup(self) -> None:
         # Perform any tracing requested from *bom_gui* (i.e. *self*):
         bom_gui = self
 
@@ -1153,7 +1160,7 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.update():
     @trace(1)
-    def update(self, tracing: str = "") -> None:
+    def update(self) -> None:
         bom_gui: BomGui = self
 
         # Only update the visible tabs based on *tree_tabs_index*:
@@ -1260,7 +1267,7 @@ class TreeModel(QAbstractItemModel):
     FLAG_DEFAULT = Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     # TreeModel.__init__():
-    def __init__(self, tracing: str = "") -> None:
+    def __init__(self) -> None:
         # Initialize the parent *QAbstraceItemModel*:
         super().__init__()
 
@@ -1268,7 +1275,7 @@ class TreeModel(QAbstractItemModel):
         # tree_model: TreeModel = self
         self.headers: Dict[int, str] = {0: "Type", 1: "Name"}
         self.collections: Optional[Collections] = None
-        self.tracing: str = tracing
+        # self.tracing: str = tracing
 
     # TreeMode.__str__():
     def __str__(self) -> str:
@@ -1276,7 +1283,7 @@ class TreeModel(QAbstractItemModel):
 
     # check if the node has data that has not been loaded yet
     # TreeModel.canFetchMore():
-    def canFetchMore(self, model_index: QModelIndex, tracing: str = "") -> bool:
+    def canFetchMore(self, model_index: QModelIndex) -> bool:
         # We delegate the decision of whether we can fetch more stuff to the *node*
         # associated with *model_index*:
         tree_model: TreeModel = self
@@ -1285,13 +1292,13 @@ class TreeModel(QAbstractItemModel):
         return can_fetch_more
 
     # TreeModel.collections_set():
-    def collections_set(self, collections: Collections, tracing: str = ""):
+    def collections_set(self, collections: Collections):
         # Stuff *collections* into *tree_model* (i.e. *self*):
         tree_model: TreeModel = self
         tree_model.collections = collections
 
     # TreeModel.columnCount():
-    def columnCount(self, model_index: QModelIndex, tracing: str = "") -> int:
+    def columnCount(self, model_index: QModelIndex) -> int:
         return 2
 
     # TreeModel.data():
@@ -1312,7 +1319,7 @@ class TreeModel(QAbstractItemModel):
         return value
 
     # TreeModel.delete():
-    def delete(self, model_index: QModelIndex, tracing: str = "") -> None:
+    def delete(self, model_index: QModelIndex) -> None:
         # Perform any *tracing* requested by *tree_model* (i.e. *self*):
         tree_model: TreeModel = self
 
@@ -1326,14 +1333,14 @@ class TreeModel(QAbstractItemModel):
                 parent.child_remove(node)
 
     # TreeModel.fetchMore():
-    def fetchMore(self, model_index: QModelIndex, tracing: str = "") -> None:
+    def fetchMore(self, model_index: QModelIndex) -> None:
         # Delegate fetching to the *node* associated with *model_index*:
         tree_model: TreeModel = self
         node: Node = tree_model.getNode(model_index)
         node.fetch_more()
 
     # TreeModel.getNode():
-    def getNode(self, model_index: QModelIndex, tracing: str = "") -> Node:
+    def getNode(self, model_index: QModelIndex) -> Node:
         tree_model: TreeModel = self
         node: Node = (model_index.internalPointer() if model_index.isValid()
                       else tree_model.collections)
@@ -1341,7 +1348,7 @@ class TreeModel(QAbstractItemModel):
         return node
 
     # TreeModel.hasChildren():
-    def hasChildren(self, model_index: QModelIndex, tracing: str = "") -> bool:
+    def hasChildren(self, model_index: QModelIndex) -> bool:
         # Delegate to *has_children*() method to *node*:
         tree_model: TreeModel = self
         node: Node = tree_model.getNode(model_index)
@@ -1349,8 +1356,7 @@ class TreeModel(QAbstractItemModel):
         return has_children
 
     # TreeModel.headerData():
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int,
-                   tracing: str = "") -> Optional[str]:
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int) -> Optional[str]:
         tree_model: TreeModel = self
         header_data: Optional[str] = (tree_model.headers[section]
                                       if orientation == Qt.Horizontal and role == Qt.DisplayRole
@@ -1358,7 +1364,7 @@ class TreeModel(QAbstractItemModel):
         return header_data
 
     # TreeModel.flags():
-    def flags(self, model_index: QModelIndex, tracing: str = "") -> int:
+    def flags(self, model_index: QModelIndex) -> int:
         return TreeModel.FLAG_DEFAULT
 
     # TreeModel.index():
@@ -1373,7 +1379,7 @@ class TreeModel(QAbstractItemModel):
         return model_index
 
     # TreeModel.children_update():
-    def children_update(self, parent_model_index: QModelIndex, tracing: str = "") -> None:
+    def children_update(self, parent_model_index: QModelIndex) -> None:
         # Grab the *parent_node* using *parent_model_index* and *tree_model* (i.e. *self*):
         tree_model: TreeModel = self
         parent_node: Node = tree_model.getNode(parent_model_index)
@@ -1389,8 +1395,7 @@ class TreeModel(QAbstractItemModel):
 
     # TreeModel.insertNodes():
     def insertNodes(self, position: int, nodes: List[Node],
-                    parent_model_index: QModelIndex = QModelIndex(),
-                    tracing: str = "") -> bool:
+                    parent_model_index: QModelIndex = QModelIndex()) -> bool:
         tree_model: TreeModel = self
         node: Node = tree_model.getNode(parent_model_index)
 
@@ -1405,7 +1410,7 @@ class TreeModel(QAbstractItemModel):
         return True
 
     # TreeModel.parent():
-    def parent(self, model_index: QModelIndex, tracing: str = "") -> QModelIndex:
+    def parent(self, model_index: QModelIndex) -> QModelIndex:
         tree_model: TreeModel = self
         node: Node = tree_model.getNode(model_index)
         parent: Optional[Node] = node.parent
@@ -1418,7 +1423,7 @@ class TreeModel(QAbstractItemModel):
 
     # Return 0 if there is data to fetch (handled implicitly by check length of child list)
     # TreeModel.rowCount():
-    def rowCount(self, parent: QModelIndex, tracing: str = "") -> int:
+    def rowCount(self, parent: QModelIndex) -> int:
         tree_model: TreeModel = self
         node: Node = tree_model.getNode(parent)
         count: int = node.child_count()

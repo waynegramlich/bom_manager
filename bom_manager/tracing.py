@@ -235,8 +235,8 @@ def trace(level: int) -> Callable:
 
                 # Call *function* with its positional *arguments* and its *keyword_arguments*)
                 # and save the *results*:
-                any_tracing: Any = tracing
-                keyword_arguments["tracing"] = any_tracing
+                # any_t2racing: Any = tracing
+                # keyword_arguments["tracing"] = any_tracing
                 try:
                     results = function(*arguments, **keyword_arguments)
                 except TypeError:
@@ -272,3 +272,8 @@ def trace_level_set(new_trace_level: int) -> None:
     global trace_level, tracing
     trace_level = new_trace_level
     tracing = "" if trace_level <= 0 else " "
+
+
+def tracing_get() -> str:
+    global tracing
+    return tracing
