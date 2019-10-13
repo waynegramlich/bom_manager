@@ -217,8 +217,12 @@ class BomGui(QMainWindow, Gui):
 
         # Grap *collections* and stuff into both *bom_gui* and *tree_model*:
         partial_load: bool = True
-        collections: Collections = Collections("Collections", collection_directories,
-                                               searches_root, partial_load, bom_gui)
+        collections: Collections = Collections("Collections", searches_root, partial_load, bom_gui)
+        collections_children: List[Node] = collections.children_get()
+        collection: Node
+        for collection in collections_children:
+            assert isinstance(collection, Collection)
+
         self.collections: Collections = collections
         tree_model.collections_set(collections)
 
@@ -379,7 +383,7 @@ class BomGui(QMainWindow, Gui):
             new_search_name: str = collections_line.text().strip()
 
             # Grab some values from *current_search*:
-            table: Optional[Node] = current_search.parent
+            table: Node = current_search.parent
             assert isinstance(table, Table)
 
             # Construct *new_search_name*:
@@ -505,7 +509,7 @@ class BomGui(QMainWindow, Gui):
             new_button_why = "No search seleted"
         else:
             # Search *table* for a match of *search_title*:
-            table: Optional[Node] = current_search.parent
+            table: Node = current_search.parent
             assert isinstance(table, Table)
             collection: Optional[Collection] = table.collection
             assert isinstance(collection, Collection)
@@ -769,9 +773,9 @@ class BomGui(QMainWindow, Gui):
     @trace(1)
     def search_clicked(self, search: Search) -> None:
         # Grab some values from *search*:
-        current_table: Optional[Node] = search.parent
+        current_table: Node = search.parent
         assert isinstance(current_table, Table)
-        current_directory: Optional[Node] = current_table.parent
+        current_directory: Node = current_table.parent
         assert isinstance(current_directory, Directory)
         current_collection: Optional[Collection] = search.collection
         assert isinstance(current_collection, Collection)
@@ -795,7 +799,7 @@ class BomGui(QMainWindow, Gui):
 
         # Grab some values from *search*:
         search_name: str = search.name
-        table: Optional[Node] = search.parent
+        table: Node = search.parent
         assert isinstance(table, Table)
         url: str = search.url
         tracing: str = tracing_get()
@@ -851,7 +855,7 @@ class BomGui(QMainWindow, Gui):
         new_name: str = search_panel_new_name_line.text()
         url: str = search_panel_url.text()
         assert url.startswith("http")
-        table: Optional[Node] = current_search.parent
+        table: Node = current_search.parent
         assert isinstance(table, Table)
         new_search: Search = Search(new_name, table, current_search, url)
         table.sort()
@@ -884,7 +888,7 @@ class BomGui(QMainWindow, Gui):
         current_search_name: str = current_search.name
         collection.search_remove(current_search_name)
         assert collection.search_find(current_search_name) is None
-        table: Optional[Node] = current_search.parent
+        table: Node = current_search.parent
         assert isinstance(table, Table)
         table.child_remove(current_search)
         table_searches: List[Node] = table.children_get()
@@ -955,7 +959,7 @@ class BomGui(QMainWindow, Gui):
             new_why = rename_why = "@ALL Reserved"
         else:
             # First verify that *search_name* does not match any of the *search* siblings:
-            table: Optional[Node] = search.parent
+            table: Node = search.parent
             assert isinstance(table, Table)
             siblings: List[Node] = table.children_get()
             sibling: Node
@@ -1328,7 +1332,7 @@ class TreeModel(QAbstractItemModel):
             # row = model_index.row()
             node: Node = tree_model.getNode(model_index)
             assert isinstance(node, Node)
-            parent: Optional[Node] = node.parent
+            parent: Node = node.parent
             if parent is not None:
                 parent.child_remove(node)
 
@@ -1413,7 +1417,7 @@ class TreeModel(QAbstractItemModel):
     def parent(self, model_index: QModelIndex) -> QModelIndex:
         tree_model: TreeModel = self
         node: Node = tree_model.getNode(model_index)
-        parent: Optional[Node] = node.parent
+        parent: Node = node.parent
         parent_model_index: QModelIndex
         if parent is None or isinstance(parent, Collections):
             parent_model_index = QModelIndex()

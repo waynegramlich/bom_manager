@@ -236,7 +236,7 @@ from argparse import ArgumentParser
 import csv
 # from currency_converter import CurrencyConverter         # Currency converter
 # import fnmatch                    # File Name Matching
-import glob                         # Unix/Linux style command line file name pattern matching
+# import glob                         # Unix/Linux style command line file name pattern matching
 # import io                           # I/O stuff
 import lxml.etree as etree  # type: ignore
 # import pickle                     # Python data structure pickle/unpickle
@@ -1514,7 +1514,8 @@ class Node:
     """ Represents a single *Node* suitable for use in a *QTreeView* tree. """
 
     # Node.__init__():
-    def __init__(self, name: str, parent: "Optional[Node]", gui: Optional[Gui] = None) -> None:
+    def __init__(self, name: str, parent: "Node", collection: "Collection",
+                 gui: Optional[Gui] = None) -> None:
         # Do some additional checking for *node* (i.e. *self*):
         node: Node = self
         # is_collection: bool = isinstance(node, Collection)
@@ -1522,34 +1523,14 @@ class Node:
         # is_either = is_collections or is_collection
         # assert (parent is None) == is_collections, f"Node '{name}' has bad parent"
 
-        # Initilize the super class for *node*:
-        super().__init__()
-
-        # Determine the *collection* to attache *node*.  Do this very carefully so that
-        # `mypy` does not throw a fit:
-        collection: Optional[Collection] = None
-        if parent is None:
-            # A *Node* with no parent is a root node which will not be a *Collection* node,
-            # so we mark this *node* as having no *collection*:
-            collection = None
-        elif isinstance(parent, Collection):
-            # If the *parent* is a *Collection*, we can just use the *parent*:
-            collection = parent
-        elif isinstance(parent, Collections):
-            # If the *parent* is a *Collections*, we know this it a child *Collection*, so
-            # we just use *node* (i.e. *self*) as the *collection*:
-            assert isinstance(node, Collection)
-            collection = node
-        elif isinstance(parent.collection, Collection):
-            # If *parant* has a valid *Collection*, we use it as the *collection*:
-            collection = parent.collection
-        else:
-            # We have not found a valid *Collection* and force *None* into *collection*:
-            collection = None
-
         # Compute *relative_path*:
-        relative_path: str = ("" if parent is None
-                              else os.path.join(parent.relative_path, Encode.to_file_name(name)))
+        relative_path: str = "??"
+        if isinstance(node, Collections):
+            relative_path = ""
+        elif isinstance(node, Collection):
+            relative_path = Encode.to_file_name(name)
+        else:
+            relative_path = os.path.join(parent.relative_path, Encode.to_file_name(name))
 
         # Make sure we have a valid *gui* object:
         if gui is None:
@@ -1561,9 +1542,9 @@ class Node:
         node = self
         self._children: List[Node] = list()       # *Node* sub-classes should use *chldren_get*()
         self.gui: Gui = gui                       # The *gui* object to use for GUI updates
-        self.collection: Optional[Collection] = collection  # Parent *Collection* for *node*
+        self.collection: Collection = collection  # Parent *Collection* for *node*
         self.name: str = name                     # Human readable name of version of *node*
-        self.parent: Optional[Node] = parent      # Parent *Node* (*None* for *Collections*)
+        self.parent: Node = parent                # Parent *Node* (*self* for *Collections*)
         self.relative_path: str = relative_path   # Relative path from root to *node* name wo/suffix
 
         # To construct a path to the file/directory associated with a *node*:
@@ -1573,7 +1554,7 @@ class Node:
         # 3. If appropriate, append `.xml`.
 
         # Force *node* to be a child of *parent*:
-        if parent is not None:
+        if parent is not node:
             parent.child_append(node)
 
     # Node.can_fetch_more():
@@ -1704,15 +1685,14 @@ class Node:
     # Node.directory_create():
     def directory_create(self, root_path: str) -> None:
         node: "Node" = self
-        parent: Optional[Node] = node.parent
-        if parent is not None:
-            parent_relative_path: str = parent.relative_path
-            directory_path: str = os.path.join(root_path, parent_relative_path)
-            if not os.path.isdir(directory_path):
-                os.makedirs(directory_path)
-                tracing: str = tracing_get()
-                if tracing:
-                    print(f"{tracing}Created directory '{directory_path}'")
+        parent: Node = node.parent
+        parent_relative_path: str = parent.relative_path
+        directory_path: str = os.path.join(root_path, parent_relative_path)
+        if not os.path.isdir(directory_path):
+            os.makedirs(directory_path)
+            tracing: str = tracing_get()
+            if tracing:
+                print(f"{tracing}Created directory '{directory_path}'")
 
     # Node.fetch_more():
     def fetch_more(self) -> None:
@@ -1772,7 +1752,6 @@ class Node:
         for index, child in enumerate(children):
             if child is remove_node:
                 del children[index]
-                remove_node.parent = None
                 break
         else:
             assert False, f"Node '{remove_node.name}' not in '{node.name}' remove failed"
@@ -1781,8 +1760,7 @@ class Node:
     def row(self) -> int:
         # Return the index of *node* (i.e. *self*) from its parent children list:
         node: Node = self
-        parent: Optional[Node] = node.parent
-        assert isinstance(parent, Node)
+        parent: Node = node.parent
         parent_children: List[Node] = parent._children
         result: int = parent_children.index(node)
         return result
@@ -1823,7 +1801,8 @@ class Directory(Node):
         assert isinstance(parent, Directory) or isinstance(parent, Collection)
 
         # Initlialize the *Node* super class for directory (i.e. *self*):
-        super().__init__(name, parent)
+        parent_collection: Collection = parent.collection
+        super().__init__(name, parent, parent_collection)
 
         # The parent *Node* class initialized *directory* (i.e. *self*) to have a *relative_path*:
         directory: Directory = self
@@ -1943,7 +1922,7 @@ class Collection(Node):
                  collection_root: str, searches_root: str, gui: Gui) -> None:
         # Intialize the *Node* super class of *collection* (i.e. *self*).
         collection: Collection = self
-        super().__init__(name, parent, gui=gui)
+        super().__init__(name, parent, collection, gui=gui)
         tracing: str = tracing_get()
         if tracing:
             print(f"{tracing}collection.relative_path='{collection.relative_path}'")
@@ -1963,6 +1942,14 @@ class Collection(Node):
 
         # Ensure that *type_letter_get()* returns 'C' for Collection:
         assert collection.type_letter_get() == 'C'
+
+    # Collection.__str__():
+    def __str__(self) -> str:
+        collection: Collection = self
+        name: str = "??"
+        if hasattr(collection, "name"):
+            name = collection.name
+        return f"Collection('{name}')"
 
     # Collection.actual_parts_lookup():
     @trace(1)
@@ -2085,6 +2072,7 @@ class Collection(Node):
         collection: Collection = self
         collection_root: str = collection.collection_root
         relative_path: str = collection.relative_path
+        assert relative_path == Encode.to_file_name(collection.name)
         directory_path: str = os.path.join(collection_root, relative_path)
         tracing: str = tracing_get()
         if tracing:
@@ -2191,15 +2179,38 @@ class Collections(Node):
 
     # Collections.__init__():
     @trace(1)
-    def __init__(self, name: str, collection_directories: List[str],
-                 searches_root: str, partial_load: bool, gui: Gui) -> None:
-        # Intialize the *Node* super class of *collections* (i.e. *self*):
+    def __init__(self, name: str, searches_root: str, partial_load: bool, gui: Gui) -> None:
+        # This code is pretty fragile.  In order for the *Node* object to have a
+        # *parent* attribute that is of type *Node* rather than *Optional[Node]*,
+        # we use make the *Collections* object parent be itself.  Thus,
+        #
+        #     collections = collections.parent
+        #
+        # The *Node* initializer (i.e. *Node.__init__()* needs a *Collection* object.  So, we
+        # have the *Collections* object needing a *Collection* and vice versa.  We break
+        # this self dependency by creating a *bogus_collection* first.  This works because
+        # the *Collection* initializer (i.e. *Collection.__init__()* uses itself as its
+        # *Collections* object.
+        #
+        # In addition, there is some code in *Node.__init__()* that special cases
+        # the creation of *Collections* and *Collection* objects:
+
+        # We start by preinitializing some fields of *collections* (i.e. *self*) before
+        # calling *Collection.__init__()* initializer (which needs these fields):
+        bogus_children: List[Node] = list()
+        self._children: List[Node] = bogus_children
+        self.gui: Gui = gui
+
+        # Create a *bogus_collection* which we need to feed to the *Node.__init__*():
         collections: Collections = self
-        super().__init__(name, None, gui=gui)
-        # Stuff some values into *collections*:
-        self.collection_directories = collection_directories
-        self.searches_root = searches_root
-        self.gui = gui
+        bogus_collection: Collection = Collection("Bogus Collection", collections, "", "", gui)
+
+        # Intialize the *Node* super class of *collections* (i.e. *self*):
+        super().__init__(name, collections, bogus_collection, gui=gui)
+
+        # Now we can define the additional fields that we need
+        self.searches_root: str = searches_root
+        self.bogus_collection: Collection = bogus_collection
 
         # Construct the collections list:
         tracing: str = tracing_get()
@@ -2222,7 +2233,6 @@ class Collections(Node):
         # Do some *tracing*:
         if tracing:
             relative_path = collections.relative_path
-            print(f"{tracing}collection_directories={collection_directories}")
             print(f"{tracing}searchs_root='{searches_root}'")
             print(f"{tracing}relative_path='{relative_path}'")
 
@@ -2289,11 +2299,9 @@ class Collections(Node):
         # Extract some values from *collections*:
         collections: Collections = self
         gui: Gui = collections.gui
-        collection_directories: List[str] = collections.collection_directories
         searches_root: str = collections.searches_root
         tracing: str = tracing_get()
         if tracing:
-            print(f"{tracing}collection_directories='{collection_directories}'")
             print(f"{tracing}searches_root='{searches_root}'")
 
         # Find all of the the *collections* by searching through install Python packages
@@ -2316,37 +2324,6 @@ class Collections(Node):
 
             # Recursively perfrom *partial_load*'s down from *collection*:
             collection.partial_load()
-
-        # Sweep through *path* finding directories (technically symbolic links):
-        collection_director: str
-        for index, collection_directory in enumerate(sorted(collection_directories)):
-            # Perform requested *tracing*:
-            if tracing:
-                print(f"{tracing}Collection[{index}]:'{collection_directory}'")
-
-            # Skip over Unix/Linux *collection_directory*'s that start with a '.':
-            if not collection_directory.startswith('.'):
-                # Create *collection_root_path* and *searches_root*:
-                collection_directory_root: str = os.path.join(collection_directory, "ROOT")
-                collection_directory_root = os.path.abspath(collection_directory_root)
-                if tracing:
-                    print(f"{tracing}collection_directory_root='{collection_directory_root}'")
-
-                # Now find the directory under `ROOT`:
-                sub_directories_glob: str = os.path.join(collection_directory_root, "*")
-                sub_directories: List[str] = list(glob.glob(sub_directories_glob))
-                assert len(sub_directories) == 1, f"sub_directories={sub_directories}"
-                base_name: str = os.path.basename(sub_directories[0])
-                name: str = Encode.from_file_name(base_name)
-                # collection_root = os.path.join(collection_directory_root, base_name)
-                if tracing:
-                    print(f"{tracing}base_name='{base_name}'")
-                    print(f"{tracing}name='{name}'")
-                    # print(f"{tracing}collection_root='{collection_root}'")
-                    print(f"{tracing}searches_root='{searches_root}'")
-
-                # Recursively perfrom *partial_load*'s down from *collection*:
-                collection.partial_load()
 
     # Collections.searches_find():
     @trace(1)
@@ -2399,7 +2376,7 @@ class Search(Node):
         assert name.find("%3b") < 0
 
         # Initialize the super class for *search* (i.e. *self*):
-        super().__init__(name, parent)
+        super().__init__(name, parent, parent.collection)
 
         # The *parent* is known to be a *table* and must contain *search*:
         table: Table = parent
@@ -2441,7 +2418,7 @@ class Search(Node):
     # Search.children_count():
     def children_count(self) -> Tuple[int, int]:
         search: Search = self
-        table: Optional[Node] = search.parent
+        table: Node = search.parent
         assert isinstance(table, Table)
         children: List[Node] = table.children_get()
         child: Node
@@ -2488,8 +2465,7 @@ class Search(Node):
     def file_load(self) -> None:
         # Grab some informtation from parent *table* of *search*:
         search: Search = self
-        table: Optional[Node] = search.parent
-        assert table is not None
+        table: Node = search.parent
         assert isinstance(table, Table)
         table_name: str = table.name
         searches: List[Node] = table.children_get()
@@ -2497,7 +2473,8 @@ class Search(Node):
         # Only load *search* (i.e. *self*) if it is not already *loaded*:
         loaded: bool = search.loaded
         tracing: str = tracing_get()
-        if tracing:
+        trace_level: int = trace_level_get()
+        if tracing and trace_level >= 2:
             print(f"{tracing}loaded={loaded} table='{table_name}' searches_size={searches_size}")
         if not loaded:
             # Grab some values from *search*:
@@ -2548,9 +2525,9 @@ class Search(Node):
         # Frankly, it is should be impossible not to have an associated table, but we must
         # be careful:
         search: Search = self
-        table: Optional[Node] = search.parent
+        table: Node = search.parent
         assert isinstance(table, Table)
-        if table is not None:
+        if True:
             # Now we have to make sure that there is a *filter* for each *parameter* in
             # *parameters*.  We want to preserve the order of *filters*, so this is pretty
             # tedious:
@@ -2590,7 +2567,7 @@ class Search(Node):
 
         # Search through *sibling_searches* of *table* to ensure that *search* is not
         # a parent of any *sibling_search* object:
-        table: Optional[Node] = search.parent
+        table: Node = search.parent
         assert isinstance(table, Table)
         sibling_searches: List[Node] = table.children_get()
 
@@ -2627,7 +2604,7 @@ class Search(Node):
 
         # Grab *table* and *searches_table* from *search* (i.e. *self*):
         assert isinstance(search, Search)
-        table: Optional[Node] = search.parent
+        table: Node = search.parent
         assert isinstance(table, Table)
 
         # Figure out template *depth*:
@@ -2695,7 +2672,7 @@ class Search(Node):
         # Grab some values from *search* (i.e. *self*):
         search: Search = self
         search_name: str = search.name
-        table: Optional[Node] = search.parent
+        table: Node = search.parent
         assert isinstance(table, Table)
 
         # Make sure that all *searches* associated with *table* are loaded from their
@@ -2805,7 +2782,7 @@ class Search(Node):
     def xml_lines_append(self, xml_lines: List[str], indent: str) -> None:
         # Grab some values from *search* (i.e. *self*):
         search: Search = self
-        table: Optional[Node] = search.parent
+        table: Node = search.parent
         assert isinstance(table, Table)
         search_parent: Optional[Search] = search.search_parent
         search_name: str = search.name
@@ -2839,7 +2816,7 @@ class Table(Node):
     # Table.__init__():
     def __init__(self, name: str, parent: Node, url: str) -> None:
         # Initialize the parent class:
-        super().__init__(name, parent)
+        super().__init__(name, parent, parent.collection)
 
         # Load additional values into *table* (i.e. *self*):
         # table: Table = self
