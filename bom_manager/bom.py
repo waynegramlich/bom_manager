@@ -1432,12 +1432,12 @@ class Gui:
     # Gui.begin_rows_insert():
     def begin_rows_insert(self, node: "Node",
                           start_row_index: int, end_row_index: int, tracing: str = "") -> None:
-        pass  # Do nothing for the non-GUI version of th code
+        pass  # Do nothing for the non-GUI version of the code:
 
     # Gui.begin_rows_remove():
     def begin_rows_remove(self, node: "Node",
                           start_row_index: int, end_row_index: int, tracing: str = "") -> None:
-        pass  # Do nothing for the non-GUI version of th code
+        pass  # Do nothing for the non-GUI version of the code:
 
     # Gui.collection_clicked():
     def collection_clicked(self, collection: "Collection", tracing: str = "") -> None:
@@ -1458,6 +1458,11 @@ class Gui:
         class_name: str = gui.__class__.__name__
         assert False, f"{class_name}.collections_clicked() has not been implemented yet"
 
+    # Gui.data_changed():
+    def data_changed(self, node: "Node", start_index: int, end_index: int,
+                     tracing: str = "") -> None:
+        pass  # Do nothing for the non-GUI version of the code:
+
     # Gui.directory_clicked():
     def directory_clicked(self, directory: "Directory", tracing: str = "") -> None:
         gui: Gui = self
@@ -1471,12 +1476,14 @@ class Gui:
         assert False, f"{class_name}.directory_panel_update() has not been implemented yet"
 
     # Gui.end_rows_insert():
-    def end_rows_insert(self, tracing: str = "") -> None:
-        pass  # Do nothing for the non-GUI version of th code
+    def end_rows_insert(self, node: "Node", start_row_index: int, end_row_index: int,
+                        tracing: str = "") -> None:
+        pass  # Do nothing for the non-GUI version of the code:
 
     # Gui.end_rows_remove():
-    def end_rows_remove(self, tracing: str = "") -> None:
-        pass  # Do nothing for the non-GUI version of th code
+    def end_rows_remove(self, node: "Node", start_row_index: int, end_row_index: int,
+                        tracing: str = "") -> None:
+        pass  # Do nothing for the non-GUI version of the code:
 
     # Gui.search_clicked():
     def search_clicked(self, search: "Search", tracing: str = "") -> None:
@@ -1587,7 +1594,8 @@ class Node:
         return child
 
     # Node.child_append():
-    def child_append(self, child: "Node") -> None:
+    @trace(1)
+    def child_append(self, child: "Node", tracing: str = "") -> None:
         # FIXME: This should just call *child_insert*() with a position of len(children)!!!
 
         # Grab some values from *node* (i.e. *self*):
@@ -1605,17 +1613,17 @@ class Node:
         child.parent = node
 
         # Let any *gui* know that the row has been appended:
-        gui.end_rows_insert()
+        gui.end_rows_insert(node, insert_row_index, insert_row_index)
 
     # Node.child_count():
-    def child_count(self) -> int:
+    def child_count(self, tracing: str = "") -> int:
         # Return the number of children associated with *node* (i.e. *self*):
         node: Node = self
         count: int = len(node._children)
         return count
 
     # Node.child_delete():
-    def child_delete(self, index: int) -> None:
+    def child_delete(self, index: int, tracing: str = "") -> None:
         # Grab some values out of *node* (i.e. *self*):
         node = self
         children = node._children
@@ -1632,7 +1640,7 @@ class Node:
         del children[index]
 
         # Let *gui* know that the row has been deleted:
-        gui.end_rows_remove()
+        gui.end_rows_remove(node, index, index)
 
     # Node.child_insert():
     def child_insert(self, index: int, child: "Node") -> None:
@@ -1652,7 +1660,7 @@ class Node:
         child.parent = node
 
         # Wrap up *gui* row insert:
-        gui.end_rows_insert()
+        gui.end_rows_insert(node, index, index)
 
     # Node.child_remove()
     def child_remove(self, child: "Node", tracing="") -> None:
@@ -1782,11 +1790,17 @@ class Node:
         return result
 
     # Node.sort_helper():
+    @trace(1)
     def sort_helper(self, key_get: "Callable[[Node], Any]", tracing: str = "") -> None:
         # Sort the *children* of *node* (i.e. *self*) using *key_function*:
         node: Node = self
         children: List[Node] = node._children
+        children_size: int = len(children)
         children.sort(key=key_get)
+
+        # Let the *gui* know that all of the rows may have changed their values
+        gui: Gui = node.gui
+        gui.data_changed(node, 0, children_size - 1)
 
     # Node.tables_get():
     def tables_get(self) -> "List[Table]":
@@ -2372,6 +2386,7 @@ class Search(Node):
     }
 
     # Search.__init__():
+    @trace(1)
     def __init__(self, name: str, parent: "Table", search_parent: "Optional[Search]",
                  url: str, tracing: str = "") -> None:
         # Grab some values from *search* (i.e. *self*):
@@ -2384,10 +2399,11 @@ class Search(Node):
         # The *parent* is known to be a *table* and must contain *search*:
         table: Table = parent
         assert table.has_child(search)
+        table.searches_sorted = False
 
         # Mark that the *table* is no longer sorted, since the *Node.__init__()* just
         # appended *search* to its *children* list:
-        table.is_sorted = False
+        table.searches_sorted = False
 
         # Stuff values into *search*:
         self.comments: List[SearchComment] = list()
@@ -2499,7 +2515,7 @@ class Search(Node):
 
                 # Mark that *table* is no longer sorted since we may updated the
                 # *search_parent* and *search_parent_title* fields:
-                table.is_sorted = False
+                table.searches_sorted = False
 
             # Mark *search* as *loaded*:
             search.loaded = True
@@ -2677,10 +2693,8 @@ class Search(Node):
 
         # Make sure that all *searches* associated with *table* are loaded from their
         # associated `.xml` files:
-        table.searches_load()
-
-        # Make sure that *table* is *sort*'ed:
-        table.sort()
+        if not table.searches_loaded:
+            table.searches_load()
 
         # Construct the *name*:
         search_parent: Optional[Search] = search.search_parent
@@ -2825,12 +2839,21 @@ class Table(Node):
         self.import_column_triples: List[List[Tuple[int, str, str]]] = list()
         self.import_headers: List[str] = list()     # Read from .csv file
         self.import_rows: List[str] = list()        # Read from .csv file
-        self.is_sorted: bool = False
+        self.searches_loaded: bool = False
+        self.searches_sorted: bool = False
         self.loaded: bool = False
         self.parameters: List[Parameter] = list()
         self._relative_path: str = ""
         self.searches_table: Dict[str, Search] = dict()
         self.url: str = ""
+
+    # Table.__str__():
+    def __str__(self) -> str:
+        table: Table = self
+        name: str = "??"
+        if hasattr(table, "name"):
+            name = table.name
+        return f"Table('{name}')"
 
     # Table.can_fetch_more():
     def can_fetch_more(self, tracing: str = "") -> bool:
@@ -3146,9 +3169,16 @@ class Table(Node):
                     search.loaded = False
 
     # Table.sort():
+    @trace(1)
     def sort(self, tracing: str = "") -> None:
         # Only sort *table* (i.e. *self*) if it is not *is_sorted*:
         table: Table = self
+        if not table.searches_sorted:
+            table.sort_helper(Search.key)
+            table.searches_sorted = True
+        return
+
+        # Old bogus code:
         is_sorted: bool = table.is_sorted
         if tracing:
             print(f"{tracing}is_sorted={is_sorted}")
@@ -3223,44 +3253,54 @@ class Table(Node):
     #     return search_directory
 
     # Table.searches_load():
+    @trace(1)
     def searches_load(self, tracing: str = "") -> None:
         # Grab some values from *table* (i.e. *self*):
         table: Table = self
-        table_searches: Dict[str, Search] = dict()
-        searches_loaded_count: int = 0
-        searches: List[Node] = table.children_get()
-        search: Node
-        for search in searches:
-            # Make sure *search* is *loaded*.  We test *loaded* up here to prevent
-            # a lot of unnecessary calls to *file_load*:
-            assert isinstance(search, Search)
-            if not search.loaded:
-                search.file_load()
-                assert search.loaded
-                searches_loaded_count += 1
-
-            # Build up *tables_searches_table_table* with all of the *searches* to used for
-            # for the upcoming parent search fix-up step:
-            table_searches[search.name] = search
-
-        # Fix up the search parent links:
-        if searches_loaded_count >= 1:
+        if not table.searches_loaded:
+            table_searches: Dict[str, Search] = dict()
+            searches_loaded_count: int = 0
+            searches: List[Node] = table.children_get()
+            search: Node
             for search in searches:
+                # Make sure *search* is *loaded*.  We test *loaded* up here to prevent
+                # a lot of unnecessary calls to *file_load*:
                 assert isinstance(search, Search)
-                search_parent_name: str = search.search_parent_name
-                if tracing:
-                    print(f"Search '{search.name}' parent name is '{search_parent_name}'")
-                if search_parent_name != "":
-                    assert search_parent_name in table_searches, (f"'{search_parent_name} '"
-                                                                  f"not in {table_searches.keys()}")
-                    search_parent: Search = table_searches[search_parent_name]
-                    search.search_parent = search_parent
+                if not search.loaded:
+                    search.file_load()
+                    assert search.loaded
+                    searches_loaded_count += 1
+
+                # Build up *tables_searches_table_table* with all of the *searches* to used for
+                # for the upcoming parent search fix-up step:
+                table_searches[search.name] = search
+
+            # Fix up the search parent links:
+            if searches_loaded_count >= 1:
+                for search in searches:
+                    assert isinstance(search, Search)
+                    search_parent_name: str = search.search_parent_name
                     if tracing:
-                        print(f"Setting search '{search.name}' "
-                              f"search parent to '{search_parent.name}'")
-                else:
-                    if tracing:
-                        print(f"Search '{search.name}' has no search parent.")
+                        print(f"{tracing}Search '{search.name}' parent name is "
+                              f"'{search_parent_name}'")
+                    if search_parent_name != "":
+                        assert search_parent_name in table_searches, (f"'{search_parent_name} '"
+                                                                      "not in "
+                                                                      f"{table_searches.keys()}")
+                        search_parent: Search = table_searches[search_parent_name]
+                        search.search_parent = search_parent
+                        if tracing:
+                            print(f"{tracing}Setting search '{search.name}' "
+                                  f"search parent to '{search_parent.name}'")
+                    else:
+                        if tracing:
+                            print(f"{tracing}Search '{search.name}' has no search parent.")
+
+            # Finally, mark *searches_loaded*:
+            table.searches_loaded = True
+
+            # Now force *table* to be sorted:
+            table.sort()
 
     # Table.searches_table_set():
     # def searches_table_set(self, searches_table):

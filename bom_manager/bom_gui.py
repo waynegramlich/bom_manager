@@ -651,6 +651,11 @@ class BomGui(QMainWindow, Gui):
             current_search_text: str = "None" if current_search is None else current_search.name
             print(f"{tracing}current_search='{current_search_text}'")
 
+    # BomGui.data_changed():
+    @trace(1)
+    def data_changed(self, node: Node, start_index: int, end_index: int, tracing: str = "") -> None:
+        pass  # FIXME!!!
+
     # BomGui.data_update()
     def data_update(self, tracing: str = "") -> None:
 
@@ -687,7 +692,9 @@ class BomGui(QMainWindow, Gui):
         directory_panel_name.setText(name_text)
 
     # BomGui.end_rows_insert():
-    def end_rows_insert(self, tracing: str = "") -> None:
+    @trace(1)
+    def end_rows_insert(self, node: Node, start_row_index: int, end_row_index: int,
+                        tracing: str = "") -> None:
         # Inform the *tree_model* associated with *bom_gui* (i.e. *self*) that we are
         # done inserting rows:
         bom_gui: BomGui = self
@@ -695,7 +702,9 @@ class BomGui(QMainWindow, Gui):
         tree_model.endInsertRows()
 
     # BomGui.end_rows_remove():
-    def end_rows_remove(self, tracing: str = "") -> None:
+    @trace(1)
+    def end_rows_remove(self, node: Node, start_row_index: int, end_row_index: int,
+                        tracing: str = "") -> None:
         # Inform the *tree_model* associated with *bom_gui* (i.e. *self*) that we are
         # done inserting rows:
         bom_gui: BomGui = self
@@ -841,6 +850,7 @@ class BomGui(QMainWindow, Gui):
         table: Optional[Node] = current_search.parent
         assert isinstance(table, Table)
         new_search: Search = Search(new_name, table, current_search, url)
+        table.sort()
         collection: Optional[Collection] = current_search.collection
         assert isinstance(collection, Collection)
         collection.url_insert(new_search)
