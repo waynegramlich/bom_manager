@@ -45,6 +45,7 @@ BOM_DIGIKEY_PLUGIN_LINTS := ${BOM_DIGIKEY_PLUGIN_FILES:%.py=%.pyl}
 BOM_MANAGER_FILES :=								\
 	$(BOM_MANAGER_DIRECTORY)/bom_manager/bom.py				\
 	$(BOM_MANAGER_DIRECTORY)/bom_manager/bom_gui.py				\
+	$(BOM_MANAGER_DIRECTORY)/bom_manager/tracing.py				\
 	$(BOM_MANAGER_DIRECTORY)/bom_manager/__init__.py			\
 	$(BOM_MANAGER_DIRECTORY)/setup.py
 BOM_MANAGER_LINTS := ${BOM_MANAGER_FILES:%.py=%.pyl}

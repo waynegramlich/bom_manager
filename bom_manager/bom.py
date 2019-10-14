@@ -1845,6 +1845,11 @@ class Directory(Node):
         if tracing:
             print(f"{tracing}relative_path='{relative_path}'")
 
+    # Directory.__str__():
+    def __str__(self):
+        directory: Directory = self
+        return f"Directory('{directory.name}')"
+
     # Directory.append():
     def append(self, node: Node) -> None:
         assert isinstance(node, Directory) or isinstance(node, Table)
@@ -2547,8 +2552,8 @@ class Search(Node):
             searches_root: str = collection.searches_root
             relative_path: str = search.relative_path
             search_full_file_name: str = os.path.join(searches_root, relative_path + ".xml")
-            if tracing:
-                print(f"{tracing}search_full_file_name={search_full_file_name}")
+            # if tracing:
+            #     print(f"{tracing}search_full_file_name={search_full_file_name}")
             search_file: IO[str]
             with open(search_full_file_name, "r") as search_file:
                 # Read in *search_xml_text* from *search_file*:

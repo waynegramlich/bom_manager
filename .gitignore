@@ -6,6 +6,7 @@ bom_by_*.txt
 *.bak
 *.egg-info/
 *,cover
+.pyp
 .coverage
 .mypy_cache/
 build/

@@ -79,7 +79,7 @@
 # are explicitly listed to make the flake8 linting program happier:
 from bom_manager.bom import (command_line_arguments_process, Collection, Collections, Directory,
                              Gui, Node, Order, Search, Table, TableComment)
-from bom_manager.tracing import trace, tracing_get  # Tracing decorator module:
+from bom_manager.tracing import trace, tracing_get, trace_format_set  # Tracing decorator module:
 # import csv                      # Parser for CSV (Comma Separated Values) files
 from functools import partial   # Needed for window events
 # import lxml.etree as etree      # type: ignore
@@ -95,7 +95,7 @@ from PySide2.QtCore import (QItemSelectionModel, QModelIndex, Qt)               
 from PySide2.QtGui import (QClipboard,)                                               # type: ignore
 # import re                       # Regular expressions
 import sys                      # System utilities
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 import webbrowser               # Some tools to send messages to a web browser
 
 
@@ -106,6 +106,9 @@ def main() -> int:
     searches_root: str
     order: Order
     collection_directories, searches_root, order = command_line_arguments_process()
+
+    bogus_model_index: QModelIndex = QModelIndex()
+    trace_format_set(type(bogus_model_index), q_model_index_format)
 
     # Now create the *bom_gui* graphical user interface (GUI) and run it:
     tracing: str = tracing_get()
@@ -119,6 +122,14 @@ def main() -> int:
 
     # Return 0 on successful exit from GUI application:
     return 0
+
+
+# q_model_index_format():
+def q_model_index_format(q_model_index: QModelIndex) -> str:
+    row: int = q_model_index.row()
+    column: int = q_model_index.column()
+    internal_pointer: Any = q_model_index.internalPointer()
+    return f"QModelIndex({row}, {column}, {internal_pointer})"
 
 
 # BomGui:
@@ -218,10 +229,11 @@ class BomGui(QMainWindow, Gui):
         # Grap *collections* and stuff into both *bom_gui* and *tree_model*:
         partial_load: bool = True
         collections: Collections = Collections("Collections", searches_root, partial_load, bom_gui)
-        collections_children: List[Node] = collections.children_get()
-        collection: Node
-        for collection in collections_children:
+        if collections.child_count() >= 1:
+            collection: Node = collections.child_fetch(0)
             assert isinstance(collection, Collection)
+            bom_gui.current_collection = collection
+            bom_gui.current_node = collection
 
         self.collections: Collections = collections
         tree_model.collections_set(collections)
@@ -273,7 +285,7 @@ class BomGui(QMainWindow, Gui):
     # https://myprogrammingnotes.com/addinsertremove-row-qtableview.html
 
     # BomGui.begin_model_reset():
-    @trace(1)
+    # @trace(1)
     def begin_model_reset(self) -> None:
         bom_gui: BomGui = self
         tree_model: TreeModel = bom_gui.tree_model
@@ -287,21 +299,21 @@ class BomGui(QMainWindow, Gui):
         # *bom_gui* (i.e. *self):
         bom_gui: BomGui = self
         tree_model: TreeModel = bom_gui.tree_model
-        model_index: QModelIndex = tree_model.createIndex(0, 0, node)
+        model_index: QModelIndex = tree_model.createIndex(start_row_index, 0, node)
 
         # Inform the *tree_model* that rows will be inserted from *start_row_index* through
         # *end_row_index*:
         tree_model.beginInsertRows(model_index, start_row_index, end_row_index)
 
     # BomGui.begin_rows_remove():
-    @trace(1)
+    # @trace(1)
     def begin_rows_remove(self, node: Node, start_row_index: int, end_row_index: int) -> None:
 
         # Create a *model_index* for *node* and *insert_row_index* starting from
         # *bom_gui* (i.e. *self):
         bom_gui: BomGui = self
         tree_model: TreeModel = bom_gui.tree_model
-        model_index: QModelIndex = tree_model.createIndex(0, 0, node)
+        model_index: QModelIndex = tree_model.createIndex(start_row_index, 0, node)
 
         # Inform the *tree_model* that rows will be inserted from *start_row_index* through
         # *end_row_index*:
@@ -319,7 +331,7 @@ class BomGui(QMainWindow, Gui):
         bom_gui.update()
 
     # BomGui.collection_panel_update():
-    @trace(1)
+    # @trace(1)
     def collection_panel_update(self, collection: Collection):
         # Force the *panel_collection* widget to be displayed by *panels* stacked widget:
         bom_gui: BomGui = self
@@ -337,7 +349,7 @@ class BomGui(QMainWindow, Gui):
         collection_panel_name.setText(name_text)
 
     # BomGui.collection_clicked():
-    @trace(1)
+    # @trace(1)
     def collection_clicked(self, collection: Collection) -> None:
         # Make sure that the current table and search are disabled for *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
@@ -348,14 +360,14 @@ class BomGui(QMainWindow, Gui):
         bom_gui.current_table = None
 
     # BomGui.collections_line_changed():
-    @trace(1)
+    # @trace(1)
     def collections_line_changed(self, text: str) -> None:
         # Make sure that *bom_gui* (i.e. *self*) is updated:
         bom_gui: BomGui = self
         bom_gui.update()
 
     # BomGui.collections_new_clicked():
-    @trace(1)
+    # @trace(1)
     def collections_new_clicked(self) -> None:
         bom_gui: BomGui = self
         # Grab some values from *bom_gui* (i.e. *self*):
@@ -404,11 +416,14 @@ class BomGui(QMainWindow, Gui):
             table.sort()
             new_search.xml_file_save()
 
-            model_index: QModelIndex = bom_gui.current_model_index
-            if model_index is not None:
-                parent_model_index: QModelIndex = model_index.parent()
-                tree_model: TreeModel = model_index.model()
-                tree_model.children_update(parent_model_index)
+            current_model_index: QModelIndex = bom_gui.current_model_index
+            if current_model_index is not None and current_model_index.isValid:
+                node: Any = current_model_index.internalPointer()
+                if isinstance(node, Node) and not isinstance(node, Collections):
+                    parent_model_index: QModelIndex = current_model_index.parent()
+                    assert parent_model_index.isValid()
+                    tree_model: TreeModel = current_model_index.model()
+                    tree_model.children_update(parent_model_index)
 
             # model = bom_gui.model
             # model.insertNodes(0, [ new_search ], parent_model_index)
@@ -418,7 +433,7 @@ class BomGui(QMainWindow, Gui):
             bom_gui.update()
 
     # BomGui.collections_check_clicked():
-    @trace(1)
+    # @trace(1)
     def collections_check_clicked(self) -> None:
         # Grab some values from *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
@@ -429,7 +444,7 @@ class BomGui(QMainWindow, Gui):
         order.check(collections)
 
     # BomGui.collections_process_clicked():
-    @trace(1)
+    # @trace(1)
     def collections_process_clicked(self) -> None:
         # Grab some values from *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
@@ -440,7 +455,7 @@ class BomGui(QMainWindow, Gui):
         order.process(collections)
 
     # BomGui.collections_tree_clicked():
-    @trace(1)
+    # @trace(1)
     def collections_tree_clicked(self, model_index: QModelIndex) -> None:
         # Stuff *model_index* into *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
@@ -455,7 +470,7 @@ class BomGui(QMainWindow, Gui):
 
         # Now grab the associated *node* from *model_index*:
         model: TreeModel = model_index.model()
-        node: Optional[Node] = model.getNode(model_index)
+        node: Optional[Node] = model.get_node(model_index)
         assert isinstance(node, Node)
 
         # Let the *node* know it has been clicked:
@@ -476,7 +491,7 @@ class BomGui(QMainWindow, Gui):
         bom_gui.update()
 
     # BomGui.collections_update():
-    @trace(1)
+    # @trace(1)
     def collections_update(self) -> None:
         # Grab some widgets from *bom_gui*:
         bom_gui: BomGui = self
@@ -685,7 +700,7 @@ class BomGui(QMainWindow, Gui):
         bom_gui.current_update()
 
     # BomGui.directory_clicked():
-    @trace(1)
+    # @trace(1)
     def directory_clicked(self, directory: Directory) -> None:
         # Mark the current search in *bom_gui* (i.e. *self*) as not active:
         bom_gui: BomGui = self
@@ -713,7 +728,7 @@ class BomGui(QMainWindow, Gui):
         directory_panel_name.setText(name_text)
 
     # BomGui.end_model_reset():
-    @trace(1)
+    # @trace(1)
     def end_model_reset(self) -> None:
         bom_gui: BomGui = self
         tree_model: TreeModel = bom_gui.tree_model
@@ -729,7 +744,7 @@ class BomGui(QMainWindow, Gui):
         tree_model.endInsertRows()
 
     # BomGui.end_rows_remove():
-    @trace(1)
+    # @trace(1)
     def end_rows_remove(self, node: Node, start_row_index: int, end_row_index: int) -> None:
         # Inform the *tree_model* associated with *bom_gui* (i.e. *self*) that we are
         # done inserting rows:
@@ -738,13 +753,13 @@ class BomGui(QMainWindow, Gui):
         tree_model.endRemoveRows()
 
     # BomGui.panels_connect():
-    @trace(1)
+    # @trace(1)
     def panels_connect(self) -> None:
         bom_gui: BomGui = self
         bom_gui.search_panel_connect()
 
     # BomGui.panels_update():
-    @trace(1)
+    # @trace(1)
     def panels_update(self) -> None:
         # Dispatch on the *current_node* of *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
@@ -777,7 +792,7 @@ class BomGui(QMainWindow, Gui):
         application.quit()
 
     # BomGui.run():
-    @trace(1)
+    # @trace(1)
     def run(self) -> None:
         # Grab some values from *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
@@ -844,7 +859,7 @@ class BomGui(QMainWindow, Gui):
         collections_line.setText(search_name)
 
     # BomGui.search_panel_connect():
-    @trace(1)
+    # @trace(1)
     def search_panel_connect(self) -> None:
         # Grab the various search panel widgets from the *main_window* of *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
@@ -895,7 +910,7 @@ class BomGui(QMainWindow, Gui):
         bom_gui.update()
 
     # BomGui.search_panel_remove_clicked():
-    @trace(1)
+    # @trace(1)
     def search_panel_remove_clicked(self) -> None:
         bom_gui: BomGui = self
         current_search: Optional[Search] = bom_gui.current_search
@@ -922,13 +937,13 @@ class BomGui(QMainWindow, Gui):
         bom_gui.update()
 
     # BomGui.search_panel_rename_clicked():
-    @trace(1)
+    # @trace(1)
     def search_panel_rename_clicked(self) -> None:
         bom_gui: BomGui = self
         bom_gui.update()
 
     # BomGui.search_panel_update():
-    @trace(1)
+    # @trace(1)
     def search_panel_update(self, search: Search) -> None:
         # Force the *panel_search* stacked widget to be displayed by *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
@@ -1040,7 +1055,7 @@ class BomGui(QMainWindow, Gui):
         search_panel.update()
 
     # BomGui.search_panel_url_get_clicked():
-    @trace(1)
+    # @trace(1)
     def search_panel_url_get_clicked(self):
         # Grab some values from *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
@@ -1077,7 +1092,7 @@ class BomGui(QMainWindow, Gui):
         bom_gui.update()
 
     # BomGui.search_panel_url_send_clicked():
-    @trace(1)
+    # @trace(1)
     def search_panel_url_send_clicked(self):
         bom_gui: BomGui = self
         current_search: Optional[Search] = bom_gui.current_search
@@ -1108,7 +1123,7 @@ class BomGui(QMainWindow, Gui):
             bom_gui.in_signal = False
 
     # BomGui.table_clicked():
-    @trace(1)
+    # @trace(1)
     def table_clicked(self, table: Table) -> None:
         # Grab some values from *BomGui*:
         bom_gui: BomGui = self
@@ -1184,7 +1199,7 @@ class BomGui(QMainWindow, Gui):
             data_table.setRowCount(1)
 
     # BomGui.update():
-    @trace(1)
+    # @trace(1)
     def update(self) -> None:
         bom_gui: BomGui = self
 
@@ -1295,6 +1310,7 @@ class TreeModel(QAbstractItemModel):
     FLAG_DEFAULT = Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     # TreeModel.__init__():
+    @trace(1)
     def __init__(self) -> None:
         # Initialize the parent *QAbstraceItemModel*:
         super().__init__()
@@ -1305,21 +1321,24 @@ class TreeModel(QAbstractItemModel):
         self.collections: Optional[Collections] = None
         # self.tracing: str = tracing
 
-    # TreeMode.__str__():
+    # TreeModel.__str__():
     def __str__(self) -> str:
         return "TreeModel()"
 
-    # check if the node has data that has not been loaded yet
     # TreeModel.canFetchMore():
+    # @trace(1)
     def canFetchMore(self, model_index: QModelIndex) -> bool:
         # We delegate the decision of whether we can fetch more stuff to the *node*
         # associated with *model_index*:
         tree_model: TreeModel = self
-        node: Node = tree_model.getNode(model_index)
-        can_fetch_more: bool = node.can_fetch_more()
+        node: Optional[Node] = tree_model.get_node(model_index)
+        can_fetch_more: bool = False
+        if isinstance(node, Node):
+            can_fetch_more = node.can_fetch_more()
         return can_fetch_more
 
     # TreeModel.collections_set():
+    # @trace(1)
     def collections_set(self, collections: Collections):
         # Stuff *collections* into *tree_model* (i.e. *self*):
         tree_model: TreeModel = self
@@ -1350,37 +1369,41 @@ class TreeModel(QAbstractItemModel):
     def delete(self, model_index: QModelIndex) -> None:
         # Perform any *tracing* requested by *tree_model* (i.e. *self*):
         tree_model: TreeModel = self
+        assert False, "Is anybody using this method"
 
-        # Carefully delete the row associated with *model_index*:
-        if model_index.isValid():
-            # row = model_index.row()
-            node: Node = tree_model.getNode(model_index)
-            assert isinstance(node, Node)
+        node: Optional[Node] = tree_model.get_node(model_index)
+        if isinstance(node, Node):
             parent: Node = node.parent
-            if parent is not None:
-                parent.child_remove(node)
+            parent.child_remove(node)
 
     # TreeModel.fetchMore():
+    # @trace(1)
     def fetchMore(self, model_index: QModelIndex) -> None:
         # Delegate fetching to the *node* associated with *model_index*:
         tree_model: TreeModel = self
-        node: Node = tree_model.getNode(model_index)
-        node.fetch_more()
+        node: Optional[Node] = tree_model.get_node(model_index)
+        if isinstance(node, Node):
+            node.fetch_more()
 
-    # TreeModel.getNode():
-    def getNode(self, model_index: QModelIndex) -> Node:
-        tree_model: TreeModel = self
-        node: Node = (model_index.internalPointer() if model_index.isValid()
-                      else tree_model.collections)
-        assert isinstance(node, Node), f"node.type={type(node)}"
+    # TreeModel.get_node():
+    # @trace(1)
+    def get_node(self, model_index: QModelIndex) -> Optional[Node]:
+        node: Optional[Node] = None
+        if model_index.isValid:
+            internal_pointer: Any = model_index.internalPointer()
+            if isinstance(internal_pointer, Node):
+                node = internal_pointer
         return node
 
     # TreeModel.hasChildren():
+    # @trace(1)
     def hasChildren(self, model_index: QModelIndex) -> bool:
         # Delegate to *has_children*() method to *node*:
         tree_model: TreeModel = self
-        node: Node = tree_model.getNode(model_index)
-        has_children: bool = node.has_children()
+        node: Optional[Node] = tree_model.get_node(model_index)
+        has_children: bool = False
+        if isinstance(node, Node):
+            has_children = node.has_children()
         return has_children
 
     # TreeModel.headerData():
@@ -1396,65 +1419,73 @@ class TreeModel(QAbstractItemModel):
         return TreeModel.FLAG_DEFAULT
 
     # TreeModel.index():
+    # @trace(1)
     def index(self, row: int, column: int, parent_model_index: QModelIndex) -> QModelIndex:
         tree_model: TreeModel = self
-        node: Node = tree_model.getNode(parent_model_index)
-        # FIXME: child method should be sibling method!!!
-        child = node.child_fetch(row)
-        model_index: QModelIndex = (QModelIndex() if child is None
-                                    else tree_model.createIndex(row, column, child))
-        assert isinstance(parent_model_index, QModelIndex)
+        model_index: QModelIndex
+        node: Optional[Node] = tree_model.get_node(parent_model_index)
+        if isinstance(node, Node):
+            children_size: int = node.child_count()
+            if row < children_size:
+                child: Node = node.child_fetch(row)
+                model_index = tree_model.createIndex(row, column, child)
+            else:
+                model_index = QModelIndex()
+        else:
+            model_index = QModelIndex()
         return model_index
 
     # TreeModel.children_update():
-    def children_update(self, parent_model_index: QModelIndex) -> None:
-        # Grab the *parent_node* using *parent_model_index* and *tree_model* (i.e. *self*):
+    # @trace(1)
+    def children_update(self, node: Node) -> None:
         tree_model: TreeModel = self
-        parent_node: Node = tree_model.getNode(parent_model_index)
-        children: List[Node] = parent_node.children_get()
-        children_size: int = len(children)
-
-        # For now do something really simple and just delete everything and reinsert it:
-        if children_size >= 1:
-            tree_model.beginRemoveRows(parent_model_index, 0, children_size - 1)
-            tree_model.endRemoveRows()
-        tree_model.beginInsertRows(parent_model_index, 0, children_size - 1)
-        tree_model.endInsertRows()
+        children_size: int = node.child_count()
+        tree_model.data_changed(node, 0, children_size - 1)
 
     # TreeModel.insertNodes():
     def insertNodes(self, position: int, nodes: List[Node],
                     parent_model_index: QModelIndex = QModelIndex()) -> bool:
-        tree_model: TreeModel = self
-        node: Node = tree_model.getNode(parent_model_index)
+        # tree_model: TreeModel = self
+        # node: Optional[Node] = tree_model.get_node(parent_model_index)
 
-        tree_model.beginInsertRows(parent_model_index, position, position + len(nodes) - 1)
+        # tree_model.beginInsertRows(parent_model_index, position, position + len(nodes) - 1)
 
-        child: Node
-        for child in reversed(nodes):
-            node.child_insert(child, position)
+        # child: Node
+        # for child in reversed(nodes):
+        #     node.child_insert(child, position)
 
-        tree_model.endInsertRows()
+        # tree_model.endInsertRows()
 
-        return True
+        assert False, "Somebody called TreeModel.insertNodes() !!!"
+
+        return False
 
     # TreeModel.parent():
+    # @trace(1)
     def parent(self, model_index: QModelIndex) -> QModelIndex:
         tree_model: TreeModel = self
-        node: Node = tree_model.getNode(model_index)
-        parent: Node = node.parent
         parent_model_index: QModelIndex
-        if parent is None or isinstance(parent, Collections):
-            parent_model_index = QModelIndex()
+        if model_index.isValid():
+            node: Any = tree_model.get_node(model_index)
+            if isinstance(node, Node) and not isinstance(node, Collections):
+                parent: Node = node.parent
+                parent_model_index = tree_model.createIndex(0, 0, parent)
+            else:
+                parent_model_index = QModelIndex()
         else:
-            parent_model_index = tree_model.createIndex(parent.row(), 0, parent)
+            parent_model_index = QModelIndex()
         return parent_model_index
 
     # Return 0 if there is data to fetch (handled implicitly by check length of child list)
     # TreeModel.rowCount():
+    @trace(1)
     def rowCount(self, parent: QModelIndex) -> int:
         tree_model: TreeModel = self
-        node: Node = tree_model.getNode(parent)
-        count: int = node.child_count()
+        count: int = 0
+        if parent.isValid():
+            node: Optional[Node] = tree_model.get_node(parent)
+            if isinstance(node, Node):
+                count = node.child_count()
         return count
 
 

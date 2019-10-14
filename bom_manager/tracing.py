@@ -132,23 +132,28 @@
 
 import inspect     # Python object inspection library used by *trace*:
 import functools   # Clean up some introspection stuff with wrapper:
-from typing import (Any, Callable, Dict, List)
+from typing import (Any, Callable, Dict, List, Type)
 
-# This module uses a couple of global variables for easy access:
+# This module uses some of global variables for easy access:
 global trace_level, tracing
 trace_level = 0
 tracing = ""
+trace_format_functions: Dict[Type, Callable] = dict()
 
 
 def trace(level: int) -> Callable:
     def value2text(value: object) -> str:
+        global trace_format_functions
         """Convert a value to a human readable string."""
         # Start with *text* to something weird to start with:
         text: str = "?"
         value_size: int = -1
 
         # Dispatch on type of *value*:
-        if isinstance(value, list):
+        if type(value) in trace_format_functions:
+            trace_format_function: Callable = trace_format_functions[type(value)]
+            text = trace_format_function(value)
+        elif isinstance(value, list):
             # We have a *list* and need to set *text* to "[]", "[value0]", or "[value0,...]":
             value_size = len(value)
             if value_size == 0:
@@ -261,6 +266,11 @@ def trace(level: int) -> Callable:
             return results
         return wrapper
     return decorator_wrapper
+
+
+def trace_format_set(type: Type, format_function: Callable) -> None:
+    global trace_format_routines
+    trace_format_functions[type] = format_function
 
 
 def trace_level_get() -> int:
