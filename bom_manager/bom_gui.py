@@ -1376,7 +1376,7 @@ class TreeModel(QAbstractItemModel):
         tree_model: TreeModel = self
         node: Node = tree_model.getNode(parent_model_index)
         # FIXME: child method should be sibling method!!!
-        child = node.child(row)
+        child = node.child_fetch(row)
         model_index: QModelIndex = (QModelIndex() if child is None
                                     else tree_model.createIndex(row, column, child))
         assert isinstance(parent_model_index, QModelIndex)
@@ -1407,7 +1407,7 @@ class TreeModel(QAbstractItemModel):
 
         child: Node
         for child in reversed(nodes):
-            node.child_insert(position, child)
+            node.child_insert(child, position)
 
         tree_model.endInsertRows()
 
