@@ -1,8 +1,8 @@
 bom_by_*.txt
 *~
 *.csv
-*.pkl
 *.pyc
+*.pyl
 *.bak
 *.egg-info/
 *,cover
