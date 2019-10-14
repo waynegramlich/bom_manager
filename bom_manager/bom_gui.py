@@ -270,6 +270,15 @@ class BomGui(QMainWindow, Gui):
     def __str__(self) -> str:
         return "BomGui()"
 
+    # https://myprogrammingnotes.com/addinsertremove-row-qtableview.html
+
+    # BomGui.begin_model_reset():
+    @trace(1)
+    def begin_model_reset(self) -> None:
+        bom_gui: BomGui = self
+        tree_model: TreeModel = bom_gui.tree_model
+        tree_model.beginResetModel()
+
     # BomGui.begin_rows_insert():
     @trace(1)
     def begin_rows_insert(self, node: Node, start_row_index: int, end_row_index: int) -> None:
@@ -660,12 +669,17 @@ class BomGui(QMainWindow, Gui):
 
     # BomGui.data_changed():
     @trace(1)
-    def data_changed(self, node: Node, start_index: int, end_index: int) -> None:
-        pass  # FIXME!!!
+    def data_changed(self, node: Node, begin_row_index: int, end_row_index: int) -> None:
+        bom_gui: BomGui = self
+        tree_model: TreeModel = bom_gui.tree_model
+        top_left_model_index: QModelIndex = tree_model.createIndex(begin_row_index, 0, node)
+        column_count: int = tree_model.columnCount(top_left_model_index)
+        bottom_right_model_index: QModelIndex = tree_model.createIndex(end_row_index,
+                                                                       column_count - 1, node)
+        tree_model.dataChanged.emit(top_left_model_index, bottom_right_model_index)
 
     # BomGui.data_update()
     def data_update(self) -> None:
-
         # Make sure that the data for *bom_gui* (i.e. *self*) is up-to-date:
         bom_gui: BomGui = self
         bom_gui.current_update()
@@ -697,6 +711,13 @@ class BomGui(QMainWindow, Gui):
         directory_panel_name: QLabel = main_window.directory_panel_name
         name_text = f"Name: {directory.name}"
         directory_panel_name.setText(name_text)
+
+    # BomGui.end_model_reset():
+    @trace(1)
+    def end_model_reset(self) -> None:
+        bom_gui: BomGui = self
+        tree_model: TreeModel = bom_gui.tree_model
+        tree_model.endResetModel()
 
     # BomGui.end_rows_insert():
     @trace(1)
@@ -1178,6 +1199,9 @@ class BomGui(QMainWindow, Gui):
 
         # Update the *panels* stacked widget:
         bom_gui.panels_update()
+
+        # application: QApplication = bom_gui.application
+        # application.processEvents()
 
     # BomGui.search_update():
     def xxx_search_update(self, tracing=""):
