@@ -1431,6 +1431,10 @@ class Gui:
     def __str__(self) -> str:
         return "GUI()"
 
+    # Gui.begin_model_reset():
+    def begin_model_reset(self) -> None:
+        pass
+
     # Gui.begin_rows_insert():
     def begin_rows_insert(self, node: "Node",
                           start_row_index: int, end_row_index: int) -> None:
@@ -1461,7 +1465,7 @@ class Gui:
         assert False, f"{class_name}.collections_clicked() has not been implemented yet"
 
     # Gui.data_changed():
-    def data_changed(self, node: "Node", start_index: int, end_index: int) -> None:
+    def data_changed(self, node: "Node", begin_row_index: int, end_row_index: int) -> None:
         pass  # Do nothing for the non-GUI version of the code:
 
     # Gui.directory_clicked():
@@ -1475,6 +1479,10 @@ class Gui:
         gui: Gui = self
         class_name: str = gui.__class__.__name__
         assert False, f"{class_name}.directory_panel_update() has not been implemented yet"
+
+    # Gui.end_model_reset():
+    def end_model_reset(self):
+        pass  # Do nothing for the non-GUI version of the code:
 
     # Gui.end_rows_insert():
     def end_rows_insert(self, node: "Node", start_row_index: int, end_row_index: int) -> None:
@@ -1518,18 +1526,17 @@ class Node:
                  gui: Optional[Gui] = None) -> None:
         # Do some additional checking for *node* (i.e. *self*):
         node: Node = self
-        # is_collection: bool = isinstance(node, Collection)
-        # is_collections: bool = isinstance(node, Collections)
-        # is_either = is_collections or is_collection
-        # assert (parent is None) == is_collections, f"Node '{name}' has bad parent"
 
-        # Compute *relative_path*:
+        # We have to special case the computation of *relative_path* base on *node* type:
         relative_path: str = "??"
         if isinstance(node, Collections):
+            # A *Collections* object has no meaningful *relative_path*:
             relative_path = ""
         elif isinstance(node, Collection):
+            # A *Collection* object start with with its file encoded *name* as the root directory:
             relative_path = Encode.to_file_name(name)
         else:
+            # All other *node*'s construct their *relative_path* from the *parent* and *name*:
             relative_path = os.path.join(parent.relative_path, Encode.to_file_name(name))
 
         # Make sure we have a valid *gui* object:
@@ -1541,6 +1548,7 @@ class Node:
         # Load up *node* (i.e. *self*):
         node = self
         self._children: List[Node] = list()       # *Node* sub-classes should use *chldren_get*()
+        self.is_sorted: bool = False              # Set to *True* when children sorted
         self.gui: Gui = gui                       # The *gui* object to use for GUI updates
         self.collection: Collection = collection  # Parent *Collection* for *node*
         self.name: str = name                     # Human readable name of version of *node*
@@ -1564,35 +1572,14 @@ class Node:
         assert False, f"{class_name}.can_fetch_more() needs to be implemented"
         return True
 
-    # Node.child():
-    def child(self, index: int) -> "Node":
-        node: Node = self
-        children: List[Node] = node._children
-        assert 0 <= index < len(children)
-        child: Node = children[index]
-        return child
-
     # Node.child_append():
     @trace(1)
     def child_append(self, child: "Node") -> None:
-        # FIXME: This should just call *child_insert*() with a position of len(children)!!!
-
-        # Grab some values from *node* (i.e. *self*):
         node: Node = self
         children: List[Node] = node._children
-        gui: Gui = node.gui
-
-        # Let *gui* (if it exists) know that we are about to insert *node* at the
-        # end of *children* (i.e. at the *insert_row_index*):
-        insert_row_index: int = len(children)
-        gui.begin_rows_insert(node, insert_row_index, insert_row_index)
-
-        # Now tack *child* onto the end of *child* and update *child*'s parent field:
-        children.append(child)
-        child.parent = node
-
-        # Let any *gui* know that the row has been appended:
-        gui.end_rows_insert(node, insert_row_index, insert_row_index)
+        children_size: int = len(children)
+        node.child_insert(child, children_size)
+        node.is_sorted = False
 
     # Node.child_count():
     def child_count(self) -> int:
@@ -1603,26 +1590,42 @@ class Node:
 
     # Node.child_delete():
     def child_delete(self, index: int) -> None:
-        # Grab some values out of *node* (i.e. *self*):
-        node = self
-        children = node._children
-        children_size = len(children)
-
-        # Only delete if *index* is valid*:
-        assert 0 <= index < children_size
-
         # Let *gui* know that the *index*'th row is about to be removed:
+        node: Node = self
         gui = node.gui
         gui.begin_rows_remove(node, index, index)
+        # pgui.begin_model_reset()
+
+        # Grab some values out of *node* (i.e. *self*):
+        node = self
+        if not node.is_sorted:
+            node.sort()
+
+        # Verify that *index* is in bounds:
+        children = node._children
+        children_size = len(children)
+        assert 0 <= index < children_size, f"Index out of bounds {index} >= {children_size}"
 
         # Perform the actual deletion:
         del children[index]
 
         # Let *gui* know that the row has been deleted:
         gui.end_rows_remove(node, index, index)
+        # gui.end_model_reset()
+
+    # Node.child_fetch():
+    def child_fetch(self, index: int) -> "Node":
+        node: Node = self
+        if not node.is_sorted:
+            node.sort()
+        children: List[Node] = node._children
+        children_size: int = len(children)
+        assert 0 <= index < len(children), f"Index out of bounds {index} >= {children_size}"
+        child: Node = children[index]
+        return child
 
     # Node.child_insert():
-    def child_insert(self, index: int, child: "Node") -> None:
+    def child_insert(self, child: "Node", index: int) -> None:
         # Verify that *index* is valid for inserting into *node* (i.e. *self*):
         node: Node = self
         children = node._children
@@ -1633,6 +1636,7 @@ class Node:
         # (i.e. at *index*):
         gui: Gui = node.gui
         gui.begin_rows_insert(node, index, index)
+        # gui.begin_model_reset()
 
         # Now stuff *child* into *children* at *index*:
         children.insert(index, child)
@@ -1640,6 +1644,7 @@ class Node:
 
         # Wrap up *gui* row insert:
         gui.end_rows_insert(node, index, index)
+        # gui.end_model_reset()
 
     # Node.child_remove()
     def child_remove(self, child: "Node") -> None:
@@ -1653,7 +1658,9 @@ class Node:
     # Node.children_get():
     def children_get(self) -> "List[Node]":
         # Return the children of *node* (i.e. *self*):
-        node: "Node" = self
+        node: Node = self
+        if not node.is_sorted:
+            node.sort()
         children: "List[Node]" = node._children
         return children
 
@@ -1700,13 +1707,6 @@ class Node:
         class_name: str = node.__class__.__name__
         assert False, f"{class_name}.fetch_more() has not been implmented yet."
 
-    # Node.gui_get():
-    def gui_get(self) -> Gui:
-        # Return *gui* for *node* (i.e. *self*):
-        node: "Node" = self
-        gui: Gui = node.gui
-        return gui
-
     # Node.has_child():
     def has_child(self, sub_node: "Node") -> bool:
         # Start with *found* set to *False* and only set to *True* if *sub_node* is found
@@ -1728,6 +1728,19 @@ class Node:
         children: "List[Node]" = node._children
         has_children: bool = len(children) > 0
         return has_children
+
+    # Node.gui_get():
+    def gui_get(self) -> Gui:
+        # Return *gui* for *node* (i.e. *self*):
+        node: Node = self
+        gui: Gui = node.gui
+        return gui
+
+    # Node.key_function_get():
+    def key_function_get(self) -> "Callable[[Node], Any]":
+        node: Node = self
+        class_name: str = node.__class__.__name__
+        assert False, f"{class_name}.key_function_get() is not implemented yet"
 
     # Node.name_get():
     def name_get(self) -> str:
@@ -1764,6 +1777,27 @@ class Node:
         parent_children: List[Node] = parent._children
         result: int = parent_children.index(node)
         return result
+
+    # Node.sort():
+    @trace(1)
+    def sort(self) -> None:
+        node: Node = self
+        if not node.is_sorted:
+            # Grab* the *key_function* for *node* and sort *children* using it:
+            children: List[Node] = node._children
+            if len(children) >= 1:
+                child0: Node = children[0]
+                key_function: "Callable[[Node], Any]" = child0.key_function_get()
+                children.sort(key=key_function)
+
+            # Generate the *data_changed* signal:
+            collection: Collection = node.collection
+            gui: Gui = collection.gui
+            children_size: int = len(children)
+            gui.data_changed(node, 0, children_size - 1)
+
+            # Remember that *node* *is_sorted8:
+            node.is_sorted = True
 
     # Node.sort_helper():
     @trace(1)
@@ -1843,6 +1877,16 @@ class Directory(Node):
         directory: Directory = self
         name: str = directory.name
         return name
+
+    # Directory.key():
+    @staticmethod
+    def key(directory: Node) -> Any:
+        name: str = directory.name
+        return (name, )
+
+    # Directory.key_function_get():
+    def key_function_get(self) -> Callable[[Node], Any]:
+        return Directory.key
 
     # Directory.partial_load():
     def partial_load(self) -> None:
@@ -2064,6 +2108,16 @@ class Collection(Node):
         for node in collection.children_get():
             directories.extend(node.directories_get())
         return directories
+
+    # Collection.key():
+    @staticmethod
+    def key(collection: "Collection") -> Any:
+        name: str = collection.name
+        return (name, )
+
+    # Collection.key_function_get():
+    def key_function_get(self) -> Callable[[Node], Any]:
+        return Collection.key
 
     # Collection.partial_load():
     @trace(1)
@@ -2293,6 +2347,16 @@ class Collections(Node):
     def clicked(self, gui: Gui) -> None:
         collections: Collections = self
         gui.collections_clicked(collections)
+
+    # Collections.key():
+    @staticmethod
+    def key(collections: "Collections") -> Any:
+        name: str = collections.name
+        return (name, )
+
+    # Collections.key_function_get():
+    def key_function_get(self) -> Callable[[Node], Any]:
+        return Collections.key
 
     # Collections.partial_load():
     def partial_load(self) -> None:
@@ -2581,9 +2645,8 @@ class Search(Node):
         return deletable
 
     # Search.key():
-    # def key(self) -> Tuple[int, float, str]:
     @staticmethod
-    def key(search: Node) -> Any:
+    def key(search: "Search") -> Any:
         """ Return a sorting key for the *Search* object (i.e. *self*):
 
             The sorting key is a three tuple consisting of (*Depth*, *UnitsNumber*, *Text*), where:
@@ -2602,8 +2665,7 @@ class Search(Node):
         #    are organized as a heirachical set of templates and we want the ones closest to
         #    to top
 
-        # Grab *table* and *searches_table* from *search* (i.e. *self*):
-        assert isinstance(search, Search)
+        # Grab *table* and *searches_table* from *search*:
         table: Node = search.parent
         assert isinstance(table, Table)
 
@@ -2648,6 +2710,10 @@ class Search(Node):
         rest: str = search_name if number_end_index < 0 else search_name[number_end_index:]
         key: Tuple[int, float, str] = (depth, number, rest)
         return key
+
+    # Search.key_function_get():
+    def key_function_get(self) -> Callable[[Node], Any]:
+        return Search.key
 
     # Search.panel_update():
     @trace(1)
@@ -3000,12 +3066,11 @@ class Table(Node):
         # Only load *table* (i.e. *self*) if it is not already *loaded*:
         table: Table = self
         loaded: bool = table.loaded
-        searches: List[Node] = table.children_get()
-        searches_size: int = len(searches)
-        tracing: str = tracing_get()
-        if tracing:
-            print(f"{tracing}loaded={loaded} searches_size={searches_size}")
         if not table.loaded:
+            searches_size: int = table.child_count()
+            tracing: str = tracing_get()
+            if tracing:
+                print(f"{tracing}loaded={loaded} searches_size={searches_size}")
             # Get *table_file_name* for *table*:
             relative_path: str = table.relative_path
             collection: Optional[Collection] = table.collection
@@ -3056,6 +3121,16 @@ class Table(Node):
             header_labels.append(header_label)
         return header_labels
 
+    # Table.key():
+    @staticmethod
+    def key(table: Node) -> Any:
+        name: str = table.name
+        return (name, )
+
+    # Table.key_function_get():
+    def key_function_get(self) -> Callable[[Node], Any]:
+        return Table.key
+
     # Table.name_get():
     def name_get(self) -> str:
         # Force *table* (i.e. *self*) *load* if it has not already been loaded:
@@ -3064,9 +3139,8 @@ class Table(Node):
         table.file_load()
 
         # Augment *name* with the *searches_size*:
-        searches: List[Node] = table.children_get()
-        searches_size: int = len(searches)
-        if len(searches) >= 2:
+        searches_size: int = table.child_count()
+        if searches_size >= 2:
             name += f" ({searches_size})"
         return name
 
@@ -3153,69 +3227,6 @@ class Table(Node):
                     assert table.has_child(search)
                     search.loaded = False
 
-    # Table.sort():
-    @trace(1)
-    def sort(self) -> None:
-        # Only sort *table* (i.e. *self*) if it is not *is_sorted*:
-        table: Table = self
-        if not table.searches_sorted:
-            table.sort_helper(Search.key)
-            table.searches_sorted = True
-        return
-
-        # Old bogus code:
-        is_sorted: bool = table.is_sorted
-        tracing: str = tracing_get()
-        if tracing:
-            print(f"{tracing}is_sorted={is_sorted}")
-        if not is_sorted:
-            # Grab *searches* list from *table* (i.e. *self*):
-            searches: List[Node] = table.children_get()
-            searches_size: int = len(searches)
-            if tracing:
-                print(f"{tracing}searches_size={searches_size}")
-
-            # Create a new *searches_table* that contains every *search* keyed by *search_name*:
-            searches_table: Dict[str, Search] = dict()
-            index: int
-            search: Node
-            for index, search in enumerate(searches):
-                assert isinstance(search, Search)
-                search_name: str = search.name
-                if search_name in searches_table:
-                    assert searches_table[search_name] is search
-                else:
-                    searches_table[search_name] = search
-                # print(f"Search[{index}]:'{search_name}'=>'{search_key}'")
-            if len(searches) != len(searches_table):
-                # tracing = "TS:" if tracing is None else tracing
-                if tracing:
-                    searches_titles = [search.name for search in searches]
-                    print(f"{tracing}searches_titles={searches_titles}")
-                    print(f"{tracing}searches_table={searches_table}")
-                assert False, f"{len(searches)} != {len(searches_table)}"
-
-            # Sweep through *searches* and ensure that the *search_parent* field is set:
-            # for index, search in enumerate(searches):
-            #     search_parent = search.search_parent
-            #     if search_parent is not None:
-            #         search_parent_name = search_parent.name
-            #         if search_parent_name not in searches_table:
-            #             keys = list(searches_table.keys())
-            #             assert False, f"'{search_parent_name}' not in searches_table {keys}"
-            #         search_parent = searches_table[search_parent_title_key]
-            #         search.search_parent = search_parent
-            #     if tracing:
-            #         search_parent_text = ("None" if search_parent is None
-            #                               else f"'{search_parent.name}'")
-            #         print(f"{tracing}Search[{index}]:'{search.name}' {search_parent_text}")
-
-            # Now sort *searches*:
-            searches.sort(key=Search.key)
-
-            # Mark that *table* *is_sorted*:
-            table.is_sorted = True
-
     # Table.search_directory_get():
     # def search_directory_get(self) -> str:
     #     # Compute *search_directory*:
@@ -3265,7 +3276,6 @@ class Table(Node):
             # Fix up the search parent links:
             if searches_loaded_count >= 1:
                 for search in searches:
-                    assert isinstance(search, Search)
                     search_parent_name: str = search.search_parent_name
                     if tracing:
                         print(f"{tracing}Search '{search.name}' parent name is "
@@ -3285,9 +3295,15 @@ class Table(Node):
 
             # Finally, mark *searches_loaded*:
             table.searches_loaded = True
+            table.is_sorted = False
 
             # Now force *table* to be sorted:
-            table.sort()
+            # searches = table.children_get()
+            if tracing:
+                print(f"{tracing}After searches sort:")
+                for index, search in enumerate(searches):
+                    key: Any = Search.key(search)
+                    print(f"{tracing}[{index}]:'{search.name}': {key}")
 
     # Table.searches_table_set():
     # def searches_table_set(self, searches_table):

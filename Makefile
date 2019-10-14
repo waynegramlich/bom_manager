@@ -5,7 +5,9 @@ BOM_MANAGER := .
 
 # NOTE that the version number comes from the BOM_VERSION environment varaible.
 
-all: pkg_install
+.PHONY: dist_build download lint pkg_build upload pipinstall
+
+all: lint pipinstall
 
 REPO_URL := https://test.pypi.org/simple/ bom_manager_waynegramlich
 PKG_BUILD := =pip install .
@@ -13,7 +15,6 @@ DIST_BUILD := =python setup.py sdist bdist_wheel
 TWINE_UPLOAD := =twine upload --verbose -r testpypi dist/*
 DO_ALL=echo "--PKG--";$(PKG_BUILD);echo "--DIST--";$(DIST_BUILD);echo "--TWINE--";$(TWINE_UPOAD)
 
-.PHONY: dist_build download lint pkg_build upload 
 
 dist_build: pkg_install
 	(cd $(BOM_MANAGER);          rm -rf dist ; python setup.py sdist bdist_wheel )
