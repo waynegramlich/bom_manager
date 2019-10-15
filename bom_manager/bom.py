@@ -2187,9 +2187,11 @@ class Collection(Node):
         collection: Collection = self
         searches_table: Dict[str, Search] = collection.searches_table
         search_name: str = search.name
+        search_url: str = search.url
         assert search_name[0] != '@', f"Trying to remove template '{search_name}' from table"
         assert search_name in searches_table, "Search '{search_name} not found"
         del searches_table[search_name]
+        collection.url_remove(search_url)
 
     # Collection.tables_get():
     def tables_get(self) -> "List[Table]":
@@ -2470,6 +2472,17 @@ class Search(Node):
         collection: Optional[Collection] = parent.collection
         assert isinstance(collection, Collection)
         collection.searches_insert(search)
+
+        # Make sure that the URL is not a duplicate:
+        if url != "":
+            prior_search: Optional[Search] = collection.url_find(url)
+            if isinstance(prior_search, Search):
+                # We have a duplicate *url*:
+                print(f"URL '{url}' for search '{name}' is the same as search "
+                      f"'{prior_search.name}' in collection '{collection.name}.")
+            else:
+                # *url* is unique, so stuff it into the URL table of *collection*:
+                collection.url_insert(search)
 
     # Search.__str__(self):
     def __str__(self) -> str:
@@ -2802,6 +2815,16 @@ class Search(Node):
         search.search_parent = None  # This is filled in later on
         search.search_parent_name = search_parent_name
         search.url = url
+
+        if search.url != "":
+            collection: Collection = search.collection
+            prior_search: Optional[Search] = collection.url_find(url)
+            if isinstance(prior_search, Search):
+                # We have a duplicate *url*:
+                print(f"URL '{url}' for search '{name}' is the same as search "
+                      f"'{prior_search.name}' in collection '{collection.name}.")
+            else:
+                collection.url_insert(search)
 
     # Search.type_letter_get():
     def type_letter_get(self) -> str:
@@ -3228,7 +3251,7 @@ class Table(Node):
                     search_name: str = Encode.from_file_name(file_base)
 
                     # Create *search* and then save it out to the file system:
-                    search: Search = Search(search_name, table, None, "??")
+                    search: Search = Search(search_name, table, None, "")
                     assert table.has_child(search)
                     search.loaded = False
 

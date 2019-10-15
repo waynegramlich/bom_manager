@@ -199,10 +199,10 @@ class BomGui(QMainWindow, Gui):
         self.clicked_model_index: QModelIndex = QModelIndex()
         self.collection_directories: List[str] = collection_directories
         self.current_collection: Optional[Collection] = None
-        self.current_model_index: Optional[QModelIndex] = None
         self.current_node: Optional[Node] = None
         self.current_search: Optional[Search] = None
         self.current_table: Optional[Table] = current_table
+        self.deleted_nodes: List[Node] = list()
         self.in_signal: bool = True
         self.main_window: QMainWindow = main_window
         self.order: Order = order
@@ -216,7 +216,7 @@ class BomGui(QMainWindow, Gui):
         mw: QMainWindow = main_window
         mw.collections_check.clicked.connect(bom_gui.collections_check_clicked)
         mw.collections_process.clicked.connect(bom_gui.collections_process_clicked)
-        mw.collections_new.clicked.connect(bom_gui.collections_new_clicked)
+        # mw.collections_new.clicked.connect(bom_gui.collections_new_clicked)
         mw.collections_new.setEnabled(False)
         mw.collections_line.textChanged.connect(bom_gui.collections_line_changed)
         mw.collections_tree.clicked.connect(bom_gui.collections_tree_clicked)
@@ -368,72 +368,6 @@ class BomGui(QMainWindow, Gui):
         bom_gui: BomGui = self
         bom_gui.update()
 
-    # BomGui.collections_new_clicked():
-    # @trace(1)
-    def collections_new_clicked(self) -> None:
-        bom_gui: BomGui = self
-        # Grab some values from *bom_gui* (i.e. *self*):
-        current_search: Optional[Search] = bom_gui.current_search
-
-        # Make sure *current_search* exists (this button click should be disabled if not available):
-        assert current_search is not None
-
-        # clip_board = pyperclip.paste()
-        # selection = os.popen("xsel").read()
-        application: QApplication = bom_gui.application
-        application_clipboard: QClipboard = application.clipboard()
-        selection: str = application_clipboard.text(QClipboard.Selection)
-        clipboard: str = application_clipboard.text(QClipboard.Clipboard)
-
-        url: str = ""
-        if selection.startswith("http"):
-            url = selection
-        elif clipboard.startswith("http"):
-            url = clipboard
-        tracing: str = tracing_get()
-        if tracing:
-            print(f"{tracing}clipbboard='{clipboard}'")
-            print(f"{tracing}selection='{selection}'")
-            print(f"{tracing}url='{url}'")
-
-        # Process *url* (if it is valid):
-        if url == "":
-            print("URL: No valid URL found!")
-        else:
-            # Grab some stuff from *bom_gui*:
-            main_window: QMainWindow = bom_gui.main_window
-            collections_line: QLineEdit = main_window.collections_line
-            new_search_name: str = collections_line.text().strip()
-
-            # Grab some values from *current_search*:
-            table: Node = current_search.parent
-            assert isinstance(table, Table)
-
-            # Construct *new_search_name*:
-            new_search: Search = Search(new_search_name, table, current_search, url)
-            assert table.has_child(new_search)
-
-            # if tracing:
-            #    print("{0}1:len(searches)={1}".format(tracing, len(searches)))
-            table.sort()
-            new_search.xml_file_save()
-
-            current_model_index: QModelIndex = bom_gui.current_model_index
-            if current_model_index is not None and current_model_index.isValid:
-                node: Any = current_model_index.internalPointer()
-                if isinstance(node, Node) and not isinstance(node, Collections):
-                    parent_model_index: QModelIndex = current_model_index.parent()
-                    assert parent_model_index.isValid()
-                    tree_model: TreeModel = current_model_index.model()
-                    tree_model.children_update(parent_model_index)
-
-            # model = bom_gui.model
-            # model.insertNodes(0, [ new_search ], parent_model_index)
-            # if tracing:
-            #    print("{0}2:len(searches)={1}".format(tracing, len(searches)))
-
-            bom_gui.update()
-
     # BomGui.collections_check_clicked():
     # @trace(1)
     def collections_check_clicked(self) -> None:
@@ -461,7 +395,6 @@ class BomGui(QMainWindow, Gui):
     def collections_tree_clicked(self, model_index: QModelIndex) -> None:
         # Stuff *model_index* into *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
-        bom_gui.current_model_index = model_index
 
         # If *tracing*, show the *row* and *column*:
         tracing: str = tracing_get()
@@ -493,7 +426,7 @@ class BomGui(QMainWindow, Gui):
         bom_gui.update()
 
     # BomGui.collections_update():
-    # @trace(1)
+    @trace(1)
     def collections_update(self) -> None:
         # Grab some widgets from *bom_gui*:
         bom_gui: BomGui = self
@@ -763,7 +696,7 @@ class BomGui(QMainWindow, Gui):
         bom_gui.search_panel_connect()
 
     # BomGui.panels_update():
-    # @trace(1)
+    @trace(1)
     def panels_update(self) -> None:
         # Dispatch on the *current_node* of *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
@@ -851,7 +784,6 @@ class BomGui(QMainWindow, Gui):
 
         # Remember that *search* and *model_index* are current:
         bom_gui.current_search = search
-        bom_gui.current_model_index = clicked_model_index
 
         # Now tediously force the GUI to high-light *model_index*:
         flags: int = (QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
@@ -914,20 +846,28 @@ class BomGui(QMainWindow, Gui):
         bom_gui.update()
 
     # BomGui.search_panel_remove_clicked():
-    # @trace(1)
+    @trace(1)
     def search_panel_remove_clicked(self) -> None:
+        tracing: str = tracing_get()
+        if tracing:
+            print("{tracing}>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
         bom_gui: BomGui = self
         current_search: Optional[Search] = bom_gui.current_search
         assert isinstance(current_search, Search)
-        tracing: str = tracing_get()
-        if tracing:
-            print("******************************************************************************")
         collection: Optional[Collection] = current_search.collection
         assert isinstance(collection, Collection)
-        current_search.file_delete()
         current_search_name: str = current_search.name
-        collection.search_remove(current_search_name)
-        assert collection.search_find(current_search_name) is None
+        current_search_url: str = current_search.url
+        collection.searches_remove(current_search)
+        assert collection.url_find(current_search_url) is None
+        assert collection.searches_find(current_search_name) is None
+
+        bom_gui.deleted_nodes.append(current_search)
+        search_parent: Optional[Search] = current_search.search_parent
+        assert isinstance(search_parent, Search)
+        bom_gui.current_search = search_parent
+        bom_gui.current_node = search_parent
+
         table: Node = current_search.parent
         assert isinstance(table, Table)
         table.child_remove(current_search)
@@ -936,9 +876,10 @@ class BomGui(QMainWindow, Gui):
         for table_search in table_searches:
             assert isinstance(table_search, Search)
             assert table_search is not current_search, "Somehow the current search is not deleted"
-        bom_gui.current_search = None
-        bom_gui.current_node = None
+        current_search.file_delete()
         bom_gui.update()
+        if tracing:
+            print("{tracing}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
 
     # BomGui.search_panel_rename_clicked():
     # @trace(1)
@@ -947,7 +888,7 @@ class BomGui(QMainWindow, Gui):
         bom_gui.update()
 
     # BomGui.search_panel_update():
-    # @trace(1)
+    @trace(1)
     def search_panel_update(self, search: Search) -> None:
         # Force the *panel_search* stacked widget to be displayed by *bom_gui* (i.e. *self*):
         bom_gui: BomGui = self
@@ -1047,11 +988,16 @@ class BomGui(QMainWindow, Gui):
         main_window.search_panel_rename.setEnabled(rename_enable)
         main_window.search_panel_rename_why.setText(rename_why)
 
+        # Compute *remove_enable* and *remove_why* to allow/disallow deletion of *search*:
         remove_enable: bool = False
-        remove_why: str = "@ALL Reserved"
-        if search_name != "@ALL":
-            remove_enable = True
+        remove_why: str = "??"
+        if search_name == "@ALL":
+            remove_why = "@ALL Reserved"
+        elif all_children >= 1:
+            remove_why = f"{all_children} children"
+        else:
             remove_why = "Remove Allowed"
+            remove_enable = True
         main_window.search_panel_remove.setEnabled(remove_enable)
         main_window.search_panel_remove_why.setText(remove_why)
 
@@ -1203,7 +1149,7 @@ class BomGui(QMainWindow, Gui):
             data_table.setRowCount(1)
 
     # BomGui.update():
-    # @trace(1)
+    @trace(1)
     def update(self) -> None:
         bom_gui: BomGui = self
 
