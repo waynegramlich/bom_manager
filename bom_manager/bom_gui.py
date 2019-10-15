@@ -303,6 +303,7 @@ class BomGui(QMainWindow, Gui):
 
         # Inform the *tree_model* that rows will be inserted from *start_row_index* through
         # *end_row_index*:
+        tree_model.layoutAboutToBeChanged.emit()
         tree_model.beginInsertRows(model_index, start_row_index, end_row_index)
 
     # BomGui.begin_rows_remove():
@@ -317,6 +318,7 @@ class BomGui(QMainWindow, Gui):
 
         # Inform the *tree_model* that rows will be inserted from *start_row_index* through
         # *end_row_index*:
+        tree_model.layoutAboutToBeChanged.emit()
         tree_model.beginRemoveRows(model_index, start_row_index, end_row_index)
 
     # BomGui.comment_text_set()
@@ -742,6 +744,7 @@ class BomGui(QMainWindow, Gui):
         bom_gui: BomGui = self
         tree_model: TreeModel = bom_gui.tree_model
         tree_model.endInsertRows()
+        tree_model.layoutChanged.emit()
 
     # BomGui.end_rows_remove():
     # @trace(1)
@@ -751,6 +754,7 @@ class BomGui(QMainWindow, Gui):
         bom_gui: BomGui = self
         tree_model: TreeModel = bom_gui.tree_model
         tree_model.endRemoveRows()
+        tree_model.layoutChanged.emit()
 
     # BomGui.panels_connect():
     # @trace(1)
