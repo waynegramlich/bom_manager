@@ -25,6 +25,7 @@ BOM_DIGIKEY_PLUGIN_DIRECTORY := ../bom_digikey_plugin
 BOM_FINDCHIPS_PLUGIN_DIRECTORY := ../bom_findchips_plugin
 BOM_KICAD_PLUGIN_DIRECTORY := ../bom_kicad_plugin
 BOM_MANAGER_DIRECTORY := .
+TESTS_DIRECTORY := tests
 
 # For each Python package define the Python files that matter:
 BOM_DIGIKEY_PLUGIN_FILES := 							\
@@ -49,7 +50,8 @@ BOM_MANAGER_FILES :=								\
 	$(BOM_MANAGER_DIRECTORY)/bom_manager/node_view.py			\
 	$(BOM_MANAGER_DIRECTORY)/bom_manager/tracing.py				\
 	$(BOM_MANAGER_DIRECTORY)/bom_manager/__init__.py			\
-	$(BOM_MANAGER_DIRECTORY)/setup.py
+	$(BOM_MANAGER_DIRECTORY)/setup.py					\
+	$(BOM_MANAGER_DIRECTORY)/tests/test_node_view.py
 BOM_MANAGER_LINTS := ${BOM_MANAGER_FILES:%.py=%.pyl}
 PYTHON_FILES :=									\
         ${BOM_DIGKEY_PLUGIN_FILES}						\
@@ -97,6 +99,9 @@ download:
 	pip install --no-cache-dir --index-url $(REPO_URL) bom_findchips_plugin_waynegramlich
 	pip install --no-cache-dir --index-url $(REPO_URL) bom_kicad_plugin_waynegramlich
 
+test:
+	py.test --cov=bom_manager --cov-report=annotate
+	@grep -n "^!" $(BOM_MANAGER_DIRECTORY)/bom_manager/node_view.py,cover || true
 
 lint: ${PYTHON_LINTS}
 
@@ -131,3 +136,6 @@ $(BOM_MANAGER_DIRECTORY)/.pyp: ${BOM_MANAGER_LINTS}
 # [CI/CD Actions on GitHub](https://github.com/features/actions)
 # [CI/CD Pipelines on GitHub]https://docs.gitlab.com/ee/ci/pipelines.html
 # [Hugo on gitlab](https://gohugo.io/hosting-and-deployment/hosting-on-gitlab/)
+
+# py.test --cov=bom_manager --cov-report=annotate
+# grep -n "^!" DIR/file.py,cover

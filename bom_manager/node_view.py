@@ -30,7 +30,7 @@
 
 from bom_manager.bom import Encode
 from pathlib import Path
-from bom_manager.tracing import trace, trace_level_set, tracing_get
+from bom_manager.tracing import trace, tracing_get
 from typing import Dict, List, Tuple, Type
 
 
@@ -67,23 +67,23 @@ class BomManager:
         self.node_templates: Dict[type, NodeTemplate] = node_templates
 
 
-class GuiManager:
-    def __init__(self) -> None:
-        pass
+# class GuiManager:
+#     def __init__(self) -> None:
+#         pass
 
 
-class View:
-    def __init__(self, gui_manager: GuiManager, name: str, view_nodes: "Tuple[Node, ...]") -> None:
-        # view: View = self
-        self.gui_manager = GuiManager
-        self.name = name
-
-    def __str__(self) -> str:
-        view: View = self
-        name: str = "??"
-        if hasattr(view, "name"):
-            name = view.name
-        return f"View('{name}')"
+# class View:
+#    def __init__(self, gui_manager: GuiManager, name: str, view_nodes: "Tuple[Node, ...]") -> None:
+#        # view: View = self
+#        self.gui_manager = GuiManager
+#        self.name = name
+#
+#    def __str__(self) -> str:
+#        view: View = self
+#        name: str = "??"
+#        if hasattr(view, "name"):
+#            name = view.name
+#        return f"View('{name}')"
 
 
 class NodeTemplate:
@@ -175,17 +175,18 @@ class Node:
         for nodes in nodes_list:
             nodes.show_lines_append(show_lines, next_indent)
 
-    # @trace(1)
-    def path_find(self, search_node: "Node", path: "List[Node]") -> "List[Node]":
+    @trace(1)
+    def tree_path_find(self, search_node: "Node", path: "List[Node]") -> "List[Node]":
         node: Node = self
         if node is search_node:
             path.append(node)
         else:
             nodes_table: Dict[Type, Nodes] = node.nodes_table
             for nodes in nodes_table.values():
-                nodes.path_find(search_node, path)
-            if path:
-                path.append(node)
+                nodes.tree_path_find(search_node, path)
+                if path:
+                    path.append(node)
+                    break
         return path
 
 
@@ -226,7 +227,7 @@ class Collection(Node):
 
         # Perform a little *tracing*:
         tracing: str = tracing_get()
-        if tracing:
+        if tracing:  # pragma: no cover
             print(f"{tracing}collection_name='{collection_name}'")
             print(f"{tracing}collection_root='{collection_root}'")
             print(f"{tracing}searches_root='{searches_root}'")
@@ -255,6 +256,12 @@ class Collections(Node):
     def collection_insert(self, collection: "Collection") -> None:
         collections: Collections = self
         collections.node_insert(collection)
+
+    def show_lines_get(self) -> List[str]:
+        collections: Collections = self
+        show_lines: List[str] = list()
+        collections.show_lines_append(show_lines, "")
+        return show_lines
 
 
 class Directory(Node):
@@ -432,12 +439,12 @@ class Nodes:
         sub_nodes[nonce] = sub_node
         nodes.nonce = nonce + 1
 
-    # @trace(1)
-    def path_find(self, search_node: Node, path: List[Node]) -> List[Node]:
+    @trace(1)
+    def tree_path_find(self, search_node: Node, path: List[Node]) -> List[Node]:
         nodes: Nodes = self
         sub_nodes: Dict[int, Node] = nodes.sub_nodes
         for sub_node in sub_nodes.values():
-            sub_node.path_find(search_node, path)
+            sub_node.tree_path_find(search_node, path)
             if path:
                 break
         return path
@@ -453,58 +460,14 @@ class Nodes:
         for nonce, sub_node in tuples_list:
             sub_node.show_lines_append(show_lines, indent)
 
-    def remove(self, remove_node: Node) -> None:
-        nodes: Nodes = self
-        sub_nodes: Dict[int, Node] = nodes.sub_nodes
-        nonce: int
-        sub_node: Node
-        for nonce, sub_node in sub_nodes.items():
-            if remove_node is sub_node:
-                del sub_nodes[nonce]
-                break
-        else:
-            assert False
-
-
-def main():
-    bom_manager: BomManager = BomManager()
-    collections: Collections = Collections(bom_manager)
-    projects: Path = Path("/home/wayne/public_html/projects")
-    digikey_root: Path = projects / Path("bom_digikey_plugin/bom_digikey_plugin/ROOT")
-    searches_root: Path = projects / Path("bom_manager/searches")
-    digikey_collection: Collection = Collection(bom_manager,
-                                                "Digi-Key", digikey_root, searches_root)
-    collections.collection_insert(digikey_collection)
-
-    digikey_collection.partial_load()
-
-    if False:
-        capacitors_directory: Directory = Directory(bom_manager, "Capacitors")
-        digikey_collection.directory_insert(capacitors_directory)
-        resistors_directory: Directory = Directory(bom_manager, "Resistors")
-        digikey_collection.directory_insert(resistors_directory)
-        chip_resistors_table: Table = Table(bom_manager, "Chip Resistors")
-        resistors_directory.table_insert(chip_resistors_table)
-        manufacturer_parameter: Parameter = Parameter(bom_manager, "Manufacture No.")
-        chip_resistors_table.parameter_insert(manufacturer_parameter)
-        all_search: Search = Search(bom_manager, "@ALL", "")
-        chip_resistors_table.search_insert(all_search)
-
-        path: List[Node] = list()
-        collections.path_find(all_search, path)
-        node: Node
-        path_text: str = ':'.join([node.__str__() for node in path])
-        print(f"path_text='{path_text}'")
-
-    collections.attributes_validate_recursively()
-
-    show_lines: List[str] = list()
-    collections.show_lines_append(show_lines, "")
-    show_lines.append("")
-    show_text: str = "\n".join(show_lines)
-    print(show_text)
-
-
-if __name__ == "__main__":
-    trace_level_set(1)
-    main()
+    # def remove(self, remove_node: Node) -> None:
+    #     nodes: Nodes = self
+    #     sub_nodes: Dict[int, Node] = nodes.sub_nodes
+    #      nonce: int
+    #     sub_node: Node
+    #     for nonce, sub_node in sub_nodes.items():
+    #         if remove_node is sub_node:
+    #             del sub_nodes[nonce]
+    #             break
+    #     else:
+    #         assert False

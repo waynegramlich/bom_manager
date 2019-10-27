@@ -2,5 +2,7 @@ bs4
 currencyconverter
 lxml
 pyside2
+pytest
+pytest-cov
 requests
 sexpdata

@@ -1,7 +1,11 @@
-from bom_manager.node_view import (BomManager, Collection, Collections, Directory, Parameter,
+from bom_manager.node_view import (BomManager, Collection, Collections, Directory, Node, Parameter,
                                    Table, Search)
 from pathlib import Path
 from typing import (List,)
+from bom_manager.tracing import trace_level_set
+
+
+trace_level_set(0)
 
 
 def test_constructors():
@@ -72,6 +76,30 @@ def test_constructors():
     # Perform a recursive data validity test for *collections*:
     collections.attributes_validate_recursively()
 
+    # Test *tree_path_find* method and invoke the various *__str__* methods:
+    tree_path: List[Node] = list()
+    collections.tree_path_find(all_search, tree_path)
+    desired_path = [
+        all_search,
+        chip_resistors_table,
+        resistors_directory,
+        digikey_collection,
+        collections]
+    tree_path_names: List[str] = [node.__str__() for node in tree_path]
+    desired_path_names: List[str] = [node.__str__() for node in desired_path]
+    assert tree_path_names == desired_path_names, (f"tree_path_names={tree_path_names} != "
+                                                   f"desired_path_names={desired_path_names}")
+    tree_path = list()
+    resistors_directory.tree_path_find(manufacturer_parameter, tree_path)
+    desired_path = [
+        manufacturer_parameter,
+        chip_resistors_table,
+        resistors_directory]
+    tree_path_names: List[str] = [node.__str__() for node in tree_path]
+    desired_path_names: List[str] = [node.__str__() for node in desired_path]
+    assert tree_path_names == desired_path_names, (f"tree_path_names={tree_path_names} != "
+                                                   f"desired_path_names={desired_path_names}")
+
 
 def test_partial_load():
     test_file_path: Path = Path(__file__)
@@ -91,7 +119,7 @@ def test_partial_load():
     # Now perform *partial_load* on *digikey_collection*:
     digikey_collection.partial_load()
 
-    # 
+    # Verify that we get the correct values in *show_lines*:
     show_lines = collections.show_lines_get()
     with open("/tmp/partial_load", "w") as show_file:
         show_line: str
@@ -104,7 +132,6 @@ def test_partial_load():
         "   Directory('Capacitors')",
         "    Table('Niobium Oxide Capacitors')",
         "    Table('Thin Film Capacitors')",
-        "     Search('@ALL')",
         "    Table('Tantalum Capacitors')",
         "    Table('Trimmers, Variable Capacitors')",
         "    Table('Aluminum Electrolytic Capacitors')",
