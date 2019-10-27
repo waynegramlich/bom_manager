@@ -45,6 +45,8 @@ BOM_DIGIKEY_PLUGIN_LINTS := ${BOM_DIGIKEY_PLUGIN_FILES:%.py=%.pyl}
 BOM_MANAGER_FILES :=								\
 	$(BOM_MANAGER_DIRECTORY)/bom_manager/bom.py				\
 	$(BOM_MANAGER_DIRECTORY)/bom_manager/bom_gui.py				\
+	$(BOM_MANAGER_DIRECTORY)/bom_manager/bom_manager.py			\
+	$(BOM_MANAGER_DIRECTORY)/bom_manager/node_view.py			\
 	$(BOM_MANAGER_DIRECTORY)/bom_manager/tracing.py				\
 	$(BOM_MANAGER_DIRECTORY)/bom_manager/__init__.py			\
 	$(BOM_MANAGER_DIRECTORY)/setup.py
@@ -76,6 +78,9 @@ DO_ALL=echo "--PKG--";$(PKG_BUILD);echo "--DIST--";$(DIST_BUILD);echo "--TWINE--
 .PHONY: all clean dist_build download lint upload
 
 all: ${PYP_FILES}
+
+foo:
+	echo ${BOM_MANAGER_LINTS}
 
 clean:
 	rm -f ${PYTHON_LINTS} ${PYP_FILES}

@@ -13,5 +13,11 @@ build/
 dist/
 order/
 searches/
+# Old files not under source control:
+database.py
+find_chips.py
+octopart.py
+parametric.py
+snap_eda.py
 
 

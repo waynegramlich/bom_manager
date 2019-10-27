@@ -376,6 +376,7 @@ class Table(Node):
             # So now we ascan *searches_path* looking for `.xml` files:
             table: Table = self
             bom_manager: BomManager = table.bom_manager
+            all_search_encountered: bool = False
             searches_count: int = 0
             search_path: Path
             for search_path in searches_path.glob("*"):
@@ -383,13 +384,15 @@ class Table(Node):
                     # We have a *search* `.xml` file:
                     search_stem_file_name: str = search_path.stem
                     search_name: str = Encode.from_file_name(search_stem_file_name)
+                    if search_name == "@ALL":
+                        all_search_encountered = True
                     search: Search = Search(bom_manager, search_name, search_path)
                     table.search_insert(search)
                     searches_count += 1
 
             # If we found any search `.xml` files (i.e. *searches_count* >= 1), we need to create
             # an *all_search* named "@ALL":
-            if searches_count:
+            if not all_search_encountered and searches_count:
                 all_search: Search = Search(bom_manager, "@ALL", search_path)
                 table.search_insert(all_search)
 
