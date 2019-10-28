@@ -2,6 +2,7 @@ bom_by_*.txt
 *~
 *.csv
 *.pyc
+*.pyds
 *.pyl
 *.bak
 *.egg-info/

@@ -77,9 +77,13 @@ DIST_BUILD := python setup.py sdist bdist_wheel
 TWINE_UPLOAD := twine upload --verbose -r testpypi dist/*
 DO_ALL=echo "--PKG--";$(PKG_BUILD);echo "--DIST--";$(DIST_BUILD);echo "--TWINE--";$(TWINE_UPOAD)
 
+PYDS_FILES :=									\
+	$(BOM_MANAGER_DIRECTORY)/bom_manager/node_view.pyds
+
+
 .PHONY: all clean dist_build download lint upload
 
-all: ${PYP_FILES}
+all: ${PYP_FILES} ${PYDS_FILES}
 
 foo:
 	echo ${BOM_MANAGER_LINTS}
@@ -124,6 +128,12 @@ $(BOM_KICAD_PLUGIN_DIRECTORY)/.pyp: ${BOM_KICAD_PLUGIN_LINTS}
 	touch $@
 $(BOM_MANAGER_DIRECTORY)/.pyp: ${BOM_MANAGER_LINTS}
 	(cd $(BOM_MANAGER_DIRECTORY); pip install .)
+	touch $@
+
+# Pattern rull for running `docstyle` of a `.py` Python file.  The `.pyds` suffix
+# is used to remember that the docstyl checking has occurred:
+%.pyds: %.py
+	pydocstyle $<
 	touch $@
 
 # Pattern rule for running `mypy` and `flake8` over a `.py` Python file.  The `.pyl` suffix
