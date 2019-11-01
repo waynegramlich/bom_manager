@@ -54,18 +54,18 @@ BOM_MANAGER_FILES :=								\
 	$(BOM_MANAGER_DIRECTORY)/tests/test_node_view.py
 BOM_MANAGER_LINTS := ${BOM_MANAGER_FILES:%.py=%.pyl}
 PYTHON_FILES :=									\
-        ${BOM_DIGKEY_PLUGIN_FILES}						\
 	${BOM_FINDCHIPS_PLUGIN_FILES}						\
 	${BOM_KICAD_PLUGIN_FILES}						\
 	${BOM_MANAGER_FILES}
+#        ${BOM_DIGKEY_PLUGIN_FILES}						
 PYTHON_LINTS := ${PYTHON_FILES:%.py=%.pyl}
 
 # The `.pyp` file is touched to remember that a package has been installed:
 PYP_FILES := 									\
-	${BOM_DIGIKEY_PLUGIN_DIRECTORY}/.pyp					\
 	${BOM_FINDCHIPS_PLUGIN_DIRECTORY}/.pyp					\
 	${BOM_KICAD_PLUGIN_DIRECTORY}/.pyp					\
 	${BOM_MANAGER_DIRECTORY}/.pyp
+#	${BOM_DIGIKEY_PLUGIN_DIRECTORY}/.pyp					
 
 
 # NOTE that the version number comes from the BOM_VERSION environment varaible.
@@ -79,6 +79,8 @@ DO_ALL=echo "--PKG--";$(PKG_BUILD);echo "--DIST--";$(DIST_BUILD);echo "--TWINE--
 
 PYDS_FILES :=									\
 	$(BOM_MANAGER_DIRECTORY)/bom_manager/node_view.pyds
+
+#	$(BOM_MANAGER_DIRECTORY)/tests/test_node_view.pyds
 
 
 .PHONY: all clean dist_build download lint upload
