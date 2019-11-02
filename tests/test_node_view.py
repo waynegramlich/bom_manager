@@ -1,6 +1,8 @@
 from bom_manager.node_view import (BomManager, Collection, Collections, Directory, Node,
                                    NodeTemplate, Parameter, ParameterComment, Table,
                                    TableComment, Search)
+import lxml.etree as ETree   # type: ignore
+from lxml.etree import _Element as Element  # type: ignore
 from pathlib import Path
 from typing import (Any, IO, List,)
 from bom_manager.tracing import trace_level_set
@@ -104,7 +106,6 @@ def test_constructors():
         text: str = "\n".join(collections.show_lines_get()) + '\n'
         show_lines_file.write(text)
 
-
     # Create some nested sub-directories:
     connectors_directory: Directory = Directory(bom_manager, "Connectors")
     digikey_collection.directory_insert(connectors_directory)
@@ -157,10 +158,24 @@ def test_constructors():
     collections.show_lines_file_write(Path("/tmp/show_lines.txt"), "")
 
     xml_lines: List[str] = list()
-    digikey_collection.xml_lines_append(xml_lines, "", "")
-
+    collections.xml_lines_append(xml_lines, "")
+    xml_lines.append("")
+    xml_text: str = '\n'.join(xml_lines)
+    xml_file: IO[Any]
+    with open("/tmp/xml_lines.xml", "w") as xml_file:
+        xml_file.write(xml_text)
     table_nodes: List[Node] = list()
     digikey_collection.nodes_collect_recursively(Table, table_nodes)
+
+    collections_element: Element = ETree.fromstring(xml_text)
+    foo_collections: Collections = Collections.xml_parse(collections_element, bom_manager)
+    reread_xml_lines: List[str] = list()
+    foo_collections.xml_lines_append(reread_xml_lines, "")
+    reread_xml_lines.append("")
+    with open("/tmp/xml_lines2.xml", "w") as xml_file:
+        xml_file.write('\n'.join(reread_xml_lines))
+
+    assert xml_lines == reread_xml_lines
 
 
 # test_partial_load():

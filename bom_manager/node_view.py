@@ -48,14 +48,17 @@ All *Node* objects are sub-classed to contain the actual important data about th
 
 # <----------------------------------------100 Characters----------------------------------------> #
 
-from bom_manager.bom import Encode
+# from bom_manager.bom import Encode
 from bom_manager.tracing import trace  # , tracing_get
 # import csv
+# import lxml.etree as ETree  # type: ignore
+from lxml.etree import _Element as Element  # type: ignore
 from pathlib import Path
 # import pkg_resources              # Used to find plug-ins.
 import re
 from typing import Any, Dict, IO, List, Tuple, Type
 from typing import Any as PreCompiled
+# Element = ETree._element
 
 
 class BomManager:
@@ -576,7 +579,13 @@ class Collection(Node):
         collection: Collection = self
         collection_type_name: str = collection.__class__.__name__
         name: str = collection.name
-        xml_lines.append(f'<{collection_type_name} name="{name}"{extra_attributes}>')
+        collection_root: Path = collection.collection_root
+        searches_root: Path = collection.searches_root
+        xml_lines.append(f'{indent}<{collection_type_name} '
+                         f'name="{name}" '
+                         f'collection_root="{collection_root}" '
+                         f'searches_root="{searches_root}"'
+                         f'{extra_attributes}>')
 
         # Now output the sorted *directories*:
         next_indent: str = indent + "  "
@@ -586,7 +595,44 @@ class Collection(Node):
             directory.xml_lines_append(xml_lines, next_indent)
 
         # Output the closing element:
-        xml_lines.append(f'</{collection_type_name}>')
+        xml_lines.append(f'{indent}</{collection_type_name}>')
+
+    # Collection.xml_parse():
+    @staticmethod
+    def xml_parse(collection_element: Element, bom_manager: BomManager) -> "Collection":
+        """Parse an XML Elment into a *Collection*.
+
+        Parse *collection_element* into new *Collection* object.
+
+        Args:
+            *collect_element* (*Element*): The XML element to
+                parse parse.
+            *bom_manager* (*BomManager*): The root of all data
+                structures.
+
+        Returns:
+            The created *Collection* object.
+
+        """
+        # Create the *collection* from with *collection_element*:
+        assert collection_element.tag == "Collection"
+        attributes_table: Dict[str, str] = collection_element.attrib
+        assert "name" in attributes_table
+        assert "collection_root" in attributes_table
+        assert "searches_root" in attributes_table
+        name: str = attributes_table["name"]
+        collection_root: Path = Path(attributes_table["collection_root"])
+        searches_root: Path = Path(attributes_table["searches_root"])
+        collection: Collection = Collection(bom_manager, name, collection_root, searches_root)
+
+        # Visit each of the *collection* *sub_elements*:
+        sub_elements: List[Element] = list(collection_element)
+        sub_element: Element
+        for sub_element in sub_elements:
+            assert sub_element.tag == "Directory"
+            directory: Directory = Directory.xml_parse(sub_element, bom_manager)
+            collection.directory_insert(directory)
+        return collection
 
 
 # Collections:
@@ -614,6 +660,35 @@ class Collections(Node):
         """Insert a collection into a Collections object."""
         collections: Collections = self
         collections.node_insert(collection)
+
+    # Collections.collections_get():
+    def collections_get(self, sort: bool) -> List[Collection]:
+        """
+        Return a list of *Collection*'s.
+
+        Return a list of *Collection*'s associated with *collections*
+        (i.e. *self*.)  If *sort* is *True*, the returned list
+        is sorted by table name.
+
+        Args:
+            *sort* (*bool*): If *True*, the returned tables sorted by
+                table name.
+
+        Returns:
+            Returns a list of *Table*'s that are sorted if *sort*
+            is *True*:
+
+        """
+        collections: Collections = self
+        collection_nodes: List[Node] = collections.sub_nodes_get(Collection)
+        collections_list: List[Collection] = list()
+        collection: Node
+        for collection in collection_nodes:
+            assert isinstance(collection, Collection)
+            collections_list.append(collection)
+        if sort:
+            collections_list.sort(key=lambda collection: collection.name)
+        return collections_list
 
     # Collections.show_lines_get():
     def show_lines_get(self) -> List[str]:
@@ -673,6 +748,62 @@ class Collections(Node):
     #         collection: Collection = collection_get(bom_manager)
     #         assert isinstance(collection, Collection)
     #         collections.collection_insert(collection)
+
+    # Collections.xml_lines_append():
+    def xml_lines_append(self, xml_lines: List[str], indent: str) -> None:
+        """Append XML for *Collection* to a list.
+
+        Append the XML description of *collection* (i.e. *self*) to the *xml_lines* list.
+        Each line is prefixed by *indent*.
+
+        Args:
+            *xml_lines*: *List*[*str*]: List of line to append individual XML lines to.
+            *indent* (*str*): A prefix prepended to each line.
+
+        """
+        # Output the initial element:
+        collections: Collections = self
+        xml_lines.append(f"{indent}<Collections>")
+
+        # Now output the sorted *collections*:
+        next_indent: str = indent + "  "
+        collections_list: List[Collection] = collections.collections_get(True)
+        collection: Collection
+        for collection in collections_list:
+            collection.xml_lines_append(xml_lines, next_indent, "")
+
+        # Output the closing element:
+        xml_lines.append(f"{indent}</Collections>")
+
+    # Collections.xml_parse():
+    @staticmethod
+    def xml_parse(collections_element: Element, bom_manager: BomManager) -> "Collections":
+        """Parse an element tree into *Collections* object.
+
+        Parse the *collections_element* into a *Collections* object
+        including all children *Node*'s.
+
+        Args:
+            *collections_element* (*Element*): The XML Element object
+                to parse.
+            *bom_manager* (*BomManager*): The root of all data
+                structures.
+
+        Returns:
+            The resulting parsed *Collections* object.
+
+        """
+        # Create *collectons*:
+        assert collections_element.tag == "Collections", f"tag='{collections_element.tag}'"
+        collections: Collections = Collections(bom_manager)
+
+        # Parse each sub-*collection* and it into *collections*:
+        collection_elements: List[Element] = list(collections_element)
+        collection_element: Element
+        for collection_element in collection_elements:
+            collection: Collection = Collection.xml_parse(collection_element, bom_manager)
+            collections.collection_insert(collection)
+        return collections
 
 
 # Comment:
@@ -774,7 +905,38 @@ class Comment(Node):
             xml_lines.append(f'{next_indent}{line}')
 
         # End with the closing `</Comment>`:
-        xml_lines.append(f'{indent}</{comment_class_name}">')
+        xml_lines.append(f'{indent}</{comment_class_name}>')
+
+    # Comment.xml_language_lines_parse():
+    @staticmethod
+    def xml_language_lines_parse(comment_element: Element) -> Tuple[str, List[str]]:
+        """Parse the lanaguage and text lines of an XML comment.
+
+        This is a helper method to parse *Comment* and extract the
+        language and comment lines.
+
+        Args:
+            *comment_element* (*Element*): The comment *Element* to be
+                parsed.
+
+        Returns:
+            The lanaguage string and a list of comment lines:
+
+        """
+        # Extract the the *language* and comment *lines* from *comment_element*:
+        attributes_table: Dict[str, str] = comment_element.attrib
+        assert "language" in attributes_table
+        language: str = attributes_table["language"]
+        text = comment_element.text
+        lines: List[str] = text.split('\n')
+        lines = [line.strip() for line in lines]
+
+        # Remove empty lines from the beginning and end of *lines* before returning results:
+        if lines and lines[0] == "":
+            del lines[0]
+        if lines and lines[-1] == "":
+            del lines[-1]
+        return language, lines
 
 
 # TableComment:
@@ -800,6 +962,28 @@ class TableComment(Comment):
         language: str = table_comment.language
         super().show_lines_append(show_lines, indent, f"'{language}'")
 
+    # TableComment.xml_parse():
+    @staticmethod
+    def xml_parse(table_comment_element: Element, bom_manager: BomManager) -> "TableComment":
+        """Parse table comment element into a *TableComment*.
+
+        Args:
+            *table_comment_element* (*Element*): The XML element to
+                parse.
+            *bom_manager* (*BOM_Manager*): The root of all data
+                structures.
+
+        Returns:
+            Returns the resulting *TableComment* object.
+
+        """
+        language: str
+        lines: List[str]
+        language, lines = Comment.xml_language_lines_parse(table_comment_element)
+        table_comment: TableComment = TableComment(bom_manager, language)
+        table_comment.lines_set(lines)
+        return table_comment
+
 
 # ParameterComment:
 class ParameterComment(Comment):
@@ -823,6 +1007,29 @@ class ParameterComment(Comment):
         parameter_comment: ParameterComment = self
         language: str = parameter_comment.language
         super().show_lines_append(show_lines, indent, f"'{language}'")
+
+    # ParameterComment.xml_parse():
+    @staticmethod
+    def xml_parse(parameter_comment_element: Element,
+                  bom_manager: BomManager) -> "ParameterComment":
+        """Parse parameter comment element into a *ParameterComment*.
+
+        Args:
+            *parameter_comment_element* (*Element*): The XML element to
+                parse.
+            *bom_manager* (*BOM_Manager*): The root of all data
+                structures.
+
+        Returns:
+            Returns the resulting *ParameterComment* object.
+
+        """
+        language: str
+        lines: List[str]
+        language, lines = Comment.xml_language_lines_parse(parameter_comment_element)
+        parameter_comment: ParameterComment = ParameterComment(bom_manager, language)
+        parameter_comment.lines_set(lines)
+        return parameter_comment
 
 
 # Directory:
@@ -1018,7 +1225,7 @@ class Directory(Node):
         directory: Directory = self
         directory_class_name: str = directory.__class__.__name__
         name: str = directory.name
-        xml_lines.append(f'<{directory_class_name} name="{name}>"')
+        xml_lines.append(f'{indent}<{directory_class_name} name="{name}">')
 
         # Append the XML for any *tables* to *xml_lines*:
         next_indent: str = indent + "  "
@@ -1034,7 +1241,44 @@ class Directory(Node):
             sub_directory.xml_lines_append(xml_lines, next_indent)
 
         # Output the closing *directory* XML element:
-        xml_lines.append(f"</{directory_class_name}>")
+        xml_lines.append(f"{indent}</{directory_class_name}>")
+
+    # Directory.xml_parse():
+    @staticmethod
+    def xml_parse(directory_element: Element, bom_manager: BomManager) -> "Directory":
+        """Parse an XML Elment into a *Directory*.
+
+        Parse *directory_element* (i.e. *self*) into new *Collection*
+        object.
+
+        Args:
+            *directory_element* (*Element*): The XML element to parse.
+            *bom_manager* (*BomManager*): The root of all data
+                structures.
+
+        Returns:
+            The created *Directory* object.
+
+        """
+        assert directory_element.tag == "Directory"
+        attributes_table: Dict[str, str] = directory_element.attrib
+        assert "name" in attributes_table
+        name: str = attributes_table["name"]
+        directory: Directory = Directory(bom_manager, name)
+
+        sub_elements: List[Element] = list(directory_element)
+        sub_element: Element
+        for sub_element in sub_elements:
+            sub_element_tag: str = sub_element.tag
+            if sub_element_tag == "Directory":
+                sub_directory: Directory = Directory.xml_parse(sub_element, bom_manager)
+                directory.directory_insert(sub_directory)
+            elif sub_element_tag == "Table":
+                table: Table = Table.xml_parse(sub_element, bom_manager)
+                directory.table_insert(table)
+            else:  # pragma: no cover
+                assert False, f"Unprocessed tag='{sub_element_tag}'"
+        return directory
 
 
 # Enumeration:
@@ -1204,19 +1448,51 @@ class Parameter(Node):
 
         # Start with the initial `<Parameter ...>`:
         xml_lines.append(f'{indent}<Parameter'
-                         f' name="{name}" '
-                         f' header_index="{header_index}'
+                         f' name="{name}"'
+                         f' header_index="{header_index}"'
                          f' type_name="{type_name}">')
 
         # Now output the sorted *parameter_comments*:
-        next_indent = indent + "    "
+        next_indent = indent + "  "
         parameter_comments: List[ParameterComment] = parameter.comments_get(True)
         parameter_comment: ParameterComment
         for parameter_comment in parameter_comments:
             parameter_comment.xml_lines_append(xml_lines, next_indent)
 
         # Wrap up the with the closing `/<Parameter>`:
-        xml_lines.append('f{indnet}</Parameter>')
+        xml_lines.append(f'{indent}</Parameter>')
+
+    def xml_parse(parameter_element: Element, bom_manager: BomManager) -> "Parameter":
+        """Parse an XML element into a *Parameter*.
+
+        Parse *parameter_element* (i.e. *self*) into new *Parameter*
+        object.
+
+        Args:
+            *paremeter_element* (*Element*): The XML element to parse.
+            *bom_manager* (*BomManager*): The root of all data
+                structures.
+
+        Returns:
+            The created *Parameter* object.
+
+        """
+        assert parameter_element.tag == "Parameter"
+        attributes_table: Dict[str, str] = parameter_element.attrib
+        assert "header_index" in attributes_table
+        assert "name" in attributes_table
+        assert "type_name" in attributes_table
+        header_index: int = int(attributes_table["header_index"])
+        name: str = attributes_table["name"]
+        type_name: str = attributes_table["type_name"]
+        parameter: Parameter = Parameter(bom_manager, name, type_name, header_index)
+        sub_elements: List[Element] = list(parameter_element)
+        sub_element: Element
+        for sub_element in sub_elements:
+            parameter_comment: ParameterComment = ParameterComment.xml_parse(sub_element,
+                                                                             bom_manager)
+            parameter.comment_insert(parameter_comment)
+        return parameter
 
 
 # Search:
@@ -1670,29 +1946,71 @@ class Table(Node):
         """TODO."""
         # Start by appending the `<TABLE_CLASS_NAME...>` element:
         table: Table = self
+        file_path: Path = table.file_path
+        name: str = table.name
         table_class_name: str = table.__class__.__name__
-        name_text: str = Encode.to_attribute(table.name)
-        xml_lines.append(f'{indent}<{table_class_name} name="{name_text}"{extra}>')
+        xml_lines.append(f'{indent}<{table_class_name} '
+                         f'name="{name}" '
+                         f'file_path="{file_path}"'
+                         f'{extra}>')
 
         # Append the `<TableComments>` ... `</TableComments>` elements:
         table_comments: List[TableComment] = table.comments_get(True)
-        xml_lines.append(f'{indent}  <TableComments>')
-        next_indent: str = indent + "    "
+        next_indent: str = indent + "  "
         table_comment: TableComment
         for table_comment in table_comments:
             table_comment.xml_lines_append(xml_lines, next_indent)
-        xml_lines.append(f'{indent}  </TableComments>')
 
         # Append the `<Parameters>` element:
         parameters: List[Parameter] = table.parameters_get(True)
-        xml_lines.append(f'{indent}  <Parameters>')
         parameter: Parameter
         for parameter in parameters:
             parameter.xml_lines_append(xml_lines, next_indent)
-        xml_lines.append(f'{indent}  </Parameters>')
 
         # Close out with the `</TABLE_CLASS_NAME>` element:
         xml_lines.append(f'{indent}</{table_class_name}>')
+
+    # Table.xml_parse():
+    @staticmethod
+    def xml_parse(table_element: Element, bom_manager: BomManager) -> "Table":
+        """Parse an XML Elment into a *Table*.
+
+        Parse *table_element* (i.e. *self*) into new *Table*
+        object.
+
+        Args:
+            *table_element* (*Element*): The XML element to parse.
+            *bom_manager* (*BomManager*): The root of all data
+                structures.
+
+        Returns:
+            The created *Table* object.
+
+        """
+        assert table_element.tag == "Table"
+        attributes_table: Dict[str, str] = table_element.attrib
+        assert "name" in attributes_table
+        assert "file_path" in attributes_table
+        name: str = attributes_table["name"]
+        file_path: Path = Path(attributes_table["file_path"])
+        table: Table = Table(bom_manager, name, file_path)
+
+        sub_elements: List[Element] = list(table_element)
+        sub_element: Element
+        for sub_element in sub_elements:
+            sub_element_tag: str = sub_element.tag
+            # if sub_element_tag == "Search":
+            #     # sub_directory: Search = Search.xml_parse(sub_element, bom_manager)
+            #     # directory.directory.search_insert(sub_directory)
+            if sub_element_tag == "Parameter":
+                parameter: Parameter = Parameter.xml_parse(sub_element, bom_manager)
+                table.parameter_insert(parameter)
+            elif sub_element_tag == "TableComment":
+                table_comment: TableComment = TableComment.xml_parse(sub_element, bom_manager)
+                table.comment_insert(table_comment)
+            else:  # pragma: no cover
+                assert False, f"Unprocessed tag='{sub_element_tag}'"
+        return table
 
 
 # Nodes:
