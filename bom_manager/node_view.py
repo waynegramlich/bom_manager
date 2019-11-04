@@ -56,7 +56,7 @@ from lxml.etree import _Element as Element  # type: ignore
 from pathlib import Path
 # import pkg_resources              # Used to find plug-ins.
 import re
-from typing import Any, Dict, IO, List, Optional, Tuple, Type
+from typing import Any, Callable, Dict, IO, List, Optional, Tuple, Type
 from typing import Any as PreCompiled
 # Element = ETree._element
 
@@ -76,7 +76,7 @@ class BomManager:
         directory_node_template: NodeTemplate = NodeTemplate(Directory, (Directory, Table),
                                                              {"name": str})
         table_node_template: NodeTemplate = NodeTemplate(Table, (Parameter, Search, TableComment),
-                                                         {"file_path": Path,
+                                                         {"file_name": str,
                                                           "name": str})
         table_comment_node_template: NodeTemplate = NodeTemplate(TableComment, (),
                                                                  {"language": str,
@@ -89,7 +89,7 @@ class BomManager:
                                                                      {"language": str,
                                                                       "lines": list})
         search_node_template: NodeTemplate = NodeTemplate(Search, (),
-                                                          {"file_path": Path,
+                                                          {"file_name": str,
                                                            "name": str})
 
         node_templates: Dict[Type, NodeTemplate] = {
@@ -984,16 +984,22 @@ class Collection(Node):
             *extra_attributes*: Some extra attributes to add to the *Collection* element.
 
         """
-        # Output initiial element:
+        # Grab some values from *collection* (i.e. *self*):
         collection: Collection = self
+        bom_manager: BomManager = collection.bom_manager
         collection_type_name: str = collection.__class__.__name__
+        collection_root: str = str(collection.collection_root)
         name: str = collection.name
-        collection_root: Path = collection.collection_root
-        searches_root: Path = collection.searches_root
+        searches_root: str = str(collection.searches_root)
+
+        # Attribute strings need to be converted:
+        to_attribute: Callable[[str], str] = bom_manager.to_attribute
+
+        # Output initiial element:
         xml_lines.append(f'{indent}<{collection_type_name} '
-                         f'name="{name}" '
-                         f'collection_root="{collection_root}" '
-                         f'searches_root="{searches_root}"'
+                         f'name="{to_attribute(name)}" '
+                         f'collection_root="{to_attribute(collection_root)}" '
+                         f'searches_root="{to_attribute(searches_root)}"'
                          f'{extra_attributes}>')
 
         # Now output the sorted *directories*:
@@ -1299,11 +1305,18 @@ class Comment(Node):
             *indent* (*str*): Prefix for each line.
 
         """
-        # Start with the opening `<Comment ...>` for *comment (i.e. *self*):
+        # Grab some values from *comment* (i.e. *self*):
         comment: Comment = self
+        bom_manager: BomManager = comment.bom_manager
         comment_class_name = comment.__class__.__name__
         language: str = comment.language
-        xml_lines.append(f'{indent}<{comment_class_name} language="{language}">')
+
+        # Attributes need to be converted:
+        to_attribute: Callable[[str], str] = bom_manager.to_attribute
+
+        # Output the initial opening `<Comment ...>`:
+        xml_lines.append(f'{indent}<{comment_class_name} '
+                         f'language="{to_attribute(language)}">')
 
         # Append each *line* from *lines* to *xml_lines* indented by *next_indent*:
         lines: List[str] = comment.lines
@@ -1642,11 +1655,18 @@ class Directory(Node):
             *indent* (*str*): Prefix to be prepended to each XML line.
 
         """
-        # Output the initial *directory* (i.e. *self*) XML element:
+        # Grab some values from *directory* (i.e. *self*):
         directory: Directory = self
+        bom_manager: BomManager = directory.bom_manager
         directory_class_name: str = directory.__class__.__name__
         name: str = directory.name
-        xml_lines.append(f'{indent}<{directory_class_name} name="{name}">')
+
+        # XML attributes need to be converted:
+        to_attribute: Callable[[str], str] = bom_manager.to_attribute
+
+        # Output the initial *directory* (i.e. *self*) XML element:
+        xml_lines.append(f'{indent}<{directory_class_name} '
+                         f'name="{to_attribute(name)}">')
 
         # Append the XML for any *tables* to *xml_lines*:
         next_indent: str = indent + "  "
@@ -1871,15 +1891,19 @@ class Parameter(Node):
         """
         # Grab some values from *parameter* (i.e. *self*):
         parameter: Parameter = self
-        name: str = parameter.name
+        bom_manager: BomManager = parameter.bom_manager
         header_index: int = parameter.header_index
+        name: str = parameter.name
         type_name: str = parameter.type_name
+
+        # XML attributes need to be converted:
+        to_attribute: Callable[[str], str] = bom_manager.to_attribute
 
         # Start with the initial `<Parameter ...>`:
         xml_lines.append(f'{indent}<Parameter'
-                         f' name="{name}"'
+                         f' name="{to_attribute(name)}"'
                          f' header_index="{header_index}"'
-                         f' type_name="{type_name}">')
+                         f' type_name="{to_attribute(type_name)}">')
 
         # Now output the sorted *parameter_comments*:
         next_indent = indent + "  "
@@ -1945,7 +1969,7 @@ class Search(Node):
         assert name, "Empty name!"
         assert file_path.suffix == ".xml", "No .xml suffix"
         # search: Search = self
-        self.file_path: Path = file_path
+        self.file_name: str = str(file_path)
         self.name: str = name
         self.parent_name: str = ""
 
@@ -1994,9 +2018,17 @@ class Search(Node):
             *indent* (*str*): Prefix to prepend to each line.
 
         """
+        # Grab some values from *search* (i.e. *self*):
         search: Search = self
-        search_name: str = search.name
-        xml_lines.append(f'{indent}<Search name="{search_name}"/>')
+        bom_manager: BomManager = search.bom_manager
+        name: str = search.name
+
+        # XML attributes need to be converted:
+        to_attribute: Callable[[str], str] = bom_manager.to_attribute
+
+        # Output the XML for *search*:
+        xml_lines.append(f'{indent}<Search '
+                         f'name="{to_attribute(name)}"/>')
 
     # Search.xml_parse():
     @staticmethod
@@ -2036,9 +2068,9 @@ class Table(Node):
         # Verify that *name* is non-empty and stuff everything into *table* (i.e. *self*.)
         # table: Table = self
         assert name, "Empty name string!"
-        assert file_path.exists(), f"xml file '{file_path}' does not exist"
+        # assert file_path.exists(), f"xml file '{file_path}' does not exist"
         self.name: str = name
-        self.file_path: Path = file_path
+        self.file_name: str = str(file_path)
 
     # Table.__str__():
     def __str__(self) -> str:
@@ -2454,14 +2486,20 @@ class Table(Node):
     # Table.xml_lines_append():
     def xml_lines_append(self, xml_lines: List[str], indent: str, extra: str) -> None:
         """TODO."""
-        # Start by appending the `<TABLE_CLASS_NAME...>` element:
+        # Grab some values from *table* (i.e. *self*):
         table: Table = self
-        file_path: Path = table.file_path
+        bom_manager: BomManager = table.bom_manager
+        file_name: str = table.file_name
         name: str = table.name
         table_class_name: str = table.__class__.__name__
+
+        # XML attributes need to be converted:
+        to_attribute: Callable[[str], str] = bom_manager.to_attribute
+
+        # Start by appending the `<TABLE_CLASS_NAME...>` element:
         xml_lines.append(f'{indent}<{table_class_name} '
-                         f'name="{name}" '
-                         f'file_path="{file_path}"'
+                         f'name="{to_attribute(name)}" '
+                         f'file_name="{to_attribute(file_name)}"'
                          f'{extra}>')
 
         # Append the *parameters* to the *xml_lines*:
@@ -2506,9 +2544,10 @@ class Table(Node):
         assert table_element.tag == "Table"
         attributes_table: Dict[str, str] = table_element.attrib
         assert "name" in attributes_table
-        assert "file_path" in attributes_table
+        assert "file_name" in attributes_table
         name: str = attributes_table["name"]
-        file_path: Path = Path(attributes_table["file_path"])
+        file_name: str = attributes_table["file_name"]
+        file_path: Path = Path(file_name)
         table: Table = Table(bom_manager, name, file_path)
 
         sub_elements: List[Element] = list(table_element)
