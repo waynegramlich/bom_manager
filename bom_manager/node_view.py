@@ -49,14 +49,14 @@ All *Node* objects are sub-classed to contain the actual important data about th
 # <----------------------------------------100 Characters----------------------------------------> #
 
 # from bom_manager.bom import Encode
-from bom_manager.tracing import trace  # , tracing_get
+from bom_manager.tracing import trace, tracing_get  # , trace_level_set  # , tracing_get
 # import csv
 # import lxml.etree as ETree  # type: ignore
 from lxml.etree import _Element as Element  # type: ignore
 from pathlib import Path
 # import pkg_resources              # Used to find plug-ins.
 import re
-from typing import Any, Dict, IO, List, Tuple, Type
+from typing import Any, Dict, IO, List, Optional, Tuple, Type
 from typing import Any as PreCompiled
 # Element = ETree._element
 
@@ -64,7 +64,7 @@ from typing import Any as PreCompiled
 class BomManager:
     """Contains top-level data structurs needed for the BOM Manager."""
 
-    @trace(1)
+    # @trace(1)
     def __init__(self) -> None:
         """Initialize the BomManger object."""
         collections_node_template: NodeTemplate = NodeTemplate(Collections, (Collection,),
@@ -107,10 +107,158 @@ class BomManager:
         re_table: Dict[str, PreCompiled] = dict()
         self.node_templates: Dict[type, NodeTemplate] = node_templates
         self.re_table: Dict[str, PreCompiled] = re_table
+        self.ENTITY_SUBSTITUTIONS: Dict[str, str] = {
+            '&': "&amp;",
+            '>': "&gt;",
+            '<': "&lt;",
+            '"': "&quot;",
+            '#': "&num",
+            ';': "&semi;"
+        }
 
         # Initialize *re_table*:
         bom_manager: BomManager = self
         bom_manager.re_table_initialize()
+
+    # BomManager.from_attribute():
+    # @trace(1)
+    def from_attribute(self, text: str) -> str:
+        """Convert attrbitute text into a standard string.
+
+        Args:
+            *text* (*str*): Attribute text to convert.
+
+        Returns:
+            (*str*) Returns string with entities converted into
+            unicode characters.
+
+        """
+        # Sweep across *text* looking for amphersands ('&'), breaking *text* into *chunks*
+        # where some chunks are copied from *text* and others are entity substitutions:
+        bom_manager: BomManager = self
+        ENTITY_SUBSTITUTIONS: Dict[str, str] = bom_manager.ENTITY_SUBSTITUTIONS
+        chunks: List[str] = list()
+        processed_index: int = 0
+        text_size: int = len(text)
+        tracing: str = tracing_get()
+        current_index: int = 0
+        while current_index < text_size:
+            # Do not do anything until an '&' is encountered:
+            character: str = text[current_index]
+            is_amphersand: bool = character == '&'
+            if tracing:  # pragma: no cover
+                print(f"{tracing}[{current_index}]:'{character}' is_amphersand={is_amphersand}")
+            if character == '&':
+                # We have an entity starting at *current_index* in *text*.
+                # Start by stuffing the preceed unprocess characters from *text* into *chunks*:
+                preceeding_chunk: str = text[processed_index:current_index]
+                chunks.append(preceeding_chunk)
+
+                # We find an exact match from the *ENTITY_SUBSTITUTIONS* table or we match "&#NNN;"
+                # where NNN is a decimal number. Star by searching *ENTITY_STITUTIONS*:
+                remaining_text: str = text[current_index:]
+                if tracing:  # pragma: no cover
+                    print(f"{tracing}preceeding_chunk='{preceeding_chunk}'")
+                    print(f"{tracing}remaining_text='{remaining_text}'")
+                substitution_character: str
+                entity: str
+                for substitution_character, entity in ENTITY_SUBSTITUTIONS.items():
+                    if remaining_text.startswith(entity):
+                        # We found a matching *entity*, so we record the substitution into *chunks*:
+                        if tracing:  # pragma: no cover
+                            print(f"{tracing}substitution_character='{substitution_character}'")
+                        chunks.append(substitution_character)
+                        current_index += len(entity)
+                        break
+                else:
+                    # Nothing was found in *ENTITY_SUBSTITUTIONS*, so now we assume that we
+                    # will get an entity of the form "&#NNN;" where NNN is a decimal number:
+                    assert remaining_text.startswith("&#")
+                    semicolon_index: int = remaining_text.find(';')
+                    assert semicolon_index > 0, "No closing semicolon found"
+                    numeric_text: str = remaining_text[2:semicolon_index]
+                    assert numeric_text.isnumeric()
+                    substitution_character = chr(int(numeric_text))
+                    if tracing:  # pragma: no cover
+                        print(f"{tracing}substitution_character='{substitution_character}'")
+                    chunks.append(substitution_character)
+                    current_index += 2 + len(numeric_text) + 1
+                processed_index = current_index
+            else:
+                current_index += 1
+
+        # If substitutions occurred, convert *chunks* back into the final *text*:
+        if chunks:
+            final_chunk: str = text[processed_index:]
+            if tracing:  # pragma: no cover
+                print(f"{tracing}final_chunk='{final_chunk}'")
+            chunks.append(final_chunk)
+            text = "".join(chunks)
+        if tracing:  # pragma: no cover
+            print(f"{tracing}final_text='{text}'")
+        return text
+
+    # BomManager.to_attribute():
+    # @trace(1)
+    def to_attribute(self, text: str) -> str:
+        """Return string with entity replacements for HTML an attribute.
+
+        HTML elements are generally of the form:
+
+             <ElementName attribute1="value1" ... attributeN="valueN">
+
+        Since *text* can contain any arbitrary unicode character.  To
+        make life consistent the characters that cause parsing problems
+        are converted into HTML entities.  Thus, '&' is converted to
+        "&amp;", '"" is converted to ";&quot", and characters out of
+        the normal ASCII character range are converted to '&#NNN;'
+        where NNN is a decimal number.
+
+        Args:
+            *text* (*str*): The text to perform entity subsitutions on.
+
+        Returns:
+            (*str*): A string with entity substitions performed on it.
+
+        """
+        # Grab some values from *bom_manager*:
+        bom_manager: BomManager = self
+        ENTITY_SUBSTITUTIONS: Dict[str, str] = bom_manager.ENTITY_SUBSTITUTIONS
+        tracing: str = tracing_get()
+
+        # Sweep across *text* one *character* at time.  The *text* is broken into the
+        # *chunks* list with unmodified text and entity subsitutions intermixed:
+        chunks: List[str] = list()
+        processed_index: int = 0
+        entity: Optional[str] = None
+        index: int
+        character: str
+        for index, character in enumerate(text):
+            # Dispatch on character to figure out if we need an *entity* substitution:
+            if tracing:
+                print(f"{tracing}[{index}]'{character}'")
+            entity = None
+            if character in ENTITY_SUBSTITUTIONS:
+                entity = ENTITY_SUBSTITUTIONS[character]
+            elif not(' ' <= character <= '~'):
+                entity = f"&#{ord(character)};"
+
+            # If there is an *entity* subsitution, place the preceedeing unmodified text
+            # into *chunks* followed by the *entity* substitution:
+            if entity is not None:
+                preceeding_chunk: str = text[processed_index:index]
+                chunks.append(preceeding_chunk)
+                chunks.append(entity)
+                processed_index = index + 1
+
+        # If substitutions occured update *text* from *chunks*:
+        if chunks:
+            # Create the *final_chunk* containing the remaining characters, and convert *chunks*
+            # into *result_text*:
+            final_chunk: str = text[processed_index:]
+            chunks.append(final_chunk)
+            text = "".join(chunks)
+        return text
 
     def re_table_initialize(self):
         """Initialize the BOM manager regular expresstion table."""
@@ -297,6 +445,30 @@ class Node:
         for nodes in nodes_table.values():
             nodes.attributes_validate_recursively()
 
+    # Node.collection_cast():
+    def collection_cast(self) -> "Collection":
+        """Fail when not properly overridden by *Collection* sub-class.
+
+        Used for converting between a list of *Nodes* that happen
+        to all be *TableComment*s.  If this method is called, the
+        *Node* (i.e. *self*) is not a *Collection* object and we fail.
+
+        """
+        node: Node = self  # pragma: no cover
+        assert False, f"Got a {node.__class__.__name__} instead of Collection"  # pragma: no cover
+
+    # Node.directory_cast():
+    def directory_cast(self) -> "Directory":
+        """Fail when not properly overridden by *Directory* sub-class.
+
+        Used for converting between a list of *Nodes* that happen
+        to all be *Directory*s.  If this method is called, the
+        *Node* (i.e. *self*) is not a *Directory* object and we fail.
+
+        """
+        node: Node = self  # pragma: no cover
+        assert False, f"Got a {node.__class__.__name__} instead of Directory"  # pragma: no cover
+
     # Node.sub_nodes_get():
     def sub_nodes_get(self, sub_node_type: Type) -> "List[Node]":
         """Return the sub-nodes that match a given type.
@@ -340,13 +512,39 @@ class Node:
         nodes.insert(child_node)
 
     # Node.nodes_get():
-    def nodes_get(self, sub_type: Type) -> "Nodes":
-        """Return the sub type Nodes object."""
-        node: Node = self
-        nodes_table: Dict[Type, Nodes] = node.nodes_table
-        assert sub_type in nodes_table
-        nodes: Nodes = nodes_table[sub_type]
-        return nodes
+    # def nodes_get(self, sub_type: Type) -> "Nodes":
+    #     """Return the sub type Nodes object."""
+    #     node: Node = self
+    #     nodes_table: Dict[Type, Nodes] = node.nodes_table
+    #     assert sub_type in nodes_table
+    #     nodes: Nodes = nodes_table[sub_type]
+    #     return nodes
+
+    # Node.parameter_cast():
+    def parameter_cast(self) -> "Parameter":
+        """Fail when not overridden by *Parameter* sub-class.
+
+        Used for converting between a list of *Nodes* that happen
+        to all be *Parameter*s.  If this method is called, the
+        *Node* (i.e. *self*) is not a *Parameter* object and we fail.
+
+        """
+        node: Node = self  # pragma: no cover
+        assert False, (f"Got a {node.__class__.__name__} instead of Parameter")  # pragma: no cover
+
+    # Node.parameter_comment_cast():
+    def parameter_comment_cast(self) -> "ParameterComment":
+        """Fail when not overridden by *ParameterCommetn* sub-class.
+
+        Used for converting between a list of *Nodes* that happen
+        to all be *ParameterComment*s.  If this method is called, the
+        *Node* (i.e. *self*) is not a *ParameterComemnt* object and we
+        fail.
+
+        """
+        node: Node = self  # pragma: no cover
+        assert False, (f"Got a {node.__class__.__name__} "
+                       "instead of ParameterComment")  # pragma: no cover
 
     # Node.show_lines_append():
     # @trace(1)
@@ -384,6 +582,42 @@ class Node:
         next_indent: str = indent + " "
         for nodes in nodes_list:
             nodes.show_lines_append(show_lines, next_indent)
+
+    # Node.search_cast():
+    def search_cast(self) -> "Search":
+        """Return the *Search* object.
+
+        Used for converting between a list of *Nodes* that happen
+        to all be *Search*s.  If this method is called, the
+        *Node* (i.e. *self*) is not a *Search* and we fail.
+
+        """
+        node: Node = self  # pragma: no cover
+        assert False, f"Got a {node.__class__.__name__} instead of Search"  # pragma: no cover
+
+    # Node.table_cast():
+    def table_cast(self) -> "Table":
+        """Return the *Table* object.
+
+        Used for converting between a list of *Nodes* that happen
+        to all be *Table*s.  If this method is called, the
+        *Node* (i.e. *self*) is not a *Table* and we fail.
+
+        """
+        node: Node = self  # pragma: no cover
+        assert False, f"Got a {node.__class__.__name__} instead of Table"  # pragma: no cover
+
+    # Node.table_comment_cast():
+    def table_comment_cast(self) -> "TableComment":
+        """Return the *TableComment* object.
+
+        Used for converting between a list of *Nodes* that happen
+        to all be *TableComment*s.  If this method is called, the
+        *Node* (i.e. *self*) is not a *TableComment* and we fail.
+
+        """
+        node: Node = self  # pragma: no cover
+        assert False, f"Got a {node.__class__.__name__} instead of TableComment"  # pragma: no cover
 
     # Node.tree_path_find():
     @trace(1)
@@ -477,6 +711,12 @@ class Collection(Node):
             name = collection.name
         return f"Collection('{name}')"
 
+    # Collection.collection_cast():
+    def collection_cast(self) -> "Collection":
+        """Convert a *Node* to a *Collection*."""
+        collection: Collection = self
+        return collection
+
     # Collection.directories_get():
     def directories_get(self, sort: bool) -> "List[Directory]":
         """Return immediate sub directories.
@@ -494,19 +734,15 @@ class Collection(Node):
 
         """
         # Get all of the *Directory*'s from *collection* (i.e. *self*) and stuff them
-        # into *directory_nodes*:
+        # into *directories*:
         collection: Collection = self
-        directory_nodes: List[Node] = collection.sub_nodes_get(Directory)
-
-        # This ugly piece of code constructs the *directories* list forcing `mypy` to
-        # notice that the each *Node* is, in fact, a *Directory*:
-        directories: List[Directory] = list()
-        directory: Node
-        for directory in directory_nodes:
-            assert isinstance(directory, Directory)
-            directories.append(directory)
+        directory_sub_nodes: List[Node] = collection.sub_nodes_get(Directory)
+        directory_sub_node: Node
+        directories: List[Directory] = [directory_sub_node.directory_cast()
+                                        for directory_sub_node in directory_sub_nodes]
 
         # Perform any requested *sort* before returning *directories*:
+        directory: Directory
         if sort:
             directories.sort(key=lambda directory: directory.name)
         return directories
@@ -679,13 +915,12 @@ class Collections(Node):
             is *True*:
 
         """
+        # Extract *collections* from *collection
         collections: Collections = self
-        collection_nodes: List[Node] = collections.sub_nodes_get(Collection)
-        collections_list: List[Collection] = list()
-        collection: Node
-        for collection in collection_nodes:
-            assert isinstance(collection, Collection)
-            collections_list.append(collection)
+        collection_sub_nodes: List[Node] = collections.sub_nodes_get(Collection)
+        collection_sub_node: Node
+        collections_list: List[Collection] = [collection_sub_node.collection_cast()
+                                              for collection_sub_node in collection_sub_nodes]
         if sort:
             collections_list.sort(key=lambda collection: collection.name)
         return collections_list
@@ -962,6 +1197,17 @@ class TableComment(Comment):
         language: str = table_comment.language
         super().show_lines_append(show_lines, indent, f"'{language}'")
 
+    # TableComment.table_comment_cast():
+    def table_comment_cast(self) -> "TableComment":
+        """Return the *TableComment* object.
+
+        Used for converting between a list of *Nodes* that happen
+        to all be *TableComment*s.
+
+        """
+        table_comment: TableComment = self
+        return table_comment
+
     # TableComment.xml_parse():
     @staticmethod
     def xml_parse(table_comment_element: Element, bom_manager: BomManager) -> "TableComment":
@@ -993,6 +1239,12 @@ class ParameterComment(Comment):
     def __init__(self, bom_manager: BomManager, language: str) -> None:
         """See *Comment* base class."""
         super().__init__(bom_manager, language=language)
+
+    # ParameterComment.parameter_comment_cast():
+    def parameter_comment_cast(self) -> "ParameterComment":
+        """Convert a *Node* into a *ParameterComment*."""
+        parameter_comment: ParameterComment = self
+        return parameter_comment
 
     # ParameterComment.show_lines_append():
     def show_lines_append(self, show_lines: List[str], indent: str, text: str = "") -> None:
@@ -1059,6 +1311,12 @@ class Directory(Node):
         if hasattr(directory, "name"):
             name = directory.name
         return f"Directory('{name}')"
+
+    # Directory.directory_cast():
+    def directory_cast(self) -> "Directory":
+        """Convert a *Node* into a *Directory*."""
+        directory: Directory = self
+        return directory
 
     # Directory.directory_insert()
     def directory_insert(self, sub_directory: "Directory") -> None:
@@ -1158,17 +1416,11 @@ class Directory(Node):
             is *True*:
 
         """
-        # Extract *tables_nodes* from *directory* (i.e. *self*):
+        # Extract *tables* from *directory* (i.e. *self*):
         directory: Directory = self
-        table_nodes: List[Node] = directory.sub_nodes_get(Table)
-
-        # To make `my_py` happy, convert *table_nodes* from a list of *Node*s to
-        # *tables* which is a list of *Table*'s:
-        tables: List[Table] = list()
-        table: Node
-        for table in table_nodes:
-            assert isinstance(table, Table)
-            tables.append(table)
+        table_sub_nodes: List[Node] = directory.sub_nodes_get(Table)
+        table_sub_node: Node
+        tables: List[Table] = [table_sub_node.table_cast() for table_sub_node in table_sub_nodes]
 
         # Perform any request *sort* before returning *tables*:
         if sort:
@@ -1195,17 +1447,13 @@ class Directory(Node):
         # Extract *tables_nodes* from *directory* (i.e. *self*):
         directory: Directory = self
         sub_directory_nodes: List[Node] = directory.sub_nodes_get(Directory)
+        sub_directory_node: Node
+        sub_directories: List[Directory] = [sub_directory_node.directory_cast()
+                                            for sub_directory_node in sub_directory_nodes]
 
-        # To make `my_py` happy, convert *sub_directory_nodes* from a list of *Node*s to
-        # *sub_diretories* which is a list of *Directory*'s:
-        sub_directories: List[Directory] = list()
-        sub_directory: Node
-        for sub_directory in sub_directory_nodes:
-            assert isinstance(sub_directory, Directory)
-            sub_directories.append(sub_directory)
-
-        # Perform any request *sort* before returning *tables*:
+        # Perform any request *sort* before returning *sub_directories*:
         if sort:
+            sub_directory: Directory
             sub_directories.sort(key=lambda sub_directory: sub_directory.name)
         return sub_directories
 
@@ -1367,15 +1615,12 @@ class Parameter(Node):
 
         """
         parameter: Parameter = self
-        parameter_comment_nodes: List[Node] = parameter.sub_nodes_get(ParameterComment)
-
-        # To make the `mypy` type checker happy, convert *parameter_comment_nodes* (a list of
-        # *Node*'s) to *parameter_comments* (a list of *ParameterComment*'s):
-        parameter_comments: List[ParameterComment] = list()
-        parameter_comment: Node
-        for parameter_comment in parameter_comment_nodes:
-            assert isinstance(parameter_comment, ParameterComment)
-            parameter_comments.append(parameter_comment)
+        parameter_comment_sub_nodes: List[Node] = parameter.sub_nodes_get(ParameterComment)
+        parameter_comment_sub_node: Node
+        parameter_comments: List[ParameterComment] = [parameter_comment_sub_node.
+                                                      parameter_comment_cast()
+                                                      for parameter_comment_sub_node
+                                                      in parameter_comment_sub_nodes]
 
         # Perform any requested *sort* before returning:
         if sort:
@@ -1413,6 +1658,17 @@ class Parameter(Node):
 
         # Finally, insert *parameter_comment* into *parameter*:
         parameter.node_insert(parameter_comment)
+
+    # Parameter.parameter_cast():
+    def parameter_cast(self) -> "Parameter":
+        """Return the *Parameter* object.
+
+        Used for converting from a *Node* that happens to be a
+        *Parameter* to *Parameter*.
+
+        """
+        parameter: Parameter = self
+        return parameter
 
     # Parameter.show_lines_append():
     def show_lines_append(self, show_lines: List[str], indent: str, text: str = "") -> None:
@@ -1545,6 +1801,42 @@ class Search(Node):
         text = f"'{search.name}'"
         super().show_lines_append(show_lines, indent, text=text)
 
+    # Search.search_cast():
+    def search_cast(self) -> "Search":
+        """Return the *Search* object.
+
+        Used for converting from a *Node* that happens to be a
+        *Search* to *Search*.
+
+        """
+        search: Search = self
+        return search
+
+    # Search.xml_lines_append():
+    def xml_lines_append(self, xml_lines: List[str], indent: str) -> None:
+        """Append XML lines for a *Search* to a list.
+
+        Args:
+            *xml_lines* (*List*[*str*]): List to append XML lines to.
+            *indent* (*str*): Prefix to prepend to each line.
+
+        """
+        search: Search = self
+        search_name: str = search.name
+        xml_lines.append(f'{indent}<Search name="{search_name}"/>')
+
+    # Search.xml_parse():
+    @staticmethod
+    def xml_parse(search_element: Element, bom_manager: BomManager) -> "Search":
+        """TODO."""
+        assert search_element.tag == "Search"
+        attributes_table: Dict[str, str] = search_element.attrib
+        assert "name" in attributes_table
+        name: str = attributes_table["name"]
+        file_path: Path = Path("foo.xml")
+        search: Search = Search(bom_manager, name, file_path)
+        return search
+
 
 # Table:
 class Table(Node):
@@ -1651,17 +1943,12 @@ class Table(Node):
             List of *TableComment'*s.
 
         """
-        # Grab the *table_comment_nodes* from *table*:
+        # Grab the *table_comment* from *table*:
         table: Table = self
-        table_comment_nodes: List[Node] = table.sub_nodes_get(TableComment)
-
-        # To make the `mypy` the type checker happy, convert from *table_comment_nodes* (a list of
-        # *Node*'s) to *table_comments* (a list *TableComment*'s):
-        table_comments: List[TableComment] = list()
-        table_comment: Node
-        for table_comment in table_comment_nodes:
-            assert isinstance(table_comment, TableComment)
-            table_comments.append(table_comment)
+        table_comment_sub_nodes: List[Node] = table.sub_nodes_get(TableComment)
+        table_comment_sub_node: Node
+        table_comments: List[TableComment] = [table_comment_sub_node.table_comment_cast()
+                                              for table_comment_sub_node in table_comment_sub_nodes]
 
         # Perform any requested *sort* before returning *table_comments*:
         if sort:
@@ -1823,20 +2110,30 @@ class Table(Node):
 
     # Table.parameters_get():
     def parameters_get(self, sort: bool) -> List[Parameter]:
-        """Return the a list of Parameters."""
+        """Return the a list of Parameters.
+
+        Return the list of *Parameter*'s associated with *table*
+        (i.e. *self*.)  If *sort* is *True*, sort the returned
+        list by table name.
+
+        Args:
+            *sort* (*bool*): If *True*, sort returned *Parameter*'s
+                list by name.
+
+        Returns:
+            Returns a list of *Parameter*'s from *table*.  They are
+            sorted by name if *sort* is *True* otherwise thare are
+            in semi-random order.
+
+        """
+        # Extrat the *parameters* from *table*:
         table: Table = self
-        parameter_nodes: Nodes = table.nodes_get(Parameter)
-        parameter_nodes_list: List[Node] = parameter_nodes.sub_nodes_get()
+        parameter_sub_nodes: List[Node] = table.sub_nodes_get(Parameter)
+        parameter_sub_node: Node
+        parameters: List[Parameter] = [parameter_sub_node.parameter_cast()
+                                       for parameter_sub_node in parameter_sub_nodes]
 
-        # To make the `mypy` type checker happy, convert *parameter_nodes_list* (a list *Node*'s)
-        # into *parameters* (a list of *Parameter*'s):
-        parameters: List[Parameter] = list()
-        parameter: Node
-        for parameter in parameter_nodes_list:
-            assert isinstance(parameter, Parameter)
-            parameters.append(parameter)
-
-        # Perform any requested *sort* before returning:
+        # Perform any requested *sort* before returning *parameters*:
         if sort:
             parameters.sort(key=Parameter.key)
         return parameters
@@ -1852,6 +2149,35 @@ class Table(Node):
         table: Table = self
         table.node_insert(search)
 
+    # Table.searches_get():
+    def searches_get(self, sort: bool) -> List[Search]:
+        """Return the *Search*'s from the *Table*.
+
+        Return the list of *Search* objects from *table* (i.e. *self*.)
+        If *sort* is *True*, sort the searches by they their key.
+
+        Args:
+            *sort* (*bool*): If *True*, sort the resulting list
+                by the *Sort*.*Key*() function.
+
+        Returns:
+            Returns a list of *Search* objects.  If *sort* is *True*,
+            the returned objects are sorted.
+
+        """
+        # Extract the *searches* from *table* (i.e. *self*):
+        table: Table = self
+        search_sub_nodes: List[Node] = table.sub_nodes_get(Search)
+        search_sub_node: Node
+        searches: List[Search] = [search_sub_node.search_cast()
+                                  for search_sub_node in search_sub_nodes]
+
+        # Perform any requested *sort* prior to returning *searches*:
+        if sort:
+            search: Search
+            searches.sort(key=lambda search: search.name)
+        return searches
+
     # Table.show_lines_append():
     def show_lines_append(self, show_lines: List[str], indent: str, text: str = "") -> None:
         """Recursively append table information to show lines list.
@@ -1866,6 +2192,17 @@ class Table(Node):
         table: Table = self
         text = f"'{table.name}'"
         super().show_lines_append(show_lines, indent, text=text)
+
+    # Table.table_cast():
+    def table_cast(self) -> "Table":
+        """Return the *Table* object.
+
+        Used for converting from a *Node* that happens to be a
+        *Table* to *Table*.
+
+        """
+        table: Table = self
+        return table
 
     # # Table.type_tables_extract():
     # @trace(1)
@@ -1954,18 +2291,24 @@ class Table(Node):
                          f'file_path="{file_path}"'
                          f'{extra}>')
 
-        # Append the `<TableComments>` ... `</TableComments>` elements:
-        table_comments: List[TableComment] = table.comments_get(True)
+        # Append the *parameters* to the *xml_lines*:
+        parameters: List[Parameter] = table.parameters_get(True)
         next_indent: str = indent + "  "
+        parameter: Parameter
+        for parameter in parameters:
+            parameter.xml_lines_append(xml_lines, next_indent)
+
+        # Append the *table_comments* to *xml_lines*:
+        table_comments: List[TableComment] = table.comments_get(True)
         table_comment: TableComment
         for table_comment in table_comments:
             table_comment.xml_lines_append(xml_lines, next_indent)
 
-        # Append the `<Parameters>` element:
-        parameters: List[Parameter] = table.parameters_get(True)
-        parameter: Parameter
-        for parameter in parameters:
-            parameter.xml_lines_append(xml_lines, next_indent)
+        # Append the *searches* to *xml_lines*:
+        searches: List[Search] = table.searches_get(True)
+        search: Search
+        for search in searches:
+            search.xml_lines_append(xml_lines, next_indent)
 
         # Close out with the `</TABLE_CLASS_NAME>` element:
         xml_lines.append(f'{indent}</{table_class_name}>')
@@ -2008,6 +2351,9 @@ class Table(Node):
             elif sub_element_tag == "TableComment":
                 table_comment: TableComment = TableComment.xml_parse(sub_element, bom_manager)
                 table.comment_insert(table_comment)
+            elif sub_element_tag == "Search":
+                search: Search = Search.xml_parse(sub_element, bom_manager)
+                table.search_insert(search)
             else:  # pragma: no cover
                 assert False, f"Unprocessed tag='{sub_element_tag}'"
         return table

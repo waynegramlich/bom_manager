@@ -107,7 +107,7 @@ download:
 
 test:
 	py.test --cov=bom_manager --cov-report=annotate
-	@grep -n "^!" $(BOM_MANAGER_DIRECTORY)/bom_manager/node_view.py,cover || true
+	@grep -H -n "^!" $(BOM_MANAGER_DIRECTORY)/bom_manager/node_view.py,cover || true
 
 lint: ${PYTHON_LINTS}
 

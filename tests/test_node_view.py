@@ -4,11 +4,55 @@ from bom_manager.node_view import (BomManager, Collection, Collections, Director
 import lxml.etree as ETree   # type: ignore
 from lxml.etree import _Element as Element  # type: ignore
 from pathlib import Path
-from typing import (Any, IO, List,)
-from bom_manager.tracing import trace_level_set
-
+from typing import (Any, Dict, IO, List)
+from bom_manager.tracing import trace, trace_level_set, tracing_get
 
 trace_level_set(0)
+
+# test_bom_manager():
+@trace(4)
+def test_bom_manager():
+    """Test the *BomManager* class."""
+    # @trace(1)
+    def check_both_ways(bom_manager: BomManager, text: str, substituted_text: str) -> None:
+        tracing: str = tracing_get()
+        attribute_text: str = bom_manager.to_attribute(text)
+        reversed_text: str = bom_manager.from_attribute(attribute_text)
+        if tracing:
+            print(f"{tracing}text='{text}'")
+            print(f"{tracing}attribute_text='{attribute_text}'")
+            print(f"{tracing}reversed_text='{reversed_text}'")
+        assert attribute_text == substituted_text, (f"attribute_text='{text}' "
+                                                    f"subsituted_text='{substituted_text}'")
+        assert text == reversed_text, (f"text='{text}' reversed_text='{reversed_text}'")
+
+    # Perform a nasty convertion:
+    bom_manager: BomManager = BomManager()
+    check_both_ways(bom_manager, "before&amp;middle&semi;after",
+                    "before&amp;amp&semi;middle&amp;semi&semi;after")
+
+    # Verify that the empty string works:
+    check_both_ways(bom_manager, "", "")
+
+    # Verify that the entities in *ENTITY_SUBISTITUTIONS* are properly processed:
+    ENTITY_SUBSTITUTIONS: Dict[str, str] = bom_manager.ENTITY_SUBSTITUTIONS
+    character: str
+    entity: str
+    for character, entity in ENTITY_SUBSTITUTIONS.items():
+        check_both_ways(bom_manager, character, entity)
+
+    # Verify that "&#NNN;" is properly processed:
+    maximum_unicode_ord: int = 0x110000 - 1
+    index: int
+    for index in range(8, 32):
+        character_ord: int = 1 << index
+        if character_ord <= maximum_unicode_ord:
+            character = chr(character_ord)
+            print(f"Ord[{index}]:character_ord={character_ord} character='{character}'")
+            assert ord(character) == character_ord, (f"character='{character}' "
+                                                     f"character_ord={character_ord}")
+            entity_text: str = f"&#{character_ord};"
+            check_both_ways(bom_manager, character, entity_text)
 
 
 # test_constrcutors():
@@ -250,3 +294,7 @@ def xxx_test_packages_scan():
     bom_manager: BomManager = BomManager()
     collections: Collections = Collections(bom_manager)
     collections.packages_scan()
+
+
+if __name__ == "__main__":
+    test_bom_manager()
