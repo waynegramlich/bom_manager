@@ -115,6 +115,7 @@ class BomManager:
             '#': "&num",
             ';': "&semi;"
         }
+        self.UNICODE_MAXIMUM = 0x110000 - 1
 
         # Initialize *re_table*:
         bom_manager: BomManager = self
@@ -198,6 +199,88 @@ class BomManager:
             print(f"{tracing}final_text='{text}'")
         return text
 
+    # BomManager.from_file_name():
+    @trace(1)
+    def from_file_name(self, file_name: str) -> str:
+        """Convert an encoded file name into a text string.
+
+        See *BomManager*.*to_file_name*() for the rules to convert
+        a Python unicode string and an ASCII file name string.  This
+        method converts and ASCII *file_name* back into a Python
+        unicode string.
+
+        Args:
+            *file_name* (*self*): The encoded file name to convert.
+
+        Returns:
+            (*str*): Returns the Python unicode string converted from
+            *file_name*.
+
+        """
+        # Break *file_name* into string *chunks* where some string chunks are taken
+        # verbatim from *file_name* and others contain substitutions:
+        tracing: str = tracing_get()
+        chunks: List[str] = list()
+        file_name_size = len(file_name)
+        current_index: int = 0
+        processed_index: int = 0
+        while current_index < file_name_size:
+            # Dispatch on the current *character*:
+            character: str = file_name[current_index]
+            substitute: Optional[str] = None
+            next_index: int = current_index + 1
+            if character == '_':
+                # Simple underscore ('_') to (' ') conversion:
+                substitute = ' '
+            elif character == '%':
+                # We have "%XX", "%%XXXX", or "%%%XXXXXX" hex number encoding.
+                # First compute the *percent_count* of percent ('%') characters:
+                percent_count: int = 0
+                index: int = current_index
+                while index < file_name_size and file_name[index] == '%':
+                    percent_count += 1
+                    index += 1
+
+                # Compute *next_index* skips over preceeding percent characters and *digits_test*:
+                next_index = current_index + 3*percent_count
+
+                # Extract the *digits_text* and convert into a *substitute* character:
+                digits_text: str = file_name[current_index+percent_count:next_index]
+                substitute_ord: int = int(digits_text, 16)
+                if tracing:  # pragma: no cover
+                    print(f"{tracing}file_name='{file_name}'")
+                    print(f"{tracing}current_index={current_index}")
+                    print(f"{tracing}percent_count={percent_count}")
+                    print(f"{tracing}next_index={next_index}")
+                    print(f"{tracing}digits_text='{digits_text}'")
+                    print(f"{tracing}substitute_ord={substitute_ord}")
+                assert digits_text.isalnum(), f"digits_text='{digits_text}' not hex"
+                substitute = chr(substitute_ord)
+
+            # If we have an actual *substitute* character, we add sub-strings to *chunks*:
+            if substitute is not None:
+                # Tack the unprocessed *previous_chunk* and *substitute* onto *chunks*:
+                previous_chunk: str = file_name[processed_index:current_index]
+                chunks.append(previous_chunk)
+                chunks.append(substitute)
+
+                # Update *processed_index* to remember how many characters have been processed:
+                processed_index = next_index
+            current_index = next_index
+
+        # Return the final *name* converted from *file_name*:
+        name: str
+        if chunks:
+            # Substititutions occurred, so tack the *final_chunk* onto *chunks*
+            # and genaerate final *name* value:
+            final_chunk: str = file_name[processed_index:]
+            chunks.append(final_chunk)
+            name = "".join(chunks)
+        else:
+            # No substitutions occurred, so we can just return *file_name* as the final *name*:
+            name = file_name
+        return name
+
     # BomManager.to_attribute():
     # @trace(1)
     def to_attribute(self, text: str) -> str:
@@ -235,7 +318,7 @@ class BomManager:
         character: str
         for index, character in enumerate(text):
             # Dispatch on character to figure out if we need an *entity* substitution:
-            if tracing:
+            if tracing:  # pragma: no cover
                 print(f"{tracing}[{index}]'{character}'")
             entity = None
             if character in ENTITY_SUBSTITUTIONS:
@@ -259,6 +342,96 @@ class BomManager:
             chunks.append(final_chunk)
             text = "".join(chunks)
         return text
+
+    # BomManager.to_file_name():
+    @trace(1)
+    def to_file_name(self, text: str) -> str:
+        """Convert Python unicode string to ASCII file name.
+
+        Many of the *BomManager* data structures store their contents
+        as file in a file system..  This routine is used to convert
+        the name attached to the data structure into a ASCII file that
+        can be seen and manipulated at the shell level without having
+        to resort to weird shell quoting tricks.
+
+        The conversion rules are:
+        * Letters ('A-Z', 'a'-'z'), digits ('0'-'9') and the following
+          punctuation characters plus ('+'), comma (','), period ('.'),
+          and colon (':') go straight through.
+        * A space (' ') is translated to an underscore '_'.
+        * All other characters are translated to one of "%XX",
+          "%%XXXX", or "%%%XXXXXX", where "XX", "XXXX", and "XXXXXX",
+          are 2, 4 and 6 digit hexadecimal digits.  The smallest one
+          that can contain the unicode character is always used.
+
+        This method converts *text* from an Python unicode string into
+        an ASCII file name using the rules listed above and returns
+        the resulting string.
+
+        Args:
+            *text* (*str*): The Python unicode string to convert.
+
+        Returns:
+            (*str*): The ASCII representation of of *text*.
+
+        """
+        # Grab some values from *bom_manager*:
+        bom_manager: BomManager = self
+        UNICODE_MAXIMUM = bom_manager.UNICODE_MAXIMUM
+        tracing: str = tracing_get()
+
+        # Partion *text* into *chunks* where some chunks are take verbatim from *text*
+        # and others are substitutions for individual characters in *text*.  Later all
+        # *chunks* is joined together to for the converted string:
+        chunks: List[str] = list()
+        processed_index: int = 0
+        current_index: int
+        character: str
+        for current_index, character in enumerate(text):
+            # Skip over letters, digits, '+', ',', '.', and ':':
+            if not (character.isalnum() or character in "+,.:"):
+                # We will generate a *substitute* for *character*:
+                substitute: str
+                if character == ' ':
+                    # Spaces are converted to underscores ('_'):
+                    substitute = '_'
+                else:
+                    # All other characters are converted into a hex format of "%XX", "%%XXXX",
+                    # or "%%%XXXXXX".  We dispatch using *character_ord* to figure out which
+                    # format to use:
+                    character_ord: int = ord(character)
+                    # Dispatch using *character_ord* to figure out if we are going to use
+                    if character_ord <= 0xff:
+                        substitute = "%{0:02x}".format(character_ord)
+                    elif character_ord <= 0xffff:
+                        substitute = "%%{0:04x}".format(character_ord)
+                    elif character_ord <= UNICODE_MAXIMUM:
+                        substitute = "%%%{0:06x}".format(character_ord)
+                    else:  # pragma: no cover
+                        assert False, f"Unicode character that is too big: {character_ord}"
+                    if tracing:  # pragma: no cover
+                        print(f"{tracing}character_ord={character_ord}")
+                        print(f"{tracing}substitute='{substitute}'")
+
+                # Now tack the *preceeding_chunk* and *substitute* onto *chunks*:
+                preceeding_chunk: str = text[processed_index:current_index]
+                chunks.append(preceeding_chunk)
+                chunks.append(substitute)
+
+                # Update *processed_index* to remember how much of *text* has been processed:
+                processed_index = current_index + 1
+
+        # Now we generate the resulting *file_name*:
+        file_name: str
+        if chunks:
+            # We have substitutions in *chunks*, so wrap up the *final_chunk* and perform the join:
+            final_chunk: str = text[processed_index:]
+            chunks.append(final_chunk)
+            file_name = "".join(chunks)
+        else:
+            # No substitutions occured, so we can just return *text* as *file_name*:
+            file_name = text
+        return file_name
 
     def re_table_initialize(self):
         """Initialize the BOM manager regular expresstion table."""

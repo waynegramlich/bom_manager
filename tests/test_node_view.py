@@ -7,12 +7,10 @@ from pathlib import Path
 from typing import (Any, Dict, IO, List)
 from bom_manager.tracing import trace, trace_level_set, tracing_get
 
-trace_level_set(0)
-
-# test_bom_manager():
+# test_attribute_converter():
 @trace(4)
-def test_bom_manager():
-    """Test the *BomManager* class."""
+def test_attribute_converter():
+    """Test the *BomManager* attribute converter methods."""
     # @trace(1)
     def check_both_ways(bom_manager: BomManager, text: str, substituted_text: str) -> None:
         tracing: str = tracing_get()
@@ -48,14 +46,62 @@ def test_bom_manager():
         character_ord: int = 1 << index
         if character_ord <= maximum_unicode_ord:
             character = chr(character_ord)
-            print(f"Ord[{index}]:character_ord={character_ord} character='{character}'")
+            # print(f"Ord[{index}]:character_ord={character_ord} character='{character}'")
             assert ord(character) == character_ord, (f"character='{character}' "
                                                      f"character_ord={character_ord}")
             entity_text: str = f"&#{character_ord};"
             check_both_ways(bom_manager, character, entity_text)
 
 
-# test_constrcutors():
+# test_file_name_converter():
+@trace(1)
+def test_file_name_converter():
+    """Test the *BomManager* file name converter."""
+
+    def file_convert_check(bom_manager: BomManager, text: str) -> None:
+        file_name: str = bom_manager.to_file_name(text)
+        converted_text: str = bom_manager.from_file_name(file_name)
+        assert text == converted_text, (f"text='{text}' file_name='{file_name}' "
+                                        f"converted_text='{converted_text}'")
+
+    # Grab some values from *bom_manager* (i.e. *self*):
+    bom_manager: BomManager = BomManager()
+    UNICODE_MAXIMUM = bom_manager.UNICODE_MAXIMUM
+
+    # Convert null character:
+    null_character: str = chr(0)
+    null_character_file_name: str = bom_manager.to_file_name(null_character)
+    assert null_character_file_name == "%00"
+    null_character_file_name_converted: str = bom_manager.from_file_name(null_character_file_name)
+    assert null_character_file_name_converted == null_character
+
+    # Sweep through the ASCII space:
+    tracing: str = tracing_get()
+    if tracing:  # pragma: no cover
+        print(f"{tracing}Started test_file_name_converter")
+    character_ord: int
+    character: str
+    for character_ord in range(128):
+        character = chr(character_ord)
+        file_convert_check(bom_manager, character)
+
+    # Sweep through some more of the Unicode space:
+    for index in range(32):
+        character_ord = 1 << index
+        if character_ord <= UNICODE_MAXIMUM:
+            character = chr(character_ord)
+            file_convert_check(bom_manager, character)
+
+    # Do some additional tests:
+    bom_manager.to_file_name("") == ""
+    bom_manager.from_file_name("") == ""
+    bom_manager.to_file_name("abc - def") == "abc_%2d_def"
+    bom_manager.from_file_name("abc_%2d_def") == "abc - def"
+    bom_manager.to_file_name("foo/bar") == "foo%2fbar"
+    bom_manager.from_file_name("foo%2fbar") == "foo/bar"
+
+
+# Test_constrcutors():
 def test_constructors():
     """Test the various *Node* sub-class constructors."""
     # Identify the *test_file_directory*:
@@ -297,4 +343,5 @@ def xxx_test_packages_scan():
 
 
 if __name__ == "__main__":
-    test_bom_manager()
+    trace_level_set(0)
+    test_file_name_converter()
