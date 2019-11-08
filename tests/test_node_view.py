@@ -146,10 +146,9 @@ def test_constructors():
         ]
 
     # Create  *chip_resistors_table* and stuff it into *resistors_directory*:
-    chip_resistors_table_path: Path = (digikey_root /
-                                       "Resistors" / "Chip_Resistor_-_Surface_Mount.xml")
-    chip_resistors_table: Table = Table(bom_manager, "Chip Resistor - Surface Mount",
-                                        chip_resistors_table_path)
+    # chip_resistors_table_path: Path = (digikey_root /
+    #                                    "Resistors" / "Chip_Resistor_-_Surface_Mount.xml")
+    chip_resistors_table: Table = Table(bom_manager, "Chip Resistor - Surface Mount")
     table_comment: TableComment = TableComment(bom_manager, "EN")
     table_comment.lines_set(["Line 1", "Line 2"])
     table_comment.line_append("Line 3")

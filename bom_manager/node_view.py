@@ -50,7 +50,7 @@ All *Node* objects are sub-classed to contain the actual important data about th
 
 # from bom_manager.bom import Encode
 from bom_manager.tracing import trace, tracing_get  # , trace_level_set  # , tracing_get
-# import csv
+import csv
 # import lxml.etree as ETree  # type: ignore
 from lxml.etree import _Element as Element  # type: ignore
 from pathlib import Path
@@ -75,14 +75,8 @@ class BomManager:
                                                                "searches_root": Path})
         directory_node_template: NodeTemplate = NodeTemplate(Directory, (Directory, Table),
                                                              {"name": str})
-        table_node_template: NodeTemplate = NodeTemplate(Table, (Parameter, Search, TableComment),
-                                                         {"file_name": str,
-                                                          "name": str})
-        table_comment_node_template: NodeTemplate = NodeTemplate(TableComment, (),
-                                                                 {"language": str,
-                                                                  "lines": list})
         parameter_node_template: NodeTemplate = NodeTemplate(Parameter, (ParameterComment,),
-                                                             {"header_index": int,
+                                                             {"index": int,
                                                               "name": str,
                                                               "type_name": str})
         parameter_comment_node_template: NodeTemplate = NodeTemplate(ParameterComment, (),
@@ -91,6 +85,11 @@ class BomManager:
         search_node_template: NodeTemplate = NodeTemplate(Search, (),
                                                           {"file_name": str,
                                                            "name": str})
+        table_node_template: NodeTemplate = NodeTemplate(Table, (Parameter, Search, TableComment),
+                                                         {"name": str})
+        table_comment_node_template: NodeTemplate = NodeTemplate(TableComment, (),
+                                                                 {"language": str,
+                                                                  "lines": list})
 
         node_templates: Dict[Type, NodeTemplate] = {
             Collection: collection_node_template,
@@ -200,7 +199,7 @@ class BomManager:
         return text
 
     # BomManager.from_file_name():
-    @trace(1)
+    # @trace(1)
     def from_file_name(self, file_name: str) -> str:
         """Convert an encoded file name into a text string.
 
@@ -281,6 +280,15 @@ class BomManager:
             name = file_name
         return name
 
+    # BomManager.node_template_add():
+    def node_template_add(self, node_template: "NodeTemplate") -> None:
+        """TODO."""
+        bom_manager: BomManager = self
+        node_type: Type = node_template.node_type
+        node_templates: Dict[Type, NodeTemplate] = bom_manager.node_templates
+        assert node_type not in node_templates
+        node_templates[node_type] = node_template
+
     # BomManager.to_attribute():
     # @trace(1)
     def to_attribute(self, text: str) -> str:
@@ -307,7 +315,7 @@ class BomManager:
         # Grab some values from *bom_manager*:
         bom_manager: BomManager = self
         ENTITY_SUBSTITUTIONS: Dict[str, str] = bom_manager.ENTITY_SUBSTITUTIONS
-        tracing: str = tracing_get()
+        # tracing: str = tracing_get()
 
         # Sweep across *text* one *character* at time.  The *text* is broken into the
         # *chunks* list with unmodified text and entity subsitutions intermixed:
@@ -318,8 +326,8 @@ class BomManager:
         character: str
         for index, character in enumerate(text):
             # Dispatch on character to figure out if we need an *entity* substitution:
-            if tracing:  # pragma: no cover
-                print(f"{tracing}[{index}]'{character}'")
+            # if tracing:  # pragma: no cover
+            #     print(f"{tracing}to_attribute[{index}]'{character}'")
             entity = None
             if character in ENTITY_SUBSTITUTIONS:
                 entity = ENTITY_SUBSTITUTIONS[character]
@@ -344,7 +352,7 @@ class BomManager:
         return text
 
     # BomManager.to_file_name():
-    @trace(1)
+    # @trace(1)
     def to_file_name(self, text: str) -> str:
         """Convert Python unicode string to ASCII file name.
 
@@ -462,11 +470,6 @@ class BomManager:
         re_table["List"] = list_re
         re_table["Range"] = range_re
         re_table["URL"] = url_re
-
-# class GuiManager:
-#     def __init__(self) -> None:
-#         pass
-
 
 # class View:
 #    def __init__(self, gui_manager: GuiManager, name: str, view_nodes: "Tuple[Node, ...]") -> None:
@@ -718,6 +721,21 @@ class Node:
         node: Node = self  # pragma: no cover
         assert False, (f"Got a {node.__class__.__name__} "
                        "instead of ParameterComment")  # pragma: no cover
+
+    # Node.remove():
+    def remove(self, sub_node: "Node") -> None:
+        """Remove a sub-node from a Node.
+
+        Args:
+            *sub_node* (*Node*): Sub-node to remove.
+
+        """
+        node: Node = self
+        nodes_table: Dict[Type, Nodes] = node.nodes_table
+        sub_node_type: Type = type(sub_node)
+        assert sub_node_type in nodes_table
+        nodes: Nodes = nodes_table[sub_node_type]
+        nodes.remove(sub_node)
 
     # Node.show_lines_append():
     # @trace(1)
@@ -1758,25 +1776,24 @@ class Parameter(Node):
     """Represents a parameter of a parameteric table."""
 
     # Parameter.__init__():
-    def __init__(self, bom_manager: BomManager, name: str, type_name: str,
-                 header_index: int) -> None:
+    def __init__(self, bom_manager: BomManager, name: str, type_name: str, index: int) -> None:
         """Initialize a parameter.
 
         Initialize a *Parameter* object (i.e. *self*) to contain
-        *bom_manager*, *type_name* and *header_index*:
+        *bom_manager*, *type_name* and *index*:
 
         Args:
             *bom_manager* (*BomManager)* : The root of all of the data
                 structures:
             *name* (*str*): The parameter name and it must be non-empty.
-            *header_index* (*int*): The index to `.csv` table for the
+            *index* (*int*): The column index to `.csv` table for the
                 parameter.
 
         """
         super().__init__(bom_manager)
         assert name, "Empty String!"
         # parameter: Parameter = self
-        self.header_index: int = header_index
+        self.index: int = index
         self.name: str = name
         self.type_name: str = type_name
 
@@ -1824,7 +1841,7 @@ class Parameter(Node):
     def key(self) -> int:
         """Return the sorting key."""
         parameter: Parameter = self
-        return parameter.header_index
+        return parameter.index
 
     # Parameter.comment_insert():
     def comment_insert(self, parameter_comment: ParameterComment) -> None:
@@ -1892,7 +1909,7 @@ class Parameter(Node):
         # Grab some values from *parameter* (i.e. *self*):
         parameter: Parameter = self
         bom_manager: BomManager = parameter.bom_manager
-        header_index: int = parameter.header_index
+        index: int = parameter.index
         name: str = parameter.name
         type_name: str = parameter.type_name
 
@@ -1902,7 +1919,7 @@ class Parameter(Node):
         # Start with the initial `<Parameter ...>`:
         xml_lines.append(f'{indent}<Parameter'
                          f' name="{to_attribute(name)}"'
-                         f' header_index="{header_index}"'
+                         f' index="{index}"'
                          f' type_name="{to_attribute(type_name)}">')
 
         # Now output the sorted *parameter_comments*:
@@ -1932,13 +1949,13 @@ class Parameter(Node):
         """
         assert parameter_element.tag == "Parameter"
         attributes_table: Dict[str, str] = parameter_element.attrib
-        assert "header_index" in attributes_table
+        assert "index" in attributes_table
         assert "name" in attributes_table
         assert "type_name" in attributes_table
-        header_index: int = int(attributes_table["header_index"])
+        index: int = int(attributes_table["index"])
         name: str = attributes_table["name"]
         type_name: str = attributes_table["type_name"]
-        parameter: Parameter = Parameter(bom_manager, name, type_name, header_index)
+        parameter: Parameter = Parameter(bom_manager, name, type_name, index)
         sub_elements: List[Element] = list(parameter_element)
         sub_element: Element
         for sub_element in sub_elements:
@@ -2048,7 +2065,7 @@ class Table(Node):
     """Informatation about a parametric table of parts."""
 
     # Table.__init__():
-    def __init__(self, bom_manager: BomManager, name: str, file_path: Path) -> None:
+    def __init__(self, bom_manager: BomManager, name: str) -> None:
         """Initialize the Table.
 
         Initialize the table with a *bom_manager*, *name*, and XML
@@ -2070,7 +2087,6 @@ class Table(Node):
         assert name, "Empty name string!"
         # assert file_path.exists(), f"xml file '{file_path}' does not exist"
         self.name: str = name
-        self.file_name: str = str(file_path)
 
     # Table.__str__():
     def __str__(self) -> str:
@@ -2083,40 +2099,45 @@ class Table(Node):
             name = table.name
         return f"Table('{name}')"
 
-    # # Table.column_tables_extract():
+    # Table.column_tables_extract():
     # @trace(1)
-    # def column_tables_extract(self, rows: List[List[str]]) -> List[Dict[str, int]]:
-    #     """TODO."""
-    #     # Create and return a *column_tables* which has one dictionary for each column in *rows*.
-    #     # Each *column_table* dictionary that contains an occurance count for each different
-    #     # value in the column.
+    def column_tables_extract(self, rows: List[List[str]]) -> List[Dict[str, int]]:
+        """TODO."""
+        # Create and return a *column_tables* which has one dictionary for each column in *rows*.
+        # Each *column_table* dictionary that contains an occurance count for each different
+        # value in the column.
 
-    #     # Figure out how many *columns* there are for each row.  Each row is assumed
-    #     # to have the same number of *columns*:
-    #     assert rows, "No data to extract"
-    #     row0: List[str] = rows[0]
-    #     columns: int = len(row0)
+        # Figure out how many *columns* there are for each row.  Each row is assumed
+        # to have the same number of *columns*:
+        table: Table = self
+        assert rows, "No data to extract"
+        row0: List[str] = rows[0]
+        columns: int = len(row0)
 
-    #     # Create *column_tables* and fill in one *column_table* per *column*:
-    #     column_tables: List[Dict[str, int]] = list()
-    #     for column in range(columns):
-    #         column_table: Dict[str, int] = dict()
-    #         column_tables.append(column_table)
+        # Create *column_tables* and fill in one *column_table* per *column*:
+        column_tables: List[Dict[str, int]] = list()
+        for column in range(columns):
+            column_table: Dict[str, int] = dict()
+            column_tables.append(column_table)
 
-    #         # Sweep across each *row* in *rows* and fill in *column_table*:
-    #         for row in rows:
-    #             assert len(row) == columns
-    #             value: str = row[column]
-    #             if value in column_table:
-    #                 # We have seen *value* before in this *column*, so increment its count:
-    #                 column_table[value] += 1
-    #             else:
-    #                 # This is the first time we seen *value* in this *column*, so insert it
-    #                 # into *column_table* as the first one:
-    #                 column_table[value] = 1
+            # Sweep across each *row* in *rows* and fill in *column_table*:
+            row: List[str]
+            row_index: int
+            for row_index, row in enumerate(rows):
+                assert len(row) == columns, (f"Row[{row_index}]:table={table} "
+                                             f"len(row)={len(row)} != columns={columns}, "
+                                             f"row={row}")
+                value: str = row[column]
+                if value in column_table:
+                    # We have seen *value* before in this *column*, so increment its count:
+                    column_table[value] += 1
+                else:
+                    # This is the first time we seen *value* in this *column*, so insert it
+                    # into *column_table* as the first one:
+                    column_table[value] = 1
 
-    #     # Return *column_tables*:
-    #     return column_tables
+        # Return *column_tables*:
+        return column_tables
 
     # Table.comment_insert():
     def comment_insert(self, table_comment: TableComment) -> None:
@@ -2160,64 +2181,84 @@ class Table(Node):
             table_comments.sort(key=Comment.key)
         return table_comments
 
-    # # Table.csv_file_read():
+    # Table.csv_file_read():
     # @trace(1)
-    # def csv_file_read(self) -> Tuple[List[str], List[List[str]]]:
-    #     """TODO."""
-    #     # Grab some values from *table* (i.e. *self*):
-    #     table: Table = self
-    #     file_path: Path = table.file_path
-    #     assert file_path.exists(), f".xml file '{file_path}' does not exist"
+    def csv_file_read(self, csv_file_path: Path) -> Tuple[List[str], List[List[str]]]:
+        """TODO."""
+        # Grab some values from *table* (i.e. *self*):
+        # table: Table = self
+        assert csv_file_path.is_file(), f"'{csv_file_path}' does not exist"
 
-    #     # Open *csv_full_name* and read in the *headers* and *rows*:
-    #     headers: List[str]
-    #     rows: List[List[str]] = list()
-    #     csv_file: IO[Any]
-    #     with file_path.open() as csv_file:
-    #         row_index: int
-    #         row: List[str]
-    #         for row_index, row in enumerate(csv.reader(csv_file, delimiter=',', quotechar='"')):
-    #             if row_index == 0:
-    #                 # The first *row* is actually the *headers*:
-    #                 headers = row
-    #             else:
-    #                 # All others are data *rows*:
-    #                 rows.append(row)
+        # Open *csv_full_name* and read in the *headers* and *rows*:
+        headers: List[str]
+        headers_size: int = -1
+        rows: List[List[str]] = list()
+        csv_file: IO[Any]
+        with csv_file_path.open() as csv_file:
+            row_index: int
+            row: List[str]
+            for row_index, row in enumerate(csv.reader(csv_file, delimiter=',', quotechar='"')):
+                if row_index == 0:
+                    # The first *row* is actually the *headers*:
+                    headers = row
+                    headers_size = len(headers)
+                else:
+                    # All others are data *rows*:
+                    if len(row) == headers_size:
+                        rows.append(row)
+                    else:
+                        print(f"Row {row_index+1} of '{csv_file_path}' has to many/few columns.")
 
-    #     # Return the resulting *headers* and *rows*:
-    #     return headers, rows
+        # Return the resulting *headers* and *rows*:
+        return headers, rows
 
-    # # Table.csv_read_and_process():
+    # Table.csv_read_and_process():
     # @trace(1)
-    # def csv_read_and_process(self, csv_directory: Path, bind: bool) -> None:
-    #     """TODO."""
-    #     # This delightful piece of code reads in a `.csv` file and attempts to catagorize
-    #     # each column of the table with a "type".  The types are stored in *re_table*
-    #     # (from *gui*) as dictionary of named pre compiled regualar expressions.
-    #     # If there is no good match for the table column contents, it is given a type
-    #     # of "String".  This code is actually pretty involved and convoluted.
+    def csv_read_and_process(self, directory_path: Path, bind: bool) -> None:
+        """TODO."""
+        # This delightful piece of code reads in a `.csv` file and attempts to catagorize
+        # each column of the table with a "type".  The types are stored in *re_table*
+        # (from *gui*) as dictionary of named pre compiled regualar expressions.
+        # If there is no good match for the table column contents, it is given a type
+        # of "String".  This code is actually pretty involved and convoluted.
 
-    #     # Read the example `.csv` file associated with *table* (i.e. *self*) into *headers* and
-    #     # *rows*:
-    #     table: Table = self
-    #     headers: List[str]
-    #     rows: List[List[str]]
-    #     headers, rows = table.csv_file_read()
+        # Grab some values from *table* (i.e. *self*):
+        table: Table = self
+        bom_manager: BomManager = table.bom_manager
+        table_name: str = table.name
 
-    #     # Extract *column_tables* which is a list of dictionaries where each dictionary
-    #     # has an occurence count for each unique value in a column:
-    #     column_tables: List[Dict[str, int]] = table.column_tables_extract(rows)
+        # Compute the *table_csv_file_path* and *table_xml_file_path*:
+        to_file_name: Callable[[str], str] = bom_manager.to_file_name
+        table_file_name: str = to_file_name(table_name)
+        table_csv_file_path: Path = directory_path / (table_file_name + ".csv")
+        table_xml_file_path: Path = directory_path / (table_file_name + ".xml")
 
-    #     # Extract *type_tables* which is a list of dictionaries, where each dictionary
-    #     # has an occurence count for each unique type name in the column:
-    #     types_tables: List[Dict[str, int]] = table.type_tables_extract(column_tables)
+        # Perform any requested *tracing*:
+        tracing: str = tracing_get()
+        if tracing:
+            print(f"{tracing}table_csv_file_path='{table_csv_file_path}'")
+            print(f"{tracing}table_xml_file_path='{table_xml_file_path}'")
 
-    #     # If requested, bind the *types_tables* to *parameters*:
-    #     if bind:
-    #         table.parameters_bind(headers, types_tables)
+        # Read the example `.csv` file associated with *table* (i.e. *self*) into *headers* and
+        # *rows*:
+        headers: List[str]
+        rows: List[List[str]]
+        headers, rows = table.csv_file_read(table_csv_file_path)
 
-    #     # We are done and can write out *table* now:
-    #     table.xml_file_save()
+        # Extract *column_tables* which is a list of dictionaries where each dictionary
+        # has an occurence count for each unique value in a column:
+        column_tables: List[Dict[str, int]] = table.column_tables_extract(rows)
+
+        # Extract *type_tables* which is a list of dictionaries, where each dictionary
+        # has an occurence count for each unique type name in the column:
+        types_tables: List[Dict[str, int]] = table.type_tables_extract(column_tables)
+
+        # If requested, bind the *types_tables* to *parameters*:
+        if bind:
+            table.parameters_bind(headers, types_tables)
+
+        # We are done and can write out *table* now:
+        table.xml_file_save(table_xml_file_path)
 
     # # Table.partial_load():
     # @trace(1)
@@ -2271,47 +2312,47 @@ class Table(Node):
         table: Table = self
         table.node_insert(parameter)
 
-    # # Table.parameters_bind():
+    # Table.parameters_bind():
     # @trace(1)
-    # def parameters_bind(self, headers: List[str], type_tables: List[Dict[str, int]]) -> None:
-    #     """TODO."""
-    #     # Grab *parameters* from *table* and make sure that there is a 1-to-1 correspondance
-    #     # between *parameters* and *type_tables*:
-    #     table: Table = self
-    #     bom_manager: BomManager = table.bom_manager
-    #     parameters: List[Parameter] = table.parameters_get(False)
+    def parameters_bind(self, headers: List[str], type_tables: List[Dict[str, int]]) -> None:
+        """TODO."""
+        # Grab *parameters* from *table* and make sure that there is a 1-to-1 correspondance
+        # between *parameters* and *type_tables*:
+        table: Table = self
+        bom_manager: BomManager = table.bom_manager
+        parameters: List[Parameter] = table.parameters_get(False)
 
-    #     # Sweep through *Parameters* finding the *type_name* with the best match:
-    #     index: int
-    #     header: str
-    #     # csv: str = ""
-    #     # default: str = ""
-    #     # optional: bool = False
-    #     for index, header in enumerate(headers):
-    #         # Convert *type_table* into *type_counts*:
-    #         type_table: Dict[str, int] = type_tables[index]
-    #         type_counts: List[Tuple[str, int]] = list(type_table.items())
+        # Sweep through *Parameters* finding the *type_name* with the best match:
+        index: int
+        header: str
+        # csv: str = ""
+        # default: str = ""
+        # optional: bool = False
+        for index, header in enumerate(headers):
+            # Convert *type_table* into *type_counts*:
+            type_table: Dict[str, int] = type_tables[index]
+            type_counts: List[Tuple[str, int]] = list(type_table.items())
 
-    #         # Sort *type_counts* based on count:
-    #         type_counts.sort(key=lambda name_count: (name_count[1], name_count[0]))
+            # Sort *type_counts* based on count:
+            type_counts.sort(key=lambda name_count: (name_count[1], name_count[0]))
 
-    #         # Grab the *name_count_last* which will have the highest count, and stuff
-    #         # the associated *type_name* into *parameter*:
-    #         name_count_last: Tuple[str, int] = type_counts[-1]
-    #         type_name: str = name_count_last[0]
+            # Grab the *name_count_last* which will have the highest count, and stuff
+            # the associated *type_name* into *parameter*:
+            name_count_last: Tuple[str, int] = type_counts[-1]
+            type_name: str = name_count_last[0]
 
-    #         parameter: Parameter
-    #         if len(parameters) <= index:
-    #             parameter = Parameter(bom_manager, header, type_name, index)
-    #             table.parameter_insert(parameter)
+            parameter: Parameter
+            if len(parameters) <= index:
+                parameter = Parameter(bom_manager, header, type_name, index)
+                table.parameter_insert(parameter)
 
-    #             # Create an empty *english_parameter_comment* and stuff it into *parameter*:
-    #             english_parameter_comment: ParameterComment = ParameterComment(bom_manager,
-    #                                                                            language="EN")
-    #             parameter.comment_insert(english_parameter_comment)
-    #         else:
-    #             assert False, "How do we get here?"
-    #             parameter.type_name = type_name
+                # Create an empty *english_parameter_comment* and stuff it into *parameter*:
+                english_parameter_comment: ParameterComment = ParameterComment(bom_manager,
+                                                                               language="EN")
+                parameter.comment_insert(english_parameter_comment)
+            else:
+                assert False, "How do we get here?"
+                parameter.type_name = type_name
 
     # Table.parameters_get():
     def parameters_get(self, sort: bool) -> List[Parameter]:
@@ -2409,79 +2450,78 @@ class Table(Node):
         table: Table = self
         return table
 
-    # # Table.type_tables_extract():
+    # Table.type_tables_extract():
     # @trace(1)
-    # def type_tables_extract(self, column_tables: List[Dict[str, int]]) -> List[Dict[str, int]]:
-    #     """TODO."""
-    #     # The *re_table* comes from *gui* contains some regular expression for catagorizing
-    #     # values.  The key of *re_table* is the unique *type_name* associated with the regular
-    #     # expression that matches a given type.  The regular expressions are *PreCompiled*
-    #     # to improve efficiency:
-    #     table: Table = self
-    #     bom_manager: BomManager = table.bom_manager
-    #     re_table: Dict[str, PreCompiled] = bom_manager.re_table
+    def type_tables_extract(self, column_tables: List[Dict[str, int]]) -> List[Dict[str, int]]:
+        """TODO."""
+        # The *re_table* comes from *gui* contains some regular expression for catagorizing
+        # values.  The key of *re_table* is the unique *type_name* associated with the regular
+        # expression that matches a given type.  The regular expressions are *PreCompiled*
+        # to improve efficiency:
+        table: Table = self
+        bom_manager: BomManager = table.bom_manager
+        re_table: Dict[str, PreCompiled] = bom_manager.re_table
 
-    #     # Constuct *type_tables*, which is a list *type_table* that is 1-to-1 with the columns
-    #     # in *column_tables*.  Each *type_table* collects a count of the number of column entries
-    #     # that match a given *type_name*.  If none of the *type_names* match a given *value*,
-    #     # the default *type_name* of "String" is used:
-    #     type_tables: List[Dict[str, int]] = list()
-    #     column_table: Dict[str, int]
-    #     for column_table in column_tables:
-    #         # Create *type_table*, create the "String" *type_name*, and tack it onto
-    #         # *type_tables*:
-    #         type_table: Dict[str, int] = dict()
-    #         type_table["String"] = 0
-    #         type_tables.append(type_table)
+        # Constuct *type_tables*, which is a list *type_table* that is 1-to-1 with the columns
+        # in *column_tables*.  Each *type_table* collects a count of the number of column entries
+        # that match a given *type_name*.  If none of the *type_names* match a given *value*,
+        # the default *type_name* of "String" is used:
+        type_tables: List[Dict[str, int]] = list()
+        column_table: Dict[str, int]
+        for column_table in column_tables:
+            # Create *type_table*, create the "String" *type_name*, and tack it onto
+            # *type_tables*:
+            type_table: Dict[str, int] = dict()
+            type_table["String"] = 0
+            type_tables.append(type_table)
 
-    #         # Sweep through *column_table* characterizing which values match which *type_names*:
-    #         value: str
-    #         count: int
-    #         for value, count in column_table.items():
-    #             type_name: str
-    #             regex: PreCompiled
-    #             match: bool = False
-    #             # Now test *value* against *re* to see if we have a match:
-    #             for type_name, regex in re_table.items():
-    #                 if regex.match(value) is not None:
-    #                     # We have a match, so make sure *type_name* is in *type_table*
-    #                     # update the count appropriately:
-    #                     if type_name in type_table:
-    #                         type_table[type_name] += count
-    #                     else:
-    #                         type_table[type_name] = count
-    #                     match = True
+            # Sweep through *column_table* characterizing which values match which *type_names*:
+            value: str
+            count: int
+            for value, count in column_table.items():
+                type_name: str
+                regex: PreCompiled
+                match: bool = False
+                # Now test *value* against *re* to see if we have a match:
+                for type_name, regex in re_table.items():
+                    if regex.match(value) is not None:
+                        # We have a match, so make sure *type_name* is in *type_table*
+                        # update the count appropriately:
+                        if type_name in type_table:
+                            type_table[type_name] += count
+                        else:
+                            type_table[type_name] = count
+                        match = True
 
-    #             # If we did not *match*, mark the *value* as a "String" type:
-    #             if not match:
-    #                 type_table["String"] += count
-    #     return type_tables
+                # If we did not *match*, mark the *value* as a "String" type:
+                if not match:
+                    type_table["String"] += count
+        return type_tables
 
-    # # Table.xml_file_save():
-    # def xml_file_save(self, extra: str = "") -> None:
-    #     """TODO."""
-    #     # Compute *file_path_parent* directory for *file_path* and make sure it exists:
-    #     table: Table = self
-    #     file_path: Path = table.file_path
-    #     file_path_parent: Path = file_path.parent
-    #     tracing: str = tracing_get()
-    #     if tracing:  # pragma: no cover
-    #         print(f"{tracing}file_path='{file_path}'")
-    #         print(f"{tracing}file_path_parent='{file_path_parent}'")
-    #     file_path_parent.mkdir(parents=True, exist_ok=True)
-    #     assert file_path_parent.is_dir(), f"'{file_path_parent}' is not a diretory"
+    # Table.xml_file_save():
+    def xml_file_save(self, file_path: Path, extra: str = "") -> None:
+        """TODO."""
+        # Compute *file_path_parent* directory for *file_path* and make sure it exists:
+        table: Table = self
+        file_path_parent: Path = file_path.parent
+        tracing: str = tracing_get()
+        if tracing:  # pragma: no cover
+            print(f"{tracing}file_path='{file_path}'")
+            print(f"{tracing}file_path_parent='{file_path_parent}'")
+        file_path_parent.mkdir(parents=True, exist_ok=True)
+        assert file_path_parent.is_dir(), f"'{file_path_parent}' is not a diretory"
 
-    #     # Construct the final *xml_lines*:
-    #     xml_lines: List[str] = list()
-    #     xml_lines.append('<?xml version="1.0"?>')
-    #     table.xml_lines_append(xml_lines, "", extra)
-    #     xml_lines.append("")
-    #     xml_text: str = '\n'.join(xml_lines)
+        # Construct the final *xml_lines*:
+        xml_lines: List[str] = list()
+        xml_lines.append('<?xml version="1.0"?>')
+        table.xml_lines_append(xml_lines, "", extra)
+        xml_lines.append("")
+        xml_text: str = '\n'.join(xml_lines)
 
-    #     # Now write *xml_text* out to the *xml_path* file::
-    #     xml_file: IO[Any]
-    #     with file_path.open("w") as xml_file:
-    #         xml_file.write(xml_text)
+        # Now write *xml_text* out to the *xml_path* file::
+        xml_file: IO[Any]
+        with file_path.open("w") as xml_file:
+            xml_file.write(xml_text)
 
     # Table.xml_lines_append():
     def xml_lines_append(self, xml_lines: List[str], indent: str, extra: str) -> None:
@@ -2489,7 +2529,6 @@ class Table(Node):
         # Grab some values from *table* (i.e. *self*):
         table: Table = self
         bom_manager: BomManager = table.bom_manager
-        file_name: str = table.file_name
         name: str = table.name
         table_class_name: str = table.__class__.__name__
 
@@ -2499,7 +2538,6 @@ class Table(Node):
         # Start by appending the `<TABLE_CLASS_NAME...>` element:
         xml_lines.append(f'{indent}<{table_class_name} '
                          f'name="{to_attribute(name)}" '
-                         f'file_name="{to_attribute(file_name)}"'
                          f'{extra}>')
 
         # Append the *parameters* to the *xml_lines*:
@@ -2544,11 +2582,9 @@ class Table(Node):
         assert table_element.tag == "Table"
         attributes_table: Dict[str, str] = table_element.attrib
         assert "name" in attributes_table
-        assert "file_name" in attributes_table
+        # assert "file_name" in attributes_table
         name: str = attributes_table["name"]
-        file_name: str = attributes_table["file_name"]
-        file_path: Path = Path(file_name)
-        table: Table = Table(bom_manager, name, file_path)
+        table: Table = Table(bom_manager, name)
 
         sub_elements: List[Element] = list(table_element)
         sub_element: Element
@@ -2674,7 +2710,7 @@ class Nodes:
         return list(sub_nodes.values())
 
     # Nodes.treep_path_find():
-    @trace(1)
+    # @trace(1)
     def tree_path_find(self, search_node: Node, path: List[Node]) -> List[Node]:
         """Recursively construct a path between to *Nodes*.
 
@@ -2700,17 +2736,18 @@ class Nodes:
         return path
 
     # Nodes.remove():
-    # def remove(self, remove_node: Node) -> None:
-    #     nodes: Nodes = self
-    #     sub_nodes: Dict[int, Node] = nodes.sub_nodes
-    #      nonce: int
-    #     sub_node: Node
-    #     for nonce, sub_node in sub_nodes.items():
-    #         if remove_node is sub_node:
-    #             del sub_nodes[nonce]
-    #             break
-    #     else:
-    #         assert False
+    def remove(self, remove_node: Node) -> None:
+        """TODO."""
+        nodes: Nodes = self
+        sub_nodes: Dict[int, Node] = nodes.sub_nodes
+        nonce: int
+        sub_node: Node
+        for nonce, sub_node in sub_nodes.items():
+            if remove_node is sub_node:
+                del sub_nodes[nonce]
+                break
+        else:
+            assert False
 
 
 # Units:

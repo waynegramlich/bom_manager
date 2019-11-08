@@ -64,8 +64,8 @@ PYTHON_LINTS := ${PYTHON_FILES:%.py=%.pyl}
 PYP_FILES := 									\
 	${BOM_FINDCHIPS_PLUGIN_DIRECTORY}/.pyp					\
 	${BOM_KICAD_PLUGIN_DIRECTORY}/.pyp					\
-	${BOM_MANAGER_DIRECTORY}/.pyp
-#	${BOM_DIGIKEY_PLUGIN_DIRECTORY}/.pyp					
+	${BOM_MANAGER_DIRECTORY}/.pyp						\
+	${BOM_DIGIKEY_PLUGIN_DIRECTORY}/.pyp					
 
 
 # NOTE that the version number comes from the BOM_VERSION environment varaible.
