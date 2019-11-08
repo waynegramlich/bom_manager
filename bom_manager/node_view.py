@@ -1916,21 +1916,31 @@ class Parameter(Node):
         # XML attributes need to be converted:
         to_attribute: Callable[[str], str] = bom_manager.to_attribute
 
+        # Extract the *parameter_comments*:
+        parameter_comment: ParameterComment
+        parameter_comments: List[ParameterComment] = parameter.comments_get(True)
+        non_empty_parameter_comments: List[ParameterComment] = [parameter_comment
+                                                                for parameter_comment
+                                                                in parameter_comments
+                                                                if len(parameter_comment.lines)]
+        has_comments: bool = len(non_empty_parameter_comments) >= 1
+        trailing_slash: str = "" if has_comments else '/'
+
         # Start with the initial `<Parameter ...>`:
         xml_lines.append(f'{indent}<Parameter'
                          f' name="{to_attribute(name)}"'
                          f' index="{index}"'
-                         f' type_name="{to_attribute(type_name)}">')
+                         f' type_name="{to_attribute(type_name)}"'
+                         f'{trailing_slash}>')
 
         # Now output the sorted *parameter_comments*:
-        next_indent = indent + "  "
-        parameter_comments: List[ParameterComment] = parameter.comments_get(True)
-        parameter_comment: ParameterComment
-        for parameter_comment in parameter_comments:
-            parameter_comment.xml_lines_append(xml_lines, next_indent)
+        if has_comments:
+            next_indent = indent + "  "
+            for parameter_comment in non_empty_parameter_comments:
+                parameter_comment.xml_lines_append(xml_lines, next_indent)
 
-        # Wrap up the with the closing `/<Parameter>`:
-        xml_lines.append(f'{indent}</Parameter>')
+            # Wrap up the with the closing `/<Parameter>`:
+            xml_lines.append(f'{indent}</Parameter>')
 
     def xml_parse(parameter_element: Element, bom_manager: BomManager) -> "Parameter":
         """Parse an XML element into a *Parameter*.
