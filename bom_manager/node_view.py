@@ -1667,7 +1667,7 @@ class Directory(Node):
 
     # Directory.__init__():
     @trace(1)
-    def __init__(self, bom_manager: BomManager, name: str) -> None:
+    def __init__(self, bom_manager: BomManager, name: str, url: str = "", nonce: int = -1) -> None:
         """Initialize a directory.
 
         Args:
@@ -1677,6 +1677,8 @@ class Directory(Node):
         """
         super().__init__(bom_manager)
         self.name: str = name
+        self.nonce: int = nonce
+        self.url: str = url
 
     # Directory.__str__():
     def __str__(self) -> str:
