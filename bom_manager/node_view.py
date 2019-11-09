@@ -1864,7 +1864,7 @@ class Directory(Node):
         tables: List[Table] = directory.tables_get(True)
         table: Table
         for table in tables:
-            table.xml_lines_append(xml_lines, next_indent, "")
+            table.xml_lines_append(xml_lines, next_indent)
 
         # Append the XML for any *sub_directories* to *xml_lines*:
         sub_directories: List[Directory] = directory.sub_directories_get(True)
@@ -2716,7 +2716,7 @@ class Table(Node):
         # Construct the final *xml_lines*:
         xml_lines: List[str] = list()
         xml_lines.append('<?xml version="1.0"?>')
-        table.xml_lines_append(xml_lines, "", extra)
+        table.xml_lines_append(xml_lines, "")
         xml_lines.append("")
         xml_text: str = '\n'.join(xml_lines)
 
@@ -2726,25 +2726,32 @@ class Table(Node):
             xml_file.write(xml_text)
 
     # Table.xml_lines_append():
-    def xml_lines_append(self, xml_lines: List[str], indent: str, extra: str) -> None:
+    @trace(1)
+    def xml_lines_append(self, xml_lines: List[str], indent: str) -> None:
         """TODO."""
         # Grab some values from *table* (i.e. *self*):
         table: Table = self
         bom_manager: BomManager = table.bom_manager
         name: str = table.name
+        nonce: int = table.nonce
+        base: str = table.base
+        url: str = table.url
         table_class_name: str = table.__class__.__name__
 
         # XML attributes need to be converted:
         to_attribute: Callable[[str], str] = bom_manager.to_attribute
 
         # Start by appending the `<TABLE_CLASS_NAME...>` element:
-        xml_lines.append(f'{indent}<{table_class_name} '
-                         f'name="{to_attribute(name)}" '
-                         f'{extra}>')
+        name_text: str = f' name="{to_attribute(name)}"'
+        nonce_text: str = f' nonce="{nonce}"' if nonce >= 0 else ""
+        base_text: str = f' base="{to_attribute(base)}"' if base else ""
+        url_text: str = f' url="{to_attribute(url)}"' if url else ""
+        xml_lines.append(f'{indent}<{table_class_name}'
+                         f'{name_text}{url_text}{nonce_text}{base_text}>')
+        next_indent: str = indent + "  "
 
         # Append the *parameters* to the *xml_lines*:
         parameters: List[Parameter] = table.parameters_get(True)
-        next_indent: str = indent + "  "
         parameter: Parameter
         for parameter in parameters:
             parameter.xml_lines_append(xml_lines, next_indent)
@@ -2752,7 +2759,10 @@ class Table(Node):
         # Append the *table_comments* to *xml_lines*:
         table_comments: List[TableComment] = table.comments_get(True)
         table_comment: TableComment
-        for table_comment in table_comments:
+        non_empty_table_comments: List[TableComment] = [table_comment
+                                                        for table_comment in table_comments
+                                                        if table_comment.lines]
+        for table_comment in non_empty_table_comments:
             table_comment.xml_lines_append(xml_lines, next_indent)
 
         # Append the *searches* to *xml_lines*:
