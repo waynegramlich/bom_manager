@@ -4,7 +4,7 @@ from bom_manager.node_view import (BomManager, Collection, Collections, Director
 import lxml.etree as ETree   # type: ignore
 from lxml.etree import _Element as Element  # type: ignore
 from pathlib import Path
-from typing import (Any, Dict, IO, List)
+from typing import (Any, Dict, IO, List, Tuple)
 from bom_manager.tracing import trace, trace_level_set, tracing_get
 
 # test_attribute_converter():
@@ -122,11 +122,11 @@ def test_constructors():
                                                           f"'{node_template_text}'")
 
     # Create *digikey_collection* and verify:
-    digikey_root: Path = test_file_directory / "ROOT" / "Digi-Key"
+    collection_root: Path = test_file_directory / "ROOT"
     searches_root: Path = test_file_directory / "searches"
     digikey_collection: Collection = Collection(bom_manager,
-                                                "Digi-Key", digikey_root, searches_root)
-    collections.collection_insert(digikey_collection)
+                                                "Digi-Key", collection_root, searches_root)
+    digikey_collection_key: Tuple[int, int] = collections.collection_insert(digikey_collection)
     assert collections.show_lines_get() == [
         "Collections()",
         " Collection('Digi-Key')"
@@ -148,7 +148,8 @@ def test_constructors():
     # Create  *chip_resistors_table* and stuff it into *resistors_directory*:
     # chip_resistors_table_path: Path = (digikey_root /
     #                                    "Resistors" / "Chip_Resistor_-_Surface_Mount.xml")
-    chip_resistors_table: Table = Table(bom_manager, "Chip Resistor - Surface Mount")
+    chip_resistors_table: Table = Table(bom_manager, "Chip Resistor - Surface Mount",
+                                        digikey_collection_key)
     table_comment: TableComment = TableComment(bom_manager, "EN")
     table_comment.lines_set(["Line 1", "Line 2"])
     table_comment.line_append("Line 3")

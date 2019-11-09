@@ -70,8 +70,8 @@ class BomManager:
         collections_node_template: NodeTemplate = NodeTemplate(Collections, (Collection,),
                                                                {})
         collection_node_template: NodeTemplate = NodeTemplate(Collection, (Directory,),
-                                                              {"collection_root": Path,
-                                                               "name": str,
+                                                              {"name": str,
+                                                               "collection_root": Path,
                                                                "searches_root": Path})
         directory_node_template: NodeTemplate = NodeTemplate(Directory, (Directory, Table),
                                                              {"name": str})
@@ -86,7 +86,10 @@ class BomManager:
                                                           {"file_name": str,
                                                            "name": str})
         table_node_template: NodeTemplate = NodeTemplate(Table, (Parameter, Search, TableComment),
-                                                         {"name": str})
+                                                         {"name": str,
+                                                          "base": str,
+                                                          "nonce": int,
+                                                          "url": str})
         table_comment_node_template: NodeTemplate = NodeTemplate(TableComment, (),
                                                                  {"language": str,
                                                                   "lines": list})
@@ -119,6 +122,59 @@ class BomManager:
         # Initialize *re_table*:
         bom_manager: BomManager = self
         bom_manager.re_table_initialize()
+        self.collection_table: Dict[Tuple[int, int], Collection] = dict()
+        self.collections_nodes: Nodes = Nodes(Collections)
+        self.collections_table: Dict[int, Collections] = dict()
+
+    # BomManager.collection_register():
+    def collection_register(self, collection: "Collection",
+                            collection_key: Tuple[int, int]) -> None:
+        """
+        Register a collection with a key.
+
+        *bom_manager* (i.e. *self*) maintains a table of *Collection*
+        objects.  Each one of these objects is given a unique
+        *collection_key*.  This routine causes there to be a binding
+        between *collection_key* and associated *collection* in
+        *bom_manager*.  The *BomManager.collection_lookup*() method
+        is used to retreive this *collection* object.
+
+        Args:
+            *collection* (*Collection*): The *Collection* object to
+                register.
+            *collection_key: (*Tuple*[*int*, *int*]): The key to
+                register *collection* with in *bom_manager*.
+
+        """
+        bom_manager: BomManager = self
+        collection_table: Dict[Tuple[int, int], Collection] = bom_manager.collection_table
+        assert collection_key not in collection_table
+        collection_table[collection_key] = collection
+
+    # BomManager.collections_insert():
+    def collections_insert(self, collections: "Collections") -> None:
+        """Insert a *Collections* object.
+
+        Insert *collections* into *bom_manager* (i.e. *self*.)
+
+        Args:
+            *collections* (*Collections*): The new *Collections*
+                object to insert into *bom_manager*.
+
+        """
+        # Grab some values from *bom_manager* (i.e. *self*):
+        bom_manager: BomManager = self
+        collections_nodes: Nodes = bom_manager.collections_nodes
+        collections_table: Dict[int, Collections] = bom_manager.collections_table
+
+        # Insert *collections* into *collections_node* and then set the *collections_nonce*:
+        collections_nodes.insert(collections)
+        collections_nonce: int = collections_nodes.nonce_get(collections)
+        collections.nonce_set(collections_nonce)
+
+        # Update the *collections_table* to contain *collections* keyed off of *collections_nonce*:
+        assert collections_nonce not in collections_table
+        collections_table[collections_nonce] = collections
 
     # BomManager.from_attribute():
     # @trace(1)
@@ -288,6 +344,24 @@ class BomManager:
         node_templates: Dict[Type, NodeTemplate] = bom_manager.node_templates
         assert node_type not in node_templates
         node_templates[node_type] = node_template
+
+    # BomManager.collections_nonce_get():
+    def nonce_get(self, collections: "Collections") -> int:
+        """Return the appropriate nonce.
+
+        Args:
+            *collections* (*Collections*): The *Collections* object
+            to fetch the nonce from.
+
+        Returns:
+            (*int*): The nonce associatied with *collections*:
+
+        """
+        # Search *collections_nodes* for the *nonce* associated with *collections*
+        bom_manager: BomManager = self
+        collections_nodes: Nodes = bom_manager.collections_nodes
+        nonce: int = collections_nodes.nonce_get(collections)
+        return nonce
 
     # BomManager.to_attribute():
     # @trace(1)
@@ -645,26 +719,6 @@ class Node:
         node: Node = self  # pragma: no cover
         assert False, f"Got a {node.__class__.__name__} instead of Directory"  # pragma: no cover
 
-    # Node.sub_nodes_get():
-    def sub_nodes_get(self, sub_node_type: Type) -> "List[Node]":
-        """Return the sub-nodes that match a given type.
-
-        Return a list of *Node*'s from *node* (i.e. *self*.)  Each of
-        the *Node*'s in the returned list will be of type
-        *sub_node_type*.
-
-        Args:
-            *sub_node_type* (Type): The type of *Node* to insert into
-            the returned list.
-
-        """
-        node: Node = self
-        nodes_table: Dict[Type, Nodes] = node.nodes_table
-        assert sub_node_type in nodes_table, f"Invliad type '{sub_node_type}'"
-        nodes: Nodes = nodes_table[sub_node_type]
-        sub_nodes_list: List[Node] = nodes.sub_nodes_get()
-        return sub_nodes_list
-
     # Node.node_insert():
     def node_insert(self, child_node: "Node") -> None:
         """Insert a child node.
@@ -688,13 +742,13 @@ class Node:
         nodes.insert(child_node)
 
     # Node.nodes_get():
-    # def nodes_get(self, sub_type: Type) -> "Nodes":
-    #     """Return the sub type Nodes object."""
-    #     node: Node = self
-    #     nodes_table: Dict[Type, Nodes] = node.nodes_table
-    #     assert sub_type in nodes_table
-    #     nodes: Nodes = nodes_table[sub_type]
-    #     return nodes
+    def nodes_get(self, sub_type: Type) -> "Nodes":
+        """Return the sub type Nodes object."""
+        node: Node = self
+        nodes_table: Dict[Type, Nodes] = node.nodes_table
+        assert sub_type in nodes_table
+        nodes: Nodes = nodes_table[sub_type]
+        return nodes
 
     # Node.parameter_cast():
     def parameter_cast(self) -> "Parameter":
@@ -786,6 +840,26 @@ class Node:
         node: Node = self  # pragma: no cover
         assert False, f"Got a {node.__class__.__name__} instead of Search"  # pragma: no cover
 
+    # Node.sub_nodes_get():
+    def sub_nodes_get(self, sub_node_type: Type) -> "List[Node]":
+        """Return the sub-nodes that match a given type.
+
+        Return a list of *Node*'s from *node* (i.e. *self*.)  Each of
+        the *Node*'s in the returned list will be of type
+        *sub_node_type*.
+
+        Args:
+            *sub_node_type* (Type): The type of *Node* to insert into
+            the returned list.
+
+        """
+        node: Node = self
+        nodes_table: Dict[Type, Nodes] = node.nodes_table
+        assert sub_node_type in nodes_table, f"Invliad type '{sub_node_type}'"
+        nodes: Nodes = nodes_table[sub_node_type]
+        sub_nodes_list: List[Node] = nodes.sub_nodes_get()
+        return sub_nodes_list
+
     # Node.table_cast():
     def table_cast(self) -> "Table":
         """Return the *Table* object.
@@ -876,19 +950,28 @@ class Collection(Node):
                  collection_root: Path, searches_root: Path) -> None:
         """Initialize the Collection.
 
+        Initialize the *collection* (i.e. *self*) to have *bom_manager*,
+        *name*, *collection_root*, and *searches_root*.  It is very
+        important to call *Collection.key_set*() after the *collection*
+        has been inserted into a *Collections* object.
+
         Args:
-            bom_manager (BomManager): The root of all the data
+            *bom_manager* (*BomManager*): The root of all the data
                 structures.
-            collection_root (Path): The root directory where the
+            *name* (*str*): The name of the collection.
+            *collection_root* (*Path*): The root directory where the
                 collection directories and tables reside.
-            searches_root (Path): The root directory of the
+            *searches_root* (*Path*): The root directory of the
                 mirror directory structure that contains the
                 search related information.
 
         """
+        # Initialize the *Node* super-class and stuff values into it.
+        # collection: Collection = self
         super().__init__(bom_manager)
-        self.name: str = name
         self.collection_root: Path = collection_root
+        self.collection_key: Tuple[int, int] = (-1, -1)  # Set using *Collection.key_set*().
+        self.name: str = name
         self.searches_root: Path = searches_root
 
     # Collection.__str__():
@@ -943,6 +1026,47 @@ class Collection(Node):
         """Insert a directory into the Collection."""
         collection: Collection = self
         collection.node_insert(sub_directory)
+
+    # Collection.key_set():
+    def key_set(self, collections: "Collections") -> Tuple[int, int]:
+        """Set the key for a collection."""
+        collection: Collection = self
+        collections_nonce: int = collections.nonce
+        collection_nonce: int = collections.collection_nonce_get(collection)
+        collection_key: Tuple[int, int] = (collections_nonce, collection_nonce)
+        collection.collection_key = collection_key
+        return collection_key
+
+    # Collection.nonce_set():
+    def nonce_set(self, collections: "Collections") -> Tuple[int, int]:
+        """Both set and return the collection nonce.
+
+        There is a unique integer (called a nonce) assigned to each
+        *Collection* in *collections*.  This nonce is obtained from
+        *collections* and both stored inside of *collection* and
+        returned.
+
+        Args:
+            *collections* (*Collections*): The parent *Collections*
+                object that contains *collection* (i.e. *self*.)
+
+        Returns:
+            Returns the nonce associated with *collection*
+                (i.e. *self*.)
+
+        """
+        # Grab the *collection_key* for *collection* via *collections*:
+        collection: Collection = self
+        collection_nodes: Nodes = collections.nodes_get(Collection)
+        collection_nonce: int = collection_nodes.nonce_get(collection)
+        collections_nonce: int = collections.nonce
+        assert collections_nonce >= 0
+        assert collection_nonce >= 0
+        collection_key: Tuple[int, int] = (collections_nonce, collection_nonce)
+
+        # Stuff *collection_nonce* into *collection* and return it:
+        collection.collection_key = collection_key
+        return collection_key
 
     # # Collection.partial_load():
     # @trace(1)
@@ -1032,16 +1156,20 @@ class Collection(Node):
 
     # Collection.xml_parse():
     @staticmethod
-    def xml_parse(collection_element: Element, bom_manager: BomManager) -> "Collection":
-        """Parse an XML Elment into a *Collection*.
+    def xml_parse(collection_element: Element, bom_manager: BomManager,
+                  collections: "Collections") -> "Collection":
+        """Parse an XML Element into a *Collection*.
 
-        Parse *collection_element* into new *Collection* object.
+        Parse *collection_element* into new *Collection* object and
+        stuff it into *collections*.
 
         Args:
             *collect_element* (*Element*): The XML element to
                 parse parse.
             *bom_manager* (*BomManager*): The root of all data
                 structures.
+            *collections* (*Collections*): The place to store the
+                new *Collection* object into.
 
         Returns:
             The created *Collection* object.
@@ -1057,13 +1185,14 @@ class Collection(Node):
         collection_root: Path = Path(attributes_table["collection_root"])
         searches_root: Path = Path(attributes_table["searches_root"])
         collection: Collection = Collection(bom_manager, name, collection_root, searches_root)
+        collection_key: Tuple[int, int] = collections.collection_insert(collection)
 
         # Visit each of the *collection* *sub_elements*:
         sub_elements: List[Element] = list(collection_element)
         sub_element: Element
         for sub_element in sub_elements:
             assert sub_element.tag == "Directory"
-            directory: Directory = Directory.xml_parse(sub_element, bom_manager)
+            directory: Directory = Directory.xml_parse(sub_element, bom_manager, collection_key)
             collection.directory_insert(directory)
         return collection
 
@@ -1076,12 +1205,21 @@ class Collections(Node):
     def __init__(self, bom_manager: BomManager) -> None:
         """Initialize a Collections object.
 
+        Initialize the *collections* object.  Also register the
+        the *collections* object with *bom_manager*:
+
         Args:
             bom_manager (BomManager): Contains all the root data
                 structures.
 
         """
+        # Initialize super-class of *collections* (i.e. *self*):
         super().__init__(bom_manager)
+
+        # Stuff *collections* into *bom_manager*:
+        collections: Collections = self
+        self.nonce: int = -1  # This value must be set by calling *Collections.nonce_set*().
+        bom_manager.collections_insert(collections)
 
     # Collections.__str__():
     def __str__(self) -> str:
@@ -1089,10 +1227,38 @@ class Collections(Node):
         return "Collections()"
 
     # Collections.collection_insert():
-    def collection_insert(self, collection: "Collection") -> None:
+    def collection_insert(self, collection: "Collection") -> Tuple[int, int]:
         """Insert a collection into a Collections object."""
+        # Insert *collection* into *collections* (i.e. *self*) and then extract the
+        # associated *collection_nonce*:
         collections: Collections = self
         collections.node_insert(collection)
+        collection_key: Tuple[int, int] = collection.key_set(collections)
+        bom_manager: BomManager = collections.bom_manager
+        bom_manager.collection_register(collection, collection_key)
+        return collection_key
+
+    # Collections.collection_nonce_get():
+    def collection_nonce_get(self, collection: "Collection") -> int:
+        """Return the nonce associated with *collection*.
+
+        *collections* (i.e. *self*) maintains a list of *Collection*
+        objects where each *Collection* object has an associated unique
+        identifier (call a nonce.)  Return the nonce associated with
+        *collection* from the list.
+
+        Args:
+            *collection* (*Collection*): The *Collection* object to
+            find the nonce of.
+
+        Returns:
+            (*int*): Returns then nonce associated with *collection*.
+
+        """
+        collections: Collections = self
+        collection_nodes: Nodes = collections.nodes_get(Collection)
+        collection_nonce: int = collection_nodes.nonce_get(collection)
+        return collection_nonce
 
     # Collections.collections_get():
     def collections_get(self, sort: bool) -> List[Collection]:
@@ -1121,6 +1287,12 @@ class Collections(Node):
         if sort:
             collections_list.sort(key=lambda collection: collection.name)
         return collections_list
+
+    # Collections.nonce_set():
+    def nonce_set(self, nonce: int):
+        """Set the nonce for a *Collections* object."""
+        collections: Collections = self
+        collections.nonce = nonce
 
     # Collections.show_lines_get():
     def show_lines_get(self) -> List[str]:
@@ -1233,8 +1405,9 @@ class Collections(Node):
         collection_elements: List[Element] = list(collections_element)
         collection_element: Element
         for collection_element in collection_elements:
-            collection: Collection = Collection.xml_parse(collection_element, bom_manager)
-            collections.collection_insert(collection)
+            # Note that *Collection.xml_parse* automatically inserts the parsed *Collection*
+            # into *collections*:
+            Collection.xml_parse(collection_element, bom_manager, collections)
         return collections
 
 
@@ -1704,7 +1877,8 @@ class Directory(Node):
 
     # Directory.xml_parse():
     @staticmethod
-    def xml_parse(directory_element: Element, bom_manager: BomManager) -> "Directory":
+    def xml_parse(directory_element: Element, bom_manager: BomManager,
+                  collection_key: Tuple[int, int]) -> "Directory":
         """Parse an XML Elment into a *Directory*.
 
         Parse *directory_element* (i.e. *self*) into new *Collection*
@@ -1714,6 +1888,9 @@ class Directory(Node):
             *directory_element* (*Element*): The XML element to parse.
             *bom_manager* (*BomManager*): The root of all data
                 structures.
+            *collection_key* (*Tuple*[*int*, *int*]): The key that can
+                be used  to get the parent *Collection* from the
+                the *BomManager* object.
 
         Returns:
             The created *Directory* object.
@@ -1730,10 +1907,11 @@ class Directory(Node):
         for sub_element in sub_elements:
             sub_element_tag: str = sub_element.tag
             if sub_element_tag == "Directory":
-                sub_directory: Directory = Directory.xml_parse(sub_element, bom_manager)
+                sub_directory: Directory = Directory.xml_parse(sub_element,
+                                                               bom_manager, collection_key)
                 directory.directory_insert(sub_directory)
             elif sub_element_tag == "Table":
-                table: Table = Table.xml_parse(sub_element, bom_manager)
+                table: Table = Table.xml_parse(sub_element, bom_manager, collection_key)
                 directory.table_insert(table)
             else:  # pragma: no cover
                 assert False, f"Unprocessed tag='{sub_element_tag}'"
@@ -2075,28 +2253,42 @@ class Table(Node):
     """Informatation about a parametric table of parts."""
 
     # Table.__init__():
-    def __init__(self, bom_manager: BomManager, name: str) -> None:
+    def __init__(self, bom_manager: BomManager, name: str, collection_key: Tuple[int, int],
+                 url: str = "", nonce: int = -1, base: str = "") -> None:
         """Initialize the Table.
 
-        Initialize the table with a *bom_manager*, *name*, and XML
-        *file_name* path.
+        Initialize the table with a *bom_manager*, *name*,
+        *collection_nonce*, etc.
 
         Args:
             *bom_manager* (BomManager): The top level data structure
                 that is root of all of the trees.
             *name* (str): The non-empty name of the table.  Can
                 contain *any* unicode characters.
-            *file_path* (Path): The path to the associated `.xml` file.
+            *collection_key* (*Tuple*[*int*, *int*]): The unique collection
+                identifier that can be used to retrieve the parent
+                *Collection* object.
+            *url* (*str*) (Optional): A URL for accessing the parts
+                associated with the table.
+            *nonce* (*int*) (Optional): An optional identifier that
+                that can be used for `.csv` file retrieval.
+            *base*: (*str*) (Optional): An optional base string that
+                can be sused for `.csv` file retreival.
 
         """
         # Initialize the *Node* super-class:
         super().__init__(bom_manager)
 
-        # Verify that *name* is non-empty and stuff everything into *table* (i.e. *self*.)
-        # table: Table = self
+        # Do some argument verification:
         assert name, "Empty name string!"
-        # assert file_path.exists(), f"xml file '{file_path}' does not exist"
+
+        # Stuff values into *table* (i.e. *self*):
+        # table: Table = self
+        self.base: str = base
+        self.collection_key: Tuple[int, int] = collection_key
         self.name: str = name
+        self.nonce: int = nonce
+        self.url: str = url
 
     # Table.__str__():
     def __str__(self) -> str:
@@ -2574,7 +2766,8 @@ class Table(Node):
 
     # Table.xml_parse():
     @staticmethod
-    def xml_parse(table_element: Element, bom_manager: BomManager) -> "Table":
+    def xml_parse(table_element: Element, bom_manager: BomManager,
+                  collection_key: Tuple[int, int]) -> "Table":
         """Parse an XML Elment into a *Table*.
 
         Parse *table_element* (i.e. *self*) into new *Table*
@@ -2584,17 +2777,25 @@ class Table(Node):
             *table_element* (*Element*): The XML element to parse.
             *bom_manager* (*BomManager*): The root of all data
                 structures.
+            *collection_key* (*Tuple*[*int*, *int*]): The key that
+                can be used to get the parent *Collection* from
+                *bom_manager*.
 
         Returns:
             The created *Table* object.
 
         """
+        # Make sure that *table_element* has the tag and appropriate attributes::
         assert table_element.tag == "Table"
         attributes_table: Dict[str, str] = table_element.attrib
         assert "name" in attributes_table
-        # assert "file_name" in attributes_table
+        base: str = attributes_table["base"] if "base" in attributes_table else ""
         name: str = attributes_table["name"]
-        table: Table = Table(bom_manager, name)
+        nonce: int = int(attributes_table["nonce"]) if "nonce" in attributes_table else -1
+        url: str = attributes_table["url"] if "url" in attributes_table else ""
+
+        # assert "file_name" in attributes_table
+        table: Table = Table(bom_manager, name, collection_key, url, nonce, base)
 
         sub_elements: List[Element] = list(table_element)
         sub_element: Element
@@ -2688,6 +2889,33 @@ class Nodes:
         sub_node: Node
         for sub_node in sub_nodes.values():
             sub_node.nodes_collect_recursively(node_type, nodes_list)
+
+    # Nodes.nonce_get():
+    def nonce_get(self, target_node: Node) -> int:
+        """Return the nonce for a sub-node.
+
+        Lookup the unique identifier (called a nonce) that was assigned
+        to *sub_node* in *nodes* (i.e. *self*) and return it.
+
+        Args:
+            *target_node* (*Node*): The *Node* in *nodes* (i.e. *self*)
+            to lookup the nonce for.
+
+        Returns:
+            Return the nonce asssigned to *sub_node* from *nodes*.
+
+        """
+        # Search the *sub_nodes* for *nodes* to find *
+        nodes: Nodes = self
+        sub_nodes: Dict[int, Node] = nodes.sub_nodes
+        nonce: int
+        sub_node: Node
+        for nonce, sub_node in sub_nodes.items():
+            if sub_node is target_node:
+                break
+        else:
+            assert False, "Node not found"
+        return nonce
 
     # Nodes.show_lines_append():
     # @trace(1)
