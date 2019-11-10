@@ -1138,6 +1138,42 @@ class Collection(Node):
     #     collection.directory_insert(directory)
     #     directory.partial_load(collection_path, searches_path)
 
+    # Collection.csvs_read_and_process():
+    # @trace(1)
+    def csvs_read_and_process(self, bind: bool) -> None:
+        """Recusively catagorize tables from example .csv files.
+
+        After all of the example `.csv` files have been recursively
+        loaded by the *Collection*.*csvs_download* method, this
+        method will recursively visit each of the example `.csv`
+        and attempt to determine the type of each column
+        (i.e. parameter.)
+
+        Args:
+            *bind* (*bool*): If *True*, the deduced types are actually
+                bound the the table parameters.
+
+        """
+        # Grab the *csvs_directory* from *digikey* (i.e. *self*):
+        collection: Collection = self
+        bom_manager: BomManager = collection.bom_manager
+        collection_root: Path = collection.collection_root
+
+        # Convert the *digikey_collection* name into a *digikey_collection_file_path*:
+        to_file_name: Callable[[str], str] = bom_manager.to_file_name
+        collection_name: str = collection.name
+        collection_file_name: str = to_file_name(collection_name)
+        collection_directory_path: Path = collection_root / collection_file_name
+
+        # Fetch example `.csv` files for each table in *digikey_collection*:
+        sub_directories: List[Directory] = collection.directories_get(True)
+        sub_directory: Directory
+        for sub_directory in sub_directories:
+            sub_directory_name: str = sub_directory.name
+            sub_directory_file_name = to_file_name(sub_directory_name)
+            sub_directory_path = collection_directory_path / sub_directory_file_name
+            sub_directory.csv_read_and_process(sub_directory_path, bind)
+
     # Collection.show_lines_append():
     def show_lines_append(self, show_lines: List[str], indent: str, text: str = "") -> None:
         """See node base class."""
@@ -1815,6 +1851,42 @@ class Directory(Node):
     #             # Now do a partial load of *table*:
     #             sub_searches_path = searches_path / table_stem_file_name
     #             table.partial_load(sub_searches_path)
+
+    # Directory.csv_read_and_process():
+    # @trace(1)
+    def csv_read_and_process(self, directory_path: Path, bind: bool) -> None:
+        """Recursively process .csv files for column types.
+
+        Recursiveily visit all of the tables and sub-directories of
+        *directory* (i.e. *self*) and heruistically determine the
+        column/parameter types.
+
+        Args:
+            *directory_path* (*Path*): The directory path for
+                *directory* (i.e. *self*)
+            *bind* (*bool*): If *True*, store the determined types
+                into the associated table parameters.
+
+        """
+        # Grab some values from *directory* (i.e. *self*):
+        directory: Directory = self
+        bom_manager: BomManager = directory.bom_manager
+
+        # Visit all of the *tables* in this *directory*:
+        to_file_name: Callable[[str], str] = bom_manager.to_file_name
+        sub_directories: List[Directory] = directory.sub_directories_get(True)
+        sub_directory: Directory
+        for sub_directory in sub_directories:
+            sub_directory_name: str = sub_directory.name
+            sub_directory_file_name: str = to_file_name(sub_directory_name)
+            sub_directory_path: Path = directory_path / sub_directory_file_name
+            sub_directory.csv_read_and_process(sub_directory_path, bind)
+
+        # Visit all of the *digikey_tables* in this *digikey_directory*:
+        tables: List[Table] = directory.tables_get(True)
+        table: Table
+        for table in tables:
+            table.csv_read_and_process(directory_path, bind)
 
     # Directory.show_lines_append():
     def show_lines_append(self, show_lines: List[str], indent: str, text: str = "") -> None:
@@ -2516,7 +2588,19 @@ class Table(Node):
     # Table.csv_read_and_process():
     # @trace(1)
     def csv_read_and_process(self, directory_path: Path, bind: bool) -> None:
-        """TODO."""
+        """Determine table column/parameter types.
+
+        Read in the associated example `.csv` file associated with
+        *table* (i.e. *self*) and heuristically attempt to determine
+        the type of each column (e.g. parameter).
+
+        Args:
+            *directory_path* (*Path*): The directory cont containing
+                the example `.csv` to be read in.
+            *bind* (*bool*): If *True*, the heuristically determined
+                types are stored back into the the *table* *Parameter*'s.
+
+        """
         # This delightful piece of code reads in a `.csv` file and attempts to catagorize
         # each column of the table with a "type".  The types are stored in *re_table*
         # (from *gui*) as dictionary of named pre compiled regualar expressions.
