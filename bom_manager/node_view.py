@@ -991,6 +991,39 @@ class Collection(Node):
         collection: Collection = self
         return collection
 
+    # Collection.csvs_download():
+    @trace(1)
+    def csvs_download(self, root_path: Path, csv_fetch: "Callable[[Table, Path, int], int]") -> int:
+        """TODO."""
+        # Grab some values from *collection* (i.e. *self*):
+        collection: Collection = self
+        bom_manager: BomManager = collection.bom_manager
+
+        # Create *collection_file_name*:
+        collection_name: str = collection.name
+        to_file_name: Callable[[str], str] = bom_manager.to_file_name
+        collection_file_name: str = to_file_name(collection_name)
+
+        # Create the *collection_root_path* which is an extra directory with
+        # the collection name.  This is consistent with the organization of the
+        # searches directories, where first directory specifies the collection name:
+        collection_root_path: Path = root_path / collection_file_name
+
+        # Recursively fetch `.csv` files for each table in *collection*:
+        downloads_count: int = 0
+        directories: List[Directory] = collection.directories_get(True)
+        directory: Directory
+        for directory in directories:
+            # Create the *from_root_path* to the corresponding *directory* location
+            # in the file system:
+            directory_name: str = directory.name
+            directory_file_name: str = to_file_name(directory_name)
+            directory_path: Path = collection_root_path / directory_file_name
+
+            # Now recursively visit each of the *directory* and fetch any appropiate `.csv` files:
+            downloads_count += directory.csvs_download(directory_path, csv_fetch, downloads_count)
+        return downloads_count
+
     # Collection.directories_get():
     def directories_get(self, sort: bool) -> "List[Directory]":
         """Return immediate sub directories.
@@ -1691,6 +1724,36 @@ class Directory(Node):
             name = directory.name
         return f"Directory('{name}')"
 
+    # Directory.csvs_download():
+    @trace(1)
+    def csvs_download(self, directory_path: Path,
+                      csv_fetch: "Callable[[Table, Path, int], int]", downloads_count: int) -> int:
+        """TODO."""
+        # Grab some values from *digikey_directory* (i.e. *self*):
+        directory: Directory = self
+        bom_manager: BomManager = directory.bom_manager
+        to_file_name: Callable[[str], str] = bom_manager.to_file_name
+        tracing: str = tracing_get()
+
+        # First, visit all of the *sub_directories* from *directory*:
+        sub_directories: List[Directory] = directory.sub_directories_get(True)
+        sub_directory: Directory
+        for sub_directory in sub_directories:
+            sub_directory_name: str = sub_directory.name
+            sub_directory_file_name: str = to_file_name(sub_directory_name)
+            sub_directory_path: Path = directory_path / sub_directory_file_name
+            if tracing:
+                print(f"{tracing}sub_directory_path='{sub_directory_path}")
+            downloads_count += sub_directory.csvs_download(sub_directory_path,
+                                                           csv_fetch, downloads_count)
+
+        # Second, visit all of the *tables* of *directory*:
+        tables: List[Table] = directory.tables_get(True)
+        table: Table
+        for table in tables:
+            downloads_count += table.csv_download(directory_path, csv_fetch, downloads_count)
+        return downloads_count
+
     # Directory.directory_cast():
     def directory_cast(self) -> "Directory":
         """Convert a *Node* into a *Directory*."""
@@ -2314,7 +2377,7 @@ class Table(Node):
         # Figure out how many *columns* there are for each row.  Each row is assumed
         # to have the same number of *columns*:
         table: Table = self
-        assert rows, "No data to extract"
+        assert rows, f"No data to extract for table '{table.name}'"
         row0: List[str] = rows[0]
         columns: int = len(row0)
 
@@ -2384,6 +2447,40 @@ class Table(Node):
         if sort:
             table_comments.sort(key=Comment.key)
         return table_comments
+
+    # Table.csv_download():
+    @trace(1)
+    def csv_download(self, directory_path: Path,
+                     csv_fetch: "Callable[[Table, Path, int], int]", downloads_count: int) -> int:
+        """TODO."""
+        # Grab some values from *table* (i.e. *self*):
+        table: Table = self
+        bom_manager: BomManager = table.bom_manager
+        name: str = table.name
+
+        # Construct the two likely file name locations:
+        to_file_name: Callable[[str], str] = bom_manager.to_file_name
+        name_csv_file_name: str = to_file_name(name) + ".csv"
+        name_csv_file_path: Path = directory_path / name_csv_file_name
+
+        # Perform any requested *tracing*:
+        tracing: str = tracing_get()
+        if tracing:
+            print(f"{tracing}directory_path='{directory_path}'")
+            print(f"{tracing}name_csv_file_path='{name_csv_file_path}'")
+
+        # See whether we already have the *name_csv_file_path*.
+        if name_csv_file_path.is_file():
+            # The *name_csv_file_path* file already exists and there nothing more to do:
+            if tracing:
+                print(f"{tracing}File '{name_csv_file_path}' already exists.  Nothing to do.")
+        else:
+            # The *name_csv_file_path* does not exist and needs to be downloaded:
+            if tracing:
+                print(f"{tracing}Download '{name_csv_file_path}'")
+            downloads_count = csv_fetch(table, name_csv_file_path, downloads_count)
+
+        return downloads_count
 
     # Table.csv_file_read():
     # @trace(1)
