@@ -131,7 +131,7 @@ def main() -> int:
     collection_directories, searches_root, order = command_line_arguments_process()
 
     bom_manager: BomManager = BomManager()
-    collections: Collections = Collections(bom_manager)
+    collections: Collections = Collections(bom_manager, "Root")
     gui: Gui = Gui()
 
     # Construct the collections list:

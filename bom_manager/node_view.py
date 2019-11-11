@@ -61,6 +61,7 @@ from typing import Any as PreCompiled
 # Element = ETree._element
 
 
+# BomManger:
 class BomManager:
     """Contains top-level data structurs needed for the BOM Manager."""
 
@@ -122,59 +123,57 @@ class BomManager:
         # Initialize *re_table*:
         bom_manager: BomManager = self
         bom_manager.re_table_initialize()
-        self.collection_table: Dict[Tuple[int, int], Collection] = dict()
-        self.collections_nodes: Nodes = Nodes(Collections)
-        self.collections_table: Dict[int, Collections] = dict()
+        self.collection_table: Dict[int, Collection] = dict()
+        self.collection_table_nonce: int = 0
+
+    # BomManager.collection_lookup():
+    def collection_lookup(self, collection_key: int) -> "Collection":
+        """Retreive a Collection using a key."""
+        bom_manager: BomManager = self
+        collection_table: Dict[int, Collection] = bom_manager.collection_table
+        assert collection_key in collection_table, f"collection_key={collection_key} not present"
+        collection: Collection = collection_table[collection_key]
+        return collection
 
     # BomManager.collection_register():
-    def collection_register(self, collection: "Collection",
-                            collection_key: Tuple[int, int]) -> None:
-        """
-        Register a collection with a key.
+    def collection_register(self, collection: "Collection") -> int:
+        """Register a *Collection* and return its key.
 
         *bom_manager* (i.e. *self*) maintains a table of *Collection*
         objects.  Each one of these objects is given a unique
-        *collection_key*.  This routine causes there to be a binding
-        between *collection_key* and associated *collection* in
+        integer *collection_key*.  This routine causes there to be a
+        binding between *collection_key* and associated *collection* in
         *bom_manager*.  The *BomManager.collection_lookup*() method
-        is used to retreive this *collection* object.
+        is used to retrieve this *collection* object.
 
         Args:
-            *collection* (*Collection*): The *Collection* object to
-                register.
-            *collection_key: (*Tuple*[*int*, *int*]): The key to
-                register *collection* with in *bom_manager*.
+            *collection* (*Collecton*): The *collection* to register
+                with *bom_manager*.
 
-        """
-        bom_manager: BomManager = self
-        collection_table: Dict[Tuple[int, int], Collection] = bom_manager.collection_table
-        assert collection_key not in collection_table
-        collection_table[collection_key] = collection
-
-    # BomManager.collections_insert():
-    def collections_insert(self, collections: "Collections") -> None:
-        """Insert a *Collections* object.
-
-        Insert *collections* into *bom_manager* (i.e. *self*.)
-
-        Args:
-            *collections* (*Collections*): The new *Collections*
-                object to insert into *bom_manager*.
+        Returns:
+            (*int*) Returns the collection key.
 
         """
         # Grab some values from *bom_manager* (i.e. *self*):
         bom_manager: BomManager = self
-        collections_nodes: Nodes = bom_manager.collections_nodes
-        collections_table: Dict[int, Collections] = bom_manager.collections_table
+        collection_table: Dict[int, Collection] = bom_manager.collection_table
+        collection_key: int = bom_manager.collection_table_nonce
+        collection_table[collection_key] = collection
+        bom_manager.collection_table_nonce = collection_key + 1
+        return collection_key
 
-        # Insert *collections* into *collections_node* and then set the *collections_nonce*:
-        collections_nodes.insert(collections)
-        collections_nonce: int = collections_nodes.nonce_get(collections)
-        collections.nonce_set(collections_nonce)
-
-        # Update the *collections_table* to contain *collections* keyed off of *collections_nonce*:
-        assert collections_nonce not in collections_table
-        collections_table[collections_nonce] = collections
+    # BomManager.collection_unregister()
+    # def collection_unregister(self, collection_key: int):
+    #     """Unregister a *Collection* using a key.
+    #
+    #     Args:
+    #         *collection_key* (*int*): The key of the *Collection*
+    #         to unregister.
+    #
+    #     """
+    #     bom_manager: BomManager = self
+    #     collection_table: Dict[int, Collection] = bom_manager.collection_table
+    #     del collection_table[collection_key]
 
     # BomManager.from_attribute():
     # @trace(1)
@@ -337,31 +336,13 @@ class BomManager:
         return name
 
     # BomManager.node_template_add():
-    def node_template_add(self, node_template: "NodeTemplate") -> None:
-        """TODO."""
-        bom_manager: BomManager = self
-        node_type: Type = node_template.node_type
-        node_templates: Dict[Type, NodeTemplate] = bom_manager.node_templates
-        assert node_type not in node_templates
-        node_templates[node_type] = node_template
-
-    # BomManager.collections_nonce_get():
-    def nonce_get(self, collections: "Collections") -> int:
-        """Return the appropriate nonce.
-
-        Args:
-            *collections* (*Collections*): The *Collections* object
-            to fetch the nonce from.
-
-        Returns:
-            (*int*): The nonce associatied with *collections*:
-
-        """
-        # Search *collections_nodes* for the *nonce* associated with *collections*
-        bom_manager: BomManager = self
-        collections_nodes: Nodes = bom_manager.collections_nodes
-        nonce: int = collections_nodes.nonce_get(collections)
-        return nonce
+    # def node_template_add(self, node_template: "NodeTemplate") -> None:
+    #     """TODO."""
+    #     bom_manager: BomManager = self
+    #     node_type: Type = node_template.node_type
+    #     node_templates: Dict[Type, NodeTemplate] = bom_manager.node_templates
+    #     assert node_type not in node_templates
+    #     node_templates[node_type] = node_template
 
     # BomManager.to_attribute():
     # @trace(1)
@@ -719,6 +700,24 @@ class Node:
         node: Node = self  # pragma: no cover
         assert False, f"Got a {node.__class__.__name__} instead of Directory"  # pragma: no cover
 
+    # Node.has_nodes():
+    def has_nodes(self, nodes_type: Type) -> bool:
+        """Verify that a node as specified sub-nodes.
+
+        Args:
+            *nodes_type* (*Type*): The type of nodes to verify
+            the existance of.
+
+        Returns:
+            (*bool*) Returns *True* if the *nodes_type* is present and
+                *False* otherwise.
+
+        """
+        node: Node = self
+        nodes_table: Dict[Type, Nodes] = node.nodes_table
+        match: bool = nodes_type in nodes_table
+        return match
+
     # Node.node_insert():
     def node_insert(self, child_node: "Node") -> None:
         """Insert a child node.
@@ -733,22 +732,13 @@ class Node:
         # Verify that *child_node* is allowed to be inserted into *node* (i.e. *self*):
         node: Node = self
         nodes_table: Dict[Type, Nodes] = node.nodes_table
-        child_node_type: Type = type(child_node)
+        child_node_type: Type = child_node.__class__
         assert child_node_type in nodes_table, (f"node_type={child_node_type}, "
                                                 f"nodes_table={nodes_table}")
 
         # Lookup the appropriate *nodes* object and stuff *child_node* into it:
         nodes: Nodes = nodes_table[child_node_type]
         nodes.insert(child_node)
-
-    # Node.nodes_get():
-    def nodes_get(self, sub_type: Type) -> "Nodes":
-        """Return the sub type Nodes object."""
-        node: Node = self
-        nodes_table: Dict[Type, Nodes] = node.nodes_table
-        assert sub_type in nodes_table
-        nodes: Nodes = nodes_table[sub_type]
-        return nodes
 
     # Node.parameter_cast():
     def parameter_cast(self) -> "Parameter":
@@ -777,6 +767,7 @@ class Node:
                        "instead of ParameterComment")  # pragma: no cover
 
     # Node.remove():
+    @trace(1)
     def remove(self, sub_node: "Node") -> None:
         """Remove a sub-node from a Node.
 
@@ -786,8 +777,8 @@ class Node:
         """
         node: Node = self
         nodes_table: Dict[Type, Nodes] = node.nodes_table
-        sub_node_type: Type = type(sub_node)
-        assert sub_node_type in nodes_table
+        sub_node_type: Type = sub_node.__class__
+        assert sub_node_type in nodes_table, f"nodes_table={nodes_table}"
         nodes: Nodes = nodes_table[sub_node_type]
         nodes.remove(sub_node)
 
@@ -967,10 +958,15 @@ class Collection(Node):
 
         """
         # Initialize the *Node* super-class and stuff values into it.
-        # collection: Collection = self
         super().__init__(bom_manager)
+
+        # Register *collection* (i.e. *self*) with *bom_manager*:
+        collection: Collection = self
+        collection_key: int = bom_manager.collection_register(collection)
+
+        # Load up *collection* (i.e. *self*):
+        self.collection_key: int = collection_key
         self.collection_root: Path = collection_root
-        self.collection_key: Tuple[int, int] = (-1, -1)  # Set using *Collection.key_set*().
         self.name: str = name
         self.searches_root: Path = searches_root
 
@@ -994,7 +990,23 @@ class Collection(Node):
     # Collection.csvs_download():
     @trace(1)
     def csvs_download(self, root_path: Path, csv_fetch: "Callable[[Table, Path, int], int]") -> int:
-        """TODO."""
+        """Recursively download example .csv files for a collection.
+
+        Recursively visit all of the *Tables* in *collection*
+        (i.e. *self*) and ensure that example .csv files have been
+        downloads and stored in the directory tree structure rooted
+        at *root_path*.  *csv_fetch* is a function used to fetch the
+        `.csv` file from a remote web server.
+
+        Args:
+            *root_path* (*Path*): Root of collection directory tree.
+            *cvs_fetch* (*Callable*[[*Table*, *Path*, *int*], *int*]:
+                A function used to fetch the `.csv` file for a given
+                *table* from a provided *path*.  The third argument
+                is a downloads count that is incremented and returned
+                upon a successful load.
+
+        """
         # Grab some values from *collection* (i.e. *self*):
         collection: Collection = self
         bom_manager: BomManager = collection.bom_manager
@@ -1059,47 +1071,6 @@ class Collection(Node):
         """Insert a directory into the Collection."""
         collection: Collection = self
         collection.node_insert(sub_directory)
-
-    # Collection.key_set():
-    def key_set(self, collections: "Collections") -> Tuple[int, int]:
-        """Set the key for a collection."""
-        collection: Collection = self
-        collections_nonce: int = collections.nonce
-        collection_nonce: int = collections.collection_nonce_get(collection)
-        collection_key: Tuple[int, int] = (collections_nonce, collection_nonce)
-        collection.collection_key = collection_key
-        return collection_key
-
-    # Collection.nonce_set():
-    def nonce_set(self, collections: "Collections") -> Tuple[int, int]:
-        """Both set and return the collection nonce.
-
-        There is a unique integer (called a nonce) assigned to each
-        *Collection* in *collections*.  This nonce is obtained from
-        *collections* and both stored inside of *collection* and
-        returned.
-
-        Args:
-            *collections* (*Collections*): The parent *Collections*
-                object that contains *collection* (i.e. *self*.)
-
-        Returns:
-            Returns the nonce associated with *collection*
-                (i.e. *self*.)
-
-        """
-        # Grab the *collection_key* for *collection* via *collections*:
-        collection: Collection = self
-        collection_nodes: Nodes = collections.nodes_get(Collection)
-        collection_nonce: int = collection_nodes.nonce_get(collection)
-        collections_nonce: int = collections.nonce
-        assert collections_nonce >= 0
-        assert collection_nonce >= 0
-        collection_key: Tuple[int, int] = (collections_nonce, collection_nonce)
-
-        # Stuff *collection_nonce* into *collection* and return it:
-        collection.collection_key = collection_key
-        return collection_key
 
     # # Collection.partial_load():
     # @trace(1)
@@ -1182,7 +1153,7 @@ class Collection(Node):
         super().show_lines_append(show_lines, indent, text=text)
 
     # Collection.xml_lines_append():
-    def xml_lines_append(self, xml_lines: List[str], indent: str, extra_attributes: str) -> None:
+    def xml_lines_append(self, xml_lines: List[str], indent: str) -> None:
         """Append XML for *Collection* to a list.
 
         Append the XML description of *collection* (i.e. *self*) to the *xml_lines* list.
@@ -1210,8 +1181,7 @@ class Collection(Node):
         xml_lines.append(f'{indent}<{collection_type_name} '
                          f'name="{to_attribute(name)}" '
                          f'collection_root="{to_attribute(collection_root)}" '
-                         f'searches_root="{to_attribute(searches_root)}"'
-                         f'{extra_attributes}>')
+                         f'searches_root="{to_attribute(searches_root)}">')
 
         # Now output the sorted *directories*:
         next_indent: str = indent + "  "
@@ -1225,8 +1195,7 @@ class Collection(Node):
 
     # Collection.xml_parse():
     @staticmethod
-    def xml_parse(collection_element: Element, bom_manager: BomManager,
-                  collections: "Collections") -> "Collection":
+    def xml_parse(collection_element: Element, bom_manager: BomManager) -> "Collection":
         """Parse an XML Element into a *Collection*.
 
         Parse *collection_element* into new *Collection* object and
@@ -1237,14 +1206,12 @@ class Collection(Node):
                 parse parse.
             *bom_manager* (*BomManager*): The root of all data
                 structures.
-            *collections* (*Collections*): The place to store the
-                new *Collection* object into.
 
         Returns:
             The created *Collection* object.
 
         """
-        # Create the *collection* from with *collection_element*:
+        # Grab the attribute values from *collection_element*:
         assert collection_element.tag == "Collection"
         attributes_table: Dict[str, str] = collection_element.attrib
         assert "name" in attributes_table
@@ -1253,8 +1220,10 @@ class Collection(Node):
         name: str = attributes_table["name"]
         collection_root: Path = Path(attributes_table["collection_root"])
         searches_root: Path = Path(attributes_table["searches_root"])
+
+        # Create the *collection*:
         collection: Collection = Collection(bom_manager, name, collection_root, searches_root)
-        collection_key: Tuple[int, int] = collections.collection_insert(collection)
+        collection_key: int = collection.collection_key
 
         # Visit each of the *collection* *sub_elements*:
         sub_elements: List[Element] = list(collection_element)
@@ -1271,63 +1240,53 @@ class Collections(Node):
     """Represents a set of Collection objects."""
 
     # Collections.__init__():
-    def __init__(self, bom_manager: BomManager) -> None:
+    def __init__(self, bom_manager: BomManager, name: str) -> None:
         """Initialize a Collections object.
 
         Initialize the *collections* object.  Also register the
         the *collections* object with *bom_manager*:
 
         Args:
-            bom_manager (BomManager): Contains all the root data
+            *name* (*str*): Name of the collections object.
+            *bom_manager* (*BomManager*): Contains all the root data
                 structures.
 
         """
         # Initialize super-class of *collections* (i.e. *self*):
+        collections: Collections = self
         super().__init__(bom_manager)
 
-        # Stuff *collections* into *bom_manager*:
-        collections: Collections = self
-        self.nonce: int = -1  # This value must be set by calling *Collections.nonce_set*().
-        bom_manager.collections_insert(collections)
+        # Verify that *collections* (i.e. *self*) has a *Nodes* object for containing
+        # *Collections*'s:
+        assert collections.has_nodes(Collection)
+
+        # Stuff values into *collections* (i.e. *self*):
+        self.name: str = name
 
     # Collections.__str__():
     def __str__(self) -> str:
         """Return a string represention of a Collections object."""
-        return "Collections()"
+        # In order to support the *trace* decorator for the *__init__*() method, we can not
+        # assume that the *name* attribute exists:
+        collections: Collections = self
+        name: str = "??"
+        if hasattr(collections, "name"):
+            name = collections.name
+        return f"Collections('{name}')"
 
     # Collections.collection_insert():
-    def collection_insert(self, collection: "Collection") -> Tuple[int, int]:
-        """Insert a collection into a Collections object."""
-        # Insert *collection* into *collections* (i.e. *self*) and then extract the
-        # associated *collection_nonce*:
-        collections: Collections = self
-        collections.node_insert(collection)
-        collection_key: Tuple[int, int] = collection.key_set(collections)
-        bom_manager: BomManager = collections.bom_manager
-        bom_manager.collection_register(collection, collection_key)
-        return collection_key
+    def collection_insert(self, collection: "Collection") -> None:
+        """Insert a collection into a *Collections* object.
 
-    # Collections.collection_nonce_get():
-    def collection_nonce_get(self, collection: "Collection") -> int:
-        """Return the nonce associated with *collection*.
-
-        *collections* (i.e. *self*) maintains a list of *Collection*
-        objects where each *Collection* object has an associated unique
-        identifier (call a nonce.)  Return the nonce associated with
-        *collection* from the list.
+        Insert *collection* into *collections* (i.e. *self*.)
 
         Args:
-            *collection* (*Collection*): The *Collection* object to
-            find the nonce of.
-
-        Returns:
-            (*int*): Returns then nonce associated with *collection*.
+            *collection* (*Collection*): The collection to insert.
 
         """
+        # Grab some values from *collections* (i.e. *self*):
         collections: Collections = self
-        collection_nodes: Nodes = collections.nodes_get(Collection)
-        collection_nonce: int = collection_nodes.nonce_get(collection)
-        return collection_nonce
+        collections.node_insert(collection)
 
     # Collections.collections_get():
     def collections_get(self, sort: bool) -> List[Collection]:
@@ -1357,11 +1316,12 @@ class Collections(Node):
             collections_list.sort(key=lambda collection: collection.name)
         return collections_list
 
-    # Collections.nonce_set():
-    def nonce_set(self, nonce: int):
-        """Set the nonce for a *Collections* object."""
+    # Collections.show_lines_append():
+    def show_lines_append(self, show_lines: List[str], indent: str, text: str = "") -> None:
+        """See node base class."""
         collections: Collections = self
-        collections.nonce = nonce
+        text = f"'{collections.name}'"
+        super().show_lines_append(show_lines, indent, text=text)
 
     # Collections.show_lines_get():
     def show_lines_get(self) -> List[str]:
@@ -1434,18 +1394,23 @@ class Collections(Node):
             *indent* (*str*): A prefix prepended to each line.
 
         """
-        # Output the initial element:
+        # Grab some values form *collections* (i.e. *self*):
         collections: Collections = self
-        xml_lines.append(f"{indent}<Collections>")
+        bom_manager: BomManager = collections.bom_manager
 
-        # Now output the sorted *collections*:
+        # Append the initial element:
+        to_attribute: Callable[[str], str] = bom_manager.to_attribute
+        name: str = collections.name
+        xml_lines.append(f'{indent}<Collections name="{to_attribute(name)}">')
+
+        # Now Append the sorted *collection*'s:
         next_indent: str = indent + "  "
         collections_list: List[Collection] = collections.collections_get(True)
         collection: Collection
         for collection in collections_list:
-            collection.xml_lines_append(xml_lines, next_indent, "")
+            collection.xml_lines_append(xml_lines, next_indent)
 
-        # Output the closing element:
+        # Append the closing element:
         xml_lines.append(f"{indent}</Collections>")
 
     # Collections.xml_parse():
@@ -1468,15 +1433,17 @@ class Collections(Node):
         """
         # Create *collectons*:
         assert collections_element.tag == "Collections", f"tag='{collections_element.tag}'"
-        collections: Collections = Collections(bom_manager)
+        attributes_table: Dict[str, str] = collections_element.attrib
+        assert "name" in attributes_table
+        name: str = attributes_table["name"]
+        collections: Collections = Collections(bom_manager, name)
 
         # Parse each sub-*collection* and it into *collections*:
         collection_elements: List[Element] = list(collections_element)
         collection_element: Element
         for collection_element in collection_elements:
-            # Note that *Collection.xml_parse* automatically inserts the parsed *Collection*
-            # into *collections*:
-            Collection.xml_parse(collection_element, bom_manager, collections)
+            collection: Collection = Collection.xml_parse(collection_element, bom_manager)
+            collections.collection_insert(collection)
         return collections
 
 
@@ -1736,7 +1703,8 @@ class Directory(Node):
 
     # Directory.__init__():
     @trace(1)
-    def __init__(self, bom_manager: BomManager, name: str, url: str = "", nonce: int = -1) -> None:
+    def __init__(self, bom_manager: BomManager, name: str, collection_key: int,
+                 url: str = "", nonce: int = -1) -> None:
         """Initialize a directory.
 
         Args:
@@ -1744,7 +1712,12 @@ class Directory(Node):
             name (str): A non-empty unicode string name.
 
         """
+        # Initialize the super class and then stuff values into *directory* (i.e. *self*):
+        # directory: Directory = self
+        assert isinstance(name, str)
+        assert isinstance(collection_key, int)
         super().__init__(bom_manager)
+        self.collection_key: int = collection_key
         self.name: str = name
         self.nonce: int = nonce
         self.url: str = url
@@ -1760,10 +1733,20 @@ class Directory(Node):
             name = directory.name
         return f"Directory('{name}')"
 
+    # Directory.collection_get():
+    def collection_get(self) -> "Collection":
+        """Return the parent *Collection."""
+        directory: Directory = self
+        bom_manager: BomManager = directory.bom_manager
+        collection_key: int = directory.collection_key
+        assert isinstance(collection_key, int)
+        collection: Collection = bom_manager.collection_lookup(collection_key)
+        return collection
+
     # Directory.csvs_download():
     @trace(1)
     def csvs_download(self, directory_path: Path,
-                      csv_fetch: "Callable[[Table, Path, int], int]", downloads_count: int) -> int:
+                      csv_fetch: "Callable[[Table], str]", downloads_count: int) -> int:
         """TODO."""
         # Grab some values from *digikey_directory* (i.e. *self*):
         directory: Directory = self
@@ -1778,7 +1761,7 @@ class Directory(Node):
             sub_directory_name: str = sub_directory.name
             sub_directory_file_name: str = to_file_name(sub_directory_name)
             sub_directory_path: Path = directory_path / sub_directory_file_name
-            if tracing:
+            if tracing:  # pragma: no cover
                 print(f"{tracing}sub_directory_path='{sub_directory_path}")
             downloads_count += sub_directory.csvs_download(sub_directory_path,
                                                            csv_fetch, downloads_count)
@@ -1787,7 +1770,7 @@ class Directory(Node):
         tables: List[Table] = directory.tables_get(True)
         table: Table
         for table in tables:
-            downloads_count += table.csv_download(directory_path, csv_fetch, downloads_count)
+            downloads_count += table.csv_download(directory_path, csv_fetch)
         return downloads_count
 
     # Directory.directory_cast():
@@ -2015,7 +1998,7 @@ class Directory(Node):
     # Directory.xml_parse():
     @staticmethod
     def xml_parse(directory_element: Element, bom_manager: BomManager,
-                  collection_key: Tuple[int, int]) -> "Directory":
+                  collection_key: int) -> "Directory":
         """Parse an XML Elment into a *Directory*.
 
         Parse *directory_element* (i.e. *self*) into new *Collection*
@@ -2025,9 +2008,8 @@ class Directory(Node):
             *directory_element* (*Element*): The XML element to parse.
             *bom_manager* (*BomManager*): The root of all data
                 structures.
-            *collection_key* (*Tuple*[*int*, *int*]): The key that can
-                be used  to get the parent *Collection* from the
-                the *BomManager* object.
+            *collection_key* (*int*): The key that can be used  to get
+                the parent *Collection* object.
 
         Returns:
             The created *Directory* object.
@@ -2037,7 +2019,7 @@ class Directory(Node):
         attributes_table: Dict[str, str] = directory_element.attrib
         assert "name" in attributes_table
         name: str = attributes_table["name"]
-        directory: Directory = Directory(bom_manager, name)
+        directory: Directory = Directory(bom_manager, name, collection_key)
 
         sub_elements: List[Element] = list(directory_element)
         sub_element: Element
@@ -2295,13 +2277,17 @@ class Search(Node):
     """Information about a parametric search."""
 
     # Search.__init__():
-    def __init__(self, bom_manager: BomManager, name: str, file_path: Path) -> None:
+    def __init__(self, bom_manager: BomManager, name: str,
+                 file_path: Path, collection_key: int) -> None:
         """Initailize a search object.
 
         Args:
-            bom_manager (BomManager): The root of all of the data structures.
-            name (str): A non-empty unicode string.
-            file_name (Path): A path to a search `.xml` file.
+            *bom_manager* (*BomManager*): The root of all of the data
+                structures.
+            *name* (*str*): The name of the search.
+            *file_name* (*Path*): A path to a search `.xml` file.
+            *collection_key* (*int*): The collection key for the
+                *Collection* that contains this *search*.
 
         """
         # Intialize the super class:
@@ -2311,6 +2297,7 @@ class Search(Node):
         assert name, "Empty name!"
         assert file_path.suffix == ".xml", "No .xml suffix"
         # search: Search = self
+        self.collection_key: int = collection_key
         self.file_name: str = str(file_path)
         self.name: str = name
         self.parent_name: str = ""
@@ -2325,6 +2312,15 @@ class Search(Node):
         if hasattr(search, "name"):
             name = search.name
         return f"Search('{name}')"
+
+    # Search.collection_get():
+    def collection_get(self) -> "Collection":
+        """Return the parent collection."""
+        search: Search = self
+        bom_manager: BomManager = search.bom_manager
+        collection_key: int = search.collection_key
+        collection: Collection = bom_manager.collection_lookup(collection_key)
+        return collection
 
     # Search.show_lines_append():
     def show_lines_append(self, show_lines: List[str], indent: str, text: str = "") -> None:
@@ -2374,14 +2370,15 @@ class Search(Node):
 
     # Search.xml_parse():
     @staticmethod
-    def xml_parse(search_element: Element, bom_manager: BomManager) -> "Search":
+    def xml_parse(search_element: Element, bom_manager: BomManager,
+                  collection_key: int) -> "Search":
         """TODO."""
         assert search_element.tag == "Search"
         attributes_table: Dict[str, str] = search_element.attrib
         assert "name" in attributes_table
         name: str = attributes_table["name"]
         file_path: Path = Path("foo.xml")
-        search: Search = Search(bom_manager, name, file_path)
+        search: Search = Search(bom_manager, name, file_path, collection_key)
         return search
 
 
@@ -2390,7 +2387,7 @@ class Table(Node):
     """Informatation about a parametric table of parts."""
 
     # Table.__init__():
-    def __init__(self, bom_manager: BomManager, name: str, collection_key: Tuple[int, int],
+    def __init__(self, bom_manager: BomManager, name: str, collection_key: int,
                  url: str = "", nonce: int = -1, base: str = "") -> None:
         """Initialize the Table.
 
@@ -2422,7 +2419,7 @@ class Table(Node):
         # Stuff values into *table* (i.e. *self*):
         # table: Table = self
         self.base: str = base
-        self.collection_key: Tuple[int, int] = collection_key
+        self.collection_key: int = collection_key
         self.name: str = name
         self.nonce: int = nonce
         self.url: str = url
@@ -2437,6 +2434,15 @@ class Table(Node):
         if hasattr(table, "name"):
             name = table.name
         return f"Table('{name}')"
+
+    # Table.collection_get():
+    def collection_get(self) -> "Collection":
+        """Return the parent *Collection*."""
+        table: Table = self
+        bom_manager: BomManager = table.bom_manager
+        collection_key: int = table.collection_key
+        collection: Collection = bom_manager.collection_lookup(collection_key)
+        return collection
 
     # Table.column_tables_extract():
     # @trace(1)
@@ -2523,7 +2529,7 @@ class Table(Node):
     # Table.csv_download():
     @trace(1)
     def csv_download(self, directory_path: Path,
-                     csv_fetch: "Callable[[Table, Path, int], int]", downloads_count: int) -> int:
+                     table_csv_fetch: "Callable[[Table], str]") -> int:
         """TODO."""
         # Grab some values from *table* (i.e. *self*):
         table: Table = self
@@ -2537,21 +2543,27 @@ class Table(Node):
 
         # Perform any requested *tracing*:
         tracing: str = tracing_get()
-        if tracing:
+        if tracing:  # pragma: no cover
             print(f"{tracing}directory_path='{directory_path}'")
             print(f"{tracing}name_csv_file_path='{name_csv_file_path}'")
 
         # See whether we already have the *name_csv_file_path*.
+        downloads_count: int = 0
         if name_csv_file_path.is_file():
             # The *name_csv_file_path* file already exists and there nothing more to do:
-            if tracing:
+            if tracing:  # pragma: no cover
                 print(f"{tracing}File '{name_csv_file_path}' already exists.  Nothing to do.")
         else:
             # The *name_csv_file_path* does not exist and needs to be downloaded:
-            if tracing:
+            if tracing:  # pragma: no cover
                 print(f"{tracing}Download '{name_csv_file_path}'")
-            downloads_count = csv_fetch(table, name_csv_file_path, downloads_count)
-
+            csv_content: str = table_csv_fetch(table)
+            name_csv_file: IO[Any]
+            parent_directory_path: Path = name_csv_file_path.parent
+            parent_directory_path.mkdir(parents=True, exist_ok=True)
+            with name_csv_file_path.open("w") as name_csv_file:
+                name_csv_file.write(csv_content)
+            downloads_count = 1
         return downloads_count
 
     # Table.csv_file_read():
@@ -2579,7 +2591,7 @@ class Table(Node):
                     # All others are data *rows*:
                     if len(row) == headers_size:
                         rows.append(row)
-                    else:
+                    else:  # pragma: no cover
                         print(f"Row {row_index+1} of '{csv_file_path}' has to many/few columns.")
 
         # Return the resulting *headers* and *rows*:
@@ -2620,7 +2632,7 @@ class Table(Node):
 
         # Perform any requested *tracing*:
         tracing: str = tracing_get()
-        if tracing:
+        if tracing:  # pragma: no cover
             print(f"{tracing}table_csv_file_path='{table_csv_file_path}'")
             print(f"{tracing}table_xml_file_path='{table_xml_file_path}'")
 
@@ -2735,9 +2747,9 @@ class Table(Node):
                 english_parameter_comment: ParameterComment = ParameterComment(bom_manager,
                                                                                language="EN")
                 parameter.comment_insert(english_parameter_comment)
-            else:
-                assert False, "How do we get here?"
-                parameter.type_name = type_name
+            # else:
+            #     assert False, f"headers={headers} length mismatch parameters{parameters}"
+            #     parameter.type_name = type_name
 
     # Table.parameters_get():
     def parameters_get(self, sort: bool) -> List[Parameter]:
@@ -2959,8 +2971,7 @@ class Table(Node):
 
     # Table.xml_parse():
     @staticmethod
-    def xml_parse(table_element: Element, bom_manager: BomManager,
-                  collection_key: Tuple[int, int]) -> "Table":
+    def xml_parse(table_element: Element, bom_manager: BomManager, collection_key: int) -> "Table":
         """Parse an XML Elment into a *Table*.
 
         Parse *table_element* (i.e. *self*) into new *Table*
@@ -2970,9 +2981,8 @@ class Table(Node):
             *table_element* (*Element*): The XML element to parse.
             *bom_manager* (*BomManager*): The root of all data
                 structures.
-            *collection_key* (*Tuple*[*int*, *int*]): The key that
-                can be used to get the parent *Collection* from
-                *bom_manager*.
+            *collection_key* (*int*): The key that is used to get
+                the parent *Collection*.
 
         Returns:
             The created *Table* object.
@@ -3004,7 +3014,7 @@ class Table(Node):
                 table_comment: TableComment = TableComment.xml_parse(sub_element, bom_manager)
                 table.comment_insert(table_comment)
             elif sub_element_tag == "Search":
-                search: Search = Search.xml_parse(sub_element, bom_manager)
+                search: Search = Search.xml_parse(sub_element, bom_manager, collection_key)
                 table.search_insert(search)
             else:  # pragma: no cover
                 assert False, f"Unprocessed tag='{sub_element_tag}'"
@@ -3083,32 +3093,32 @@ class Nodes:
         for sub_node in sub_nodes.values():
             sub_node.nodes_collect_recursively(node_type, nodes_list)
 
-    # Nodes.nonce_get():
-    def nonce_get(self, target_node: Node) -> int:
-        """Return the nonce for a sub-node.
+    # # Nodes.nonce_get():
+    # def xxx_nonce_get(self, target_node: Node) -> int:
+    #     """Return the nonce for a sub-node.
 
-        Lookup the unique identifier (called a nonce) that was assigned
-        to *sub_node* in *nodes* (i.e. *self*) and return it.
+    #     Lookup the unique identifier (called a nonce) that was assigned
+    #     to *sub_node* in *nodes* (i.e. *self*) and return it.
 
-        Args:
-            *target_node* (*Node*): The *Node* in *nodes* (i.e. *self*)
-            to lookup the nonce for.
+    #     Args:
+    #         *target_node* (*Node*): The *Node* in *nodes* (i.e. *self*)
+    #         to lookup the nonce for.
 
-        Returns:
-            Return the nonce asssigned to *sub_node* from *nodes*.
+    #     Returns:
+    #         Return the nonce asssigned to *sub_node* from *nodes*.
 
-        """
-        # Search the *sub_nodes* for *nodes* to find *
-        nodes: Nodes = self
-        sub_nodes: Dict[int, Node] = nodes.sub_nodes
-        nonce: int
-        sub_node: Node
-        for nonce, sub_node in sub_nodes.items():
-            if sub_node is target_node:
-                break
-        else:
-            assert False, "Node not found"
-        return nonce
+    #     """
+    #     # Search the *sub_nodes* for *nodes* to find *
+    #     nodes: Nodes = self
+    #     sub_nodes: Dict[int, Node] = nodes.sub_nodes
+    #     nonce: int
+    #     sub_node: Node
+    #     for nonce, sub_node in sub_nodes.items():
+    #         if sub_node is target_node:
+    #             break
+    #     else:  # pragma: no cover
+    #         assert False, "Node not found"
+    #     return nonce
 
     # Nodes.show_lines_append():
     # @trace(1)
@@ -3167,6 +3177,7 @@ class Nodes:
         return path
 
     # Nodes.remove():
+    @trace(1)
     def remove(self, remove_node: Node) -> None:
         """TODO."""
         nodes: Nodes = self
@@ -3177,7 +3188,7 @@ class Nodes:
             if remove_node is sub_node:
                 del sub_nodes[nonce]
                 break
-        else:
+        else:  # pragma: no cover
             assert False
 
 

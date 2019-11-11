@@ -4,11 +4,32 @@ from bom_manager.node_view import (BomManager, Collection, Collections, Director
 import lxml.etree as ETree   # type: ignore
 from lxml.etree import _Element as Element  # type: ignore
 from pathlib import Path
-from typing import (Any, Dict, IO, List, Tuple)
-from bom_manager.tracing import trace, trace_level_set, tracing_get
+from typing import (Any, Dict, IO, List)
+from bom_manager.tracing import trace_level_set, tracing_get  # , trace
+
+
+# directory_remove_entirely():
+def directory_remove_entirely(directory_path: Path) -> None:
+    """Remove a directory and all of its children.
+
+    Recursively visit all of the files and sub-directories of
+    *directory_path* followed by removing *directory_path* itself.
+
+    Args:
+        *directory_path* (*Path*): The directory to entirely remove.
+
+    """
+    if directory_path.is_dir():
+        sub_path: Path
+        for sub_path in directory_path.iterdir():
+            if sub_path.is_dir():
+                directory_remove_entirely(sub_path)
+            else:
+                sub_path.unlink()
+        directory_path.rmdir()
+
 
 # test_attribute_converter():
-@trace(4)
 def test_attribute_converter():
     """Test the *BomManager* attribute converter methods."""
     # @trace(1)
@@ -54,7 +75,6 @@ def test_attribute_converter():
 
 
 # test_file_name_converter():
-@trace(1)
 def test_file_name_converter():
     """Test the *BomManager* file name converter."""
 
@@ -104,16 +124,9 @@ def test_file_name_converter():
 # Test_constrcutors():
 def test_constructors():
     """Test the various *Node* sub-class constructors."""
-    # Identify the *test_file_directory*:
+    # Determine the *test_file_directory*:
     test_file_path: Path = Path(__file__)
     test_file_directory: Path = test_file_path.parent
-
-    # Create *bom_manager* and *collections* and verify:
-    bom_manager: BomManager = BomManager()
-    collections: Collections = Collections(bom_manager)
-    assert collections.show_lines_get() == [
-        "Collections()"
-        ]
 
     # Create a *node_template* and verify the *__str__*() method:
     node_template: NodeTemplate = NodeTemplate(Node, (), {})
@@ -121,25 +134,41 @@ def test_constructors():
     assert node_template_text == "NodeTemplate('Node')", ("node_template_text="
                                                           f"'{node_template_text}'")
 
-    # Create *digikey_collection* and verify:
-    collection_root: Path = test_file_directory / "ROOT"
+    # Create *bom_manager* and *collections* and verify:
+    bom_manager: BomManager = BomManager()
+    collections: Collections = Collections(bom_manager, "Root")
+    assert collections.show_lines_get() == [
+        "Collections('Root')"
+        ]
+
+    # Create an empty *test_collection_root* directory:
+    test_collection_root: Path = test_file_directory / "TMP_ROOT"
+    directory_remove_entirely(test_collection_root)
+    test_collection_root.mkdir(parents=True, exist_ok=True)
+
+    # Create *digikey_collection*, insert into *collections* and verify:
     searches_root: Path = test_file_directory / "searches"
     digikey_collection: Collection = Collection(bom_manager,
-                                                "Digi-Key", collection_root, searches_root)
-    digikey_collection_key: Tuple[int, int] = collections.collection_insert(digikey_collection)
+                                                "Digi-Key", test_collection_root, searches_root)
+    digikey_collection_key: int = digikey_collection.collection_key
+    assert digikey_collection_key >= 0
+    assert digikey_collection is bom_manager.collection_lookup(digikey_collection_key)
+    collections.collection_insert(digikey_collection)
     assert collections.show_lines_get() == [
-        "Collections()",
+        "Collections('Root')",
         " Collection('Digi-Key')"
         ]
 
     # Create the *capacitors_directory* and *resistors_directory* and insert into
     # *digikey_colleciton*:
-    capacitors_directory: Directory = Directory(bom_manager, "Capacitors")
+    capacitors_directory: Directory = Directory(bom_manager, "Capacitors", digikey_collection_key)
     digikey_collection.directory_insert(capacitors_directory)
-    resistors_directory: Directory = Directory(bom_manager, "Resistors")
+    assert capacitors_directory.collection_get() is digikey_collection
+    resistors_directory: Directory = Directory(bom_manager, "Resistors", digikey_collection_key)
     digikey_collection.directory_insert(resistors_directory)
+    assert resistors_directory.collection_get() is digikey_collection
     assert collections.show_lines_get() == [
-        "Collections()",
+        "Collections('Root')",
         " Collection('Digi-Key')",
         "  Directory('Capacitors')",
         "  Directory('Resistors')"
@@ -150,6 +179,7 @@ def test_constructors():
     #                                    "Resistors" / "Chip_Resistor_-_Surface_Mount.xml")
     chip_resistors_table: Table = Table(bom_manager, "Chip Resistor - Surface Mount",
                                         digikey_collection_key, "URL", 123, "base")
+    assert chip_resistors_table.collection_get() is digikey_collection
     table_comment: TableComment = TableComment(bom_manager, "EN")
     table_comment.lines_set(["Line 1", "Line 2"])
     table_comment.line_append("Line 3")
@@ -158,7 +188,7 @@ def test_constructors():
 
     resistors_directory.table_insert(chip_resistors_table)
     assert collections.show_lines_get() == [
-        "Collections()",
+        "Collections('Root')",
         " Collection('Digi-Key')",
         "  Directory('Capacitors')",
         "  Directory('Resistors')",
@@ -176,10 +206,11 @@ def test_constructors():
     manufacturer_parameter.comment_insert(manufacturer_parameter_comment_ru)
     all_search_table_path: Path = (searches_root / "Digi-Key" / "Resistors" /
                                    "Chip_Resistor_-_Surface_Mount.xml" / "@ALL.xml")
-    all_search: Search = Search(bom_manager, "@ALL", all_search_table_path)
+    all_search: Search = Search(bom_manager, "@ALL", all_search_table_path, digikey_collection_key)
     chip_resistors_table.search_insert(all_search)
+    assert all_search.collection_get() is digikey_collection
     assert collections.show_lines_get() == [
-        "Collections()",
+        "Collections('Root')",
         " Collection('Digi-Key')",
         "  Directory('Capacitors')",
         "  Directory('Resistors')",
@@ -191,27 +222,35 @@ def test_constructors():
         "    TableComment('EN')"
         ]
 
-    show_lines_file: IO[Any]
-    with open("/tmp/show_lines.txt", "w") as show_lines_file:
-        text: str = "\n".join(collections.show_lines_get()) + '\n'
-        show_lines_file.write(text)
-
-    # Create some nested sub-directories:
-    connectors_directory: Directory = Directory(bom_manager, "Connectors")
-    digikey_collection.directory_insert(connectors_directory)
-    rectangular_connectors_sub_directory: Directory = Directory(bom_manager,
-                                                                "Rectangular Connectors")
-    connectors_directory.directory_insert(rectangular_connectors_sub_directory)
-
+    # Remove a *Node* and verify its removal:
+    manufacturer_parameter.remove(manufacturer_parameter_comment_ru)
     assert collections.show_lines_get() == [
-        "Collections()",
+        "Collections('Root')",
         " Collection('Digi-Key')",
         "  Directory('Capacitors')",
         "  Directory('Resistors')",
         "   Table('Chip Resistor - Surface Mount')",
         "    Parameter('Manufacturer No.')",
         "     ParameterComment('EN')",
-        "     ParameterComment('RU')",
+        "    Search('@ALL')",
+        "    TableComment('EN')"
+        ], f"{collections.show_lines_get()}"
+
+    # Create some nested sub-directories and verify:
+    connectors_directory: Directory = Directory(bom_manager, "Connectors", digikey_collection_key)
+    digikey_collection.directory_insert(connectors_directory)
+    rectangular_connectors_sub_directory: Directory = Directory(bom_manager,
+                                                                "Rectangular Connectors",
+                                                                digikey_collection_key)
+    connectors_directory.directory_insert(rectangular_connectors_sub_directory)
+    assert collections.show_lines_get() == [
+        "Collections('Root')",
+        " Collection('Digi-Key')",
+        "  Directory('Capacitors')",
+        "  Directory('Resistors')",
+        "   Table('Chip Resistor - Surface Mount')",
+        "    Parameter('Manufacturer No.')",
+        "     ParameterComment('EN')",
         "    Search('@ALL')",
         "    TableComment('EN')",
         "  Directory('Connectors')",
@@ -234,6 +273,8 @@ def test_constructors():
     desired_path_names: List[str] = [node.__str__() for node in desired_path]
     assert tree_path_names == desired_path_names, (f"tree_path_names={tree_path_names} != "
                                                    f"desired_path_names={desired_path_names}")
+
+    # Do a similar test again:
     tree_path = list()
     resistors_directory.tree_path_find(manufacturer_parameter, tree_path)
     desired_path = [
@@ -245,27 +286,135 @@ def test_constructors():
     assert tree_path_names == desired_path_names, (f"tree_path_names={tree_path_names} != "
                                                    f"desired_path_names={desired_path_names}")
 
+    # Write the current *collections* *show_lines_append* output out to a file:
     collections.show_lines_file_write(Path("/tmp/show_lines.txt"), "")
 
-    xml_lines: List[str] = list()
-    collections.xml_lines_append(xml_lines, "")
-    xml_lines.append("")
-    xml_text: str = '\n'.join(xml_lines)
+    # Now verify that XML writing and parsing works:
+    # Step one: fill in *xml_lines1* from *collections*:
+    xml_lines1: List[str] = list()
+    collections.xml_lines_append(xml_lines1, "")
+    xml_lines1.append("")
+    xml_lines1_text: str = '\n'.join(xml_lines1)
+
+    # For debugging write out *xml_lines1_text* to a file:
     xml_file: IO[Any]
-    with open("/tmp/xml_lines.xml", "w") as xml_file:
-        xml_file.write(xml_text)
+    with open("/tmp/xml_lines1.xml", "w") as xml_file:
+        xml_file.write(xml_lines1_text)
+
+    # Now parse *xml_lines2_text* into *collections2*:
+    collections_element: Element = ETree.fromstring(xml_lines1_text)
+    collections2: Collections = Collections.xml_parse(collections_element, bom_manager)
+
+    # Now regenerate the *xml_lines2_text*:
+    xml_lines2: List[str] = list()
+    collections2.xml_lines_append(xml_lines2, "")
+    xml_lines2.append("")
+    xml_lines2_text: str = "\n".join(xml_lines2)
+
+    # For debugging write out *xml_lines2_text* to a file:
+    with open("/tmp/xml_lines2.xml", "w") as xml_file:
+        xml_file.write(xml_lines2_text)
+
+    # Finally verify that *xml_lines1* matches *xml_lines2*:
+    assert xml_lines1 == xml_lines2
+
+    # Just execute *nodes_collect_recursively* and verify that it finds all of the *directory_nodes*
+    # and *table_nodes*:
+    directory_nodes: List[Node] = list()
+    digikey_collection.nodes_collect_recursively(Directory, directory_nodes)
+    assert len(directory_nodes) == 4
     table_nodes: List[Node] = list()
     digikey_collection.nodes_collect_recursively(Table, table_nodes)
+    assert len(table_nodes) == 1
+    search_nodes: List[Node] = list()
+    digikey_collection.nodes_collect_recursively(Search, search_nodes)
+    assert len(search_nodes) == 1
 
-    collections_element: Element = ETree.fromstring(xml_text)
-    foo_collections: Collections = Collections.xml_parse(collections_element, bom_manager)
-    reread_xml_lines: List[str] = list()
-    foo_collections.xml_lines_append(reread_xml_lines, "")
-    reread_xml_lines.append("")
-    with open("/tmp/xml_lines2.xml", "w") as xml_file:
-        xml_file.write('\n'.join(reread_xml_lines))
+    # Create a simple `.csv` file text:
+    csv_lines: List[str] = [
+        "Header1,Header2,Header3",
+        "123,abc,-",
+        "456,def,-",
+        ""]
+    csv_text: str = "\n".join(csv_lines)
 
-    assert xml_lines == reread_xml_lines
+    # Define *bogus_table_csv_fetch* which simply returns *csv_text*:
+    def bogus_table_csv_fetch(table: Table) -> str:
+        return csv_text
+
+    # Force the population of the *temporary_root directory* with a single `.csv` file:
+    downloads: int = digikey_collection.csvs_download(test_collection_root, bogus_table_csv_fetch)
+    assert downloads == 1
+
+    # Make sure that the correct *csv_file_path* was produced:
+    csv_file_paths: List[Path] = list(test_collection_root.glob("**/*.csv"))
+    assert len(csv_file_paths) == 1
+    csv_file_path: Path = csv_file_paths[0]
+    assert csv_file_path == (test_collection_root / "Digi%2dKey" / "Resistors" /
+                             "Chip_Resistor_%2d_Surface_Mount.csv")
+
+    # Read in *csv_file_path* into *reread_csv_text* and verify that it matches *csv_text*:
+    reread_csv_text: str = ""
+    csv_file: IO[Any]
+    with csv_file_path.open() as csv_file:
+        reread_csv_text = csv_file.read()
+    assert csv_text == reread_csv_text
+
+    # Now cause the table `.xml` file be generated:
+    assert digikey_collection.collection_root == test_collection_root
+    digikey_collection.csvs_read_and_process(True)
+
+    # Now verify that the correct *xml_file_path* .xml file was produced:
+    xml_file_paths: List[Path] = list(test_collection_root.glob("**/*.xml"))
+    assert len(xml_file_paths) == 1
+    xml_file_path: Path = xml_file_paths[0]
+    assert xml_file_path == (test_collection_root / "Digi%2dKey" / "Resistors" /
+                             "Chip_Resistor_%2d_Surface_Mount.xml")
+
+    xml_text: str = ""
+    xml_file: IO[Any]
+    with xml_file_path.open() as xml_file:
+        xml_text = xml_file.read()
+    print(xml_text)
+    xml_lines: List[str] = xml_text.split("\n")
+
+    # Set to *True* to print out the desired values *target_xml_lines* and *False* to use the
+    # values that were cut and pasted back into the code below:
+    target_xml_lines: List[str] = list()
+    if False:
+        xml_line: str
+        print("        target_xml_lines = [")
+        for xml_line in xml_lines:
+            print(f"            '{xml_line}',")  # *xml_line* can contain double quote characters.
+        print("        ]")
+        assert False
+    else:
+        # Cut and paste the output from above here:
+        target_xml_lines = [
+            '<?xml version="1.0"?>',
+            '<Table name="Chip Resistor - Surface Mount" url="URL" nonce="123" base="base">',
+            '  <Parameter name="Manufacturer No." index="0" type_name="String">',
+            '    <ParameterComment language="EN">',
+            '      Manufacturer Part Number',
+            '    </ParameterComment>',
+            '  </Parameter>',
+            '  <Parameter name="Header2" index="1" type_name="String"/>',
+            '  <Parameter name="Header3" index="2" type_name="Empty"/>',
+            '  <TableComment language="EN">',
+            '    Line 1',
+            '    Line 2',
+            '    Line 3',
+            '  </TableComment>',
+            '  <Search name="@ALL"/>',
+            '</Table>',
+            '',
+        ]
+
+    # Now verify that nothing has changed:
+    assert xml_lines == target_xml_lines
+
+    # Remove *test_collection_root*:
+    directory_remove_entirely(test_collection_root)
 
 
 # test_partial_load():
