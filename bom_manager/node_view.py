@@ -51,10 +51,9 @@ All *Node* objects are sub-classed to contain the actual important data about th
 # from bom_manager.bom import Encode
 from bom_manager.tracing import trace, tracing_get  # , trace_level_set  # , tracing_get
 import csv
-# import lxml.etree as ETree  # type: ignore
 from lxml.etree import _Element as Element  # type: ignore
 from pathlib import Path
-# import pkg_resources              # Used to find plug-ins.
+import pkg_resources              # Used to find plug-ins.
 import re
 from typing import Any, Callable, Dict, IO, List, Optional, Tuple, Type
 from typing import Any as PreCompiled
@@ -1363,25 +1362,57 @@ class Collections(Node):
         with file_path.open("w") as show_lines_file:
             show_lines_file.write(show_lines_text)
 
-    # # Collections.packages_scan():
-    # def packages_scan(self):
-    #     """Scan for collection packages."""
-    #     collections: Collections = self
-    #     bom_manager: BomManager = collections.bom_manager
-    #     tracing: str = tracing_get()
-    #     entry_point_key: str = "bom_manager_collection_get"
-    #     index: int
-    #     entry_point: pkg_resources.EntryPoint
-    #     for index, entry_point in enumerate(pkg_resources.iter_entry_points(entry_point_key)):
-    #         entry_point_name: str = entry_point.name
-    #         if tracing:
-    #             print(f"{tracing}Collection_Entry_Point[{index}]: '{entry_point_name}'")
-    #         assert entry_point_name == "collection_get"
-    #         collection_get: Callable[[], Collection] = entry_point.load()
-    #         assert callable(collection_get)
-    #         collection: Collection = collection_get(bom_manager)
-    #         assert isinstance(collection, Collection)
-    #         collections.collection_insert(collection)
+    # Collections.packages_scan():
+    def packages_scan(self, searches_root: Path) -> None:
+        """Scan for collection packages.
+
+        Using the magic of the *pkg_resources* module, find all of
+        the Python modules that have been installed and have registered
+        a "bom_manager_collection_get" entry point in their `setup.py`
+        module configuration file.  Each such entry point is loaded
+        and executed to create to obtain the collection name and its
+        associated collection root directory *Path*.
+
+        Args:
+            *searches_root* (*Path*): The path to the searches root
+                directory needed for creating each *Collection* object.
+
+        """
+        # Grab some values from *collections* (i.e. *self*):
+        collections: Collections = self
+        bom_manager: BomManager = collections.bom_manager
+
+        # Sweep through *entry_point*'s that match *entry_point_key*:
+        tracing: str = tracing_get()
+        entry_point_key: str = "bom_manager_collection_get"
+        index: int
+        entry_point: pkg_resources.EntryPoint
+        for index, entry_point in enumerate(pkg_resources.iter_entry_points(entry_point_key)):
+            # Be parinoid and verify that the *entry_point* name is "collection_get":
+            entry_point_name: str = entry_point.name
+            if tracing:
+                print(f"{tracing}Collection_Entry_Point[{index}]: '{entry_point_name}'")
+            assert entry_point_name == "collection_get"
+
+            # Load the *entry_point* and verify that it is a function:
+            collection_get: Callable[[], Tuple[str, Path]] = entry_point.load()
+            assert callable(collection_get)
+
+            # Invoke the *collection_get* entry point function to get the collection
+            # name and root path:
+            collection_name: str
+            colleciton_root: Path
+            collection_name, collection_root = collection_get()
+
+            # Since inter-module type checking not performed by `mypy`, we get are
+            # parinoid here and validate that we get acceptable return types:
+            assert isinstance(collection_name, str)
+            assert isinstance(collection_root, Path)
+
+            # Now we can create the new *collection* and insert it into *collections*:
+            collection: Collection = Collection(bom_manager, collection_name,
+                                                collection_root, searches_root)
+            collections.collection_insert(collection)
 
     # Collections.xml_lines_append():
     def xml_lines_append(self, xml_lines: List[str], indent: str) -> None:

@@ -83,7 +83,7 @@ PYDS_FILES :=									\
 #	$(BOM_MANAGER_DIRECTORY)/tests/test_node_view.pyds
 
 
-.PHONY: all clean dist_build download lint upload
+.PHONY: all clean dist_build download lint test upload
 
 all: ${PYP_FILES} ${PYDS_FILES}
 
@@ -105,7 +105,7 @@ download:
 	pip install --no-cache-dir --index-url $(REPO_URL) bom_findchips_plugin_waynegramlich
 	pip install --no-cache-dir --index-url $(REPO_URL) bom_kicad_plugin_waynegramlich
 
-test:
+test: all
 	pytest --cov=bom_manager --cov-report=annotate
 	@grep -H -n "^!" $(BOM_MANAGER_DIRECTORY)/bom_manager/node_view.py,cover || true
 

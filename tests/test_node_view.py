@@ -484,11 +484,26 @@ def xxx_test_partial_load():
 
 
 # test_packages_scan():
-def xxx_test_packages_scan():
+def test_packages_scan():
     """Verify that the packages scan code works."""
+
+    # Figure out the *searches_path* to use:
+    test_node_view_file_name: str = __file__
+    test_node_view_path: Path = Path(test_node_view_file_name)
+    test_node_view_directory: Path = test_node_view_path.parent
+    searches_root: Path = test_node_view_directory / "searches"
+    assert searches_root.is_dir()
+
+    # Create a *bom_manager* and *collections*:
     bom_manager: BomManager = BomManager()
-    collections: Collections = Collections(bom_manager)
-    collections.packages_scan()
+    collections: Collections = Collections(bom_manager, "Root")
+
+    # Invoke the *packages_scan* method and verify that we got a collection:
+    collections.packages_scan(searches_root)
+    collections: List[Collection] = collections.collections_get(True)
+    assert len(collections) == 1
+    digikey_collection: Collection = collections[0]
+    assert digikey_collection.name == "Digi-Key"
 
 
 if __name__ == "__main__":
