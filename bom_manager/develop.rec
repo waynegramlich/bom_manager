@@ -1,0 +1,7 @@
+# For development:
+flake8
+mypy
+pudb
+pydoc
+pytdocstyle
+pytest

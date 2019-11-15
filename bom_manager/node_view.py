@@ -59,6 +59,7 @@ import re
 from typing import Any, Callable, Dict, IO, List, Optional, Tuple, Type
 from typing import Any as PreCompiled
 # Element = ETree._element
+# from __future__ import annotations  # Needed for Python 3.7+
 
 
 # BomManger:

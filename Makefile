@@ -106,7 +106,7 @@ download:
 	pip install --no-cache-dir --index-url $(REPO_URL) bom_kicad_plugin_waynegramlich
 
 test:
-	py.test --cov=bom_manager --cov-report=annotate
+	pytest --cov=bom_manager --cov-report=annotate
 	@grep -H -n "^!" $(BOM_MANAGER_DIRECTORY)/bom_manager/node_view.py,cover || true
 
 lint: ${PYTHON_LINTS}
