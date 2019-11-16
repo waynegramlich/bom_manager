@@ -1072,42 +1072,43 @@ class Collection(Node):
         collection: Collection = self
         collection.node_insert(sub_directory)
 
-    # # Collection.partial_load():
-    # @trace(1)
-    # def partial_load(self) -> None:
-    #     """Perform a partial load of the Collection.
+    # Collection.partial_load():
+    @trace(1)
+    def partial_load(self) -> None:
+        """Perform a partial load of the Collection.
 
-    #     Recursively visit all of the associated directories, tables,
-    #     and searches and partially load them.  This means that the
-    #     data structure has been created, but the associated `.xml`
-    #     file may not have been read in yet.
-    #     """
-    #     # Grab some values from *collection* (i.e. *self*):
-    #     collection: Collection = self
-    #     bom_manager: BomManager = collection.bom_manager
-    #     collection_name: str = collection.name
-    #     collection_root: Path = collection.collection_root
-    #     searches_root: Path = collection.searches_root
+        Recursively visit all of the associated directories, tables,
+        and searches and partially load them.  This means that the
+        data structure has been created, but the associated `.xml`
+        file may not have been read in yet.
+        """
+        # Grab some values from *collection* (i.e. *self*):
+        collection: Collection = self
+        bom_manager: BomManager = collection.bom_manager
+        collection_key: int = collection.collection_key
+        collection_name: str = collection.name
+        collection_root: Path = collection.collection_root
+        searches_root: Path = collection.searches_root
 
-    #     # Compute the *collection_path* and *searches_path*:
-    #     collection_file_name: str = Encode.to_file_name(collection_name)
-    #     collection_path: Path = collection_root
-    #     searches_path: Path = searches_root / collection_file_name
+        # Compute the *sub_collection_path* and *sub_searches_path*:
+        collection_file_name: str = bom_manager.to_file_name(collection_name)
+        sub_collection_path: Path = collection_root / collection_file_name
+        sub_searches_path: Path = searches_root / collection_file_name
 
-    #     # Perform a little *tracing*:
-    #     tracing: str = tracing_get()
-    #     if tracing:  # pragma: no cover
-    #         print(f"{tracing}collection_name='{collection_name}'")
-    #         print(f"{tracing}collection_root='{collection_root}'")
-    #         print(f"{tracing}searches_root='{searches_root}'")
-    #         print(f"{tracing}collection_path='{collection_path}'")
-    #         print(f"{tracing}searches_path='{searches_path}'")
+        # Perform a little *tracing*:
+        tracing: str = tracing_get()
+        if tracing:  # pragma: no cover
+            print(f"{tracing}collection_name='{collection_name}'")
+            print(f"{tracing}collection_root='{collection_root}'")
+            print(f"{tracing}searches_root='{searches_root}'")
+            print(f"{tracing}sub_collection_path='{sub_collection_path}'")
+            print(f"{tracing}sub_searches_path='{sub_searches_path}'")
 
-    #     assert collection_path.is_dir(), f"'{collection_path}' is not a directory"
-    #     directory_name: str = collection_name
-    #     directory: Directory = Directory(bom_manager, directory_name)
-    #     collection.directory_insert(directory)
-    #     directory.partial_load(collection_path, searches_path)
+        assert sub_collection_path.is_dir(), f"'{sub_collection_path}' is not a directory"
+        directory_name: str = collection_name
+        directory: Directory = Directory(bom_manager, directory_name, collection_key)
+        collection.directory_insert(directory)
+        directory.partial_load(sub_collection_path, sub_searches_path, collection_key)
 
     # Collection.csvs_read_and_process():
     # @trace(1)
@@ -1390,7 +1391,7 @@ class Collections(Node):
         for index, entry_point in enumerate(pkg_resources.iter_entry_points(entry_point_key)):
             # Be parinoid and verify that the *entry_point* name is "collection_get":
             entry_point_name: str = entry_point.name
-            if tracing:
+            if tracing:  # pragma: no cover
                 print(f"{tracing}Collection_Entry_Point[{index}]: '{entry_point_name}'")
             assert entry_point_name == "collection_get"
 
@@ -1817,55 +1818,57 @@ class Directory(Node):
         directory: Directory = self
         directory.node_insert(sub_directory)
 
-    # # Directory.partial_load():
-    # @trace(1)
-    # def partial_load(self, collection_path: Path, searches_path: Path) -> None:
-    #     """Recursively partially load a *Directory*.
+    # Directory.partial_load():
+    @trace(1)
+    def partial_load(self, collection_path: Path, searches_path: Path, collection_key: int) -> None:
+        """Recursively partially load a *Directory*.
 
-    #     Recursively visit all of the associated directories, tables,
-    #     and searches and partially load them.  This means that the
-    #     data structure has been created, but the associated `.xml`
-    #     file may not have been read in yet.
+        Recursively visit all of the associated directories, tables,
+        and searches and partially load them.  This means that the
+        data structure has been created, but the associated `.xml`
+        file may not have been read in yet.
 
-    #     Args:
-    #         collection_path (Path): The directory to look for
-    #             sub-directories in.
-    #         searches_path (Path): The directory to eventually look for
-    #             searches in.  This is recursively passed to lower levels
-    #             for doing partial loads of searches.
+        Args:
+            *collection_path* (*Path*): The directory to look for
+                sub-directories in.
+            *searches_path (*Path*): The directory to eventually look for
+                searches in.  This is recursively passed to lower levels
+                for doing partial loads of searches.
+            collection_key (*int*): The collection key needed to
+                eventually create *Table* and *Search* objects.
 
-    #     """
-    #     # Sweep through the contents of *collection_path* searching for other
-    #     # *sub_directory*'s or *table*'s:
-    #     directory: Directory = self
-    #     bom_manager: BomManager = directory.bom_manager
-    #     sub_path: Path
-    #     for sub_path in collection_path.glob("*"):
-    #         # Compute *sub_path_name* converting "%" notation into charactors:
-    #         sub_path_file_name: str = sub_path.name
+        """
+        # Sweep through the contents of *collection_path* searching for other
+        # *sub_directory*'s or *table*'s:
+        directory: Directory = self
+        bom_manager: BomManager = directory.bom_manager
+        sub_path: Path
+        for sub_path in collection_path.glob("*"):
+            # Compute *sub_path_name* converting "%" notation into charactors:
+            sub_path_file_name: str = sub_path.name
 
-    #         # Dispatch on whether we have a directory or a `.xml` suffix:
-    #         sub_searches_path: Path
-    #         if sub_path.is_dir():
-    #             # *sub_path* is a directory, so we create a *sub_directory* and insert it
-    #             # into *directory*:
-    #             sub_path_name: str = Encode.from_file_name(sub_path_file_name)
-    #             sub_directory: Directory = Directory(bom_manager, sub_path_name)
-    #             directory.directory_insert(sub_directory)
+            # Dispatch on whether we have a directory or a `.xml` suffix:
+            sub_searches_path: Path
+            if sub_path.is_dir():
+                # *sub_path* is a directory, so we create a *sub_directory* and insert it
+                # into *directory*:
+                sub_path_name: str = bom_manager.from_file_name(sub_path_file_name)
+                sub_directory: Directory = Directory(bom_manager, sub_path_name, collection_key)
+                directory.directory_insert(sub_directory)
 
-    #             # Now do a partial load of *sub_directory*:
-    #             sub_searches_path = searches_path / sub_path_file_name
-    #             sub_directory.partial_load(sub_path, sub_searches_path)
-    #         elif sub_path.suffix == ".xml":
-    #             # We have a `.xml` file so we can create a *table* and insert it into *directory*:
-    #             table_stem_file_name: str = sub_path.stem
-    #             table_name: str = Encode.from_file_name(table_stem_file_name)
-    #             table: Table = Table(bom_manager, table_name, sub_path)
-    #             directory.table_insert(table)
+                # Now do a partial load of *sub_directory*:
+                sub_searches_path = searches_path / sub_path_file_name
+                sub_directory.partial_load(sub_path, sub_searches_path, collection_key)
+            elif sub_path.suffix == ".xml":
+                # We have a `.xml` file so we can create a *table* and insert it into *directory*:
+                table_stem_file_name: str = sub_path.stem
+                table_name: str = bom_manager.from_file_name(table_stem_file_name)
+                table: Table = Table(bom_manager, table_name, collection_key)
+                directory.table_insert(table)
 
-    #             # Now do a partial load of *table*:
-    #             sub_searches_path = searches_path / table_stem_file_name
-    #             table.partial_load(sub_searches_path)
+                # Now do a partial load of *table*:
+                sub_searches_path = searches_path / table_stem_file_name
+                table.partial_load(sub_searches_path, collection_key)
 
     # Directory.csv_read_and_process():
     # @trace(1)
@@ -2689,46 +2692,48 @@ class Table(Node):
         # We are done and can write out *table* now:
         table.xml_file_save(table_xml_file_path)
 
-    # # Table.partial_load():
-    # @trace(1)
-    # def partial_load(self, searches_path: Path) -> None:
-    #     """Partial load all of the searches from a directory.
+    # Table.partial_load():
+    @trace(1)
+    def partial_load(self, searches_path: Path, collection_key: int) -> None:
+        """Partial load all of the searches from a directory.
 
-    #     Recursively visit all of the associated searches and
-    #     partially load them.  This means that the search
-    #     data structures have been created, but the associated
-    #     search `.xml` is not read in.  Note that the `.xml`
-    #     associated with the table is not read in either.
+        Recursively visit all of the associated searches and
+        partially load them.  This means that the search
+        data structures have been created, but the associated
+        search `.xml` is not read in.  Note that the `.xml`
+        associated with the table is not read in either.
 
-    #     Args:
-    #         searches_path (Path): The path to the directory containing the
-    #             zero, one, or more, search `.xml` files.
+        Args:
+            *searches_path* (*Path*): The path to the directory
+                containing the zero, one, or more, search `.xml` files.
+            *collection_key* (*int*): The collection key need to create
+                a new *Table* object.
 
-    #     """
-    #     # Make sure *searches_path* is actually a directory:
-    #     if searches_path.is_dir():
-    #         # *searches_path* is an existing directory that may have some search `.xml` files
-    #         # in it.  So now we ascan *searches_path* looking for `.xml` files:
-    #         table: Table = self
-    #         bom_manager: BomManager = table.bom_manager
-    #         all_search_encountered: bool = False
-    #         searches_count: int = 0
-    #         search_path: Path
-    #         for search_path in searches_path.glob("*.xml"):
-    #             # We have a *search* `.xml` file:
-    #             search_stem_file_name: str = search_path.stem
-    #             search_name: str = Encode.from_file_name(search_stem_file_name)
-    #             if search_name == "@ALL":
-    #                 all_search_encountered = True
-    #             search: Search = Search(bom_manager, search_name, search_path)
-    #             table.search_insert(search)
-    #             searches_count += 1
+        """
+        # Make sure *searches_path* is actually a directory:
+        if searches_path.is_dir():
+            # *searches_path* is an existing directory that may have some search `.xml` files
+            # in it.  So now we ascan *searches_path* looking for `.xml` files:
+            table: Table = self
+            bom_manager: BomManager = table.bom_manager
+            all_search_encountered: bool = False
+            searches_count: int = 0
+            search_path: Path
+            for search_path in searches_path.glob("*.xml"):
+                # We have a *search* `.xml` file:
+                search_stem_file_name: str = search_path.stem
+                search_name: str = bom_manager.from_file_name(search_stem_file_name)
+                if search_name == "@ALL":
+                    all_search_encountered = True
+                search: Search = Search(bom_manager, search_name, search_path, collection_key)
+                table.search_insert(search)
+                searches_count += 1
 
-    #         # If we found any search `.xml` files (i.e. *searches_count* >= 1), we need to ensure
-    #         # that search named "@ALL" is created:
-    #         if not all_search_encountered and searches_count:
-    #             all_search: Search = Search(bom_manager, "@ALL", search_path)
-    #             table.search_insert(all_search)
+            # If we found any search `.xml` files (i.e. *searches_count* >= 1), we need to ensure
+            # that search named "@ALL" is created:
+            if not all_search_encountered and searches_count:
+                all_search: Search = Search(bom_manager, "@ALL", search_path, collection_key)
+                table.search_insert(all_search)
 
     # Table.parameter.insert():
     def parameter_insert(self, parameter: Parameter) -> None:

@@ -506,6 +506,81 @@ def test_packages_scan():
     assert digikey_collection.name == "Digi-Key"
 
 
+# test_partial_load():
+def test_partial_load():
+    """Verify that partial loads work."""
+
+    # Figure out the *collection_root* and *searches_root* to use:
+    test_node_view_file_name: str = __file__
+    test_node_view_path: Path = Path(test_node_view_file_name)
+    test_node_view_directory: Path = test_node_view_path.parent
+    collection_root: Path = test_node_view_directory / "ROOT"
+    assert collection_root.is_dir()
+    searches_root: Path = test_node_view_directory / "searches"
+    assert searches_root.is_dir()
+
+    # Create a *bom_manager*, *collections* and *collection*:
+    bom_manager: BomManager = BomManager()
+    collections: Collections = Collections(bom_manager, "Root")
+    collection: Collection = Collection(bom_manager, "Digi-Key", collection_root, searches_root)
+    collections.collection_insert(collection)
+
+    # No perform the partial load:
+    collection.partial_load()
+
+    show_lines: List[str] = collections.show_lines_get()
+    show_lines.append("")
+    if True:
+        show_lines_text: str = "\n".join(show_lines)
+        show_lines_file: IO[Any]
+        with open("/tmp/show_lines.txt", "w") as show_lines_file:
+            show_lines_file.write(show_lines_text)
+
+        show_line: str
+        for show_line in show_lines:
+            print(f'        "{show_line}",')
+    assert show_lines == [
+        "Collections('Root')",
+        " Collection('Digi-Key')",
+        "  Directory('Digi-Key')",
+        "   Directory('Capacitors')",
+        "    Table('Niobium Oxide Capacitors')",
+        "    Table('Thin Film Capacitors')",
+        "    Table('Tantalum Capacitors')",
+        "    Table('Trimmers, Variable Capacitors')",
+        "    Table('Aluminum Electrolytic Capacitors')",
+        "    Table('Silicon Capacitors')",
+        "    Table('Electric Double Layer Capacitors (EDLC), Supercapacitors')",
+        "    Table('Tantalum - Polymer Capacitors')",
+        "    Table('Capacitor Networks, Arrays')",
+        "    Table('Accessories')",
+        "    Table('Aluminum - Polymer Capacitors')",
+        "    Table('Mica and PTFE Capacitors')",
+        "    Table('Ceramic Capacitors')",
+        "     Search('CAP CER 22UF 6.3V X5R 0603')",
+        "     Search('@ALL')",
+        "    Table('Film Capacitors')",
+        "   Directory('Resistors')",
+        "    Table('Resistor Networks, Arrays')",
+        "     Search('@ALL')",
+        "    Table('Chip Resistor - Surface Mount')",
+        "     Search('220;1608')",
+        "     Search('@1%Tol')",
+        "     Search('@ActStkRohs')",
+        "     Search('1k;1608')",
+        "     Search('@ALL')",
+        "     Search('@;1608')",
+        "     Search('120;1608')",
+        "     Search('470;1608')",
+        "    Table('Specialized Resistors')",
+        "    Table('Through Hole Resistors')",
+        "    Table('Accessories')",
+        "    Table('Chassis Mount Resistors')",
+        "     Search('@ALL')",
+        ""
+        ]
+
+
 if __name__ == "__main__":
     trace_level_set(0)
     test_file_name_converter()
