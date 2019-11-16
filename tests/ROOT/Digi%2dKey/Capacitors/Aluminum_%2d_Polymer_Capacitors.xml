@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<Table name="Aluminum Electrolytic Capacitors" url="https://www.digikey.com/products/en/capacitors/aluminum-electrolytic-capacitors/58" nonce="58" base="capacitors-aluminum-electrolytic-capacitors">
+<Table name="Aluminum - Polymer Capacitors" url="https://www.digikey.com/products/en/capacitors/aluminum-polymer-capacitors/69" nonce="69" base="capacitors-aluminum-polymer-capacitors">
   <Parameter name="&#65279;Datasheets" index="0" type_name="URL"/>
   <Parameter name="Image" index="1" type_name="URL"/>
   <Parameter name="Digi-Key Part Number" index="2" type_name="String"/>
@@ -14,14 +14,14 @@
   <Parameter name="Packaging" index="11" type_name="String"/>
   <Parameter name="Series" index="12" type_name="String"/>
   <Parameter name="Part Status" index="13" type_name="String"/>
-  <Parameter name="Capacitance" index="14" type_name="String"/>
-  <Parameter name="Tolerance" index="15" type_name="String"/>
-  <Parameter name="Voltage - Rated" index="16" type_name="IUnits"/>
-  <Parameter name="ESR (Equivalent Series Resistance)" index="17" type_name="Empty"/>
-  <Parameter name="Lifetime @ Temp." index="18" type_name="String"/>
-  <Parameter name="Operating Temperature" index="19" type_name="Range"/>
-  <Parameter name="Polarization" index="20" type_name="String"/>
-  <Parameter name="Ratings" index="21" type_name="String"/>
+  <Parameter name="Type" index="14" type_name="String"/>
+  <Parameter name="Capacitance" index="15" type_name="String"/>
+  <Parameter name="Tolerance" index="16" type_name="String"/>
+  <Parameter name="Voltage - Rated" index="17" type_name="IUnits"/>
+  <Parameter name="ESR (Equivalent Series Resistance)" index="18" type_name="String"/>
+  <Parameter name="Lifetime @ Temp." index="19" type_name="String"/>
+  <Parameter name="Operating Temperature" index="20" type_name="Range"/>
+  <Parameter name="Ratings" index="21" type_name="Empty"/>
   <Parameter name="Applications" index="22" type_name="String"/>
   <Parameter name="Ripple Current @ Low Frequency" index="23" type_name="String"/>
   <Parameter name="Ripple Current @ High Frequency" index="24" type_name="String"/>

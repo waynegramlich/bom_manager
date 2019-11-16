@@ -5,7 +5,7 @@ import lxml.etree as ETree   # type: ignore
 from lxml.etree import _Element as Element  # type: ignore
 from pathlib import Path
 from typing import (Any, Dict, IO, List)
-from bom_manager.tracing import trace_level_set, tracing_get  # , trace
+from bom_manager.tracing import trace_level_set, tracing_get, trace
 
 
 # directory_remove_entirely():
@@ -204,9 +204,7 @@ def test_constructors():
     manufacturer_parameter.comment_insert(manufacturer_parameter_comment_en)
     manufacturer_parameter_comment_ru: ParameterComment = ParameterComment(bom_manager, "RU")
     manufacturer_parameter.comment_insert(manufacturer_parameter_comment_ru)
-    all_search_table_path: Path = (searches_root / "Digi-Key" / "Resistors" /
-                                   "Chip_Resistor_-_Surface_Mount.xml" / "@ALL.xml")
-    all_search: Search = Search(bom_manager, "@ALL", all_search_table_path, digikey_collection_key)
+    all_search: Search = Search(bom_manager, "@ALL", digikey_collection_key)
     chip_resistors_table.search_insert(all_search)
     assert all_search.collection_get() is digikey_collection
     assert collections.show_lines_get() == [
@@ -417,72 +415,6 @@ def test_constructors():
     directory_remove_entirely(test_collection_root)
 
 
-# test_partial_load():
-def xxx_test_partial_load():
-    test_file_path: Path = Path(__file__)
-    test_file_directory: Path = test_file_path.parent
-
-    # Create *bom_manager* and *collections* and verify:
-    bom_manager: BomManager = BomManager()
-    collections: Collections = Collections(bom_manager)
-
-    # Create *digikey_collection* and verify:
-    digikey_root: Path = test_file_directory / "ROOT"
-    searches_root: Path = test_file_directory / "searches"
-    digikey_collection: Collection = Collection(bom_manager,
-                                                "Digi-Key", digikey_root, searches_root)
-    collections.collection_insert(digikey_collection)
-
-    # Now perform *partial_load* on *digikey_collection*:
-    digikey_collection.partial_load()
-
-    # Verify that we get the correct values in *show_lines*:
-    show_lines = collections.show_lines_get()
-    with open("/tmp/partial_load", "w") as show_file:
-        show_line: str
-        for show_line in show_lines:
-            show_file.write(f'        "{show_line}",\n')
-    assert show_lines == [
-        "Collections()",
-        " Collection('Digi-Key')",
-        "  Directory('Digi-Key')",
-        "   Directory('Capacitors')",
-        "    Table('Niobium Oxide Capacitors')",
-        "    Table('Thin Film Capacitors')",
-        "    Table('Tantalum Capacitors')",
-        "    Table('Trimmers, Variable Capacitors')",
-        "    Table('Aluminum Electrolytic Capacitors')",
-        "    Table('Silicon Capacitors')",
-        "    Table('Electric Double Layer Capacitors (EDLC), Supercapacitors')",
-        "    Table('Tantalum - Polymer Capacitors')",
-        "    Table('Capacitor Networks, Arrays')",
-        "    Table('Accessories')",
-        "    Table('Aluminum - Polymer Capacitors')",
-        "    Table('Mica and PTFE Capacitors')",
-        "    Table('Ceramic Capacitors')",
-        "     Search('CAP CER 22UF 6.3V X5R 0603')",
-        "     Search('@ALL')",
-        "    Table('Film Capacitors')",
-        "   Directory('Resistors')",
-        "    Table('Resistor Networks, Arrays')",
-        "     Search('@ALL')",
-        "    Table('Chip Resistor - Surface Mount')",
-        "     Search('220;1608')",
-        "     Search('@1%Tol')",
-        "     Search('@ActStkRohs')",
-        "     Search('1k;1608')",
-        "     Search('@ALL')",
-        "     Search('@;1608')",
-        "     Search('120;1608')",
-        "     Search('470;1608')",
-        "    Table('Specialized Resistors')",
-        "    Table('Through Hole Resistors')",
-        "    Table('Accessories')",
-        "    Table('Chassis Mount Resistors')",
-        "     Search('@ALL')",
-        ], f"show_lines={show_lines}"
-
-
 # test_packages_scan():
 def test_packages_scan():
     """Verify that the packages scan code works."""
@@ -506,55 +438,49 @@ def test_packages_scan():
     assert digikey_collection.name == "Digi-Key"
 
 
-# test_partial_load():
-def test_partial_load():
-    """Verify that partial loads work."""
+# test_load_recursively():
+@trace(1)
+def test_load_recursively():
+    test_file_path: Path = Path(__file__)
+    test_file_directory: Path = test_file_path.parent
 
-    # Figure out the *collection_root* and *searches_root* to use:
-    test_node_view_file_name: str = __file__
-    test_node_view_path: Path = Path(test_node_view_file_name)
-    test_node_view_directory: Path = test_node_view_path.parent
-    collection_root: Path = test_node_view_directory / "ROOT"
-    assert collection_root.is_dir()
-    searches_root: Path = test_node_view_directory / "searches"
-    assert searches_root.is_dir()
-
-    # Create a *bom_manager*, *collections* and *collection*:
+    # Create *bom_manager* and *collections* and verify:
     bom_manager: BomManager = BomManager()
     collections: Collections = Collections(bom_manager, "Root")
-    collection: Collection = Collection(bom_manager, "Digi-Key", collection_root, searches_root)
-    collections.collection_insert(collection)
 
-    # No perform the partial load:
-    collection.partial_load()
+    # Create *digikey_collection* and verify:
+    digikey_root: Path = test_file_directory / "ROOT"
+    searches_root: Path = test_file_directory / "searches"
+    digikey_collection: Collection = Collection(bom_manager,
+                                                "Digi-Key", digikey_root, searches_root)
+    collections.collection_insert(digikey_collection)
 
+    # Now perform parial *load_recursively* on *digikey_collection*:
+    digikey_collection.load_recursively(True)
+
+    # Verify that we get the correct values in *show_lines*:
     show_lines: List[str] = collections.show_lines_get()
     show_lines.append("")
-    if True:
-        show_lines_text: str = "\n".join(show_lines)
-        show_lines_file: IO[Any]
-        with open("/tmp/show_lines.txt", "w") as show_lines_file:
-            show_lines_file.write(show_lines_text)
-
+    with open("/tmp/partial_load", "w") as show_lines_file:
         show_line: str
-        for show_line in show_lines:
-            print(f'        "{show_line}",')
+        show_lines_text: str = "\n".join([f'        "{show_line}"' for show_line in show_lines])
+        show_lines_file.write(show_lines_text)
     assert show_lines == [
         "Collections('Root')",
         " Collection('Digi-Key')",
         "  Directory('Digi-Key')",
         "   Directory('Capacitors')",
+        "    Table('Aluminum - Polymer Capacitors')",
         "    Table('Niobium Oxide Capacitors')",
         "    Table('Thin Film Capacitors')",
+        "    Table('Tantalum - Polymer Capacitors')",
         "    Table('Tantalum Capacitors')",
         "    Table('Trimmers, Variable Capacitors')",
         "    Table('Aluminum Electrolytic Capacitors')",
         "    Table('Silicon Capacitors')",
         "    Table('Electric Double Layer Capacitors (EDLC), Supercapacitors')",
-        "    Table('Tantalum - Polymer Capacitors')",
         "    Table('Capacitor Networks, Arrays')",
         "    Table('Accessories')",
-        "    Table('Aluminum - Polymer Capacitors')",
         "    Table('Mica and PTFE Capacitors')",
         "    Table('Ceramic Capacitors')",
         "     Search('CAP CER 22UF 6.3V X5R 0603')",
@@ -563,24 +489,34 @@ def test_partial_load():
         "   Directory('Resistors')",
         "    Table('Resistor Networks, Arrays')",
         "     Search('@ALL')",
-        "    Table('Chip Resistor - Surface Mount')",
-        "     Search('220;1608')",
-        "     Search('@1%Tol')",
-        "     Search('@ActStkRohs')",
-        "     Search('1k;1608')",
-        "     Search('@ALL')",
-        "     Search('@;1608')",
-        "     Search('120;1608')",
-        "     Search('470;1608')",
         "    Table('Specialized Resistors')",
+        "    Table('Chip Resistor - Surface Mount')",
         "    Table('Through Hole Resistors')",
         "    Table('Accessories')",
         "    Table('Chassis Mount Resistors')",
         "     Search('@ALL')",
-        ""
-        ]
+        "",
+        ], f"show_lines={show_lines}"
+
+    # Now perform a non-partial (i.e. ful)l *load_recursively* on *digikey_collection*:
+    collections2: Collections = Collections(bom_manager, "Root")
+    digikey_collection2: Collection = Collection(bom_manager,
+                                                 "Digi-Key", digikey_root, searches_root)
+    collections2.collection_insert(digikey_collection2)
+    digikey_collection2.load_recursively(False)
+
+    # Verify that we get the correct values in *show_lines*:
+    trace_level_set(1)
+    xml_lines: List[str] = list()
+    collections2.xml_lines_append(xml_lines, "")
+    xml_lines.append("")
+    xml_text: str = '\n'.join(xml_lines)
+    xml_file: IO[Any]
+    with open("/tmp/full_load.xml", "w") as xml_file:
+        xml_file.write(xml_text)
 
 
 if __name__ == "__main__":
-    trace_level_set(0)
-    test_file_name_converter()
+    trace_level_set(1)
+    # test_file_name_converter()
+    test_load_recursively()

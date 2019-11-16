@@ -2,6 +2,6 @@
 <Search name="@ALL" table="Chassis Mount Resistors" url="https://www.digikey.com/products/en/resistors/chassis-mount-resistors/54">
   <SearchComments>
     <SearchComment language="EN">
-f{indent}</{class_name}>")
+    </SearchComment>")
   </SearchComments>
 </Search>

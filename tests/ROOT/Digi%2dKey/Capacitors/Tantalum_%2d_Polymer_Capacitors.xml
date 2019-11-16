@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<Table name="Niobium Oxide Capacitors" url="https://www.digikey.com/products/en/capacitors/niobium-oxide-capacitors/67" nonce="67" base="capacitors-niobium-oxide-capacitors">
+<Table name="Tantalum - Polymer Capacitors" url="https://www.digikey.com/products/en/capacitors/tantalum-polymer-capacitors/70" nonce="70" base="capacitors-tantalum-polymer-capacitors">
   <Parameter name="&#65279;Datasheets" index="0" type_name="URL"/>
   <Parameter name="Image" index="1" type_name="URL"/>
   <Parameter name="Digi-Key Part Number" index="2" type_name="String"/>
@@ -17,15 +17,16 @@
   <Parameter name="Capacitance" index="14" type_name="String"/>
   <Parameter name="Tolerance" index="15" type_name="String"/>
   <Parameter name="Voltage - Rated" index="16" type_name="FUnits"/>
-  <Parameter name="ESR (Equivalent Series Resistance)" index="17" type_name="String"/>
-  <Parameter name="Current - Leakage" index="18" type_name="String"/>
-  <Parameter name="Dissipation Factor" index="19" type_name="String"/>
-  <Parameter name="Mounting Type" index="20" type_name="String"/>
-  <Parameter name="Package / Case" index="21" type_name="String"/>
-  <Parameter name="Manufacturer Size Code" index="22" type_name="String"/>
-  <Parameter name="Height - Seated (Max)" index="23" type_name="String"/>
-  <Parameter name="Features" index="24" type_name="Empty"/>
-  <Parameter name="Operating Temperature" index="25" type_name="Range"/>
-  <Parameter name="Supplier Device Package" index="26" type_name="String"/>
-  <Parameter name="Size / Dimension" index="27" type_name="String"/>
+  <Parameter name="Type" index="17" type_name="String"/>
+  <Parameter name="ESR (Equivalent Series Resistance)" index="18" type_name="String"/>
+  <Parameter name="Operating Temperature" index="19" type_name="Range"/>
+  <Parameter name="Lifetime @ Temp." index="20" type_name="String"/>
+  <Parameter name="Mounting Type" index="21" type_name="String"/>
+  <Parameter name="Package / Case" index="22" type_name="String"/>
+  <Parameter name="Size / Dimension" index="23" type_name="String"/>
+  <Parameter name="Height - Seated (Max)" index="24" type_name="String"/>
+  <Parameter name="Lead Spacing" index="25" type_name="Empty"/>
+  <Parameter name="Manufacturer Size Code" index="26" type_name="String"/>
+  <Parameter name="Ratings" index="27" type_name="Empty"/>
+  <Parameter name="Features" index="28" type_name="String"/>
 </Table>

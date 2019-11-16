@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<Table name="Niobium Oxide Capacitors" url="https://www.digikey.com/products/en/capacitors/niobium-oxide-capacitors/67" nonce="67" base="capacitors-niobium-oxide-capacitors">
+<Table name="Chip Resistor - Surface Mount" url="https://www.digikey.com/products/en/resistors/chip-resistor-surface-mount/52" nonce="52" base="resistors-chip-resistor-surface-mount">
   <Parameter name="&#65279;Datasheets" index="0" type_name="URL"/>
   <Parameter name="Image" index="1" type_name="URL"/>
   <Parameter name="Digi-Key Part Number" index="2" type_name="String"/>
@@ -14,18 +14,17 @@
   <Parameter name="Packaging" index="11" type_name="String"/>
   <Parameter name="Series" index="12" type_name="String"/>
   <Parameter name="Part Status" index="13" type_name="String"/>
-  <Parameter name="Capacitance" index="14" type_name="String"/>
+  <Parameter name="Resistance" index="14" type_name="IUnits"/>
   <Parameter name="Tolerance" index="15" type_name="String"/>
-  <Parameter name="Voltage - Rated" index="16" type_name="FUnits"/>
-  <Parameter name="ESR (Equivalent Series Resistance)" index="17" type_name="String"/>
-  <Parameter name="Current - Leakage" index="18" type_name="String"/>
-  <Parameter name="Dissipation Factor" index="19" type_name="String"/>
-  <Parameter name="Mounting Type" index="20" type_name="String"/>
+  <Parameter name="Power (Watts)" index="16" type_name="List"/>
+  <Parameter name="Composition" index="17" type_name="String"/>
+  <Parameter name="Features" index="18" type_name="String"/>
+  <Parameter name="Temperature Coefficient" index="19" type_name="String"/>
+  <Parameter name="Operating Temperature" index="20" type_name="Range"/>
   <Parameter name="Package / Case" index="21" type_name="String"/>
-  <Parameter name="Manufacturer Size Code" index="22" type_name="String"/>
-  <Parameter name="Height - Seated (Max)" index="23" type_name="String"/>
-  <Parameter name="Features" index="24" type_name="Empty"/>
-  <Parameter name="Operating Temperature" index="25" type_name="Range"/>
-  <Parameter name="Supplier Device Package" index="26" type_name="String"/>
-  <Parameter name="Size / Dimension" index="27" type_name="String"/>
+  <Parameter name="Supplier Device Package" index="22" type_name="Integer"/>
+  <Parameter name="Size / Dimension" index="23" type_name="String"/>
+  <Parameter name="Height - Seated (Max)" index="24" type_name="String"/>
+  <Parameter name="Number of Terminations" index="25" type_name="Integer"/>
+  <Parameter name="Failure Rate" index="26" type_name="Empty"/>
 </Table>
