@@ -24,28 +24,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# Import both the *bom* and *bom_gui* modules from the *bom_manager* package:
-from bom_manager import bom, bom_gui, bom_manager
-
-
-# main():
-def main() -> int:
-    """Non-GUI entry point for the BOM Manager."""
-    # Forward to *bom.main*:
-    result: int = bom.main()
-    return result
-
-
-# gui_main():
-def gui_main() -> int:
-    """GUI entry point for the BOM Manager."""
-    # Forward to *bom_gui.main*:
-    result: int = bom_gui.main()
-    return result
+# Import the *bom_pyside2* package
+from bom_manager import bom_pyside2
 
 
 # bom_manager_main():
 def bom_manager_main() -> int:
     """QT GUI entry point for the BOM Manager."""
-    result: int = bom_manager.main()
+    result: int = bom_pyside2.main()
     return result

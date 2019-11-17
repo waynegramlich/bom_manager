@@ -44,8 +44,7 @@ BOM_KICAD_PLUGIN_FILES :=                                                       
 	$(BOM_KICAD_PLUGIN_DIRECTORY)/setup.py
 BOM_DIGIKEY_PLUGIN_LINTS := ${BOM_DIGIKEY_PLUGIN_FILES:%.py=%.pyl}
 BOM_MANAGER_FILES :=								\
-	$(BOM_MANAGER_DIRECTORY)/bom_manager/bom.py				\
-	$(BOM_MANAGER_DIRECTORY)/bom_manager/bom_gui.py				\
+	$(BOM_MANAGER_DIRECTORY)/bom_manager/bom_pyside2.py			\
 	$(BOM_MANAGER_DIRECTORY)/bom_manager/bom_manager.py			\
 	$(BOM_MANAGER_DIRECTORY)/bom_manager/node_view.py			\
 	$(BOM_MANAGER_DIRECTORY)/bom_manager/tracing.py				\
