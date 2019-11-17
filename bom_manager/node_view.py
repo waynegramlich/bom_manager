@@ -1403,17 +1403,19 @@ class Collections(Node):
             assert entry_point_name == "collection_get"
 
             # Load the *entry_point* and verify that it is a function:
-            collection_get: Callable[[], Tuple[str, Path]] = entry_point.load()
+            collection_get: Callable[[], Tuple[str, str, Path]] = entry_point.load()
             assert callable(collection_get)
 
             # Invoke the *collection_get* entry point function to get the collection
             # name and root path:
+            collection_catagory: str
             collection_name: str
             colleciton_root: Path
-            collection_name, collection_root = collection_get()
+            collection_category, collection_name, collection_root = collection_get()
 
             # Since inter-module type checking not performed by `mypy`, we get are
             # parinoid here and validate that we get acceptable return types:
+            assert isinstance(collection_category, str)
             assert isinstance(collection_name, str)
             assert isinstance(collection_root, Path)
 
