@@ -49,7 +49,7 @@ All *Node* objects are sub-classed to contain the actual important data about th
 # <----------------------------------------100 Characters----------------------------------------> #
 
 # from bom_manager.bom import Encode
-from bom_manager.tracing import tracing_get  # , trace, trace_level_set  # , tracing_get
+from bom_manager.tracing import tracing_get, trace  # , trace_level_set  # , tracing_get
 import csv
 import lxml.etree as ETree   # type: ignore
 from lxml.etree import _Element as Element  # type: ignore
@@ -69,8 +69,8 @@ class BomManager:
     # @trace(1)
     def __init__(self) -> None:
         """Initialize the BomManger object."""
-        collections_node_template: NodeTemplate = NodeTemplate(Collections, (Collection,),
-                                                               {})
+        group_node_template: NodeTemplate = NodeTemplate(Group, (Collection, Group),
+                                                         {"name": str})
         collection_node_template: NodeTemplate = NodeTemplate(Collection, (Directory,),
                                                               {"name": str,
                                                                "collection_root": Path,
@@ -95,10 +95,11 @@ class BomManager:
                                                                  {"language": str,
                                                                   "lines": list})
 
+        # All define *NodeTemplate*'s listed in alphabetical order:
         node_templates: Dict[Type, NodeTemplate] = {
             Collection: collection_node_template,
-            Collections: collections_node_template,
             Directory: directory_node_template,
+            Group: group_node_template,
             Parameter: parameter_node_template,
             ParameterComment: parameter_comment_node_template,
             Table: table_node_template,
@@ -541,7 +542,7 @@ class BomManager:
 #        return f"View('{name}')"
 
 
-# Node_Template():
+# NodeTemplate():
 class NodeTemplate:
     """Provide a template for instatiating new *Node* objects."""
 
@@ -700,6 +701,12 @@ class Node:
         """
         node: Node = self  # pragma: no cover
         assert False, f"Got a {node.__class__.__name__} instead of Directory"  # pragma: no cover
+
+    # Group.group_cast():
+    def group_cast(self) -> "Group":
+        """Convert a *Node* to a *Group*."""
+        node: Node = self  # pragma: no cover
+        assert False, f"Got a {node.__class__.__name__} instead of Group"  # pragma: no cover
 
     # Node.has_nodes():
     def has_nodes(self, nodes_type: Type) -> bool:
@@ -945,7 +952,7 @@ class Collection(Node):
         Initialize the *collection* (i.e. *self*) to have *bom_manager*,
         *name*, *collection_root*, and *searches_root*.  It is very
         important to call *Collection.key_set*() after the *collection*
-        has been inserted into a *Collections* object.
+        has been inserted into a *Group* object.
 
         Args:
             *bom_manager* (*BomManager*): The root of all the data
@@ -1206,8 +1213,8 @@ class Collection(Node):
     def xml_parse(collection_element: Element, bom_manager: BomManager) -> "Collection":
         """Parse an XML Element into a *Collection*.
 
-        Parse *collection_element* into new *Collection* object and
-        stuff it into *collections*.
+        Parse *collection_element* and stuff the resultes into
+        a new *Collection* object.
 
         Args:
             *collect_element* (*Element*): The XML element to
@@ -1241,252 +1248,6 @@ class Collection(Node):
             directory: Directory = Directory.xml_parse(sub_element, bom_manager, collection_key)
             collection.directory_insert(directory)
         return collection
-
-
-# Collections:
-class Collections(Node):
-    """Represents a set of Collection objects."""
-
-    # Collections.__init__():
-    def __init__(self, bom_manager: BomManager, name: str) -> None:
-        """Initialize a Collections object.
-
-        Initialize the *collections* object.  Also register the
-        the *collections* object with *bom_manager*:
-
-        Args:
-            *name* (*str*): Name of the collections object.
-            *bom_manager* (*BomManager*): Contains all the root data
-                structures.
-
-        """
-        # Initialize super-class of *collections* (i.e. *self*):
-        collections: Collections = self
-        super().__init__(bom_manager)
-
-        # Verify that *collections* (i.e. *self*) has a *Nodes* object for containing
-        # *Collections*'s:
-        assert collections.has_nodes(Collection)
-
-        # Stuff values into *collections* (i.e. *self*):
-        self.name: str = name
-
-    # Collections.__str__():
-    def __str__(self) -> str:
-        """Return a string represention of a Collections object."""
-        # In order to support the *trace* decorator for the *__init__*() method, we can not
-        # assume that the *name* attribute exists:
-        collections: Collections = self
-        name: str = "??"
-        if hasattr(collections, "name"):
-            name = collections.name
-        return f"Collections('{name}')"
-
-    # Collections.collection_insert():
-    def collection_insert(self, collection: "Collection") -> None:
-        """Insert a collection into a *Collections* object.
-
-        Insert *collection* into *collections* (i.e. *self*.)
-
-        Args:
-            *collection* (*Collection*): The collection to insert.
-
-        """
-        # Grab some values from *collections* (i.e. *self*):
-        collections: Collections = self
-        collections.node_insert(collection)
-
-    # Collections.collections_get():
-    def collections_get(self, sort: bool) -> List[Collection]:
-        """
-        Return a list of *Collection*'s.
-
-        Return a list of *Collection*'s associated with *collections*
-        (i.e. *self*.)  If *sort* is *True*, the returned list
-        is sorted by table name.
-
-        Args:
-            *sort* (*bool*): If *True*, the returned tables sorted by
-                table name.
-
-        Returns:
-            Returns a list of *Table*'s that are sorted if *sort*
-            is *True*:
-
-        """
-        # Extract *collections* from *collection
-        collections: Collections = self
-        collection_sub_nodes: List[Node] = collections.sub_nodes_get(Collection)
-        collection_sub_node: Node
-        collections_list: List[Collection] = [collection_sub_node.collection_cast()
-                                              for collection_sub_node in collection_sub_nodes]
-        if sort:
-            collections_list.sort(key=lambda collection: collection.name)
-        return collections_list
-
-    # Collections.show_lines_append():
-    def show_lines_append(self, show_lines: List[str], indent: str, text: str = "") -> None:
-        """See node base class."""
-        collections: Collections = self
-        text = f"'{collections.name}'"
-        super().show_lines_append(show_lines, indent, text=text)
-
-    # Collections.show_lines_get():
-    def show_lines_get(self) -> List[str]:
-        """Return a list of lines for the Collections object.
-
-        For testing purposes, it is desirable to produce a textual
-        representation of a tree.  This is the top level routine
-        generates the reprensentation as a list of strings.
-
-        Returns:
-            A list of lines, where each line corresponds to one
-            node in the tree.  The tree depth is indicated by
-            the number preceeding spaces.
-
-        """
-        collections: Collections = self
-        show_lines: List[str] = list()
-        collections.show_lines_append(show_lines, "")
-        return show_lines
-
-    # Collections.show_lines_file_write():
-    def show_lines_file_write(self, file_path: Path, indent: str) -> None:
-        """Write *Collections* out to file in show lines format.
-
-        Generate a list of lines in show line format for the
-        *Collections* object (i.e. *self*).  Output this list of show
-        lines to *file_path* with each line prefixed by *indent*.
-
-        Args:
-            *file_path* (Path): The file to write out to.
-            *indent* (str): A string to prepend to each line.
-
-        """
-        collections: Collections = self
-        show_lines: List[str] = collections.show_lines_get()
-        show_lines_text: str = "".join([f"{indent}{show_line}\n" for show_line in show_lines])
-        show_lines_file: IO[Any]
-        with file_path.open("w") as show_lines_file:
-            show_lines_file.write(show_lines_text)
-
-    # Collections.packages_scan():
-    def packages_scan(self, searches_root: Path) -> None:
-        """Scan for collection packages.
-
-        Using the magic of the *pkg_resources* module, find all of
-        the Python modules that have been installed and have registered
-        a "bom_manager_collection_get" entry point in their `setup.py`
-        module configuration file.  Each such entry point is loaded
-        and executed to create to obtain the collection name and its
-        associated collection root directory *Path*.
-
-        Args:
-            *searches_root* (*Path*): The path to the searches root
-                directory needed for creating each *Collection* object.
-
-        """
-        # Grab some values from *collections* (i.e. *self*):
-        collections: Collections = self
-        bom_manager: BomManager = collections.bom_manager
-
-        # Sweep through *entry_point*'s that match *entry_point_key*:
-        tracing: str = tracing_get()
-        entry_point_key: str = "bom_manager_collection_get"
-        index: int
-        entry_point: pkg_resources.EntryPoint
-        for index, entry_point in enumerate(pkg_resources.iter_entry_points(entry_point_key)):
-            # Be parinoid and verify that the *entry_point* name is "collection_get":
-            entry_point_name: str = entry_point.name
-            if tracing:  # pragma: no cover
-                print(f"{tracing}Collection_Entry_Point[{index}]: '{entry_point_name}'")
-            assert entry_point_name == "collection_get"
-
-            # Load the *entry_point* and verify that it is a function:
-            collection_get: Callable[[], Tuple[str, str, Path]] = entry_point.load()
-            assert callable(collection_get)
-
-            # Invoke the *collection_get* entry point function to get the collection
-            # name and root path:
-            collection_catagory: str
-            collection_name: str
-            colleciton_root: Path
-            collection_category, collection_name, collection_root = collection_get()
-
-            # Since inter-module type checking not performed by `mypy`, we get are
-            # parinoid here and validate that we get acceptable return types:
-            assert isinstance(collection_category, str)
-            assert isinstance(collection_name, str)
-            assert isinstance(collection_root, Path)
-
-            # Now we can create the new *collection* and insert it into *collections*:
-            collection: Collection = Collection(bom_manager, collection_name,
-                                                collection_root, searches_root)
-            collections.collection_insert(collection)
-
-    # Collections.xml_lines_append():
-    def xml_lines_append(self, xml_lines: List[str], indent: str) -> None:
-        """Append XML for *Collection* to a list.
-
-        Append the XML description of *collection* (i.e. *self*) to the *xml_lines* list.
-        Each line is prefixed by *indent*.
-
-        Args:
-            *xml_lines*: *List*[*str*]: List of line to append individual XML lines to.
-            *indent* (*str*): A prefix prepended to each line.
-
-        """
-        # Grab some values form *collections* (i.e. *self*):
-        collections: Collections = self
-        bom_manager: BomManager = collections.bom_manager
-
-        # Append the initial element:
-        to_attribute: Callable[[str], str] = bom_manager.to_attribute
-        name: str = collections.name
-        xml_lines.append(f'{indent}<Collections name="{to_attribute(name)}">')
-
-        # Now Append the sorted *collection*'s:
-        next_indent: str = indent + "  "
-        collections_list: List[Collection] = collections.collections_get(True)
-        collection: Collection
-        for collection in collections_list:
-            collection.xml_lines_append(xml_lines, next_indent)
-
-        # Append the closing element:
-        xml_lines.append(f"{indent}</Collections>")
-
-    # Collections.xml_parse():
-    @staticmethod
-    def xml_parse(collections_element: Element, bom_manager: BomManager) -> "Collections":
-        """Parse an element tree into *Collections* object.
-
-        Parse the *collections_element* into a *Collections* object
-        including all children *Node*'s.
-
-        Args:
-            *collections_element* (*Element*): The XML Element object
-                to parse.
-            *bom_manager* (*BomManager*): The root of all data
-                structures.
-
-        Returns:
-            The resulting parsed *Collections* object.
-
-        """
-        # Create *collectons*:
-        assert collections_element.tag == "Collections", f"tag='{collections_element.tag}'"
-        attributes_table: Dict[str, str] = collections_element.attrib
-        assert "name" in attributes_table
-        name: str = attributes_table["name"]
-        collections: Collections = Collections(bom_manager, name)
-
-        # Parse each sub-*collection* and it into *collections*:
-        collection_elements: List[Element] = list(collections_element)
-        collection_element: Element
-        for collection_element in collection_elements:
-            collection: Collection = Collection.xml_parse(collection_element, bom_manager)
-            collections.collection_insert(collection)
-        return collections
 
 
 # Comment:
@@ -2119,6 +1880,347 @@ class Directory(Node):
 #         return f"Enumeration('{name}')"
 
 
+# Group:
+class Group(Node):
+    """Represents a Group of  objects."""
+
+    # Group.__init__():
+    def __init__(self, bom_manager: BomManager, name: str) -> None:
+        """Initialize a Group object.
+
+        Initialize the *group* object.  Also register the
+        the *group* object with *bom_manager*:
+
+        Args:
+            *name* (*str*): Name of the group object.
+            *bom_manager* (*BomManager*): Contains all the root data
+                structures.
+
+        """
+        # Initialize super-class of *group* (i.e. *self*):
+        group: Group = self
+        super().__init__(bom_manager)
+
+        # Verify that *group* (i.e. *self*) has a *Nodes* object for containing
+        # *Group*'s:
+        assert group.has_nodes(Collection)
+        assert group.has_nodes(Group)
+
+        # Stuff values into *group* (i.e. *self*):
+        self.name: str = name
+
+    # Group.__str__():
+    def __str__(self) -> str:
+        """Return a string represention of a Group object."""
+        # In order to support the *trace* decorator for the *__init__*() method, we can not
+        # assume that the *name* attribute exists:
+        group: Group = self
+        name: str = "??"
+        if hasattr(group, "name"):
+            name = group.name
+        return f"Group('{name}')"
+
+    # Group.collection_insert():
+    def collection_insert(self, collection: "Collection") -> None:
+        """Insert a collection into a *Group* object.
+
+        Insert *collection* into *group* (i.e. *self*.)
+
+        Args:
+            *collection* (*Collection*): The collection to insert.
+
+        """
+        # Grab some values from *group* (i.e. *self*):
+        group: Group = self
+        group.node_insert(collection)
+
+    # Group.collections_get():
+    def collections_get(self, sort: bool) -> List[Collection]:
+        """
+        Return a list of *Collection*'s.
+
+        Return a list of *Collection*'s associated with *collections*
+        (i.e. *self*.)  If *sort* is *True*, the returned list
+        is sorted by table name.
+
+        Args:
+            *sort* (*bool*): If *True*, the returned tables sorted by
+                table name.
+
+        Returns:
+            Returns a list of *Table*'s that are sorted if *sort*
+            is *True*:
+
+        """
+        # Extract *collections* from *collection
+        group: Group = self
+        collection_sub_nodes: List[Node] = group.sub_nodes_get(Collection)
+        collection_sub_node: Node
+        collections: List[Collection] = [collection_sub_node.collection_cast()
+                                         for collection_sub_node in collection_sub_nodes]
+        if sort:
+            collections.sort(key=lambda collection: collection.name)
+        return collections
+
+    # Group.group_cast():
+    def group_cast(self) -> "Group":
+        """Convert a *Node* to a *Group*."""
+        group: Group = self
+        return group
+
+    # Group.show_lines_append():
+    def show_lines_append(self, show_lines: List[str], indent: str, text: str = "") -> None:
+        """See node base class."""
+        group: Group = self
+        text = f"'{group.name}'"
+        super().show_lines_append(show_lines, indent, text=text)
+
+    # Group.show_lines_get():
+    def show_lines_get(self) -> List[str]:
+        """Return a list of lines for the Group object.
+
+        For testing purposes, it is desirable to produce a textual
+        representation of a tree.  This is the top level routine
+        generates the reprensentation as a list of strings.
+
+        Returns:
+            A list of lines, where each line corresponds to one
+            node in the tree.  The tree depth is indicated by
+            the number preceeding spaces.
+
+        """
+        group: Group = self
+        show_lines: List[str] = list()
+        group.show_lines_append(show_lines, "")
+        return show_lines
+
+    # Group.show_lines_file_write():
+    def show_lines_file_write(self, file_path: Path, indent: str) -> None:
+        """Write *Group* out to file in show lines format.
+
+        Generate a list of lines in show line format for the
+        *Group* object (i.e. *self*).  Output this list of show
+        lines to *file_path* with each line prefixed by *indent*.
+
+        Args:
+            *file_path* (Path): The file to write out to.
+            *indent* (str): A string to prepend to each line.
+
+        """
+        group: Group = self
+        show_lines: List[str] = group.show_lines_get()
+        show_lines_text: str = "".join([f"{indent}{show_line}\n" for show_line in show_lines])
+        show_lines_file: IO[Any]
+        with file_path.open("w") as show_lines_file:
+            show_lines_file.write(show_lines_text)
+
+    # Group.sub_groups_get():
+    def sub_groups_get(self, sort: bool) -> "List[Group]":
+        """
+        Return a list of sub-*Group*'s.
+
+        Return a list of sub-*Group*'s associated with *group*
+        (i.e. *self*.)  If *sort* is *True*, the returned list
+        is sorted by sub-group name.
+
+        Args:
+            *sort* (*bool*): If *True*, the returned tables sorted by
+                table name.
+
+        Returns:
+            Returns a list of *Group*'s that are sorted if *sort*
+            is *True*:
+
+        """
+        # Extract *collections* from *collection
+        group: Group = self
+        group_sub_nodes: List[Node] = group.sub_nodes_get(Group)
+        group_sub_node: Node
+        sub_groups: List[Group] = [group_sub_node.group_cast()
+                                   for group_sub_node in group_sub_nodes]
+        if sort:
+            sub_groups.sort(key=lambda sub_group: sub_group.name)
+        return sub_groups
+
+    # Group.sub_group_insert():
+    def sub_group_insert(self, sub_group: "Group") -> None:
+        """Insert a sub-*Group*.
+
+        Insert *sub_group* into *group* (i.e. *self*).
+
+        Args:
+            *sub_group* (*Group*): The *Group* object to insert into
+                *group* (i.e. *self*):
+
+        """
+        # Insert *sub_group* into *group* (i.e. *self*):
+        group: Group = self
+        group.node_insert(sub_group)
+
+    # Group.packages_scan():
+    @trace(1)
+    def packages_scan(self, searches_root: Path) -> None:
+        """Scan for collection packages.
+
+        Using the magic of the *pkg_resources* module, find all of
+        the Python modules that have been installed and have registered
+        a "bom_manager_collection_get" entry point in their `setup.py`
+        module configuration file.  Each such entry point is loaded
+        and executed to create to obtain the collection name and its
+        associated collection root directory *Path*.
+
+        Args:
+            *root_group* (*Group*): The ro
+            *searches_root* (*Path*): The path to the searches root
+                directory needed for creating each *Collection* object.
+
+        """
+        # Grab some values from *group* (i.e. *self*):
+        group: Group = self
+        bom_manager: BomManager = group.bom_manager
+
+        # Sweep through *entry_point*'s that match *entry_point_key*:
+        tracing: str = tracing_get()
+        entry_point_key: str = "bom_manager_collection_get"
+        index: int
+        entry_point: pkg_resources.EntryPoint
+        for index, entry_point in enumerate(pkg_resources.iter_entry_points(entry_point_key)):
+            # Be parinoid and verify that the *entry_point* name is "collection_get":
+            entry_point_name: str = entry_point.name
+            if tracing:  # pragma: no cover
+                print(f"{tracing}Collection_Entry_Point[{index}]: '{entry_point_name}'")
+            assert entry_point_name == "collection_get"
+
+            # Load the *entry_point* and verify that it is a function:
+            collection_get: Callable[[], Tuple[str, str, Path]] = entry_point.load()
+            assert callable(collection_get)
+
+            # Invoke the *collection_get* entry point function to get the collection
+            # name and root path:
+            category_name: str
+            collection_name: str
+            collection_root: Path
+            category_name, collection_name, collection_root = collection_get()
+            if tracing:  # pragma: no cover
+                print(f"{tracing}category_name='{category_name}'")
+                print(f"{tracing}collection_name='{collection_name}'")
+                print(f"{tracing}collection_root='{collection_root}'")
+
+            # Since inter-module type checking not currenty performed by `mypy`, we get are
+            # paranoid here and validate that we get acceptable return types:
+            assert isinstance(category_name, str)
+            assert isinstance(collection_name, str)
+            assert isinstance(collection_root, Path)
+
+            # Create the *catetgory_group* if necessary:
+            if category_name != "":
+                # We have *category_name* so we must find/create the matching *category_group*:
+                sub_groups: List[Group] = group.sub_groups_get(False)
+                sub_group: Group
+                for sub_group in sub_groups:
+                    # For now, disable test coverage on this code because we only have
+                    # the Digi-Key collection.  Once we get a second electronics collection
+                    # plug-in, we can remove the "# pragma: no cover" below:
+                    if sub_group.name == category_name:  # pragma: no cover
+                        group = sub_group
+                        if tracing:  # pragma: no cover
+                            print(f"{tracing}Found category group '{category_name}'")
+                        break
+                else:
+                    if tracing:  # pragma: no cover
+                        print(f"{tracing}Creating category group '{category_name}'")
+                    category_group: Group = Group(bom_manager, category_name)
+                    group.sub_group_insert(category_group)
+                    group = category_group
+
+            # Now we can create the new *collection* and insert it into *category_group*:
+            collection: Collection = Collection(bom_manager, collection_name,
+                                                collection_root, searches_root)
+            group.collection_insert(collection)
+
+    # Group.xml_lines_append():
+    def xml_lines_append(self, xml_lines: List[str], indent: str) -> None:
+        """Append XML for *Collection* to a list.
+
+        Append the XML description of *collection* (i.e. *self*) to the *xml_lines* list.
+        Each line is prefixed by *indent*.
+
+        Args:
+            *xml_lines*: *List*[*str*]: List of line to append individual XML lines to.
+            *indent* (*str*): A prefix prepended to each line.
+
+        """
+        # Grab some values form *group* (i.e. *self*):
+        group: Group = self
+        bom_manager: BomManager = group.bom_manager
+
+        # Append the initial element:
+        to_attribute: Callable[[str], str] = bom_manager.to_attribute
+        name: str = group.name
+        xml_lines.append(f'{indent}<Group name="{to_attribute(name)}">')
+
+        # First append any sorted sub-*Group*'s:
+        next_indent: str = indent + "  "
+        sub_groups: List[Group] = group.sub_groups_get(True)
+        sub_group: Group
+        for sub_group in sub_groups:
+            sub_group.xml_lines_append(xml_lines, next_indent)
+
+        # Now Append the sorted *collection*'s:
+        collections: List[Collection] = group.collections_get(True)
+        collection: Collection
+        for collection in collections:
+            collection.xml_lines_append(xml_lines, next_indent)
+
+        # Append the closing element:
+        xml_lines.append(f"{indent}</Group>")
+
+    # Group.xml_parse():
+    @staticmethod
+    def xml_parse(group_element: Element, bom_manager: BomManager) -> "Group":
+        """Parse an element tree into *Group* object.
+
+        Parse the *group_element* into a *Group* object
+        including all children *Node*'s.
+
+        Args:
+            *group_element* (*Element*): The XML Element object
+                to parse.
+            *bom_manager* (*BomManager*): The root of all data
+                structures.
+
+        Returns:
+            The resulting parsed *Group* object.
+
+        """
+        # Perform the initial attribute extraction from *group* (i.e. *self*):
+        assert group_element.tag == "Group", f"tag='{group_element.tag}'"
+        attributes_table: Dict[str, str] = group_element.attrib
+        assert "name" in attributes_table
+        name: str = attributes_table["name"]
+
+        # Now we create the *group* using *name*:
+        group: Group = Group(bom_manager, name)
+
+        # Parse each *sub-element* into either a *sub_group* or a *collection* and it into *group*:
+        sub_elements: List[Element] = list(group_element)
+        sub_element: Element
+        for sub_element in sub_elements:
+            sub_element_tag_name: str = sub_element.tag
+            if sub_element_tag_name == "Collection":
+                # We have *collection* to parse and insert into *group*:
+                collection: Collection = Collection.xml_parse(sub_element, bom_manager)
+                group.collection_insert(collection)
+            elif sub_element_tag_name == "Group":
+                # We have a *sub_group* to parse and insert into *group:
+                sub_group: Group = Group.xml_parse(sub_element, bom_manager)
+                group.sub_group_insert(sub_group)
+            else:
+                # This should never happen:
+                assert False, f"Encountered bogus tag '{sub_element_tag_name}'"  # pragma: no cover
+        return group
+
+
 # Parameter:
 class Parameter(Node):
     """Represents a parameter of a parameteric table."""
@@ -2708,7 +2810,7 @@ class Table(Node):
                 types are stored back into the the *table* *Parameter*'s.
 
         """
-        # This delightful piece of code reads in a `.csv` file and attempts to catagorize
+        # This delightful piece of code reads in a `.csv` file and attempts to categorize
         # each column of the table with a "type".  The types are stored in *re_table*
         # (from *gui*) as dictionary of named pre compiled regualar expressions.
         # If there is no good match for the table column contents, it is given a type
@@ -2953,7 +3055,7 @@ class Table(Node):
     # @trace(1)
     def type_tables_extract(self, column_tables: List[Dict[str, int]]) -> List[Dict[str, int]]:
         """TODO."""
-        # The *re_table* comes from *gui* contains some regular expression for catagorizing
+        # The *re_table* comes from *gui* contains some regular expression for categorizing
         # values.  The key of *re_table* is the unique *type_name* associated with the regular
         # expression that matches a given type.  The regular expressions are *PreCompiled*
         # to improve efficiency:

@@ -1,5 +1,4 @@
-
-from bom_manager.node_view import (BomManager, Collection, Collections, Directory, Node,
+from bom_manager.node_view import (BomManager, Collection, Group, Directory, Node,
                                    NodeTemplate, Parameter, ParameterComment, Table,
                                    TableComment, Search)
 import lxml.etree as ETree   # type: ignore
@@ -9,25 +8,61 @@ from typing import (Any, Dict, IO, List)
 from bom_manager.tracing import trace_level_set, tracing_get, trace
 
 
-# directory_remove_entirely():
-def directory_remove_entirely(directory_path: Path) -> None:
-    """Remove a directory and all of its children.
+# remove_directory_recursively():
+def remove_recursively(path: Path) -> None:
+    """Recursivly removed directories and files.
 
-    Recursively visit all of the files and sub-directories of
-    *directory_path* followed by removing *directory_path* itself.
+    If *path* exists, it will be recursively removed whether *path* is
+    a directory or a file.
 
     Args:
-        *directory_path* (*Path*): The directory to entirely remove.
+        *path* (*Path*): The directory or file to remove.
 
     """
-    if directory_path.is_dir():
-        sub_path: Path
-        for sub_path in directory_path.iterdir():
-            if sub_path.is_dir():
-                directory_remove_entirely(sub_path)
-            else:
-                sub_path.unlink()
-        directory_path.rmdir()
+    if path.exists():
+        if path.is_dir():
+            sub_path: Path
+            for sub_path in path.iterdir():
+                remove_recursively(sub_path)
+            path.rmdir()
+        elif path.is_file():
+            path.unlink()
+        else:
+            assert False, (f"'{path} is neither a file nor a directory")  # pragma: no cover
+
+
+# temporary_directory_create():
+def temporary_directory_create() -> Path:
+    """Create an empty test directory and return the path.
+
+    Returns:
+        The *Path* to newly created empty temporary directory.
+    """
+    # Determine the *test_file_directory*:
+    test_file_path: Path = Path(__file__)
+    test_file_directory: Path = test_file_path.parent
+
+    # Create an empty *temporary_directory*:
+    temporary_directory: Path = test_file_directory / "TMP"
+    remove_recursively(temporary_directory)
+    temporary_directory.mkdir(parents=True, exist_ok=True)
+
+    # Return the path to the newly created *temporary_directory*:
+    return temporary_directory
+
+
+# temporary_directory_destroy():
+def temporary_directory_destroy() -> None:
+    """Create an empty test directory and return the path.
+
+    Returns:
+        The *Path* to newly created empty temporary directory.
+    """
+    # Determine the *test_file_directory*:
+    test_file_path: Path = Path(__file__)
+    test_file_directory: Path = test_file_path.parent
+    temporary_directory: Path = test_file_directory / "TMP"
+    remove_recursively(temporary_directory)
 
 
 # test_attribute_converter():
@@ -129,36 +164,45 @@ def test_constructors():
     test_file_path: Path = Path(__file__)
     test_file_directory: Path = test_file_path.parent
 
+    # Create the *temporary_directory* for writing miscellaneous stuff out to:
+    temporary_directory: Path = temporary_directory_create()
+
     # Create a *node_template* and verify the *__str__*() method:
     node_template: NodeTemplate = NodeTemplate(Node, (), {})
     node_template_text: str = node_template.__str__()
     assert node_template_text == "NodeTemplate('Node')", ("node_template_text="
                                                           f"'{node_template_text}'")
 
-    # Create *bom_manager* and *collections* and verify:
+    # Create *bom_manager* and *group* and verify:
     bom_manager: BomManager = BomManager()
-    collections: Collections = Collections(bom_manager, "Root")
-    assert collections.show_lines_get() == [
-        "Collections('Root')"
+    root_group: Group = Group(bom_manager, "Root")
+    assert root_group.show_lines_get() == [
+        "Group('Root')"
         ]
+
+    # Create an *electronics_group":
+    electronics_group = Group(bom_manager, "Electronics")
+    root_group.sub_group_insert(electronics_group)
 
     # Create an empty *test_collection_root* directory:
     test_collection_root: Path = test_file_directory / "TMP_ROOT"
-    directory_remove_entirely(test_collection_root)
+    remove_recursively(test_collection_root)
     test_collection_root.mkdir(parents=True, exist_ok=True)
 
-    # Create *digikey_collection*, insert into *collections* and verify:
+    # Create *digikey_collection*, insert into *group* and verify:
     searches_root: Path = test_file_directory / "searches"
     digikey_collection: Collection = Collection(bom_manager,
                                                 "Digi-Key", test_collection_root, searches_root)
     digikey_collection_key: int = digikey_collection.collection_key
     assert digikey_collection_key >= 0
     assert digikey_collection is bom_manager.collection_lookup(digikey_collection_key)
-    collections.collection_insert(digikey_collection)
-    assert collections.show_lines_get() == [
-        "Collections('Root')",
-        " Collection('Digi-Key')"
-        ]
+    electronics_group.collection_insert(digikey_collection)
+    root_group_show_lines: List[str] = root_group.show_lines_get()
+    assert root_group_show_lines == [
+        "Group('Root')",
+        " Group('Electronics')",
+        "  Collection('Digi-Key')"
+        ], f"root_group_show_lines = {root_group_show_lines}"
 
     # Create the *capacitors_directory* and *resistors_directory* and insert into
     # *digikey_colleciton*:
@@ -168,11 +212,12 @@ def test_constructors():
     resistors_directory: Directory = Directory(bom_manager, "Resistors", digikey_collection_key)
     digikey_collection.directory_insert(resistors_directory)
     assert resistors_directory.collection_get() is digikey_collection
-    assert collections.show_lines_get() == [
-        "Collections('Root')",
-        " Collection('Digi-Key')",
-        "  Directory('Capacitors')",
-        "  Directory('Resistors')"
+    assert root_group.show_lines_get() == [
+        "Group('Root')",
+        " Group('Electronics')",
+        "  Collection('Digi-Key')",
+        "   Directory('Capacitors')",
+        "   Directory('Resistors')"
         ]
 
     # Create  *chip_resistors_table* and stuff it into *resistors_directory*:
@@ -188,13 +233,14 @@ def test_constructors():
     chip_resistors_table.comment_insert(table_comment)
 
     resistors_directory.table_insert(chip_resistors_table)
-    assert collections.show_lines_get() == [
-        "Collections('Root')",
-        " Collection('Digi-Key')",
-        "  Directory('Capacitors')",
-        "  Directory('Resistors')",
-        "   Table('Chip Resistor - Surface Mount')",
-        "    TableComment('EN')"
+    assert root_group.show_lines_get() == [
+        "Group('Root')",
+        " Group('Electronics')",
+        "  Collection('Digi-Key')",
+        "   Directory('Capacitors')",
+        "   Directory('Resistors')",
+        "    Table('Chip Resistor - Surface Mount')",
+        "     TableComment('EN')"
         ]
 
     # Stuff *manufacturer_parameter* and *all_search* into *chip_resistor_table*:
@@ -208,32 +254,34 @@ def test_constructors():
     all_search: Search = Search(bom_manager, "@ALL", digikey_collection_key)
     chip_resistors_table.search_insert(all_search)
     assert all_search.collection_get() is digikey_collection
-    assert collections.show_lines_get() == [
-        "Collections('Root')",
-        " Collection('Digi-Key')",
-        "  Directory('Capacitors')",
-        "  Directory('Resistors')",
-        "   Table('Chip Resistor - Surface Mount')",
-        "    Parameter('Manufacturer No.')",
-        "     ParameterComment('EN')",
-        "     ParameterComment('RU')",
-        "    Search('@ALL')",
-        "    TableComment('EN')"
+    assert root_group.show_lines_get() == [
+        "Group('Root')",
+        " Group('Electronics')",
+        "  Collection('Digi-Key')",
+        "   Directory('Capacitors')",
+        "   Directory('Resistors')",
+        "    Table('Chip Resistor - Surface Mount')",
+        "     Parameter('Manufacturer No.')",
+        "      ParameterComment('EN')",
+        "      ParameterComment('RU')",
+        "     Search('@ALL')",
+        "     TableComment('EN')"
         ]
 
     # Remove a *Node* and verify its removal:
     manufacturer_parameter.remove(manufacturer_parameter_comment_ru)
-    assert collections.show_lines_get() == [
-        "Collections('Root')",
-        " Collection('Digi-Key')",
-        "  Directory('Capacitors')",
-        "  Directory('Resistors')",
-        "   Table('Chip Resistor - Surface Mount')",
-        "    Parameter('Manufacturer No.')",
-        "     ParameterComment('EN')",
-        "    Search('@ALL')",
-        "    TableComment('EN')"
-        ], f"{collections.show_lines_get()}"
+    assert root_group.show_lines_get() == [
+        "Group('Root')",
+        " Group('Electronics')",
+        "  Collection('Digi-Key')",
+        "   Directory('Capacitors')",
+        "   Directory('Resistors')",
+        "    Table('Chip Resistor - Surface Mount')",
+        "     Parameter('Manufacturer No.')",
+        "      ParameterComment('EN')",
+        "     Search('@ALL')",
+        "     TableComment('EN')"
+        ], f"{root_group.show_lines_get()}"
 
     # Create some nested sub-directories and verify:
     connectors_directory: Directory = Directory(bom_manager, "Connectors", digikey_collection_key)
@@ -242,32 +290,34 @@ def test_constructors():
                                                                 "Rectangular Connectors",
                                                                 digikey_collection_key)
     connectors_directory.directory_insert(rectangular_connectors_sub_directory)
-    assert collections.show_lines_get() == [
-        "Collections('Root')",
-        " Collection('Digi-Key')",
-        "  Directory('Capacitors')",
-        "  Directory('Resistors')",
-        "   Table('Chip Resistor - Surface Mount')",
-        "    Parameter('Manufacturer No.')",
-        "     ParameterComment('EN')",
-        "    Search('@ALL')",
-        "    TableComment('EN')",
-        "  Directory('Connectors')",
-        "   Directory('Rectangular Connectors')"
+    assert root_group.show_lines_get() == [
+        "Group('Root')",
+        " Group('Electronics')",
+        "  Collection('Digi-Key')",
+        "   Directory('Capacitors')",
+        "   Directory('Resistors')",
+        "    Table('Chip Resistor - Surface Mount')",
+        "     Parameter('Manufacturer No.')",
+        "      ParameterComment('EN')",
+        "     Search('@ALL')",
+        "     TableComment('EN')",
+        "   Directory('Connectors')",
+        "    Directory('Rectangular Connectors')"
         ]
 
-    # Perform a recursive data validity test for *collections*:
-    collections.attributes_validate_recursively()
+    # Perform a recursive data validity test for *group*:
+    root_group.attributes_validate_recursively()
 
     # Test *tree_path_find* method and invoke the various *__str__* methods:
     tree_path: List[Node] = list()
-    collections.tree_path_find(all_search, tree_path)
+    root_group.tree_path_find(all_search, tree_path)
     desired_path = [
         all_search,
         chip_resistors_table,
         resistors_directory,
         digikey_collection,
-        collections]
+        electronics_group,
+        root_group]
     tree_path_names: List[str] = [node.__str__() for node in tree_path]
     desired_path_names: List[str] = [node.__str__() for node in desired_path]
     assert tree_path_names == desired_path_names, (f"tree_path_names={tree_path_names} != "
@@ -285,34 +335,38 @@ def test_constructors():
     assert tree_path_names == desired_path_names, (f"tree_path_names={tree_path_names} != "
                                                    f"desired_path_names={desired_path_names}")
 
-    # Write the current *collections* *show_lines_append* output out to a file:
-    collections.show_lines_file_write(Path("/tmp/show_lines.txt"), "")
+    # Write the current *group* *show_lines_append* output out to a file:
+    show_lines_text_path: Path = temporary_directory / "show_lines.txt"
+    root_group.show_lines_file_write(show_lines_text_path, "")
 
     # Now verify that XML writing and parsing works:
-    # Step one: fill in *xml_lines1* from *collections*:
+    # Step one: fill in *xml_lines1* from *group*:
     xml_lines1: List[str] = list()
-    collections.xml_lines_append(xml_lines1, "")
+    root_group.xml_lines_append(xml_lines1, "")
     xml_lines1.append("")
     xml_lines1_text: str = '\n'.join(xml_lines1)
 
     # For debugging write out *xml_lines1_text* to a file:
-    xml_file: IO[Any]
-    with open("/tmp/xml_lines1.xml", "w") as xml_file:
-        xml_file.write(xml_lines1_text)
+    xml_lines1_file: IO[Any]
+    xml_lines1_xml_path: Path = temporary_directory / "xml_lines1.xml"
+    with xml_lines1_xml_path.open("w") as xml_lines1_file:
+        xml_lines1_file.write(xml_lines1_text)
 
-    # Now parse *xml_lines2_text* into *collections2*:
-    collections_element: Element = ETree.fromstring(xml_lines1_text)
-    collections2: Collections = Collections.xml_parse(collections_element, bom_manager)
+    # Now parse *xml_lines2_text* into *group2*:
+    group_element: Element = ETree.fromstring(xml_lines1_text)
+    group2: Group = Group.xml_parse(group_element, bom_manager)
 
     # Now regenerate the *xml_lines2_text*:
     xml_lines2: List[str] = list()
-    collections2.xml_lines_append(xml_lines2, "")
+    group2.xml_lines_append(xml_lines2, "")
     xml_lines2.append("")
     xml_lines2_text: str = "\n".join(xml_lines2)
 
     # For debugging write out *xml_lines2_text* to a file:
-    with open("/tmp/xml_lines2.xml", "w") as xml_file:
-        xml_file.write(xml_lines2_text)
+    xml_lines2_file: IO[Any]
+    xml_lines2_xml_path: Path = temporary_directory / "xml_lines2.xml"
+    with xml_lines2_xml_path.open("w") as xml_lines2_file:
+        xml_lines2_file.write(xml_lines2_text)
 
     # Finally verify that *xml_lines1* matches *xml_lines2*:
     assert xml_lines1 == xml_lines2
@@ -412,8 +466,9 @@ def test_constructors():
     # Now verify that nothing has changed:
     assert xml_lines == target_xml_lines
 
-    # Remove *test_collection_root*:
-    directory_remove_entirely(test_collection_root)
+    # Remove *test_collection_root* and the *temporary_directory*:
+    remove_recursively(test_collection_root)
+    temporary_directory_destroy()
 
 
 # test_packages_scan():
@@ -427,13 +482,21 @@ def test_packages_scan():
     searches_root: Path = test_node_view_directory / "searches"
     assert searches_root.is_dir()
 
-    # Create a *bom_manager* and *collections*:
+    # Create a *bom_manager* and *group*:
     bom_manager: BomManager = BomManager()
-    collections: Collections = Collections(bom_manager, "Root")
+    group: Group = Group(bom_manager, "Root")
 
     # Invoke the *packages_scan* method and verify that we got a collection:
-    collections.packages_scan(searches_root)
-    collections: List[Collection] = collections.collections_get(True)
+    group.packages_scan(searches_root)
+    collections: List[Collection] = group.collections_get(True)
+    assert len(collections) == 0
+    sub_groups: List[Group] = group.sub_groups_get(True)
+    assert len(sub_groups) == 1
+    electronics_group: Group = sub_groups[0]
+    assert electronics_group.name == "Electronics"
+    sub_groups = electronics_group.sub_groups_get(True)
+    assert len(sub_groups) == 0
+    collections = electronics_group.collections_get(True)
     assert len(collections) == 1
     digikey_collection: Collection = collections[0]
     assert digikey_collection.name == "Digi-Key"
@@ -445,29 +508,29 @@ def test_load_recursively():
     test_file_path: Path = Path(__file__)
     test_file_directory: Path = test_file_path.parent
 
-    # Create *bom_manager* and *collections* and verify:
+    # Create *bom_manager* and *group* and verify:
     bom_manager: BomManager = BomManager()
-    collections: Collections = Collections(bom_manager, "Root")
+    group: Group = Group(bom_manager, "Root")
 
     # Create *digikey_collection* and verify:
     digikey_root: Path = test_file_directory / "ROOT"
     searches_root: Path = test_file_directory / "searches"
     digikey_collection: Collection = Collection(bom_manager,
                                                 "Digi-Key", digikey_root, searches_root)
-    collections.collection_insert(digikey_collection)
+    group.collection_insert(digikey_collection)
 
     # Now perform parial *load_recursively* on *digikey_collection*:
     digikey_collection.load_recursively(True)
 
     # Verify that we get the correct values in *show_lines*:
-    show_lines: List[str] = collections.show_lines_get()
+    show_lines: List[str] = group.show_lines_get()
     show_lines.append("")
     with open("/tmp/partial_load", "w") as show_lines_file:
         show_line: str
         show_lines_text: str = "\n".join([f'        "{show_line}"' for show_line in show_lines])
         show_lines_file.write(show_lines_text)
     assert show_lines == [
-        "Collections('Root')",
+        "Group('Root')",
         " Collection('Digi-Key')",
         "  Directory('Digi-Key')",
         "   Directory('Capacitors')",
@@ -500,23 +563,23 @@ def test_load_recursively():
         ], f"show_lines={show_lines}"
 
     # Now perform a non-partial (i.e. ful)l *load_recursively* on *digikey_collection*:
-    collections2: Collections = Collections(bom_manager, "Root")
+    group2: Group = Group(bom_manager, "Root")
     digikey_collection2: Collection = Collection(bom_manager,
                                                  "Digi-Key", digikey_root, searches_root)
-    collections2.collection_insert(digikey_collection2)
+    group2.collection_insert(digikey_collection2)
     digikey_collection2.load_recursively(False)
 
     # Verify that we get the correct values in *show_lines*:
     trace_level_set(1)
     xml_lines: List[str] = list()
-    collections2.xml_lines_append(xml_lines, "")
+    group2.xml_lines_append(xml_lines, "")
     xxx_file: IO[Any]
     with open("/tmp/xxx.txt", "w") as xxx_file:
         xml_line: str
         for xml_line in xml_lines:
             xxx_file.write(f"        '{xml_line}',\n")
     assert xml_lines == [
-        '<Collections name="Root">',
+        '<Group name="Root">',
         ('  <Collection name="Digi-Key" '
          'collection_root="/home/wayne/public_html/projects/bom_manager/tests/ROOT" '
          'searches_root="/home/wayne/public_html/projects/bom_manager/tests/searches">'),
@@ -1111,11 +1174,12 @@ def test_load_recursively():
         '      </Directory>',
         '    </Directory>',
         '  </Collection>',
-        '</Collections>',
+        '</Group>',
     ]
 
 
 if __name__ == "__main__":
     trace_level_set(1)
     # test_file_name_converter()
-    test_load_recursively()
+    # test_load_recursively()
+    test_packages_scan()
