@@ -1,32 +1,203 @@
 """Nodes and Views.
 
-Any BOM Manager data structure that can be viewed via a Graphical User Interface (GUI) must
-be a sub-class off of the *Node* class.  When a *Node* is visible in the GUI, it has one or
-more *View* objects attached to it (one *View* object for each different view of the same
-*Node* object.)  A *View* object provides an abstract interface to the appropriate GUI library
-(e.g. QT, # WxWidgets, etc.) so that the details of the graphical presentation do not "leak"
-into the main data structures.  The command line version of the BOM manager has no need to
-load in a graphical user interface library.
+# Introduction
 
-The overall model supported by a *View* is a nestable tree of tables.  Each node of
-of the tree can be expanded and contracted by clicking on the appropriate expand/contract
-icon on the the tree node.  As the underlying *Node* data structures get updated, the
-GUI visualization gets updated.
+(This documentation is written in
+[MarkDown](https://daringfireball.net/projects/markdown/.)
 
-There are two top level global objects:
-* *BomManager* (required): There is exactly one instance of the *BomManager* object and it
-  contains the root of all BOM Manager data structures.  Every *Node* data structure has
-  a back pointer to the *BomManagaer* object.
-* *GuiManager* (optional): If there is an active graphical user interface, there is exactly one
-  *GuiManager* object instance.  This code is responsible for initializing the graphic
-  user interace libarary and managing all of the *View* objects.
-The *Node* object has a helper object all *Nodes* which is an unordered list of *Node* objects:
-All *Node* objects are sub-classed to contain the actual important data about the node.
+The data structures defined in this module are the core data structures
+for representing BOM Manager data.  All developers who decide to work
+on BOM Manager plugins, need to understand these data structures.
+
+The top level data structures are:
+
+* *BomManager*: There is exactly one of these objects in any given
+  program instance.  This data structure provides the "global" state
+  needed by all of the other data structures.
+* *NodeTemplate*: A *NodeTemplate* object is used to specify how to
+  create a *Node* object.  The *NodeTemplate*'s are stored in a table
+  inside of the *BomManager* object.  There is exactly one
+  *NodeTemplate* object for each *Node* sub-class.  (See immediately
+  below.)
+* *Node*: The *Node* object is the work horse object for storing data.
+  All *Node* objects are sub-classed to provide additional attributes
+  and methods.  In addition, each *Node* object may contain zero, one
+  or more lists of sub-*Node*'s.
+* *View*: The *View* object is used to bridge between the *Node*
+  objects and any Graphical User Interface (i.e. GUI.)  The *View*
+  object is designed to support multiple different GUI toolkit (e.g.
+  PySide2, WxWidget, Web based frameworks, etc.)
+
+Each of these data structures is discussed in separate sections below:
+
+## *BomManager*
+
+The *BomManager* object is where the global application data structures
+are stored.  The following are important components of the *BomManager*
+object:
+
+* *node_templates* (*Dict*[*Type*, *NodeTemplate*]):
+  *node_template* is a table that maps from a *Node* sub-class type
+  to that *Node*'s associated *NodeTemplate* object.  This
+  *NodeTemplate* is used by the *Node*.*__init__*() method to
+  initialize a *Node* object.  (See *Node* object below.*
+
+* *collection_table*: (*Dict*[*int*, *Collection*):
+  The *collection_table* maintains a mapping between a unique
+  colllection id and an associated *Collection*.  A *Collection* is
+  sub-classed from a *Node* object (see below.)  Many methods use the
+  *BomManager*.*collection_lookup*() method to map a collection key
+  into the associated *Collection* object.
+
+* Miscellaneous: Other miscellaneous and less interesting data is
+  stored into the *BomManager* object as well -- precompiled regular
+  expressions, etc.
+
+The key thing to understand is that every *Node* has a back pointer to
+the *BomManager* object.  Thus, *Node* sub-class objects can always
+access the *BomManager* object to access "global" information.
+
+## *NodeTemplate*:
+
+The *NodeTemplate* object specifies all of the required attributes
+and sub-*Node* lists associated with each object.  There is a
+one-to-one correspondence between a *Node* sub-class and an associated
+*NodeTemplate*.  All of the *NodeTemplate*'s are defined by the
+*BomManager*.*__init__*() method and stored in the *node_templates*
+table of the *BomManager* object.
+
+Each *NodeTemplate* specifies the following:
+
+* *node_type* (*Type*):
+  The *node_type* is the type of the *Node*.
+
+* *attributes_table* (*Dict*[*str*, *Type"]):
+  This specifies required attributes for the *Node* sub-class and
+  their associated type.  This is mostly used for data structure
+  integrity checking.
+
+* *sub_types* (*Tuple*[*Type*, ...]):
+  The *sub_types* *Tuple* specifies one *Node* sub-class type for each
+  permitted list of sub-*Node*'s.
+
+* *views_table* (??):
+  This lists all of the *View* objects used for Graphical User
+  Interfaces (GUI's) that are registered for a given *Node* sub-class.
+  See the *View* discussion further below for more about *View*
+  objects.
+
+## *Node*:
+
+The *Node* object is the primary object for storing data.  Every
+*Node* object is sub-classed.  These *Node* objects are organized
+into acyclic trees.  An acylic tree has no cross links between
+objects or objects that point back up to parent objects.  There
+are no exceptions to this rule!
+
+The primary data for the the BOM manager is stored in several root
+*Node* trees.  These primary *Node* trees are quite persistent and
+tend to stay in place for the life-time the application running.
+In addition the Graphical User Interface may create some additional
+*Node* trees that overlap with the primary *Node* trees to provide
+alternative views into the BOM manager data structures.  These
+alternative trees must still adhere to the no acyclic tree rule.
+
+The core *Node* object is quite simple and consists of the following:
+
+* *bom_manager* (*BomManager*):
+  Every *Node* object points back to the one and only *BomManager*
+  object.
+
+* *nodes_table* (*Dict*[*Type*, *Nodes*]):
+  The *nodes_table* is a dictionary that has one entry for each
+  *Node* sub-type list that is supported.  The *Nodes* class is a
+  helper class that is just a list of *Node* objects, all of the
+  same type.
+
+All other data in the *Node* object is provided by *Node* sub-class
+attribute fields.
+
+The *Node* class has a whole bunch of helper methods for use by the
+*Node* sub-classes.  Please read the code for all of these methods
+and what they do.
+
+The data structures for managing collections, tables and searces are:
+
+* *Group*: A *Group* is a collection of sub-*Group*'s and
+  *Collection*s.  There are is one root *Group* object that contains
+  all of the persistent data about *Group*'s, *Collection*'s, *Table*'s,
+  *Parameters*'s, *Search*'s, etc.  Currently, the root *Group*
+  tends to have a class sub-*Group* (e.g. "Engineering", "Food", etc.)
+  and each class sub-*Group* has a further category sub-*Group*
+  (e.g. "Electronics", "Mechanical", etc.)
+
+* *Collection*: A *Collection* contains the information for a
+  collection  of available parts.  Comceptully it very similar to a
+  vendor catalog.  A *Collection* organized as a bunch of
+  sub-*Directory*'s.
+
+* *Directory*: A *Directory* contains an optional list of
+  sub-*Directory*'s and an optional list of sub-*Table*'s.
+  A *Directory* can be thought of as a section from a vendor catalog.
+
+* *Table*: A *Table* object is the critical component of BOM Manager
+  since is specifies a class of similar parts.  It has list of
+  *Parameter*'s that specify various characteistics of each part.
+  A *Search* (see immediately below) is used to narrow down the
+  available parts to the one that is ultimately selected.
+
+  Each *Table* object has the characteristic that it can be created
+  and installed into its parent *Directory*, but it may not have
+  read in all of the underlying table data yet.  This is called
+  partial loading.  The underlying table data read in as it is needed.
+
+* *Search*: A *Search* object specifies a set of characteristics
+  needed to narrow down from a list of possible part candidates
+  in a *Table* down to a list of acceptable part candidates.  The
+  final selection of the final part occurs later in Bom Manager
+  during the Pricing and Availability phase.
+
+* *Comment*: A *Comment* is used to store textual information about
+  a parent node.  Each *Comment* has a language specifier (e.g. "EN",
+  "FR", etc.) so that a graphical user interface can be properly
+  internationalized.  All of the *Nodes* above support *Comment*s.
+
+There are other *Node* trees for other aspects of the Bom Manager.
+They are discussed further below the *View* object discussion
+immediately below.
+
+## *View*
+
+The *View* object is the intermediary between the *Node* object and
+any Graphical User Interface (GUI.)  The *View* object is generic in
+the sense that it is not tied down to any particular GUI toolkit
+(e.g. QT, WxWidgets, Tkinter, etc.)  The current BOM Manager GUI
+is implemented using QT using the PySide2 library, so it tends to
+provide functionality needed for the PySide2 library.  However,
+if someone gets enthusiastic and decides to impleant a differnt GUI
+using a differnt GUI toolkit, it is assumed that some changes to
+the View object will occur to accomedate the different GUI toolkit.
+
+A *View* object contains the following:
+
+* types_table (*Dict*[*Type*, *Callable*([*Node*], *Any) ):
+  This is a mapping from a ...
+
+The concept behind a *View* object is that it gets attached to one
+or more *Node* sub-classes.  This is accomplished via the
+*BomManager*.*view_attach*() method, which is called once for
+
+## *Plugins*
+
+The BOM Manager uses a plugin architecture to support expandability.
+Each plugin can be registered at the
+[Python Package Index Website](https://pypi.org/)
+(e.g. `https://pypi.org/`.)
 """
 
 # MIT License
 #
-# Copyright (c) 2019 Wayne C. Gramlich
+# Copyright (c) 2019 Wayne C. Gramlich (Wayne@Gramlich.Net)
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -608,6 +779,7 @@ class NodeTemplate:
                                  f"instead of desired type of '{desired_attribute_type}'")
 
 
+# Node:
 class Node:
     """Represents some data that can be displayed by a GUI."""
 
@@ -937,6 +1109,32 @@ class Node:
         nodes: Nodes
         for nodes in nodes_table.values():
             nodes.nodes_collect_recursively(node_type, nodes_list)
+
+    # Node.nodes_get():
+    def nodes_get(self, node_type: Type) -> "Nodes":
+        """Return a sub-*Nodes* object from a Node.
+
+        This method returns the *Nodes* object from *node* (i.e. *self)
+        that corresponds to *node_type*.
+
+        This is an internal helper method that is meant to be used
+        sparingly.  The manipulation of *Nodes* objects tend to be
+        hidden away from view.
+
+        Args:
+            *node_type* (*Type*): The type selector to determine
+                which *Nodes* object to return from *node*
+                (i.e. *self*)
+
+        Returns:
+            Returns the selected *Nodes* object.
+
+        """
+        # Grab the appropriate *nodes* object from *node* (i.e. *self*) and return it:
+        node: Node = self
+        nodes_table: Dict[Type, Nodes] = node.nodes_table
+        nodes: Nodes = nodes_table[node_type]
+        return nodes
 
 
 # Collection:
@@ -1707,6 +1905,17 @@ class Directory(Node):
         """
         directory: Directory = self
         directory.node_insert(sub_table)
+
+    # Directory.table_insert():
+    def table_remove(self, sub_table: "Table") -> None:
+        """Remove a sub table from a directory.
+
+        Args:
+            sub_table (Table): The table to remove.
+
+        """
+        directory: Directory = self
+        directory.remove(sub_table)
 
     # Directory.tables_get():
     def tables_get(self, sort: bool) -> "List[Table]":
@@ -2854,6 +3063,14 @@ class Table(Node):
         # We are done and can write out *table* now:
         table.xml_file_save(table_xml_file_path)
 
+    # Table.from_node():
+    @staticmethod
+    def from_node(node: Node) -> "Table":
+        """Return a Node casted into a Table."""
+        assert isinstance(node, Table)
+        table: Table = node
+        return table
+
     # Table.load_recursively():
     # @trace(1)
     def load_recursively(self, searches_path: Path, collection_key: int, partial: bool) -> None:
@@ -3293,8 +3510,10 @@ class Nodes:
         """
         # nodes: Nodes = self
         sub_nodes: Dict[int, Node] = dict()
+        self.key_sort_function: Optional[Callable[[Node], Any]] = None
         self.sub_node_type: Type = sub_node_type
         self.sub_nodes: Dict[int, Node] = sub_nodes
+        self.sorted_nodes: Optional[List[Node]] = None
         self.nonce: int = 0
 
     # Nodes.attributes_validate_recursively():
@@ -3329,9 +3548,57 @@ class Nodes:
         sub_nodes[nonce] = sub_node
         nodes.nonce = nonce + 1
 
+        # Invalidate any previous *sorted_nodes*:
+        nodes.sorted_nodes = None
+        nodes.key_sort_function = None
+
+    # Nodes.node_fetch():
+    def node_fetch(self, index: int, key_sort_function: Callable[[Node], Any]) -> Node:
+        """Return a Node from sorted Nodes list.
+
+        This method returns the *index*'th *Node* from *nodes*
+        (i.e. *self*) after it has been sorted usint the
+        *key_sort_function* for sort keys.  The *nodes* are cached
+        so multiple calls using the same *key_sort_function* do not
+        force a resort each time.  Any time the*key_sort_function*
+        function changes or a *Node* is inserted/removed from *nodes*,
+        a resort is forced.
+
+        Args:
+            *index* (*int*):
+                The index into the sorted *nodes*'.
+            *key_sort_function* (*Callable*[[*Node*], *Any*]):
+                The function that returns a sorting key for each *Node*
+                the *nodes* list.
+
+        Returns:
+            (*Node*):
+                Returns *Node* at the *index*'th location of the sorted
+                *nodes* list.
+
+        """
+        # Grab some values from *nodes*:
+        nodes: Nodes = self
+        sorted_nodes: Optional[List[Node]] = nodes.sorted_nodes
+
+        # If *key_sort_function* changes, we must force a resort:
+        if nodes.key_sort_function is not key_sort_function:
+            # Remember the new *key_sort_function* and forget any previous *sorted_nodes*:
+            nodes.key_sort_function = key_sort_function
+            sorted_nodes = None
+
+        # Make sure that we have *sorted_nodes* and that it is actually sorted:
+        if sorted_nodes is None:
+            sub_nodes: Dict[int, Node] = nodes.sub_nodes
+            sorted_nodes = list(sub_nodes.values())
+            nodes.sorted_nodes = sorted_nodes
+            sorted_nodes.sort(key=key_sort_function)
+
+        # Now *sorted_nodes* is sorted and we can perform the fetch operation:
+        return sorted_nodes[index]
+
     # Nodes.nodes_collect_recursively():
     def nodes_collect_recursively(self, node_type: Type, nodes_list: List[Node]) -> None:
-        """TODO."""
         """Recursively find all Node's that match a type.
 
         Starting from *nodes* (i.e. *self*) search for all *Nodes*
@@ -3342,6 +3609,7 @@ class Nodes:
             *node_type* (Type): The type to match for a *Node*.
             *nodes_list* (List[Node]): The list of *Node*'s to append
                 each matching *Node* to.
+
         """
         # Recursively visit each *sub_node* in *sub_nodes* looking for a *Node* that
         # matches *node_type* and append it to append to *tables*:
@@ -3351,32 +3619,31 @@ class Nodes:
         for sub_node in sub_nodes.values():
             sub_node.nodes_collect_recursively(node_type, nodes_list)
 
-    # # Nodes.nonce_get():
-    # def xxx_nonce_get(self, target_node: Node) -> int:
-    #     """Return the nonce for a sub-node.
+    # Nodes.remove():
+    # @trace(1)
+    def remove(self, remove_node: Node) -> None:
+        """Remove a Node.
 
-    #     Lookup the unique identifier (called a nonce) that was assigned
-    #     to *sub_node* in *nodes* (i.e. *self*) and return it.
+        Remove *remove_node* from *nodes* (i.e. *self*.)
 
-    #     Args:
-    #         *target_node* (*Node*): The *Node* in *nodes* (i.e. *self*)
-    #         to lookup the nonce for.
+        Args:
+            *remove_node* (*Node*): The node to remove.
 
-    #     Returns:
-    #         Return the nonce asssigned to *sub_node* from *nodes*.
+        """
+        nodes: Nodes = self
+        sub_nodes: Dict[int, Node] = nodes.sub_nodes
+        nonce: int
+        sub_node: Node
+        for nonce, sub_node in sub_nodes.items():
+            if remove_node is sub_node:
+                del sub_nodes[nonce]
+                break
+        else:  # pragma: no cover
+            assert False, "Node found in Nodes."
 
-    #     """
-    #     # Search the *sub_nodes* for *nodes* to find *
-    #     nodes: Nodes = self
-    #     sub_nodes: Dict[int, Node] = nodes.sub_nodes
-    #     nonce: int
-    #     sub_node: Node
-    #     for nonce, sub_node in sub_nodes.items():
-    #         if sub_node is target_node:
-    #             break
-    #     else:  # pragma: no cover
-    #         assert False, "Node not found"
-    #     return nonce
+        # Invalidate any *sorted_nodes*:
+        nodes.sorted_nodes = None
+        nodes.key_sort_function = None
 
     # Nodes.show_lines_append():
     # @trace(1)
@@ -3401,6 +3668,14 @@ class Nodes:
             #     assert False, f"sub_node={sub_node}
             sub_node.show_lines_append(show_lines, indent)
 
+    # Nodes.size_get():
+    def size_get(self) -> int:
+        """Return the number of sub-nodes."""
+        nodes: Nodes = self
+        sub_nodes: Dict[int, Node] = nodes.sub_nodes
+        sub_nodes_size: int = len(sub_nodes)
+        return sub_nodes_size
+
     # Nodes.sub_nodes_get():
     def sub_nodes_get(self) -> List[Node]:
         """Return the sub nodes in arbitrary order."""
@@ -3408,7 +3683,7 @@ class Nodes:
         sub_nodes: Dict[int, Node] = nodes.sub_nodes
         return list(sub_nodes.values())
 
-    # Nodes.treep_path_find():
+    # Nodes.tree_path_find():
     # @trace(1)
     def tree_path_find(self, search_node: Node, path: List[Node]) -> List[Node]:
         """Recursively construct a path between to *Nodes*.
@@ -3433,21 +3708,6 @@ class Nodes:
                 # *search_node* has been found, so we can stop sweeping:
                 break
         return path
-
-    # Nodes.remove():
-    # @trace(1)
-    def remove(self, remove_node: Node) -> None:
-        """TODO."""
-        nodes: Nodes = self
-        sub_nodes: Dict[int, Node] = nodes.sub_nodes
-        nonce: int
-        sub_node: Node
-        for nonce, sub_node in sub_nodes.items():
-            if remove_node is sub_node:
-                del sub_nodes[nonce]
-                break
-        else:  # pragma: no cover
-            assert False
 
 
 # Units:
@@ -3506,3 +3766,58 @@ class Units:
         si_units_re_text: str = prefix_re_text + "?" + all_units_re_text
         # print("si_units_re_text='{0}'".format(si_units_re_text))
         return si_units_re_text
+
+
+# View:
+class View:
+    """An interface to a GUI.
+
+    This package has no explicit knowledge of a Graphic User Interface
+    (i.e. GUI.)  The *View* class is used to bridge between the data
+    structures in this package and the GUI.  The way it works is that
+    most of the methods in this base class are templates that fail
+    with an assertion failure.  A sub-class of the GUI must sub-class
+    the *View* object and ..
+
+    """
+
+    # View.__init__():
+    def __init__(self, name: str, children_table: Dict[Type, Tuple[Type, ...]]) -> None:
+        """TODO."""
+        # view: View = self
+        self.name: str = name
+        self.children_types_table: Dict[Type, Tuple[Type, ...]] = children_table
+
+    # View.__str__():
+    def __str__(self):
+        """Return a string representation of a view."""
+        name: str = "??"
+        view: View = self
+        if hasattr(view, "name"):
+            name = view.name
+        return f"View('{name}')"
+
+    # View.can_fetch_more():
+    def can_fetch_more(self, node: Node) -> bool:
+        """TODO."""
+        view: View = self
+        more_fetchable: bool = view.has_children(node)
+        return more_fetchable
+
+    # View.has_children():
+    def has_children(self, node: Node) -> bool:
+        """TODO."""
+        # Grab some values from *view* (i.e. *self*):
+        # view: View = self
+        # children_types_table: Dict[Type, Tuple[Type, ...]] = view.children_types_table
+        # node_type: Type = node.__class__
+        # children_types: Tuple[Type, ...] = children_types_table[node_type]
+        # child_type: Type
+        children_present: bool = False
+        # for child_type in children_types:
+        #     nodes: Nodes = node.nodes_get(child_type)
+        #     nodes_size: int = nodes.size_get()
+        #     if nodes_size:
+        #         children_present = True
+        #         break
+        return children_present

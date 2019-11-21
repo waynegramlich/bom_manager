@@ -1,4 +1,4 @@
-from bom_manager.node_view import (BomManager, Collection, Group, Directory, Node,
+from bom_manager.node_view import (BomManager, Collection, Group, Directory, Node, Nodes,
                                    NodeTemplate, Parameter, ParameterComment, Table,
                                    TableComment, Search)
 import lxml.etree as ETree   # type: ignore
@@ -469,6 +469,76 @@ def test_constructors():
     # Remove *test_collection_root* and the *temporary_directory*:
     remove_recursively(test_collection_root)
     temporary_directory_destroy()
+
+
+# test_nodes():
+def test_nodes():
+    """Test out the *Nodes* data structure."""
+
+    # Figure out the *collection_root* and *searches_root* *Path*'s to use:
+    test_node_view_file_name: str = __file__
+    test_node_view_file_path: Path = Path(test_node_view_file_name)
+    tests_directory: Path = test_node_view_file_path.parent
+    collection_root: Path = tests_directory / "ROOT"
+    searches_root: Path = tests_directory / "searches"
+    assert collection_root.is_dir(), f"collection_root='{collection_root}' does not exist"
+    assert searches_root.is_dir(), f"searches_root='{searches_root}' does not exist"
+
+    # Create a *bom_manager* and *collection*:
+    bom_manager: BomManager = BomManager()
+    collection: Collection = Collection(bom_manager,
+                                        "Digi-Key", collection_root, searches_root)
+    collection_key: int = collection.collection_key
+
+    # Now start filling the *collection* with some directories and tables:
+    directory: Directory = Directory(bom_manager, "Directory", collection_key)
+    collection.directory_insert(directory)
+    table_nodes: Nodes = directory.nodes_get(Table)
+    assert table_nodes.size_get() == 0
+    table1: Table = Table(bom_manager, "Table1", collection_key)
+    directory.table_insert(table1)
+    assert table_nodes.size_get() == 1
+    table2: Table = Table(bom_manager, "Table2", collection_key)
+    directory.table_insert(table2)
+    assert table_nodes.size_get() == 2
+    table3: Table = Table(bom_manager, "Table3", collection_key)
+    directory.table_insert(table3)
+    assert table_nodes.size_get() == 3
+
+    # Now fetch some nodes with different sorting keys:
+    def name_key(node: Node) -> Any:
+        table: Table = Table.from_node(node)
+        return table.name
+
+    table1a: Table = Table.from_node(table_nodes.node_fetch(0, name_key))
+    assert table1a.name == "Table1"
+    table2a: Table = Table.from_node(table_nodes.node_fetch(1, name_key))
+    assert table2a.name == "Table2"
+    table3a: Table = Table.from_node(table_nodes.node_fetch(2, name_key))
+    assert table3a.name == "Table3"
+
+    # Now change the key sort function and verify that a resort occured:
+    def last_character_invert_key(node: Node) -> Any:
+        table: Table = Table.from_node(node)
+        return -int(table.name[-1])
+
+    table3b: Table = Table.from_node(table_nodes.node_fetch(0, last_character_invert_key))
+    assert table3b.name == "Table3"
+    table2b: Table = Table.from_node(table_nodes.node_fetch(1, last_character_invert_key))
+    assert table2b.name == "Table2"
+    table1b: Table = Table.from_node(table_nodes.node_fetch(2, last_character_invert_key))
+    assert table1b.name == "Table1"
+
+    # Now insert a new *table4* and verify that a resort occured:
+    table4: Table = Table(bom_manager, "Table4", collection_key)
+    directory.table_insert(table4)
+    table4c: Table = Table.from_node(table_nodes.node_fetch(0, last_character_invert_key))
+    assert table4c.name == "Table4"
+
+    # Now remove *table1* and verify that a resort occurred:
+    directory.table_remove(table4)
+    table3c: Table = Table.from_node(table_nodes.node_fetch(0, last_character_invert_key))
+    assert table3c.name == "Table3"
 
 
 # test_packages_scan():

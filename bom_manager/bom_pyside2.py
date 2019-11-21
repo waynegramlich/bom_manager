@@ -75,6 +75,7 @@
 #     can be enclosed in single quotes (e.g. `  f'<Tag foo="{foo}" bar="{bar}"/>'  `.)
 #
 
+from bom_manager.node_view import (BomManager, Collection, Group)
 from pathlib import Path
 # Lots of classes/types are imported from various portions of PySide2:
 from PySide2.QtUiTools import QUiLoader                                               # type: ignore
@@ -84,15 +85,44 @@ from PySide2.QtWidgets import (QApplication, QMainWindow)                       
 from PySide2.QtCore import (QCoreApplication, QFile)                                  # type: ignore
 # from PySide2.QtCore import (QItemSelectionModel, QModelIndex, Qt)                   # type: ignore
 from PySide2.QtCore import (Qt,)                                                      # type: ignore
+from typing import (List, )
 import sys
 
 
 # main():
 def main() -> int:
     """Fire up the BOM manager GUI. """
-    print("Hello")
 
-    bom_pyside2: BomPyside2 = BomPyside2()
+    # Create the *bom_manager*:
+    bom_manager: BomManager = BomManager()
+
+    # Create the *root_group*:
+    root_group: Group = Group(bom_manager, "Root")
+
+    # Find the *searches_root*.  This code is incomplete.  There needs to be a way
+    # to specify the *searches_root* from the command line:
+    current_working_directory: Path = Path.cwd()
+    searches_root: Path = current_working_directory / "searches"
+    assert searches_root.is_dir(), f"{searches_root} does not exist"
+
+    # Now scan for collections and add them into *root_group*:
+    root_group.packages_scan(searches_root)
+
+    # Do some paranoid checking that will break as soon as there is more than one *Collection*
+    # plugin:
+    root_sub_groups: List[Group] = root_group.sub_groups_get(False)
+    assert len(root_sub_groups) == 1
+    electronics_group: Group = root_sub_groups[0]
+    assert electronics_group.name == "Electronics"
+    electronics_collections: List[Collection] = electronics_group.collections_get(False)
+    assert len(electronics_collections) == 1
+    digikey_collection: Collection = electronics_collections[0]
+    assert digikey_collection.name == "Digi-Key"
+
+    # Force a partial load of *digikey_collection*:
+    digikey_collection.load_recursively(True)
+
+    bom_pyside2: BomPyside2 = BomPyside2(bom_manager, root_group)
 
     bom_pyside2.run()
 
@@ -104,8 +134,13 @@ class BomPyside2(QMainWindow):
     """Contains global GUI information."""
 
     # BomPyside2.__init__()
-    def __init__(self) -> None:
-        """Initialize the BOM Manager Graphical User Interface."""
+    def __init__(self, bom_manager: BomManager, root_group: Group) -> None:
+        """Initialize the BOM Manager Graphical User Interface.
+
+        Args:
+            *bom_manager* (*BomManager*): The root of all basic data structures.
+            *root_group* (*Group*): The root group of the basic data structures:
+        """
         # Create the *application* first.  The call to *setAttribute* makes a bogus warning message
         # printout go away:
         QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
@@ -129,6 +164,7 @@ class BomPyside2(QMainWindow):
         # bom_pyside2: BomPyside2 = self
         self.application: QApplication = application
         self.main_window: QMainWindow = main_window
+        self.root_group: Group = root_group
 
     # BomPyside2.rung()
     def run(self) -> None:
