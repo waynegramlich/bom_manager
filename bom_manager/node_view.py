@@ -850,36 +850,6 @@ class Node:
         for nodes in nodes_table.values():
             nodes.attributes_validate_recursively()
 
-    # Node.collection_cast():
-    def collection_cast(self) -> "Collection":
-        """Fail when not properly overridden by *Collection* sub-class.
-
-        Used for converting between a list of *Nodes* that happen
-        to all be *TableComment*s.  If this method is called, the
-        *Node* (i.e. *self*) is not a *Collection* object and we fail.
-
-        """
-        node: Node = self  # pragma: no cover
-        assert False, f"Got a {node.__class__.__name__} instead of Collection"  # pragma: no cover
-
-    # Node.directory_cast():
-    def directory_cast(self) -> "Directory":
-        """Fail when not properly overridden by *Directory* sub-class.
-
-        Used for converting between a list of *Nodes* that happen
-        to all be *Directory*s.  If this method is called, the
-        *Node* (i.e. *self*) is not a *Directory* object and we fail.
-
-        """
-        node: Node = self  # pragma: no cover
-        assert False, f"Got a {node.__class__.__name__} instead of Directory"  # pragma: no cover
-
-    # Group.group_cast():
-    def group_cast(self) -> "Group":
-        """Convert a *Node* to a *Group*."""
-        node: Node = self  # pragma: no cover
-        assert False, f"Got a {node.__class__.__name__} instead of Group"  # pragma: no cover
-
     # Node.has_nodes():
     def has_nodes(self, nodes_type: Type) -> bool:
         """Verify that a node as specified sub-nodes.
@@ -919,32 +889,6 @@ class Node:
         # Lookup the appropriate *nodes* object and stuff *child_node* into it:
         nodes: Nodes = nodes_table[child_node_type]
         nodes.insert(child_node)
-
-    # Node.parameter_cast():
-    def parameter_cast(self) -> "Parameter":
-        """Fail when not overridden by *Parameter* sub-class.
-
-        Used for converting between a list of *Nodes* that happen
-        to all be *Parameter*s.  If this method is called, the
-        *Node* (i.e. *self*) is not a *Parameter* object and we fail.
-
-        """
-        node: Node = self  # pragma: no cover
-        assert False, (f"Got a {node.__class__.__name__} instead of Parameter")  # pragma: no cover
-
-    # Node.parameter_comment_cast():
-    def parameter_comment_cast(self) -> "ParameterComment":
-        """Fail when not overridden by *ParameterComment* sub-class.
-
-        Used for converting between a list of *Nodes* that happen
-        to all be *ParameterComment*s.  If this method is called, the
-        *Node* (i.e. *self*) is not a *ParameterComemnt* object and we
-        fail.
-
-        """
-        node: Node = self  # pragma: no cover
-        assert False, (f"Got a {node.__class__.__name__} "
-                       "instead of ParameterComment")  # pragma: no cover
 
     # Node.remove():
     # @trace(1)
@@ -999,18 +943,6 @@ class Node:
         for nodes in nodes_list:
             nodes.show_lines_append(show_lines, next_indent)
 
-    # Node.search_cast():
-    def search_cast(self) -> "Search":
-        """Return the *Search* object.
-
-        Used for converting between a list of *Nodes* that happen
-        to all be *Search*s.  If this method is called, the
-        *Node* (i.e. *self*) is not a *Search* and we fail.
-
-        """
-        node: Node = self  # pragma: no cover
-        assert False, f"Got a {node.__class__.__name__} instead of Search"  # pragma: no cover
-
     # Node.sub_nodes_get():
     def sub_nodes_get(self, sub_node_type: Type) -> "List[Node]":
         """Return the sub-nodes that match a given type.
@@ -1030,30 +962,6 @@ class Node:
         nodes: Nodes = nodes_table[sub_node_type]
         sub_nodes_list: List[Node] = nodes.sub_nodes_get()
         return sub_nodes_list
-
-    # Node.table_cast():
-    def table_cast(self) -> "Table":
-        """Return the *Table* object.
-
-        Used for converting between a list of *Nodes* that happen
-        to all be *Table*s.  If this method is called, the
-        *Node* (i.e. *self*) is not a *Table* and we fail.
-
-        """
-        node: Node = self  # pragma: no cover
-        assert False, f"Got a {node.__class__.__name__} instead of Table"  # pragma: no cover
-
-    # Node.table_comment_cast():
-    def table_comment_cast(self) -> "TableComment":
-        """Return the *TableComment* object.
-
-        Used for converting between a list of *Nodes* that happen
-        to all be *TableComment*s.  If this method is called, the
-        *Node* (i.e. *self*) is not a *TableComment* and we fail.
-
-        """
-        node: Node = self  # pragma: no cover
-        assert False, f"Got a {node.__class__.__name__} instead of TableComment"  # pragma: no cover
 
     # Node.tree_path_find():
     # @trace(1)
@@ -1187,12 +1095,6 @@ class Collection(Node):
             name = collection.name
         return f"Collection('{name}')"
 
-    # Collection.collection_cast():
-    def collection_cast(self) -> "Collection":
-        """Convert a *Node* to a *Collection*."""
-        collection: Collection = self
-        return collection
-
     # Collection.csvs_download():
     # @trace(1)
     def csvs_download(self, root_path: Path, csv_fetch: "Callable[[Table], str]") -> int:
@@ -1242,36 +1144,6 @@ class Collection(Node):
             downloads_count += directory.csvs_download(directory_path, csv_fetch, downloads_count)
         return downloads_count
 
-    # Collection.directories_get():
-    def directories_get(self, sort: bool) -> "List[Directory]":
-        """Return immediate sub directories.
-
-        Return the sub-directories of *collection* (i.e. *self*).  If
-        *sort* is *True*, the returned sub-directores are sored by name.
-
-        Args:
-            *sort*: If *True* the return list is sorted by directory
-                name.
-
-        Returns:
-            Returns a list of *Directory* objects, which sorted if
-            *sort* is *True*.
-
-        """
-        # Get all of the *Directory*'s from *collection* (i.e. *self*) and stuff them
-        # into *directories*:
-        collection: Collection = self
-        directory_sub_nodes: List[Node] = collection.sub_nodes_get(Directory)
-        directory_sub_node: Node
-        directories: List[Directory] = [directory_sub_node.directory_cast()
-                                        for directory_sub_node in directory_sub_nodes]
-
-        # Perform any requested *sort* before returning *directories*:
-        directory: Directory
-        if sort:
-            directories.sort(key=lambda directory: directory.name)
-        return directories
-
     # Collection.csvs_read_and_process():
     # @trace(1)
     def csvs_read_and_process(self, bind: bool) -> None:
@@ -1308,11 +1180,49 @@ class Collection(Node):
             sub_directory_path = collection_directory_path / sub_directory_file_name
             sub_directory.csv_read_and_process(sub_directory_path, bind)
 
+    # Collection.directories_get():
+    def directories_get(self, sort: bool) -> "List[Directory]":
+        """Return immediate sub directories.
+
+        Return the sub-directories of *collection* (i.e. *self*).  If
+        *sort* is *True*, the returned sub-directores are sored by name.
+
+        Args:
+            *sort*: If *True* the return list is sorted by directory
+                name.
+
+        Returns:
+            Returns a list of *Directory* objects, which sorted if
+            *sort* is *True*.
+
+        """
+        # Get all of the *Directory*'s from *collection* (i.e. *self*) and stuff them
+        # into *directories*:
+        collection: Collection = self
+        directory_sub_nodes: List[Node] = collection.sub_nodes_get(Directory)
+        directory_sub_node: Node
+        directories: List[Directory] = [Directory.from_node(directory_sub_node)
+                                        for directory_sub_node in directory_sub_nodes]
+
+        # Perform any requested *sort* before returning *directories*:
+        directory: Directory
+        if sort:
+            directories.sort(key=lambda directory: directory.name)
+        return directories
+
     # Collection.directory_insert():
     def directory_insert(self, sub_directory: "Directory") -> None:
         """Insert a directory into the Collection."""
         collection: Collection = self
         collection.node_insert(sub_directory)
+
+    # Collection.from_node():
+    @staticmethod
+    def from_node(node: Node) -> "Collection":
+        """Cast a Node into a Colletion and return it."""
+        assert isinstance(node, Collection)
+        collection: Collection = node
+        return collection
 
     # Collection.load_recursively():
     # @trace(1)
@@ -1597,6 +1507,13 @@ class TableComment(Comment):
         """See *Comment* base class."""
         super().__init__(bom_manager, language)
 
+    # TableComment.from_node():
+    def from_node(node: Node) -> "TableComment":
+        """Cast a Node into at TableComment and return it."""
+        assert isinstance(node, TableComment)
+        table_comment: TableComment = node
+        return table_comment
+
     # TableComment.show_lines_append():
     def show_lines_append(self, show_lines: List[str], indent: str, text: str = "") -> None:
         """Recursively append table comment info. to show lines list.
@@ -1610,17 +1527,6 @@ class TableComment(Comment):
         table_comment: TableComment = self
         language: str = table_comment.language
         super().show_lines_append(show_lines, indent, f"'{language}'")
-
-    # TableComment.table_comment_cast():
-    def table_comment_cast(self) -> "TableComment":
-        """Return the *TableComment* object.
-
-        Used for converting between a list of *Nodes* that happen
-        to all be *TableComment*s.
-
-        """
-        table_comment: TableComment = self
-        return table_comment
 
     # TableComment.xml_parse():
     @staticmethod
@@ -1654,10 +1560,11 @@ class ParameterComment(Comment):
         """See *Comment* base class."""
         super().__init__(bom_manager, language=language)
 
-    # ParameterComment.parameter_comment_cast():
-    def parameter_comment_cast(self) -> "ParameterComment":
-        """Convert a *Node* into a *ParameterComment*."""
-        parameter_comment: ParameterComment = self
+    # ParameterComment.from_node():
+    def from_node(node: Node) -> "ParameterComment":
+        """Cast a Node into a ParameterComment and return it."""
+        assert isinstance(node, ParameterComment)
+        parameter_comment: ParameterComment = node
         return parameter_comment
 
     # ParameterComment.show_lines_append():
@@ -1810,17 +1717,19 @@ class Directory(Node):
         for table in tables:
             table.csv_read_and_process(directory_path, bind)
 
-    # Directory.directory_cast():
-    def directory_cast(self) -> "Directory":
-        """Convert a *Node* into a *Directory*."""
-        directory: Directory = self
-        return directory
-
-    # Directory.directory_insert()
+    # Directory.directory_insert():
     def directory_insert(self, sub_directory: "Directory") -> None:
         """Insert a sub_directory into a directory."""
         directory: Directory = self
         directory.node_insert(sub_directory)
+
+    # Directory.from_node():
+    @staticmethod
+    def from_node(node: Node) -> "Directory":
+        """Cast a Node into a Directory and return it."""
+        assert isinstance(node, Directory)
+        directory: Directory = node
+        return directory
 
     # Directory.load_recursively():
     # @trace(1)
@@ -1938,7 +1847,8 @@ class Directory(Node):
         directory: Directory = self
         table_sub_nodes: List[Node] = directory.sub_nodes_get(Table)
         table_sub_node: Node
-        tables: List[Table] = [table_sub_node.table_cast() for table_sub_node in table_sub_nodes]
+        tables: List[Table] = [Table.from_node(table_sub_node)
+                               for table_sub_node in table_sub_nodes]
 
         # Perform any request *sort* before returning *tables*:
         if sort:
@@ -1966,7 +1876,7 @@ class Directory(Node):
         directory: Directory = self
         sub_directory_nodes: List[Node] = directory.sub_nodes_get(Directory)
         sub_directory_node: Node
-        sub_directories: List[Directory] = [sub_directory_node.directory_cast()
+        sub_directories: List[Directory] = [Directory.from_node(sub_directory_node)
                                             for sub_directory_node in sub_directory_nodes]
 
         # Perform any request *sort* before returning *sub_directories*:
@@ -2165,16 +2075,18 @@ class Group(Node):
         group: Group = self
         collection_sub_nodes: List[Node] = group.sub_nodes_get(Collection)
         collection_sub_node: Node
-        collections: List[Collection] = [collection_sub_node.collection_cast()
+        collections: List[Collection] = [Collection.from_node(collection_sub_node)
                                          for collection_sub_node in collection_sub_nodes]
         if sort:
             collections.sort(key=lambda collection: collection.name)
         return collections
 
-    # Group.group_cast():
-    def group_cast(self) -> "Group":
-        """Convert a *Node* to a *Group*."""
-        group: Group = self
+    # Group.from_node():
+    @staticmethod
+    def from_node(node: Node) -> "Group":
+        """Cast a Node into a Group and return it."""
+        assert isinstance(node, Group)
+        group: Group = node
         return group
 
     # Group.show_lines_append():
@@ -2245,7 +2157,7 @@ class Group(Node):
         group: Group = self
         group_sub_nodes: List[Node] = group.sub_nodes_get(Group)
         group_sub_node: Node
-        sub_groups: List[Group] = [group_sub_node.group_cast()
+        sub_groups: List[Group] = [Group.from_node(group_sub_node)
                                    for group_sub_node in group_sub_nodes]
         if sort:
             sub_groups.sort(key=lambda sub_group: sub_group.name)
@@ -2486,15 +2398,22 @@ class Parameter(Node):
         parameter: Parameter = self
         parameter_comment_sub_nodes: List[Node] = parameter.sub_nodes_get(ParameterComment)
         parameter_comment_sub_node: Node
-        parameter_comments: List[ParameterComment] = [parameter_comment_sub_node.
-                                                      parameter_comment_cast()
-                                                      for parameter_comment_sub_node
-                                                      in parameter_comment_sub_nodes]
+        parameter_comments: List[ParameterComment] = [
+            ParameterComment.from_node(parameter_comment_sub_node)
+            for parameter_comment_sub_node in parameter_comment_sub_nodes]
 
         # Perform any requested *sort* before returning:
         if sort:
             parameter_comments.sort(key=Comment.key)
         return parameter_comments
+
+    # Parameter.from_node():
+    @staticmethod
+    def from_node(node: Node) -> "Parameter":
+        """Cast Node into a Parameter and return it."""
+        assert isinstance(node, Parameter)
+        parameter: Parameter = node
+        return parameter
 
     # Parameter.key():
     def key(self) -> int:
@@ -2527,17 +2446,6 @@ class Parameter(Node):
 
         # Finally, insert *parameter_comment* into *parameter*:
         parameter.node_insert(parameter_comment)
-
-    # Parameter.parameter_cast():
-    def parameter_cast(self) -> "Parameter":
-        """Return the *Parameter* object.
-
-        Used for converting from a *Node* that happens to be a
-        *Parameter* to *Parameter*.
-
-        """
-        parameter: Parameter = self
-        return parameter
 
     # Parameter.show_lines_append():
     def show_lines_append(self, show_lines: List[str], indent: str, text: str = "") -> None:
@@ -2686,6 +2594,14 @@ class Search(Node):
         collection: Collection = bom_manager.collection_lookup(collection_key)
         return collection
 
+    # Search.from_node():
+    @staticmethod
+    def from_node(node: Node) -> "Search":
+        """Cast a Node into a Search and return it."""
+        assert isinstance(node, Search)
+        search: Search = node
+        return search
+
     # Search.show_lines_append():
     def show_lines_append(self, show_lines: List[str], indent: str, text: str = "") -> None:
         """Recursively append search information to show lines list.
@@ -2699,17 +2615,6 @@ class Search(Node):
         search: Search = self
         text = f"'{search.name}'"
         super().show_lines_append(show_lines, indent, text=text)
-
-    # Search.search_cast():
-    def search_cast(self) -> "Search":
-        """Return the *Search* object.
-
-        Used for converting from a *Node* that happens to be a
-        *Search* to *Search*.
-
-        """
-        search: Search = self
-        return search
 
     # Search.xml_lines_append():
     def xml_lines_append(self, xml_lines: List[str], indent: str) -> None:
@@ -2924,7 +2829,7 @@ class Table(Node):
         table: Table = self
         table_comment_sub_nodes: List[Node] = table.sub_nodes_get(TableComment)
         table_comment_sub_node: Node
-        table_comments: List[TableComment] = [table_comment_sub_node.table_comment_cast()
+        table_comments: List[TableComment] = [TableComment.from_node(table_comment_sub_node)
                                               for table_comment_sub_node in table_comment_sub_nodes]
 
         # Perform any requested *sort* before returning *table_comments*:
@@ -3194,7 +3099,7 @@ class Table(Node):
         table: Table = self
         parameter_sub_nodes: List[Node] = table.sub_nodes_get(Parameter)
         parameter_sub_node: Node
-        parameters: List[Parameter] = [parameter_sub_node.parameter_cast()
+        parameters: List[Parameter] = [Parameter.from_node(parameter_sub_node)
                                        for parameter_sub_node in parameter_sub_nodes]
 
         # Perform any requested *sort* before returning *parameters*:
@@ -3233,7 +3138,7 @@ class Table(Node):
         table: Table = self
         search_sub_nodes: List[Node] = table.sub_nodes_get(Search)
         search_sub_node: Node
-        searches: List[Search] = [search_sub_node.search_cast()
+        searches: List[Search] = [Search.from_node(search_sub_node)
                                   for search_sub_node in search_sub_nodes]
 
         # Perform any requested *sort* prior to returning *searches*:
@@ -3256,17 +3161,6 @@ class Table(Node):
         table: Table = self
         text = f"'{table.name}'"
         super().show_lines_append(show_lines, indent, text=text)
-
-    # Table.table_cast():
-    def table_cast(self) -> "Table":
-        """Return the *Table* object.
-
-        Used for converting from a *Node* that happens to be a
-        *Table* to *Table*.
-
-        """
-        table: Table = self
-        return table
 
     # Table.type_tables_extract():
     # @trace(1)
