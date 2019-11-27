@@ -699,19 +699,6 @@ class BomManager:
         re_table["Range"] = range_re
         re_table["URL"] = url_re
 
-# class View:
-#    def __init__(self, gui_manager: GuiManager, name: str, view_nodes: "Tuple[Node, ...]") -> None:
-#        # view: View = self
-#        self.gui_manager = GuiManager
-#        self.name = name
-#
-#    def __str__(self) -> str:
-#        view: View = self
-#        name: str = "??"
-#        if hasattr(view, "name"):
-#            name = view.name
-#        return f"View('{name}')"
-
 
 # NodeTemplate():
 class NodeTemplate:
@@ -732,9 +719,10 @@ class NodeTemplate:
 
         """
         # node_template: NodeTemplate = self
+        self.attributes_table: Dict[str, Type] = attributes_table
         self.node_type: Type = node_type
         self.sub_types: Tuple[Type, ...] = sub_types
-        self.attributes_table: Dict[str, Type] = attributes_table
+        self.views: Dict[View, View] = dict()
 
     # NodeTemplate.__str__():
     def __str__(self) -> str:
@@ -868,6 +856,11 @@ class Node:
         match: bool = nodes_type in nodes_table
         return match
 
+    # Node.name_get():
+    def name_get(self) -> str:
+        """Return the name of the node."""
+        return "??"
+
     # Node.node_insert():
     def node_insert(self, child_node: "Node") -> None:
         """Insert a child node.
@@ -889,6 +882,67 @@ class Node:
         # Lookup the appropriate *nodes* object and stuff *child_node* into it:
         nodes: Nodes = nodes_table[child_node_type]
         nodes.insert(child_node)
+
+    # Node.nodes_collect_recursively():
+    def nodes_collect_recursively(self, node_type: Type, nodes_list: "List[Node]") -> None:
+        """Recursively find Node's that match a type.
+
+        Sweep down the data structure tree collecting all *Node*'s that
+        match *node_type* and append them to *nodes_list8*.
+
+        Args:
+            *node_type* (Type): The *Node* type to match.
+            *nodes_list* (List[Table]): The *Node*'s list to append each
+                matching *Node* to.
+
+        """
+        # First, figure out if *node* (i.e. *self*) matches *node_type*:
+        node: Node = self
+        if isinstance(node, node_type):
+            nodes_list.append(node)
+
+        # Now recursively visit all *nodes* from *nodes_table* looking for *node_type*:
+        nodes_table: Dict[type, Nodes] = node.nodes_table
+        nodes: Nodes
+        for nodes in nodes_table.values():
+            nodes.nodes_collect_recursively(node_type, nodes_list)
+
+    # Node.nodes_get():
+    def nodes_get(self, node_type: Type) -> "Nodes":
+        """Return a sub-*Nodes* object from a Node.
+
+        This method returns the *Nodes* object from *node* (i.e. *self)
+        that corresponds to *node_type*.
+
+        This is an internal helper method that is meant to be used
+        sparingly.  The manipulation of *Nodes* objects tend to be
+        hidden away.
+
+        Args:
+            *node_type* (*Type*): The type selector to determine
+                which *Nodes* object to return from *node*
+                (i.e. *self*)
+
+        Returns:
+            Returns the selected *Nodes* object.
+
+        """
+        # Grab the appropriate *nodes* object from *node* (i.e. *self*) and return it:
+        node: Node = self
+        nodes_table: Dict[Type, Nodes] = node.nodes_table
+        nodes: Nodes = nodes_table[node_type]
+        return nodes
+
+    # Node.Load():
+    def load(self) -> None:
+        """Place holder routine for nodes that can be partially loaded.
+
+        This method is overridden by a sub-class if the sub-class *node*
+        can be partially loaded.  If not, this method is called and does
+        nothing.
+
+        """
+        pass
 
     # Node.remove():
     # @trace(1)
@@ -994,55 +1048,10 @@ class Node:
                     break
         return path
 
-    # Node.nodes_collect_recursively():
-    def nodes_collect_recursively(self, node_type: Type, nodes_list: "List[Node]") -> None:
-        """Recursively find Node's that match a type.
-
-        Sweep down the data structure tree collecting all *Node*'s that
-        match *node_type* and append them to *nodes_list8*.
-
-        Args:
-            *node_type* (Type): The *Node* type to match.
-            *nodes_list* (List[Table]): The *Node*'s list to append each
-                matching *Node* to.
-
-        """
-        # First, figure out if *node* (i.e. *self*) matches *node_type*:
-        node: Node = self
-        if isinstance(node, node_type):
-            nodes_list.append(node)
-
-        # Now recursively visit all *nodes* from *nodes_table* looking for *node_type*:
-        nodes_table: Dict[type, Nodes] = node.nodes_table
-        nodes: Nodes
-        for nodes in nodes_table.values():
-            nodes.nodes_collect_recursively(node_type, nodes_list)
-
-    # Node.nodes_get():
-    def nodes_get(self, node_type: Type) -> "Nodes":
-        """Return a sub-*Nodes* object from a Node.
-
-        This method returns the *Nodes* object from *node* (i.e. *self)
-        that corresponds to *node_type*.
-
-        This is an internal helper method that is meant to be used
-        sparingly.  The manipulation of *Nodes* objects tend to be
-        hidden away from view.
-
-        Args:
-            *node_type* (*Type*): The type selector to determine
-                which *Nodes* object to return from *node*
-                (i.e. *self*)
-
-        Returns:
-            Returns the selected *Nodes* object.
-
-        """
-        # Grab the appropriate *nodes* object from *node* (i.e. *self*) and return it:
-        node: Node = self
-        nodes_table: Dict[Type, Nodes] = node.nodes_table
-        nodes: Nodes = nodes_table[node_type]
-        return nodes
+    # Node.type_letter_get():
+    def type_letter_get(self):
+        """Return a type letter for the node."""
+        return '?'
 
 
 # Collection:
@@ -1223,6 +1232,14 @@ class Collection(Node):
         assert isinstance(node, Collection)
         collection: Collection = node
         return collection
+
+    # Collection.key_from_node():
+    @staticmethod
+    def key_from_node(node: Node) -> str:
+        """TODO."""
+        collection: Collection = Collection.from_node(node)
+        key: str = collection.name
+        return key
 
     # Collection.load_recursively():
     # @trace(1)
@@ -1731,6 +1748,14 @@ class Directory(Node):
         directory: Directory = node
         return directory
 
+    # Directory.key_from_node():
+    @staticmethod
+    def key_from_node(node: Node) -> str:
+        """Return a sort key for a directory Node."""
+        directory: Directory = Directory.from_node(node)
+        key: str = directory.name
+        return key
+
     # Directory.load_recursively():
     # @trace(1)
     def load_recursively(self, collection_path: Path, searches_path: Path,
@@ -2089,6 +2114,20 @@ class Group(Node):
         group: Group = node
         return group
 
+    # Group.key_from_node():
+    @staticmethod
+    def key_from_node(node: Node) -> str:
+        """Cast a Node into a Group and return it."""
+        group: Group = Group.from_node(node)
+        key: str = group.name
+        return key
+
+    # Group.name_get():
+    def name_get(self) -> str:
+        """Return the group name."""
+        group: Group = self
+        return group.name
+
     # Group.show_lines_append():
     def show_lines_append(self, show_lines: List[str], indent: str, text: str = "") -> None:
         """See node base class."""
@@ -2177,6 +2216,11 @@ class Group(Node):
         # Insert *sub_group* into *group* (i.e. *self*):
         group: Group = self
         group.node_insert(sub_group)
+
+    # Group.type_letter_get():
+    def type_letter_get(self) -> str:
+        """Return the group type letter of 'G'."""
+        return "G"
 
     # Group.packages_scan():
     @trace(1)
@@ -2602,6 +2646,19 @@ class Search(Node):
         search: Search = node
         return search
 
+    # Search.key_from_node():
+    @staticmethod
+    def key_from_node(node: Node) -> str:
+        """Return a sort key for the Search Node."""
+        search: Search = Search.from_node(node)
+        key: str = search.name
+        return key
+
+    # Search.load():
+    def load(self):
+        """Ensure that Search is fully loaded."""
+        assert False
+
     # Search.show_lines_append():
     def show_lines_append(self, show_lines: List[str], indent: str, text: str = "") -> None:
         """Recursively append search information to show lines list.
@@ -2975,6 +3032,19 @@ class Table(Node):
         assert isinstance(node, Table)
         table: Table = node
         return table
+
+    # Table.key_from_node():
+    @staticmethod
+    def key_from_node(node: Node) -> str:
+        """Return a sort for the Table Node."""
+        table: Table = Table.from_node(node)
+        key: str = table.name
+        return key
+
+    # Table.load():
+    def load(self):
+        """Ensure that the Table is fully loaded."""
+        assert False
 
     # Table.load_recursively():
     # @trace(1)
@@ -3451,7 +3521,7 @@ class Nodes:
         """Return a Node from sorted Nodes list.
 
         This method returns the *index*'th *Node* from *nodes*
-        (i.e. *self*) after it has been sorted usint the
+        (i.e. *self*) after it has been sorted using the
         *key_sort_function* for sort keys.  The *nodes* are cached
         so multiple calls using the same *key_sort_function* do not
         force a resort each time.  Any time the*key_sort_function*
@@ -3676,11 +3746,14 @@ class View:
     """
 
     # View.__init__():
-    def __init__(self, name: str, children_table: Dict[Type, Tuple[Type, ...]]) -> None:
+    def __init__(self, name: str, root_node: Node,
+                 view_selects_table: "Dict[Type, Tuple[ViewSelect, ...]]") -> None:
         """TODO."""
         # view: View = self
         self.name: str = name
-        self.children_types_table: Dict[Type, Tuple[Type, ...]] = children_table
+        self.root_node: Node = root_node
+        self.focus_path: List[Node] = [root_node]
+        self.view_selects_table: Dict[Type, Tuple[ViewSelect, ...]] = view_selects_table
 
     # View.__str__():
     def __str__(self):
@@ -3692,26 +3765,216 @@ class View:
         return f"View('{name}')"
 
     # View.can_fetch_more():
+    @trace(2)
     def can_fetch_more(self, node: Node) -> bool:
-        """TODO."""
+        """Return True if the node has viewable sub-nodes.
+
+        The *view* object (i.e. *self*) can specify which of any of the
+        sub-*Node*'s in *node* need can be viewed.  Some *view* objects
+        specify no viewable sub-*Nodes*, some specify that all
+        sub-*Node*'s are viewable, and some specify a subset of all
+        sub-*Nodes*s.  This method ensures that all sub-*Nodes* are
+        loaded and the returns *True* if there at least one sub-*Node*
+        in any of the *view* selected sub-*Nodes*; otherwise, *False*
+        is returned.
+
+        Args:
+            *node* (*Node*): The *Node* object to examine for viewable
+                sub-*Node*'s.
+
+        Returns:
+            (*bool*) Returns *True* if there are any viewable
+                sub-*Node*'s
+
+        """
+        # Grab some values from *view* (i.e. *self*)
         view: View = self
-        more_fetchable: bool = view.has_children(node)
+        view_selects_table: Dict[Type, Tuple[ViewSelect, ...]] = view.view_selects_table
+
+        # Force any partially loaded *node* to be fully loaded into memory.  This
+        # ensures that any backing `.xml` files has been read:
+        node.load()
+
+        # Now figure out which *children_types* are allowed to be displayed:
+        more_fetchable: bool = False
+        node_type: Type = node.__class__
+        assert node_type in view_selects_table, "Somehow View has encounterd an unexpected Node"
+        view_selects: Tuple[ViewSelect, ...] = view_selects_table[node_type]
+
+        # Note that *children_types* could be empty in which case the loop below exits immediately.
+        # Otherwise, we visit the *child_nodes* for each *child_type* and see if there *Node*'s
+        # present:
+        view_select: ViewSelect
+        for view_select in view_selects:
+            view_type: Type = view_select.view_type
+            view_nodes: Nodes = node.nodes_get(view_type)
+            if view_nodes.size_get() >= 1:
+                # We have at least one *Node*:
+                more_fetchable = True
+                break
         return more_fetchable
 
-    # View.has_children():
-    def has_children(self, node: Node) -> bool:
+    # View.child_fetch()
+    def child_fetch(self, parent_node: Node, row: int) -> Node:
         """TODO."""
         # Grab some values from *view* (i.e. *self*):
-        # view: View = self
-        # children_types_table: Dict[Type, Tuple[Type, ...]] = view.children_types_table
-        # node_type: Type = node.__class__
-        # children_types: Tuple[Type, ...] = children_types_table[node_type]
-        # child_type: Type
-        children_present: bool = False
-        # for child_type in children_types:
-        #     nodes: Nodes = node.nodes_get(child_type)
-        #     nodes_size: int = nodes.size_get()
-        #     if nodes_size:
-        #         children_present = True
-        #         break
+        view: View = self
+        view_selects_table: Dict[Type, Tuple[ViewSelect, ...]] = view.view_selects_table
+
+        # Grab the *viewable_children_types* associated with *parent_node_type*:
+        parent_node_type: Type = parent_node.__class__
+        assert parent_node_type in view_selects_table
+        view_selects: Tuple[ViewSelect, ...] = view_selects_table[parent_node_type]
+
+        # Iterate across each of the *viewable_children_types* summing up a total
+        # *displayable_children_count:
+        base_index: int = 0
+        selected_child_node: Node
+        view_select: ViewSelect
+        for view_select in view_selects:
+            view_type: Type = view_select.view_type
+            view_nodes: Nodes = parent_node.nodes_get(view_type)
+            view_nodes_size: int = view_nodes.size_get()
+            if base_index <= row < base_index + view_nodes_size:
+                # We can actually fetch *selected_child_node*:
+                view_key_function: Callable[[Node], Any] = view_select.view_key_function
+                selected_child_node = view_nodes.node_fetch(row - base_index, view_key_function)
+                break
+            base_index += view_nodes_size
+        else:
+            assert False, f"row={row} >= base_index={base_index}"
+        return selected_child_node
+
+    # View.has_children():
+    @trace(2)
+    def has_children(self, parent_node: Node) -> bool:
+        """TODO."""
+        view: View = self
+        children_present: bool = view.row_count(parent_node) >= 1
         return children_present
+
+    # View.row_count():
+    @trace(2)
+    def row_count(self, parent_node: Node) -> int:
+        """Return the total number of displayable children.
+
+        The *view* object (i.e. *self*) specifies which of the possible
+        sub-*Node* lists in *parent_node* it is interested in displaying.
+        The total number chilidren sub-*Node*'s across these *view*
+        selected sub-*Node* lists is returned.
+
+        Args:
+            *parent_node* (*Node*): The parent *Node* object that
+            contains the viewable children sub-*Node* lists.
+
+        Returns:
+            (*int*): Return the children count across all of the
+            viewable childrent sub-*Node*s:
+
+        """
+        # Grab some values from *view*:
+        view: View = self
+        view_selects_table: Dict[Type, Tuple[ViewSelect, ...]] = view.view_selects_table
+
+        # Grab the *viewable_children_types* associated with *parent_node_type*:
+        parent_node_type: Type = parent_node.__class__
+        view_selects: Tuple[ViewSelect, ...] = view_selects_table[parent_node_type]
+
+        # Iterate across each of the *viewable_selects* summing up a total
+        # *displayable_children_count:
+        total_children_count: int = 0
+        view_select: ViewSelect
+        for view_select in view_selects:
+            view_type: Type = view_select.view_type
+            view_nodes: Nodes = parent_node.nodes_get(view_type)
+            total_children_count += view_nodes.size_get()
+        return total_children_count
+
+    # parent_node_get()
+    def parent_node_get(self, child_node: Node) -> Optional[Tuple[Node, int]]:
+        """Return the parent node for the child node.
+
+        Using *view* (i.e. *self*) find the appropriate parent *Node*
+        object for *child_node*.  If the parent *Node* is found, the
+        index to the child is returned as well.  If no parrent *Node*
+        is found *None* is returned.
+
+        Args:
+            *child_node* (*Node*): The child *Node* object to find the
+                *view* appropriate parent *Node* for.
+
+        Returns:
+            (*Optional*[*Node*, *int*]): Returns either the parent *Node* object
+                and the index to the child.
+
+        """
+        # Grab some values from *view* (i.e. *self*):
+        view: View = self
+        view_selects_table: Dict[Type, Tuple[ViewSelect, ...]] = view.view_selects_table
+        root_node: Node = view.root_node
+        focus_path: List[Node] = view.focus_path
+
+        # Leave *result* as *None* until we get a valid match:
+        result: Optional[Tuple[Node, int]] = None
+
+        # Quick lookup goes here.  For now stick with brute force:
+
+        # If the quick lookup did not work, we perform a brute force recursive search:
+        if result is None:
+            # Clear out *focus_path* and then fill it in:
+            focus_path = list()
+            focus_path = root_node.tree_path_find(child_node, focus_path)
+            child_node_type: Type = child_node.__class__
+            if len(focus_path) >= 2:
+                # We seem to have found *child_node*:
+                assert focus_path[0] is child_node, "Something went wrong with Node.path_find()"
+                probable_parent_node: Node = focus_path[1]
+
+                # Now we need to find the *view_select* associated with *probably_parent_node*:
+                probable_parent_node_type: Type = probable_parent_node.__class__
+                if probable_parent_node_type in view_selects_table:
+                    view_selects: Tuple[ViewSelect, ...]
+                    view_selects = view_selects_table[probable_parent_node_type]
+
+                    # Sweep through *view_select* looking for a match to *child_node_type*:
+                    for view_select in view_selects:
+                        view_type: Type = view_select.view_type
+                        if view_type is child_node_type:
+                            # This *view_type* matches the *child_node_type* so now we can
+                            # extract the *nodes* that should contain the *child_node*:
+                            nodes: Nodes = probable_parent_node.nodes_get(child_node_type)
+
+                            # Now sweep through *nodes* looking for a match:
+                            view_key_function: Callable[[Node], Any] = view_select.view_key_function
+                            nodes_size: int = nodes.size_get()
+                            index: int
+                            for index in range(nodes_size):
+                                possible_child_node: Node = nodes.node_fetch(index,
+                                                                             view_key_function)
+                                if possible_child_node is child_node:
+                                    # We have a match, so set set *result* and break out of loops:
+                                    result = (probable_parent_node, index)
+                                    break
+                            else:
+                                assert False, (f"Child {child_node} not in parent "
+                                               f"{probable_parent_node}")
+                        else:
+                            assert False, f"Parent node does not have child type"
+
+                        # Break out of the outer loop if we have a *result*:
+                        if result is not None:
+                            break
+                else:
+                    assert False, "Child {child_node} not under root {root_node}"
+
+        # Return the *result*:
+        return result
+
+
+class ViewSelect:
+    """TODO."""
+
+    def __init__(self, view_type: Type, view_key_function: Callable[[Node], Any]) -> None:
+        """TODO."""
+        self.view_type: Type = view_type
+        self.view_key_function: Callable[[Node], Any] = view_key_function
